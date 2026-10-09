@@ -82,3 +82,10 @@ The Agent Service works with stock Hermes. `WIZARD_JOINED_DELEGATION`:
 - `prefer` (default for new installs): use joined delegation and Markdown rendering when Hermes advertises them in `/v1/capabilities`; otherwise send a plain run. Stock Hermes already runs delegated work inline for API runs, so the reply still arrives in the same run.
 - `require`: refuse runs (503) unless Hermes advertises joined delegation. For boxes that rely on it.
 - `off`: never ask for it.
+
+## `fast_router` (added 9 Oct 2026)
+
+Which model routes orb utterances. Fields: `account` (whose subscription pays), `model`, and until
+shared accounts exist `endpoint` (OpenAI-compatible chat URL) + `key_env` (name of the env var holding
+the key; the key never goes in this file). Absent means no router: voice goes straight to the agent.
+Bootstrap exposes `account` and `model` only. Plan: `docs/FAST_ROUTER_AND_ACCOUNTS.md`.
