@@ -11,7 +11,8 @@
   - also tested: `install.sh`, uninstall/reinstall, and the HTTP API
 - ✅ **DeFleur Video in its own repo** (`defleur-video`): full history, root `wizard.md`, and a CI check that passes.
 - ⏳ **Jan:** instruction injection; read `apps.json` and connect each app's MCP and skill; pointer skills; write `spec/AGENT_SERVICE_API.md`. Done when a fresh Hermes behind the service lists installed apps without being told.
-- ⏳ **Miguel:** take over `wizard-app-manager`; add `wizard.md` to each app in `wizard-app-store` (it becomes the core-apps repo); move DeFleur's image build to `defleur-video`. Done when `wam catalog` lists files, transcriber, browser, secret-drop and defleur-video.
+- ✅ **Miguel: every app in its own repo, listed in the index** (9 Oct). Files, Transcriber, Browser, Secret Drop, Hermes Agent, Hermes Frontend 3, AI Accounts and DeFleur are at [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps).
+- ⏳ **Miguel:** App Manager installs from the index and its API is locked down; move DeFleur's image build to `defleur-video`.
 - 🔨 **James + Archimedes:** the desktop UX in `wizard-ux`, including the native desktop app and its hotkeys (`spec/NATIVE_BRIDGE.md`). Done when James uses it as his daily desktop Wizard.
 
 ## Days 3–7: the end-to-end test

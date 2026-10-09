@@ -2,13 +2,24 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 9 Oct 2026 (evening) — Miguel: index, one repo per app, categories
+
+| # | Decision | Status |
+|---|---|---|
+| 23 | Confirms #1 (stock Runtipi, no fork) and #3 (an app = `wizard.md` + stock Runtipi files + MCP + skill). | Miguel |
+| 24 | **One shared index instead of per-box GitHub search.** Per-box search tops out at 100 apps today and 1,000 at best (GitHub's search cap), and every box re-clones every app. The index ([apps.aiwizards.com](https://apps.aiwizards.com), Cloudflare Worker + D1) takes publishes (API, webhook, or the app's own GitHub Action) and crawls the `wizard-app` topic in date slices as a fallback. It's a rebuildable cache; the repos stay the source of truth. Nostr becomes a third way into the same publish path. Boxes fetch only the apps they install. | Miguel |
+| 25 | **Replaces #12:** no core-apps repo. Every app is its own repo, Humanity Labs apps included; "core" is a slot plus a defaults list, not a property of an app. Files, Transcriber, Browser, Secret Drop, Hermes Agent, Hermes Frontend 3 and AI Accounts were split out with history on 9 Oct and are listed. | Miguel |
+| 26 | `wizard.md` gains optional `category` (agent / interface / app / system, the store shelf) and `icon`. The checker also refuses host-level container access (spec rule 12). | Miguel |
+| 27 | Apps whose upstream image has no MCP get a small stdlib MCP front container in front of the unchanged image ([spec](../spec/WIZARD_MD.md#mcp-for-apps-that-dont-ship-one)). | Miguel |
+| 28 | The App Manager API binds to the box only (loopback); install/uninstall need a token. Tailscale and Cloudflare Tunnel both reach the UX, never the App Manager. | Miguel |
+
 ## 9 Oct 2026 — Wizard Dev Council and James's follow-up
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | Runtipi stays **stock**. Wizard adds a layer (`wizard-app-manager`) that compiles app repos into a Runtipi store and installs through Runtipi's API. No fork. | Approved by James, confirm Miguel |
+| 1 | Runtipi stays **stock**. Wizard adds a layer (`wizard-app-manager`) that compiles app repos into a Runtipi store and installs through Runtipi's API. No fork. | Approved by James; confirmed by Miguel (#23) |
 | 2 | Repos: `wizard-ux` (James), `wizard-agent-service` (Jan), `wizard-app-manager` (Miguel), `wizard-os` (shared), one repo per app. | Locked on the call |
-| 3 | An app is a repo with a root `wizard.md` (v0.2), stock Runtipi files, an MCP endpoint and a skill. A tag makes it found; only a passing check makes it listed. | Approved by James, confirm Miguel |
+| 3 | An app is a repo with a root `wizard.md` (v0.2), stock Runtipi files, an MCP endpoint and a skill. A tag makes it found; only a passing check makes it listed. | Approved by James; confirmed by Miguel (#23) |
 | 4 | Discovery tag: **`wizard-app`** (singular, like `obsidian-plugin` and `raycast-extension`: the tag says what one repo *is*). Nobody else uses it. `wizard-ai` stays searched during the transition. Chosen over `wizard-apps` (reads as a collection repo) and `wizardos-app` (longer, and "Wizard OS" is the developer name, not what users see). | Approved by James, 9 Oct |
 | 5 | The Agent Service is a proxy that adds Wizard OS instructions; Hermes stays unmodified. It reads `apps.json` and connects each app's MCP and skill. | Locked on the call |
 | 6 | Agent Service cutover to `wizard-agent-service`: done 9 Oct. | Done |
@@ -17,7 +28,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | 9 | System apps are normal apps with `system: true` that fill a slot and can be replaced. | Approved by James |
 | 10 | One user-files root: Runtipi's `media/` folder (on a Mac, a Mac folder shared into the VM). Wizard attachments are saved into it. | Approved by James, confirm Jan + Miguel |
 | 11 | One `transcription` slot with an OpenAI-compatible API. Wizard STT fills it and routes to providers; Speaches/Transcriber becomes its local backend. | Approved by James, confirm Jan + Miguel |
-| 12 | Core packaging apps (files, transcriber, browser, hermes, secret-drop) stay together in one core-apps repo. Apps with their own code (DeFleur, Meeting Recorder, Reader) get their own repos. | Approved by James, confirm Miguel |
+| 12 | Core packaging apps (files, transcriber, browser, hermes, secret-drop) stay together in one core-apps repo. Apps with their own code (DeFleur, Meeting Recorder, Reader) get their own repos. | **Replaced by #25** |
 | 13 | No shared integration host. Test on an existing Hermes, a fresh Hermes and the Try Wizard VM. The Company Wizard is spare capacity. | James |
 | 14 | `wizard-os` stays private to the org until James, Jan and Miguel agree on v0.2 of the contracts, then goes public. | Approved by James |
 | 15 | Customers hear "your Wizard"; developers hear "Wizard OS". Laptop is the trial, always-on is the upgrade. | Agreed on the call |

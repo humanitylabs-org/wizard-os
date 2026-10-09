@@ -15,7 +15,10 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 ## App Manager (Miguel)
 
 - [ ] Take over `wizard-app-manager`, and review the reference implementation's choices (CLI token auth, git smart-HTTP store, `apps.json` v1).
-- [ ] `wizard.md` for every app in `wizard-app-store`. Rename it `wizard-core-apps` when convenient.
+- [x] `wizard.md` for every app: each split into its own public repo with history, an MCP and a skill, and listed in the index (9 Oct).
+- [x] **Index** `wizard-app-index` live at apps.aiwizards.com, store page at aiwizards.com/wizard-apps (9 Oct).
+- [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
+- [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.

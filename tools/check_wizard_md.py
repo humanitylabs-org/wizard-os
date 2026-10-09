@@ -11,6 +11,9 @@ from pathlib import Path
 import yaml
 
 TYPES = {"agent", "service", "view", "external"}
+CATEGORIES = {"agent", "interface", "app", "system"}
+BAD_CAPS = {"ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "NET_ADMIN", "DAC_READ_SEARCH", "BPF", "PERFMON"}
+HOST_PATH = re.compile(r"^/(etc|root|boot|proc|sys|dev|var/run|run|home|usr|lib|bin|sbin)(/|$)")
 NEEDS = {"mic", "system-audio", "camera", "notifications", "files"}
 SPECS = {0.1, 0.2}
 SLOT = re.compile(r"[a-z0-9][a-z0-9-]{1,40}")
@@ -25,6 +28,38 @@ def front_matter(text: str) -> dict:
     if not isinstance(data, dict):
         raise ValueError("front matter is not a mapping")
     return data
+
+
+def compose_risks(text: str) -> list[str]:
+    """Host-level access a public, unreviewed app must never ask for (rule 12)."""
+    try:
+        doc = yaml.safe_load(text) or {}
+    except Exception as e:  # noqa: BLE001
+        return [f"compose does not parse: {e}"]
+    risks = []
+    for name, s in ((doc.get("services") or {}) if isinstance(doc, dict) else {}).items():
+        if not isinstance(s, dict):
+            continue
+        if s.get("privileged"):
+            risks.append(f"{name}: privileged")
+        for k in ("network_mode", "pid", "ipc", "userns_mode", "uts"):
+            if str(s.get(k, "")).lower() == "host":
+                risks.append(f"{name}: {k}: host")
+        for c in s.get("cap_add") or []:
+            if str(c).upper().removeprefix("CAP_") in BAD_CAPS:
+                risks.append(f"{name}: cap_add {c}")
+        if s.get("devices"):
+            risks.append(f"{name}: host devices")
+        for o in s.get("security_opt") or []:
+            if "unconfined" in str(o).lower():
+                risks.append(f"{name}: security_opt {o}")
+        for v in s.get("volumes") or []:
+            src = v.split(":")[0] if isinstance(v, str) else str((v or {}).get("source", ""))
+            if any(x in src for x in ("docker.sock", "containerd.sock", "podman.sock")):
+                risks.append(f"{name}: mounts the container runtime socket")
+            elif src == "/" or HOST_PATH.match(src):
+                risks.append(f"{name}: mounts host path {src}")
+    return risks
 
 
 def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
@@ -90,6 +125,15 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
         pv = d.get("provides")
         badp = [p for p in (pv if isinstance(pv, list) else [pv]) if not SLOT.fullmatch(str(p))]
         rule("provides are slot ids", isinstance(pv, list) and not badp, ", ".join(map(str, badp)))
+    if d.get("category") is not None:
+        rule("category is agent, interface, app or system", d.get("category") in CATEGORIES, str(d.get("category")))
+    if d.get("icon") is not None:
+        ic = repo / str(d.get("icon"))
+        rule("icon exists (png/jpg)", ic.is_file() and ic.suffix.lower() in {".png", ".jpg", ".jpeg"}, str(d.get("icon")))
+    comp = repo / str(rt.get("compose") or "")
+    if rt.get("compose") and comp.is_file():
+        risks = compose_risks(comp.read_text())
+        rule("container asks for no host-level access", not risks, "; ".join(risks))
     if d.get("publisher") is not None:
         rule("publisher is an npub", bool(NPUB.fullmatch(str(d.get("publisher")))), str(d.get("publisher")))
     if github:
