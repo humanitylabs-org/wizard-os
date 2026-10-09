@@ -6,7 +6,7 @@ Shared architecture repo for Wizard OS (agreed at the Wizard Dev Council, 9 Oct 
 
 | Repo | Owner | What |
 |---|---|---|
-| `wizard-ux` | James | Mobile-first front end (Chromium-based; Electron on desktop, native container on phone) |
+| `wizard-ux` | James + Archimedes | The front end everywhere: phone app, desktop UX and the native desktop app's hotkeys |
 | `wizard-agent-service` | Jan | Deterministic proxy between any front end and any agent; injects Wizard OS meta-instructions; Hermes unmodified |
 | `wizard-app-manager` | Miguel | Fork of Runtipi + Wizard app store; ships system core apps (Files, Transcription, Notifications, Microphone) |
 | `wizard-os` (this repo) | shared | Architecture, app format, style guide, checks |

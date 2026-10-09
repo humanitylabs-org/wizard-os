@@ -24,17 +24,18 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Pinned updates** (needed by stage 2): `wam update <id>` shows the commit diff, re-runs the checker, installs only after owner approval. Today a refresh moves to the latest commit.
 - [ ] **Stage 2 publish tooling**: one command that posts the NIP-34 announcement for an app (GitHub clone URL, `t=wizard-app`), signed through Wizard Authority, plus the Humanity Labs curated list.
 
-## Wizard UX (James, Archimedes builds)
+## Wizard UX, including the desktop UX (James + Archimedes)
 
-- [ ] **Desktop layout** of `wizard-ux`: same code, wider layout.
-- [ ] **Native bridge listener** so Wizard for Mac hotkeys drive `wizard-ux` ([spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md)).
+- [ ] **Desktop UX** of `wizard-ux`: its own desktop paradigm on the same code (keyboard, mouse and voice), in progress.
+- [ ] **Native desktop app with hotkeys** (Caps Lock Wizard key, Right ⌘ voice) driving `wizard-ux` through the [native bridge](../spec/NATIVE_BRIDGE.md). This is desktop UX work, separate from the Mac installer.
 - [ ] **Apps screen**: catalog, install, open, status from the App Manager API. A separate section for plain Runtipi apps.
 - [ ] Back button contract: Back never exits (see James's standing rule in `wizard-ux`).
 
-## Mac (Miguel)
+## Mac installer (later, once the components work together)
 
-- [ ] Build the Try Wizard UX payload from `wizard-ux` (today `ux-dist.tgz` is the old `wizard-mobile` build).
-- [ ] Merge `mizel-mac` into `try-wizard` `main`.
+The Try Wizard VM that runs the whole stack on a Mac. Not started until the App Manager, Agent Service and UX work together on Linux. Owner decided then.
+
+- [ ] Build the VM's UX payload from `wizard-ux` (the `mizel-mac` prototype ships the old `wizard-mobile` build).
 - [ ] **Shared `~/Wizard` folder** mounted into the VM as the files root (virtio-fs) ([MAC.md](MAC.md#where-files-live)).
 - [ ] Folder picker for read-only sharing of `~/.claude`, `~/.codex` and project folders into the VM.
 

@@ -12,7 +12,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | 4 | Discovery tag: **`wizard-app`** (singular, like `obsidian-plugin` and `raycast-extension`: the tag says what one repo *is*). Nobody else uses it. `wizard-ai` stays searched during the transition. Chosen over `wizard-apps` (reads as a collection repo) and `wizardos-app` (longer, and "Wizard OS" is the developer name, not what users see). | Recommended by Archimedes, applied; James to confirm |
 | 5 | The Agent Service is a proxy that adds Wizard OS instructions; Hermes stays unmodified. It reads `apps.json` and connects each app's MCP and skill. | Locked on the call |
 | 6 | Agent Service cutover to `wizard-agent-service`: done 9 Oct. | Done |
-| 7 | One web UX everywhere; desktop is a layout of `wizard-ux`. Native shells stay thin (Android WebView, Wizard for Mac WKWebView). No Electron. | Approved by James |
+| 7 | One web UX codebase everywhere (`wizard-ux`). The desktop UX is its own paradigm in that codebase, plus a thin native desktop app for hotkeys; James + Archimedes own it. The Mac installer (the VM that runs the stack) is separate and comes later. No Electron. | Approved by James, 9 Oct |
 | 8 | The Apps screen lives in `wizard-ux`. | Approved by James |
 | 9 | System apps are normal apps with `system: true` that fill a slot and can be replaced. | Approved by James |
 | 10 | One user-files root: Runtipi's `media/` folder (on a Mac, a Mac folder shared into the VM). Wizard attachments are saved into it. | Approved by James, confirm Jan + Miguel |

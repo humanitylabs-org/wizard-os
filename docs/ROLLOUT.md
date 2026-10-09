@@ -12,7 +12,7 @@
 - ✅ **DeFleur Video in its own repo** (`defleur-video`): full history, root `wizard.md`, and a CI check that passes.
 - ⏳ **Jan:** instruction injection; read `apps.json` and connect each app's MCP and skill; pointer skills; write `spec/AGENT_SERVICE_API.md`. Done when a fresh Hermes behind the service lists installed apps without being told.
 - ⏳ **Miguel:** take over `wizard-app-manager`; add `wizard.md` to each app in `wizard-app-store` (it becomes the core-apps repo); move DeFleur's image build to `defleur-video`. Done when `wam catalog` lists files, transcriber, browser, secret-drop and defleur-video.
-- 🔨 **James:** desktop layout in `wizard-ux`; native bridge listener (`spec/NATIVE_BRIDGE.md`). Done when Wizard for Mac's Right ⌘ orb works on `wizard-ux`.
+- 🔨 **James + Archimedes:** the desktop UX in `wizard-ux`, including the native desktop app and its hotkeys (`spec/NATIVE_BRIDGE.md`). Done when James uses it as his daily desktop Wizard.
 
 ## Days 3–7: the end-to-end test
 
@@ -35,13 +35,12 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 ## Week 2
 
 - ⏳ **One files root, one transcription slot.** Resolve both collisions ([SYSTEM_APPS.md](SYSTEM_APPS.md)). Owners: Jan (Agent Service attachments), Miguel (Transcriber → slot).
-- ⏳ **Mac payload from `wizard-ux`.** Try Wizard builds its UX payload from `wizard-ux` instead of the old `wizard-mobile`. Merge `mizel-mac` into `try-wizard` `main`. Owner: Miguel.
 - ⏳ **Meeting Recorder and Reader become wizard.md apps.** Owner: Archimedes.
 - ⏳ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes, with James approving the style.
 - ⏳ **Credentials test**: two harnesses sharing one ChatGPT OAuth token on one box. Result → `docs/CREDENTIALS.md` + the break-glass kit. Owners: Miguel + Oscar, write-up Archimedes.
 - ⏳ **First release file**: which version of each repo goes together. Owner: Jan.
 
-## Weeks 3–6: Mac alpha
+## Later: Mac installer (after the components work together)
 
 - **Mac files in a Mac folder** (`~/Wizard`, shared into the VM). See [MAC.md](MAC.md#where-files-live).
 - **Context bridge app.** Wizard reads your existing Claude Code / Codex sessions and project folders, and imports chat-app exports. See [MAC.md](MAC.md#picking-up-where-claude-or-chatgpt-left-off).

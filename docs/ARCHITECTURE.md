@@ -68,7 +68,7 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 | `wizard.md` v0.2, the app format | [spec/WIZARD_MD.md](../spec/WIZARD_MD.md) + `tools/check_wizard_md.py` | shared (Miguel drives) |
 | `apps.json` v1, the installed apps | [spec/APPS_JSON.md](../spec/APPS_JSON.md) | Miguel writes it, Jan reads it |
 | `/wizard/...` API, versioned | [spec/AGENT_SERVICE_API.md](../spec/AGENT_SERVICE_API.md) | Jan |
-| Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) | James (UX) + Miguel (Mac shell) |
+| Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) | James + Archimedes (desktop UX and native app) |
 | Style tokens and shared components | [style/](../style/) | James |
 | Release file (which versions go together) | `releases/` (to create) | Jan |
 
@@ -85,7 +85,7 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 ## Where it runs
 
 All hosts run the same Linux stack: Runtipi, the App Manager, the Agent Service, the agent, the UX server and the apps.
-- **Mac (trial, mass market):** Wizard for Mac runs that stack in a Linux VM (`try-wizard`).
+- **Mac (trial, mass market, later):** a Mac installer runs that same stack in one Linux VM (`try-wizard`). Built after the components work together on Linux.
 - **Always-on:** Mac mini, VPS or Wizard Box. One button moves the whole thing: snapshot, verify, cut over, roll back. Only one host writes at a time.
 - **Phone:** always a client, never the server.
 

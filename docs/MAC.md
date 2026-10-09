@@ -1,4 +1,6 @@
-# The mass-market Mac path
+# The mass-market Mac path (later)
+
+> **Two separate things.** The **desktop UX** (the desktop paradigm in `wizard-ux`, and the native desktop app with its Caps Lock / Right ⌘ hotkeys) is James + Archimedes's work, in progress now. The **Mac installer** (a VM that runs the whole Wizard OS stack on a Mac) is described below and comes later, once the App Manager, Agent Service and UX work together on Linux.
 
 The Mac is where most people try Wizard. Wizard for Mac (`try-wizard`) is a native app that runs the full Wizard OS Linux stack in a small VM and shows the Wizard UX in a native window. It also has system-wide keys:
 
@@ -63,8 +65,4 @@ So:
 
 ## Desktop UX
 
-- Wizard for Mac shows whatever UX the VM serves. Today its payload (`ux-dist.tgz`) is the older **wizard-mobile** React build, so the Right ⌘ orb script clicks `button.voice-fab` / `button.new-thread-fab` in that UI.
-- `wizard-ux` (the current front end) is the target. The switch needs:
-  - the payload built from `wizard-ux`
-  - a desktop layout
-  - the [native bridge](../spec/NATIVE_BRIDGE.md) events, so hotkeys stop depending on CSS class names
+Not part of the installer. The desktop UX and the native desktop app's hotkeys are James + Archimedes's work in `wizard-ux` ([spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md)). When the installer is built, its VM serves that same `wizard-ux` build. The `mizel-mac` prototype ships the older wizard-mobile build.
