@@ -26,7 +26,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Wizard UX, including the desktop UX (James + Archimedes)
 
-- [ ] **Desktop UX** of `wizard-ux`: its own desktop paradigm on the same code (keyboard, mouse and voice), in progress.
+- [x] **Desktop UX** of `wizard-ux`: one codebase, two shells. `web/core/` is shared; `desktop.html` is the Omarchy-style shell (workspaces, auto-tiling, ⌘K, ⌥ keys, ⌥V voice), picked by device so neither shell downloads the other's code. Live at `/wizard-os-home/` (`daily` 60e1489), qa-desktop 45/45. UX side of the native bridge done (v0.1).
 - [ ] **Native desktop app with hotkeys** (Caps Lock Wizard key, Right ⌘ voice) driving `wizard-ux` through the [native bridge](../spec/NATIVE_BRIDGE.md). This is desktop UX work, separate from the Mac installer.
 - [ ] **Apps screen**: catalog, install, open, status from the App Manager API. A separate section for plain Runtipi apps.
 - [ ] Back button contract: Back never exits (see James's standing rule in `wizard-ux`).
