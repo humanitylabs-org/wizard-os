@@ -1,26 +1,40 @@
 # wizard-os
 
-Shared architecture repo for Wizard OS (agreed at the Wizard Dev Council, 9 Oct 2026). One place for the specs, the style guide and the checks, so James's, Jan's and Miguel's agents build against the same contract.
+The shared map of Wizard OS: how the pieces fit, the contracts between them, and what's next. James, Jan and Miguel's agents all build against this repo. Agreed at the Wizard Dev Council, 9 Oct 2026.
 
-## Repos and owners (as agreed 9 Oct)
+**Agents:** read [`AGENTS.md`](AGENTS.md) first.
+
+## Repos and owners
 
 | Repo | Owner | What |
 |---|---|---|
-| `wizard-ux` | James + Archimedes | The front end everywhere: phone app, desktop UX and the native desktop app's hotkeys |
-| `wizard-agent-service` | Jan | Deterministic proxy between any front end and any agent; injects Wizard OS meta-instructions; Hermes unmodified |
-| `wizard-app-manager` | Miguel | Fork of Runtipi + Wizard app store; ships system core apps (Files, Transcription, Notifications, Microphone) |
-| `wizard-os` (this repo) | shared | Architecture, app format, style guide, checks |
-| one repo per app | app author | Tagged `wizard-ai`, contains `wizard.md` |
+| `wizard-ux` | James + Archimedes | The front end everywhere: phone app, desktop UX, and the native desktop app's hotkeys. Includes the Apps screen. |
+| `wizard-agent-service` | Jan | The service between any front end and the agent. Adds the Wizard OS instructions and the installed apps; Hermes stays unmodified. |
+| `wizard-app-manager` | Miguel | Wizard's layer on **stock** Runtipi (no fork): finds `wizard-app` repos, checks `wizard.md`, compiles a Runtipi store, installs through Runtipi's API, writes `apps.json`. |
+| `wizard-app-store` | Miguel | The core-apps repo: Files, Transcriber, Browser, Hermes, Secret Drop. |
+| `wizard-os` (this repo) | shared | Architecture, rollout, decisions, contracts, style, checks. |
+| one repo per app | app author | Root `wizard.md`, tagged `wizard-app`. Example: `defleur-video`. |
+| `try-wizard` | later | The Mac installer. Parked until the pieces above work together. |
 
-## Contents
+## Read in this order
 
-- `spec/WIZARD_MD.md` — the app format (v0.2): what `wizard.md` contains, capability slots (`provides`), shipped skill + pointer skill, the checker's rules, and the discovery chain (topic catalog → compiled Runtipi store → `apps.json` → Agent Service + Wizard UX).
-- `tools/check_wizard_md.py` — automated pass/fail check. `python3 tools/check_wizard_md.py <repo> [--github owner/repo]`
-- `tools/build_store.py` — compiles passing app repos (local paths or `--github-topic wizard-ai`) into a stock Runtipi store layout plus `catalog.json`. Runtipi stays unmodified; nobody hand-merges apps into one store repo.
-- `examples/defleur-video/` — Miguel's DeFleur Video expressed as a v0.2 Wizard app. Passes the checker; its compiled store entry passes the wizard-app-store test suite (47/47, official Runtipi schemas).
+1. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): the pieces and how they connect.
+2. [`docs/DECISIONS.md`](docs/DECISIONS.md): what's locked, what's proposed.
+3. [`docs/ROLLOUT.md`](docs/ROLLOUT.md): what ships when, and what's parked.
+4. [`docs/WORK_OUTSTANDING.md`](docs/WORK_OUTSTANDING.md): open items by owner.
+5. [`docs/SYSTEM_APPS.md`](docs/SYSTEM_APPS.md): system apps, slots, and the files and transcription overlaps.
+6. [`docs/PRIVATE_BETA.md`](docs/PRIVATE_BETA.md): sharing an app with a friend before it's public.
+7. [`docs/MAC.md`](docs/MAC.md): the later Mac installer.
 
-## Next additions
+## Contracts (`spec/`)
 
-- `spec/ARCHITECTURE.md` — the one-page system map (UX → Agent Service → agent; App Manager → apps.json).
-- `style/` — design tokens and components extracted from `wizard-ux`.
-- `spec/CREDENTIALS.md` — one credential per AI provider shared across agents on a host, plus the break-glass kit.
+- [`WIZARD_MD.md`](spec/WIZARD_MD.md): the app format (v0.2) and the checker's rules.
+- [`APPS_JSON.md`](spec/APPS_JSON.md): the installed-apps list the App Manager writes and the Agent Service and UX read.
+- [`AGENT_SERVICE_API.md`](spec/AGENT_SERVICE_API.md): the `/wizard/...` API.
+- [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
+
+## Tools
+
+- `tools/check_wizard_md.py <repo> [--github owner/repo]`: pass/fail check for an app. The App Manager and each app's CI run copies of it; the rules must stay identical.
+- `tools/build_store.py`: compiles passing app repos into a stock Runtipi store (the App Manager does this live).
+- `examples/defleur-video/`: DeFleur Video as a v0.2 app.
