@@ -14,9 +14,10 @@ Shared architecture repo for Wizard OS (agreed at the Wizard Dev Council, 9 Oct 
 
 ## Contents
 
-- `spec/WIZARD_MD.md` — the app format: what `wizard.md` contains, the checker's rules, and the discovery split (App Manager writes `apps.json`, Agent Service registers MCPs + skills, Wizard UX opens views).
+- `spec/WIZARD_MD.md` — the app format (v0.2): what `wizard.md` contains, capability slots (`provides`), shipped skill + pointer skill, the checker's rules, and the discovery chain (topic catalog → compiled Runtipi store → `apps.json` → Agent Service + Wizard UX).
 - `tools/check_wizard_md.py` — automated pass/fail check. `python3 tools/check_wizard_md.py <repo> [--github owner/repo]`
-- `examples/defleur-video/` — Miguel's DeFleur Video expressed as a v0.1 Wizard app. Passes the checker.
+- `tools/build_store.py` — compiles passing app repos (local paths or `--github-topic wizard-ai`) into a stock Runtipi store layout plus `catalog.json`. Runtipi stays unmodified; nobody hand-merges apps into one store repo.
+- `examples/defleur-video/` — Miguel's DeFleur Video expressed as a v0.2 Wizard app. Passes the checker; its compiled store entry passes the wizard-app-store test suite (47/47, official Runtipi schemas).
 
 ## Next additions
 

@@ -1,5 +1,5 @@
 ---
-wizard: 0.1
+wizard: 0.2
 id: defleur-video
 name: DeFleur Video
 type: service
@@ -16,6 +16,10 @@ mcp:
   port: 8787
   transport: streamable-http
 skill: skill/SKILL.md
+provides: [video-editing, short-form-video]
+recommends:
+  agent: hermes
+  model: claude-opus-5-5
 system: false
 uses: [transcriber, browser, files]
 needs: [files]

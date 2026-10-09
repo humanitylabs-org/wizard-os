@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a repo against the wizard.md v0.1 app format. Usage: check_wizard_md.py <repo-dir> [--github owner/repo]"""
+"""Check a repo against the wizard.md app format (v0.1/v0.2). Usage: check_wizard_md.py <repo-dir> [--github owner/repo]"""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,8 @@ import yaml
 
 TYPES = {"agent", "service", "view", "external"}
 NEEDS = {"mic", "system-audio", "camera", "notifications", "files"}
-SPECS = {0.1}
+SPECS = {0.1, 0.2}
+SLOT = re.compile(r"[a-z0-9][a-z0-9-]{1,40}")
 
 
 def front_matter(text: str) -> dict:
@@ -73,6 +74,10 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
         rule("view declared", bool(v.get("path")) and bool(v.get("port")), json.dumps(v))
     bad = [n for n in d.get("needs") or [] if n not in NEEDS and not str(n).startswith("credentials:")]
     rule("needs known", not bad, ", ".join(map(str, bad)))
+    if d.get("provides") is not None:
+        pv = d.get("provides")
+        badp = [p for p in (pv if isinstance(pv, list) else [pv]) if not SLOT.fullmatch(str(p))]
+        rule("provides are slot ids", isinstance(pv, list) and not badp, ", ".join(map(str, badp)))
     if github:
         r = subprocess.run(["gh", "api", f"repos/{github}/topics", "--jq", ".names"], capture_output=True, text=True)
         rule("GitHub topic wizard-ai", "wizard-ai" in r.stdout, r.stdout.strip() or r.stderr.strip())
