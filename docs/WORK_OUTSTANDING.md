@@ -52,4 +52,4 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 - [ ] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.
-- [x] GitHub tag: `wizard-app` applied (DECISIONS #4); James to confirm.
+- [x] GitHub tag: `wizard-app` (approved by James, 9 Oct).
