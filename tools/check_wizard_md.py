@@ -55,6 +55,17 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     for key in ("config", "compose"):
         p = rt.get(key)
         rule(f"runtime.{key} exists", bool(p) and (repo / p).is_file(), str(p))
+    cfg_path = repo / str(rt.get("config") or "")
+    if rt.get("config") and cfg_path.is_file():
+        import time as _t
+        try:
+            cfg = json.loads(cfg_path.read_text())
+            now_ms = int(_t.time() * 1000)
+            bad_ts = [k for k in ("created_at", "updated_at") if isinstance(cfg.get(k), (int, float)) and cfg[k] > now_ms]
+            rule("runtipi config id matches", cfg.get("id") == d.get("id"), f"{cfg.get('id')} vs {d.get('id')}")
+            rule("runtipi timestamps not in future", not bad_ts, ", ".join(bad_ts))
+        except Exception as e:  # noqa: BLE001
+            rule("runtipi config parses", False, str(e))
     if t in {"agent", "service", "external"}:
         m = d.get("mcp") or {}
         rule("mcp declared", bool(m.get("path")) and bool(m.get("port")), json.dumps(m))
@@ -80,7 +91,7 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
         rule("provides are slot ids", isinstance(pv, list) and not badp, ", ".join(map(str, badp)))
     if github:
         r = subprocess.run(["gh", "api", f"repos/{github}/topics", "--jq", ".names"], capture_output=True, text=True)
-        rule("GitHub topic wizard-ai", "wizard-ai" in r.stdout, r.stdout.strip() or r.stderr.strip())
+        rule("GitHub topic wizard-os-app or wizard-ai", ("wizard-os-app" in r.stdout or "wizard-ai" in r.stdout), r.stdout.strip() or r.stderr.strip())
     return out
 
 

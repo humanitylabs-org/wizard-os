@@ -1,9 +1,12 @@
+"""NOTE: superseded by wizard-app-manager (wam refresh), which adds install, apps.json and serving the store to Runtipi.
+Kept as a dependency-free one-shot compiler.
+"""
 #!/usr/bin/env python3
 """Compile Wizard app repos into a stock Runtipi app store plus a catalog.
 
 Usage:
   build_store.py --out <dir> <repo-dir> [<repo-dir> ...]      # local checkouts
-  build_store.py --out <dir> --github-topic wizard-ai [--limit 50]
+  build_store.py --out <dir> --github-topic wizard-os-app [--limit 50]
 
 Each repo must pass check_wizard_md.py. Passing apps are written as
   <out>/apps/<id>/config.json, docker-compose.yml, metadata/description.md[, logo.jpg]
