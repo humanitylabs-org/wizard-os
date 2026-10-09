@@ -32,6 +32,7 @@ version: 0.6.5
 summary: Edit a talking-head video into a finished vertical short.
 license: MIT
 source: https://github.com/humanitylabs-org/defleur-video
+publisher: npub1…            # optional; the Nostr key that publishes this app (stage 2+)
 
 runtime:                    # how the App Manager installs it (Runtipi today)
   kind: runtipi
@@ -76,6 +77,8 @@ health: /healthz
 7. Every `needs` entry is from the known capability list.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-os-app` or `wizard-ai` topic.
+10. `publisher`, if present, is a valid `npub1…`.
+11. App Manager only, for apps found on Nostr: the announcement's signature verifies, and if `publisher` is declared, the signer is that key or a listed maintainer.
 
 ## Skills: shipped skill + pointer skill
 
@@ -93,4 +96,8 @@ health: /healthz
 
 ## GitHub now, Nostr later
 
-Catalog = GitHub topic search + `wizard.md` at repo root. The Nostr path (NIP-34 repo announcements, ngit, GRASP hosting, Wizard ID = npub) replaces the catalog source later. `wizard.md`, the compiled store and `apps.json` do not change; only the catalog fetcher does.
+Catalog = GitHub topic search + `wizard.md` at repo root. Nostr is **added** as a second source in stages ([ROLLOUT.md](../docs/ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day)); `wizard.md`, the compiled store and `apps.json` do not change, only the catalog fetcher does.
+
+How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-os-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The App Manager verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
+
+Every catalog row records `commit`, `found_via` (`github` | `nostr`), `publisher` and, for Nostr, the announcement event id. Installs pin to that commit.

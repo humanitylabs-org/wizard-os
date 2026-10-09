@@ -20,6 +20,9 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
 - [ ] Uninstall keeps data. Verify Runtipi's behaviour and add an explicit `--delete-data`.
+- [x] **Nostr catalog source behind a flag** (Archimedes, 9 Oct): `wam/nostr.py`, signature-verified NIP-34 discovery, publisher rule, GitHub/Nostr de-dupe, `commit` recorded per catalog row. Off unless `WAM_NOSTR=1`. Tested against four live relays.
+- [ ] **Pinned updates** (needed by stage 2): `wam update <id>` shows the commit diff, re-runs the checker, installs only after owner approval. Today a refresh moves to the latest commit.
+- [ ] **Stage 2 publish tooling**: one command that posts the NIP-34 announcement for an app (GitHub clone URL, `t=wizard-os-app`), signed through Wizard Authority, plus the Humanity Labs curated list.
 
 ## Wizard UX (James, Archimedes builds)
 

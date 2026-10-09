@@ -55,13 +55,28 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 |---|---|
 | Vacation mode (VPS takes over, home box gets a copy) | One Mac → VPS move verified |
 | Monetization (25% on the call vs 20% in the old roadmap) | ~20 apps and a first outside developer |
-| Nostr app catalog / Wizard ID / friends' apps | App catalog works on GitHub; only the catalog fetcher changes |
+| Nostr app discovery, stages 2–4 ([below](#nostr-path-github-to-nostr-without-a-migration-day)) | Stage 2: Wizard ID ships. Stage 3: first outside developer or ~20 apps. Stage 4: GitHub actually hurts |
 | ~300 preloaded Runtipi apps as a separate section | Apps screen ships |
 | Omarchy desktop | After the Mac |
 | Android VM | Someone has a spare Pixel afternoon; the phone stays a client |
 | Rugix atomic updates | Wizard Box appliance work starts |
 | Spynel coordination experiment | Direct route works in daily use |
 | Migration from an existing server directory | After the mass-market Mac path |
+
+## Nostr path: GitHub to Nostr without a migration day
+
+Approved by James, 9 Oct 2026 ([DECISIONS](DECISIONS.md) #16, #21). Nostr is **added** as a discovery source and GitHub shrinks to one place the code is hosted. Nothing moves on a set date. Only the App Manager's catalog fetcher changes; `wizard.md`, the compiled store and `apps.json` stay the same.
+
+Why bother: a GitHub topic is public and unsigned, so anyone can tag a repo (`wizard-ai` already has an unrelated one). A Nostr announcement (NIP-34, kind 30617, hashtag `t=wizard-os-app`) is **signed by its publisher**, and signed lists give us curated stores and friends' apps. That's the trust layer.
+
+| Stage | Unparks when | What changes | Owner |
+|---|---|---|---|
+| 1. GitHub only | now, until the v0.2 contracts go public | Lock the `wizard-os-app` topic. Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
+| 2. Dual-publish | **Wizard ID ships** (the phone-signing slice) | `wizard.md` gains optional `publisher: npub1…`. Publishing an app also posts a NIP-34 announcement whose `clone` URL is still GitHub. `wam` reads both sources, lists the same repo once, and skips any Nostr-found app whose signer isn't the declared publisher. Humanity Labs signs the official list. | Miguel (App Manager), Archimedes (publish tooling) |
+| 3. Nostr primary | **first outside developer or ~20 apps** (same trigger as monetization) | Nostr announcements and signed lists become the main catalog. The Apps screen shows verified publishers and the apps friends use. GitHub topic search stays as a fallback. | Miguel + James (Apps screen) |
+| 4. Multi-host | **GitHub actually hurts**: a takedown, rate limits, private-repo cost, or developers who won't use it | Apps add a GRASP clone URL beside GitHub's (`relay.ngit.dev`, `gitnostr.com`, or our own). GitHub becomes one copy of several. | App authors; we run one GRASP host |
+
+**Rule from stage 2 on: pin installs, gate updates.** On Nostr, a publisher's key is write authority over every copy of their repo; one signed state event can rewind a branch on every host within seconds. So installs pin to the exact commit the checker passed (the catalog already records `commit`), and an update only lands after it re-passes the checker and the owner approves it. Never auto-follow the latest signed state.
 
 ## Retire
 
