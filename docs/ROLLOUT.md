@@ -70,7 +70,7 @@ Why bother: a GitHub topic is public and unsigned, so anyone can tag a repo (`wi
 
 | Stage | Unparks when | What changes | Owner |
 |---|---|---|---|
-| 1. GitHub only | now, until the v0.2 contracts go public | Lock the `wizard-app` topic. Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
+| 1. GitHub only | now, until the v0.2 contracts go public | Apps use the approved `wizard-app` topic (on Nostr, the same `wizard-app` hashtag). Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
 | 2. Dual-publish | **Wizard ID ships** (the phone-signing slice) | `wizard.md` gains optional `publisher: npub1…`. Publishing an app also posts a NIP-34 announcement whose `clone` URL is still GitHub. `wam` reads both sources, lists the same repo once, and skips any Nostr-found app whose signer isn't the declared publisher. Humanity Labs signs the official list. | Miguel (App Manager), Archimedes (publish tooling) |
 | 3. Nostr primary | **first outside developer or ~20 apps** (same trigger as monetization) | Nostr announcements and signed lists become the main catalog. The Apps screen shows verified publishers and the apps friends use. GitHub topic search stays as a fallback. | Miguel + James (Apps screen) |
 | 4. Multi-host | **GitHub actually hurts**: a takedown, rate limits, private-repo cost, or developers who won't use it | Apps add a GRASP clone URL beside GitHub's (`relay.ngit.dev`, `gitnostr.com`, or our own). GitHub becomes one copy of several. | App authors; we run one GRASP host |

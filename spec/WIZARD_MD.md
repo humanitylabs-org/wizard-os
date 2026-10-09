@@ -6,9 +6,9 @@ Status: draft for James, Jan and Miguel. Source: Wizard Dev Council, 9 Oct 2026,
 - "the app has to ship with an MCP and with a skill" (Miguel)
 - "any wizard can verify a WizardMD. Does it qualify? … Pass, pass, pass" (James)
 - "it's just checks rather … what I would not want is any sort of human review" (Miguel)
-- "each app its own repository tagged with wizard AI" + "monitor all GitHub repositories with this tag and include them in a wizard apps interface that is installable using RunTP" (James/Jan)
+- "each app its own repository tagged with wizard AI" (the call's working name; the approved tag is `wizard-app`) + "monitor all GitHub repositories with this tag and include them in a wizard apps interface that is installable using RunTP" (James/Jan)
 
-A repository is a Wizard app when its root contains a `wizard.md` that passes the checker. The GitHub topic `wizard-app` (proposed 9 Oct 2026; `wizard-ai` still searched during the transition) makes it discoverable; it is not proof of compatibility (the topic is public and already used by unrelated repos). No human review.
+A repository is a Wizard app when its root contains a `wizard.md` that passes the checker. The GitHub topic `wizard-app` (approved by James 9 Oct 2026, [DECISIONS](../docs/DECISIONS.md) #4; `wizard-ai` still searched during the transition) makes it discoverable; it is not proof of compatibility (the topic is public and already used by unrelated repos). No human review.
 
 ## Changes from v0.1
 
