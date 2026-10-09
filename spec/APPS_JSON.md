@@ -36,6 +36,7 @@ The one list of installed Wizard apps.
 ```
 
 **Rules:**
+- `view` is `null` for apps without a screen (MCP-only services such as DeFleur and hello-wizard live in the agent, not the launcher). For apps with a screen it is `{"url": "/apps/<id>/", "route": "/apps/<id>/", "upstream": "http://<host>:<port><path>"}`. `url` is what the Agent Service's `GET /wizard/v1/apps` hands the Wizard UX launcher; `upstream` is where the host proxies that route.
 - Readers ignore unknown fields. Adding a field is not a version bump; removing or renaming one is.
 - `status` is Runtipi's status (`running`, `stopped`, `installing`, …). Apps that are installed but missing from the compiled store still appear, with only their id, urn and status.
 - `mcp.url` is reachable from the host; `mcp.internal` is reachable from containers on Runtipi's network. The Agent Service uses whichever matches where the agent runs.
