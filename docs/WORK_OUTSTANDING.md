@@ -32,6 +32,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Native desktop app with hotkeys** (Caps Lock Wizard key, Right ⌘ voice) driving `wizard-ux` through the [native bridge](../spec/NATIVE_BRIDGE.md). This is desktop UX work, separate from the Mac installer.
 - [ ] **Apps screen**: catalog, install, open, status from the App Manager API. A separate section for plain Runtipi apps.
 - [ ] Back button contract: Back never exits (see James's standing rule in `wizard-ux`).
+  - Hosted app views need a spec'd Back hook in `spec/NATIVE_BRIDGE.md` and the `hello-wizard` template: the shell asks the focused app for one back step and the app answers `handled` or `not handled`, so the shell knows when to take its own step. Today `wizard-ux` bridges Legacy Wizard's `__wizardCloseOverlay` with a layout-signature guess (`LEGACY-BRIDGE` in `web/app.js`); delete that once the contract lands or Legacy Wizard retires.
 
 ## Mac installer (later, once the components work together)
 
