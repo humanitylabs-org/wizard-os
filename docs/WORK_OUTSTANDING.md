@@ -4,8 +4,6 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Agent Service (Jan)
 
-- [ ] Serve `GET /wizard/os-apps` (the contents of `~/.wizard-os/apps.json`, or 404 when there's no App Manager) so the Wizard UX Apps tab shows installed apps. The UX side is built and in preview; it hides the section on 404. Until then the preview reaches the App Manager through the tailnet gateway.
-
 - [ ] **Wizard OS instruction injection.** Prepend "you are an agent inside Wizard OS" plus the installed-app summary to every agent run. Hermes stays unmodified.
 - [ ] **`apps.json` reader.** Watch `~/.wizard-os/apps.json` (or `GET :8790/api/apps`). On change, register each app's MCP with the agent and load its skill.
 - [ ] **Pointer skills.** One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
