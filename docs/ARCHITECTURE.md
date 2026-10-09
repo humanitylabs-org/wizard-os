@@ -68,12 +68,14 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 | `wizard.md` v0.2, the app format | [spec/WIZARD_MD.md](../spec/WIZARD_MD.md) + `tools/check_wizard_md.py` | shared (Miguel drives) |
 | `apps.json` v1, the installed apps | [spec/APPS_JSON.md](../spec/APPS_JSON.md) | Miguel writes it, Jan reads it |
 | `/wizard/...` API, versioned | [spec/AGENT_SERVICE_API.md](../spec/AGENT_SERVICE_API.md) | Jan |
+| `settings.json` + `GET /wizard/v1/bootstrap` (who, agent name, clock, capabilities) | [spec/SETTINGS_AND_BOOTSTRAP.md](../spec/SETTINGS_AND_BOOTSTRAP.md) | Jan |
 | Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) | James + Archimedes (desktop UX and native app) |
 | Style tokens and shared components | [style/](../style/) | James |
 | Release file (which versions go together) | `releases/` (to create) | Jan |
 
 ## Rules everyone builds to
 
+- **Nothing personal is built into the UX.** Owner name, agent name, time zone, day start and the app list come from `~/.wizard-os/settings.json`, `apps.json` and `launcher.json` through the Agent Service ([spec](../spec/SETTINGS_AND_BOOTSTRAP.md)). The owner's name lives here, not in one agent, so it survives swapping agents.
 - **Runtipi stays stock and Hermes stays unmodified.** Wizard behaviour lives in the Agent Service, the App Manager, the UX or an app.
 - **MCP over HTTP is the one way agents use apps.** One generic `wizard` CLI can call any app's MCP for humans and scripts.
 - **One file root.** Every app sees the same user files folder ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
