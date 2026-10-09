@@ -9,7 +9,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | 1 | Runtipi stays **stock**. Wizard adds a layer (`wizard-app-manager`) that compiles app repos into a Runtipi store and installs through Runtipi's API. No fork. | Approved by James, confirm Miguel |
 | 2 | Repos: `wizard-ux` (James), `wizard-agent-service` (Jan), `wizard-app-manager` (Miguel), `wizard-os` (shared), one repo per app. | Locked on the call |
 | 3 | An app is a repo with a root `wizard.md` (v0.2), stock Runtipi files, an MCP endpoint and a skill. A tag makes it found; only a passing check makes it listed. | Approved by James, confirm Miguel |
-| 4 | Discovery tag: **`wizard-os-app`** proposed (we own the name, nobody uses it). `wizard-ai` is generic and already used by an unrelated repo, and stays searched during the transition. | Proposed, open |
+| 4 | Discovery tag: **`wizard-app`** (singular, like `obsidian-plugin` and `raycast-extension`: the tag says what one repo *is*). Nobody else uses it. `wizard-ai` stays searched during the transition. Chosen over `wizard-apps` (reads as a collection repo) and `wizardos-app` (longer, and "Wizard OS" is the developer name, not what users see). | Recommended by Archimedes, applied; James to confirm |
 | 5 | The Agent Service is a proxy that adds Wizard OS instructions; Hermes stays unmodified. It reads `apps.json` and connects each app's MCP and skill. | Locked on the call |
 | 6 | Agent Service cutover to `wizard-agent-service`: done 9 Oct. | Done |
 | 7 | One web UX everywhere; desktop is a layout of `wizard-ux`. Native shells stay thin (Android WebView, Wizard for Mac WKWebView). No Electron. | Approved by James |

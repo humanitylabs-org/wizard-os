@@ -6,7 +6,7 @@ Kept as a dependency-free one-shot compiler.
 
 Usage:
   build_store.py --out <dir> <repo-dir> [<repo-dir> ...]      # local checkouts
-  build_store.py --out <dir> --github-topic wizard-os-app [--limit 50]
+  build_store.py --out <dir> --github-topic wizard-app [--limit 50]
 
 Each repo must pass check_wizard_md.py. Passing apps are written as
   <out>/apps/<id>/config.json, docker-compose.yml, metadata/description.md[, logo.jpg]

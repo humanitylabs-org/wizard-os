@@ -51,7 +51,7 @@ Apps come in four types: view, service, agent and external. An app can declare:
 - the agent and model it **recommends**
 
 **Wizard App Manager** (`wizard-app-manager`). The Wizard layer on top of Runtipi. It does five things:
-1. Finds repos tagged `wizard-os-app` on GitHub, plus any configured sources. A Nostr source (signed NIP-34 announcements with the same tag) is built and off until stage 2 of the [Nostr path](ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day).
+1. Finds repos tagged `wizard-app` on GitHub, plus any configured sources. A Nostr source (signed NIP-34 announcements with the same tag) is built and off until stage 2 of the [Nostr path](ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day).
 2. Runs the checker on each one.
 3. Compiles the ones that pass into a normal Runtipi store, which it serves to Runtipi as git.
 4. Installs apps through Runtipi's own API.

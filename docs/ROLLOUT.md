@@ -67,11 +67,11 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 
 Approved by James, 9 Oct 2026 ([DECISIONS](DECISIONS.md) #16, #21). Nostr is **added** as a discovery source and GitHub shrinks to one place the code is hosted. Nothing moves on a set date. Only the App Manager's catalog fetcher changes; `wizard.md`, the compiled store and `apps.json` stay the same.
 
-Why bother: a GitHub topic is public and unsigned, so anyone can tag a repo (`wizard-ai` already has an unrelated one). A Nostr announcement (NIP-34, kind 30617, hashtag `t=wizard-os-app`) is **signed by its publisher**, and signed lists give us curated stores and friends' apps. That's the trust layer.
+Why bother: a GitHub topic is public and unsigned, so anyone can tag a repo (`wizard-ai` already has an unrelated one). A Nostr announcement (NIP-34, kind 30617, hashtag `t=wizard-app`) is **signed by its publisher**, and signed lists give us curated stores and friends' apps. That's the trust layer.
 
 | Stage | Unparks when | What changes | Owner |
 |---|---|---|---|
-| 1. GitHub only | now, until the v0.2 contracts go public | Lock the `wizard-os-app` topic. Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
+| 1. GitHub only | now, until the v0.2 contracts go public | Lock the `wizard-app` topic. Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
 | 2. Dual-publish | **Wizard ID ships** (the phone-signing slice) | `wizard.md` gains optional `publisher: npub1…`. Publishing an app also posts a NIP-34 announcement whose `clone` URL is still GitHub. `wam` reads both sources, lists the same repo once, and skips any Nostr-found app whose signer isn't the declared publisher. Humanity Labs signs the official list. | Miguel (App Manager), Archimedes (publish tooling) |
 | 3. Nostr primary | **first outside developer or ~20 apps** (same trigger as monetization) | Nostr announcements and signed lists become the main catalog. The Apps screen shows verified publishers and the apps friends use. GitHub topic search stays as a fallback. | Miguel + James (Apps screen) |
 | 4. Multi-host | **GitHub actually hurts**: a takedown, rate limits, private-repo cost, or developers who won't use it | Apps add a GRASP clone URL beside GitHub's (`relay.ngit.dev`, `gitnostr.com`, or our own). GitHub becomes one copy of several. | App authors; we run one GRASP host |

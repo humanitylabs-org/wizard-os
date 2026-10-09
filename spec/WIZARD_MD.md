@@ -8,7 +8,7 @@ Status: draft for James, Jan and Miguel. Source: Wizard Dev Council, 9 Oct 2026,
 - "it's just checks rather … what I would not want is any sort of human review" (Miguel)
 - "each app its own repository tagged with wizard AI" + "monitor all GitHub repositories with this tag and include them in a wizard apps interface that is installable using RunTP" (James/Jan)
 
-A repository is a Wizard app when its root contains a `wizard.md` that passes the checker. The GitHub topic `wizard-os-app` (proposed 9 Oct 2026; `wizard-ai` still searched during the transition) makes it discoverable; it is not proof of compatibility (the topic is public and already used by unrelated repos). No human review.
+A repository is a Wizard app when its root contains a `wizard.md` that passes the checker. The GitHub topic `wizard-app` (proposed 9 Oct 2026; `wizard-ai` still searched during the transition) makes it discoverable; it is not proof of compatibility (the topic is public and already used by unrelated repos). No human review.
 
 ## Changes from v0.1
 
@@ -76,7 +76,7 @@ health: /healthz
 6. `view` present for type view.
 7. Every `needs` entry is from the known capability list.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
-9. Optional online check (`--github owner/repo`): the repo has the `wizard-os-app` or `wizard-ai` topic.
+9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
 10. `publisher`, if present, is a valid `npub1…`.
 11. App Manager only, for apps found on Nostr: the announcement's signature verifies, and if `publisher` is declared, the signer is that key or a listed maintainer.
 
@@ -87,7 +87,7 @@ health: /healthz
 
 ## Discovery: catalog → store → apps.json
 
-- **Catalog (App Manager):** GitHub topic search `topic:wizard-os-app` (and `topic:wizard-ai` during the transition), filtered to repos whose `wizard.md` passes the checker, cached. Each catalog row records the repo, commit and checker result.
+- **Catalog (App Manager):** GitHub topic search `topic:wizard-app` (and `topic:wizard-ai` during the transition), filtered to repos whose `wizard.md` passes the checker, cached. Each catalog row records the repo, commit and checker result.
 - **Store (App Manager):** the catalog is compiled into a Runtipi-compatible store (`apps/<id>/config.json`, `docker-compose.yml`, `metadata/`). Runtipi stays stock and unmodified; it just points at the compiled store. Nobody merges app repos into a monorepo by hand. Reference implementation: `tools/build_store.py`.
 - **Installed registry (App Manager):** on install/update/remove, write `/wizard-os/apps.json` (id, type, version, MCP URL, skill path, view route, provides, system, health).
 - **Agent Service (Jan):** reads `apps.json`, registers each MCP with the agent, links each shipped skill, regenerates pointer skills, and injects the installed-app list into the Wizard OS meta-instructions. Hermes stays unmodified.
@@ -98,6 +98,6 @@ health: /healthz
 
 Catalog = GitHub topic search + `wizard.md` at repo root. Nostr is **added** as a second source in stages ([ROLLOUT.md](../docs/ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day)); `wizard.md`, the compiled store and `apps.json` do not change, only the catalog fetcher does.
 
-How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-os-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The App Manager verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
+How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The App Manager verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
 
 Every catalog row records `commit`, `found_via` (`github` | `nostr`), `publisher` and, for Nostr, the announcement event id. Installs pin to that commit.
