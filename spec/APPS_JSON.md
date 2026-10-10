@@ -41,4 +41,5 @@ The one list of installed Wizard apps.
 - `status` is Runtipi's status (`running`, `stopped`, `installing`, …). Apps that are installed but missing from the compiled store still appear, with only their id, urn and status.
 - `mcp.url` is reachable from the host; `mcp.internal` is reachable from containers on Runtipi's network. The Agent Service uses whichever matches where the agent runs.
 - `skill` is a local path to the app's full skill. The Agent Service builds its own short pointer skills from `provides`.
+- `grants` (top level, optional): the App Manager's app-to-app grants, same objects as `state/wizard-grants.json`, never tokens ([PERMISSIONS.md](PERMISSIONS.md)).
 - Writes are atomic (temp file + rename). Readers may watch the file.
