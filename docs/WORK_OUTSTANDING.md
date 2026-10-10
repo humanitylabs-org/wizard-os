@@ -2,9 +2,11 @@
 
 Components still to build. Pick one up: put your name on it in a PR, and close it with evidence. Ordered roughly by when it's needed.
 
-## Agent Service (Jan)
+## Agent Service (Archimedes builds, Jan reviews; DECISIONS #30)
 
-- [ ] **Wizard OS instruction injection.** Prepend "you are an agent inside Wizard OS" plus the installed-app summary to every agent run. Hermes stays unmodified.
+- [x] **Runs on stock Hermes** (Archimedes, 9 Oct): capability-aware runs, helper follow-through without a Hermes patch, settings/bootstrap/apps endpoints, orb router, serves Wizard UX. James's daily driver since 9 Oct; `main` = `2634564`, CI green.
+- [ ] **Container port** (Archimedes, 🔨): one Runtipi app = Agent Service + Wizard UX, `wizard.md` with `provides: [shell]`; Hermes at `hermes-agent-engine:8642`; sessions read from a read-only Hermes data volume; voice via the `transcription` slot; uploads into `media/`; every host path becomes a setting. Done when it passes the end-to-end test on a fresh stock-Runtipi VM.
+- [ ] **Wizard OS instruction injection.** Prepend "you are an agent inside Wizard OS" plus the installed-app summary to every agent run. Hermes stays unmodified. Built: [wizard-agent-service#2](https://github.com/humanitylabs-org/wizard-agent-service/pull/2), rebased on main, 183/183 tests; Jan to review.
 - [ ] **`apps.json` reader.** Watch `~/.wizard-os/apps.json` (or `GET :8790/api/apps`). On change, register each app's MCP with the agent and load its skill.
 - [ ] **Pointer skills.** One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
 - [ ] **`spec/AGENT_SERVICE_API.md`.** The versioned `/wizard/...` contract the UX relies on.
@@ -36,6 +38,15 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Apps screen**: catalog, install, open, status from the App Manager API. A separate section for plain Runtipi apps.
 - [ ] Back button contract: Back never exits (see James's standing rule in `wizard-ux`).
   - Hosted app views need a spec'd Back hook in `spec/NATIVE_BRIDGE.md` and the `hello-wizard` template: the shell asks the focused app for one back step and the app answers `handled` or `not handled`, so the shell knows when to take its own step. Today `wizard-ux` bridges Legacy Wizard's `__wizardCloseOverlay` with a layout-signature guess (`LEGACY-BRIDGE` in `web/app.js`); delete that once the contract lands or Legacy Wizard retires.
+
+## Shell customization (James + Archimedes, later; [spec/SHELL.md](../spec/SHELL.md))
+
+- [ ] **Shell slot**: `wam` refuses to uninstall the last `provides: [shell]` app; `wam bootstrap` installs the default shell.
+- [ ] **Theme / skin file** (`theme.json` over the style tokens): look changes on phone and desktop without a rebuild, survives updates.
+- [ ] **Overlay folder**: user CSS/JS and per-view overrides loaded last; a broken overlay starts with it off and names the file.
+- [ ] **Customize skill** so the owner's agent edits settings, layout, theme and overlay safely.
+- [ ] **Move the review screens out** (Day/Week/Month) into their own view apps; the shell keeps only what every screen relies on.
+- [ ] **App graph in the Apps screen** (from Miguel's Runtipi branch): interface → agent → system apps each one uses, with live status.
 
 ## Mac installer (later, once the components work together)
 

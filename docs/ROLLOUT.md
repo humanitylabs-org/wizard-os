@@ -10,7 +10,8 @@
   - find → check → compile → Runtipi pull → install → `apps.json` → agent calls the app's MCP
   - also tested: `install.sh`, uninstall/reinstall, and the HTTP API
 - ✅ **DeFleur Video in its own repo** (`defleur-video`): full history, root `wizard.md`, and a CI check that passes.
-- ⏳ **Jan:** instruction injection; read `apps.json` and connect each app's MCP and skill; pointer skills; write `spec/AGENT_SERVICE_API.md`. Done when a fresh Hermes behind the service lists installed apps without being told.
+- 🔨 **Archimedes (Jan reviews):** Agent Service + Wizard UX as one Runtipi app (`provides: [shell]`), staged on a fresh stock-Runtipi VM, then Telos cuts over with rollback ready. Done when the end-to-end test passes on the VM.
+- ⏳ **Jan:** review instruction injection (wizard-agent-service#2); read `apps.json` and connect each app's MCP and skill; pointer skills; write `spec/AGENT_SERVICE_API.md`. Done when a fresh Hermes behind the service lists installed apps without being told.
 - ✅ **Miguel: every app in its own repo, listed in the index** (9 Oct). Files, Transcriber, Browser, Secret Drop, Hermes Agent, Hermes Frontend 3, AI Accounts and DeFleur are at [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps).
 - ⏳ **Miguel:** App Manager installs from the index and its API is locked down; move DeFleur's image build to `defleur-video`.
 - 🔨 **James + Archimedes:** the desktop UX in `wizard-ux`, including the native desktop app and its hotkeys (`spec/NATIVE_BRIDGE.md`). Done when James uses it as his daily desktop Wizard.
@@ -40,6 +41,10 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 - ⏳ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes, with James approving the style.
 - ⏳ **Credentials test**: two harnesses sharing one ChatGPT OAuth token on one box. Result → `docs/CREDENTIALS.md` + the break-glass kit. Owners: Miguel + Oscar, write-up Archimedes.
 - ⏳ **First release file**: which version of each repo goes together. Owner: Jan.
+
+## Weeks 3–4: shell customization
+
+- ⏳ **Shell slot, theme file, overlay folder, customize skill** ([spec/SHELL.md](../spec/SHELL.md)). Owners: James + Archimedes. Done when a theme and an overlay survive a shell update.
 
 ## Later: Mac installer (after the components work together)
 

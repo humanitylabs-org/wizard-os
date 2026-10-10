@@ -2,6 +2,14 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Oct 2026 — James: shell, Agent Service owner, stock Runtipi
+
+| # | Decision | Status |
+|---|---|---|
+| 29 | **The shell.** `wizard-ux` is the system front end and fills a `shell` slot (`system: true`, `provides: [shell]`). Every box has exactly one active shell; the App Manager never removes the last one. Other screens are views (normal apps). Owners customize through settings, layout, theme and overlay files that survive updates, never by forking the shell ([spec/SHELL.md](../spec/SHELL.md)). Theme and overlay are later work. | Proposed by James |
+| 30 | **Agent Service container port: Archimedes**, with Jan reviewing. Package `wizard-agent-service` + `wizard-ux` as one Runtipi app that talks to the `hermes-agent` app; Jan keeps the `/wizard/...` API contract. `main` is now the stock-Hermes build James runs daily (`2634564`). | James |
+| 31 | **Re #1 and wizard-app-manager#5 (Runtipi fork).** Proposal to keep Runtipi stock: the index-backed store moves into `wam`, the Wizard UX Apps screen becomes the place to browse and install, Runtipi's dashboard stays admin/break-glass, and the "Open port" fix goes upstream. Discussion: [wizard-app-manager#6](https://github.com/humanitylabs-org/wizard-app-manager/issues/6). | Proposed by James; Miguel + Oscar to answer |
+
 ## 9 Oct 2026 (evening) — Miguel: index, one repo per app, categories
 
 | # | Decision | Status |
