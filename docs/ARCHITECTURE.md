@@ -66,7 +66,7 @@ Its API listens on the box only and needs a token to install or remove apps.
 
 A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 
-**Runtipi.** Stock, unforked. It's a component that runs containers. We use its store format and its API, so its updates stay free.
+**Runtipi.** A thin fork (DECISIONS #32): upstream Runtipi plus a small backend patch (index-backed store, Wizard categories, and later permission-aware networking). Its own screens stay stock and serve as admin/break-glass. The image is a drop-in for `runtipi/runtipi`, so any box can go back to stock by changing one image tag. Fixes go upstream wherever possible.
 
 ## Contracts
 
@@ -81,7 +81,7 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 
 ## Rules everyone builds to
 
-- **Runtipi stays stock and Hermes stays unmodified.** Wizard behaviour lives in the Agent Service, the App Manager, the UX or an app.
+- **Hermes stays unmodified; Runtipi carries only the thin, reversible App Manager patch (#32).** Wizard behaviour lives in the Agent Service, the App Manager, the UX or an app.
 - **MCP over HTTP is the one way agents use apps.** One generic `wizard` CLI can call any app's MCP for humans and scripts.
 - **One file root.** Every app sees the same user files folder ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
 - **One provider per slot by default.** Two apps can both provide `transcription`; `apps.json` names the default, and apps call the slot, not a specific app.
