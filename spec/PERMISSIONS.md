@@ -1,6 +1,6 @@
 # App-to-app permissions, v0.1 (draft)
 
-Status: proposed by Miguel. Jan (Agent Service, the main caller) and James to review. Code waits for this spec ([DECISIONS](../docs/DECISIONS.md) #32, #33).
+Status: proposed by Miguel. Jan (Agent Service, the main caller) and James to review. Code waits for this spec ([DECISIONS](../docs/DECISIONS.md) #32, #35).
 
 Today every Wizard app can reach every other app. Runtipi puts every app's main service on one shared Docker network (`runtipi_tipi_main_network`), so `hermes-frontend-3` reaches `http://hermes-agent:9119` without anyone saying it may. This spec says who may talk to whom, where that is written down, and how the App Manager enforces it.
 

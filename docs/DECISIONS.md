@@ -6,7 +6,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 33 | **App-to-app permissions** per [spec/PERMISSIONS.md](../spec/PERMISSIONS.md): compatibility is computed from `uses:`/`provides:`; permission is an owner-approved grant (consumer → app or slot), proposed at install (agent→app first, then `uses:`). Grants live in `state/wizard-grants.json` (no DB migration) and are mirrored into `apps.json`. Enforced by per-app Docker networks (`wizard-app-<id>`) plus a per-grant token checked at the provider's MCP front. Behind `WIZARD_APP_ISOLATION`, off by default. | Proposed; Jan to review |
+| 35 | **App-to-app permissions** per [spec/PERMISSIONS.md](../spec/PERMISSIONS.md): compatibility is computed from `uses:`/`provides:`; permission is an owner-approved grant (consumer → app or slot), proposed at install (agent→app first, then `uses:`). Grants live in `state/wizard-grants.json` (no DB migration) and are mirrored into `apps.json`. Enforced by per-app Docker networks (`wizard-app-<id>`) plus a per-grant token checked at the provider's MCP front. Behind `WIZARD_APP_ISOLATION`, off by default. | Proposed; Jan to review |
 
 ## 10 Oct 2026 (evening) — Miguel: thin Runtipi fork
 
