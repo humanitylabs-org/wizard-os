@@ -10,6 +10,8 @@ Status: draft for James, Jan and Miguel. Source: Wizard Dev Council, 9 Oct 2026,
 
 A repository is a Wizard app when its root contains a `wizard.md` that passes the checker. The GitHub topic `wizard-app` (approved by James 9 Oct 2026, [DECISIONS](../docs/DECISIONS.md) #4; `wizard-ai` still searched during the transition) makes it discoverable; it is not proof of compatibility (the topic is public and already used by unrelated repos). No human review.
 
+Every app is its own repo, including the ones Humanity Labs makes: there are no "core apps" by definition, only apps that fill slots. Which app fills a slot by default is a separate defaults list, not a property of the app.
+
 ## Changes from v0.1
 
 1. `provides:` — capability slots the app fills (`video-editing`, `files`, `transcription` …). This is how the agent picks between several apps for the same job (James: "for shorts I want the DeFleur pipeline, for long-form podcasts this pipeline") and how system core apps become swappable ("these are alternatives to fit into those slots").
@@ -17,6 +19,9 @@ A repository is a Wizard app when its root contains a `wizard.md` that passes th
 3. `system: true` is a role, not a separate format: system core apps are ordinary Wizard apps that the OS installs by default, hides from the launcher and tells the agent about. Any of them can be replaced by another app that `provides` the same slot.
 4. Pointer-skill rule (below): the Agent Service, not the app, owns the generic "when asked to do X, use app Y" skill.
 5. The topic alone never makes an app compatible.
+6. `category:` (optional) — the store shelf: `agent`, `interface`, `app` or `system`. Missing means `agent` for `type: agent`, `app` otherwise. `type` says how the app runs; `category` says where people find it.
+7. `icon:` (optional) — a square PNG or JPEG in the repo for the store and launcher. Missing falls back to Runtipi's `metadata/logo.jpg` next to `runtime.config`.
+8. Container safety: the checker refuses host-level access in the compose file (rule 12).
 
 ## Shape
 
@@ -27,9 +32,11 @@ A repository is a Wizard app when its root contains a `wizard.md` that passes th
 wizard: 0.2                 # spec version (0.1 still accepted)
 id: defleur-video           # lowercase a-z0-9-, unique in a catalog
 name: DeFleur Video
-type: service               # agent | service | view | external
+type: service               # agent | service | view | external (how it runs)
+category: app               # agent | interface | app | system (store shelf; optional)
 version: 0.6.5
 summary: Edit a talking-head video into a finished vertical short.
+icon: icon.png              # optional; square PNG/JPEG, 512x512 recommended
 license: MIT
 source: https://github.com/humanitylabs-org/defleur-video
 publisher: npub1…            # optional; the Nostr key that publishes this app (stage 2+)
@@ -78,26 +85,39 @@ health: /healthz
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
 10. `publisher`, if present, is a valid `npub1…`.
-11. App Manager only, for apps found on Nostr: the announcement's signature verifies, and if `publisher` is declared, the signer is that key or a listed maintainer.
+11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
+12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
+13. App Manager only, for apps found on Nostr: the announcement's signature verifies, and if `publisher` is declared, the signer is that key or a listed maintainer.
 
 ## Skills: shipped skill + pointer skill
 
 - The app ships its own full skill (`skill:`). The agent never writes that skill from scratch. Miguel's demo showed the failure mode: without a shipped skill, Hermes wrote its own "video editing" skill from the MCP.
 - The Agent Service keeps one small **pointer skill per slot** (e.g. `video-editing`): "for shorts use `defleur-video`; for long-form use `<other>`; ask if unsure". It holds routing and the owner's preferences, never the app's instructions. It is regenerated from `apps.json` on every install/update/remove, and the owner's stated preferences are kept.
 
-## Discovery: catalog → store → apps.json
+## Discovery: index → local store → apps.json
 
-- **Catalog (App Manager):** GitHub topic search `topic:wizard-app` (and `topic:wizard-ai` during the transition), filtered to repos whose `wizard.md` passes the checker, cached. Each catalog row records the repo, commit and checker result.
-- **Store (App Manager):** the catalog is compiled into a Runtipi-compatible store (`apps/<id>/config.json`, `docker-compose.yml`, `metadata/`). Runtipi stays stock and unmodified; it just points at the compiled store. Nobody merges app repos into a monorepo by hand. Reference implementation: `tools/build_store.py`.
-- **Installed registry (App Manager):** on install/update/remove, write `/wizard-os/apps.json` (id, type, version, MCP URL, skill path, view route, provides, system, health).
+- **Index (shared, `wizard-app-index`):** one public catalog at [apps.aiwizards.com](https://apps.aiwizards.com), with the store page at [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps). It's a Cloudflare Worker + D1 database. It's a cache, not the source of truth: every listing is re-read from the app's own repo at a pinned commit, so the database can be dropped and rebuilt. Apps get in two ways:
+  - **Publish (push):** `POST https://apps.aiwizards.com/v1/publish {"repo":"owner/name"}`, a GitHub webhook to the same URL, or the one-line GitHub Action every app repo carries. The index re-reads the repo and runs the checker; nothing in the request is trusted.
+  - **Crawl (fallback):** every 10 minutes it searches the `wizard-app` topic (and `wizard-ai` during the transition) in created-date slices, so no single query hits GitHub search's 1,000-result cap. Listings are re-verified weekly; a failing or vanished repo is delisted.
+  - Search: `GET /v1/search?q=&category=&slot=&type=&publisher=&arch=`. Why a repo isn't listed: `GET /v1/apps/{owner}/{repo}`.
+- **Why an index, not per-box search:** a box that searches GitHub itself stops at 100 apps (one result page) and 1,000 at best (GitHub's cap), and every box re-clones every app. The index does the search once; a box only fetches the apps its owner installs. Work grows with publishes, not with apps × boxes.
+- **Local store (App Manager):** on install, the App Manager fetches that one app at the commit the index lists, re-runs the checker, and adds it to a small Runtipi store on the box that holds only the owner's apps. Runtipi stays stock and unmodified; it reads that store like any other.
+- **Installed registry (App Manager):** on install/update/remove, write `~/.wizard-os/apps.json` (id, type, version, MCP URL, skill path, view route, provides, system, health).
 - **Agent Service (Jan):** reads `apps.json`, registers each MCP with the agent, links each shipped skill, regenerates pointer skills, and injects the installed-app list into the Wizard OS meta-instructions. Hermes stays unmodified.
-- **Wizard UX (James):** reads the same `apps.json` for the launcher (non-system apps) and opens views at `/apps/<id>/`.
+- **Wizard UX (James):** the Apps screen searches the index and installs through the App Manager; the launcher reads `apps.json` (non-system apps) and opens views at `/apps/<id>/`.
 - **`wizard` CLI:** `wizard apps list --json` reads the same file; one generic CLI, no per-app CLIs.
+
+## MCP for apps that don't ship one
+
+Upstream images (Speaches, Chromium, File Browser, Hermes) don't speak MCP. The pattern used by Transcriber, Browser, Secret Drop, Hermes Agent and AI Accounts:
+- The main Runtipi service is a small stdlib MCP front (`mcp/front.py` + `mcp/tools.py`) on a digest-pinned `python:3.12-alpine`, inlined into the compose `command` by `mcp/inline.py` so there's no image to build.
+- It serves `/mcp` and passes every other request, byte for byte, to the unchanged upstream container (`<id>-engine`), WebSockets included. Other apps keep calling the same address (`http://transcriber:8000`).
+- Tools stay narrow and never handle secrets (Secret Drop's MCP creates requests with the agent's public key; AI Accounts' MCP only reports status).
 
 ## GitHub now, Nostr later
 
-Catalog = GitHub topic search + `wizard.md` at repo root. Nostr is **added** as a second source in stages ([ROLLOUT.md](../docs/ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day)); `wizard.md`, the compiled store and `apps.json` do not change, only the catalog fetcher does.
+Index sources today = publish + GitHub topic crawl, with `wizard.md` at the repo root. Nostr is **added** as a third source in stages ([ROLLOUT.md](../docs/ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day)); `wizard.md`, the local store and `apps.json` do not change, only the index gains a source. A signed NIP-34 announcement becomes another way to call publish.
 
-How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The App Manager verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
+How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The index (and the App Manager, re-checking at install) verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
 
 Every catalog row records `commit`, `found_via` (`github` | `nostr`), `publisher` and, for Nostr, the announcement event id. Installs pin to that commit.

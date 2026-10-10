@@ -19,8 +19,10 @@ A personal AI server you run by talking to it. You install it on your Mac to try
      │  MCP over HTTP
   Apps ──────────────────── each one: wizard.md + container + MCP endpoint + skill
 
-  Wizard App Manager ────── finds app repos, checks them, compiles a Runtipi store,
-     │                      installs through Runtipi, writes apps.json
+  Wizard App Index ──────── shared catalog (apps.aiwizards.com): publish + crawl, checked, pinned
+     │
+  Wizard App Manager ────── installs what the owner picks into a local Runtipi store,
+     │                      re-checks it, writes apps.json
   Runtipi (stock) ───────── runs the containers
 ```
 
@@ -50,12 +52,15 @@ Apps come in four types: view, service, agent and external. An app can declare:
 - what it **needs**, meaning device permissions
 - the agent and model it **recommends**
 
-**Wizard App Manager** (`wizard-app-manager`). The Wizard layer on top of Runtipi. It does five things:
-1. Finds repos tagged `wizard-app` on GitHub, plus any configured sources. A Nostr source (signed NIP-34 announcements with the same tag) is built and off until stage 2 of the [Nostr path](ROLLOUT.md#nostr-path-github-to-nostr-without-a-migration-day).
-2. Runs the checker on each one.
-3. Compiles the ones that pass into a normal Runtipi store, which it serves to Runtipi as git.
-4. Installs apps through Runtipi's own API.
-5. Writes [`apps.json`](../spec/APPS_JSON.md) and the app skills.
+**Wizard App Index** (`wizard-app-index`). One shared catalog for every Wizard: [apps.aiwizards.com](https://apps.aiwizards.com), with the store page at [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps). Publishers push (API, webhook or the app's own GitHub Action); a crawler searches the `wizard-app` topic in date slices as a fallback. It runs the same checker and records the passing commit. It's a cache: the repos are the source of truth and it can be rebuilt from them. Nostr announcements become a third way in.
+
+**Wizard App Manager** (`wizard-app-manager`). The Wizard layer on top of Runtipi, on each box. It does four things:
+1. When the owner installs an app found in the index, fetches that one repo at the listed commit.
+2. Re-runs the checker on it.
+3. Adds it to a small local Runtipi store that holds only this box's apps, and installs through Runtipi's own API.
+4. Writes [`apps.json`](../spec/APPS_JSON.md) and the app skills.
+
+Its API listens on the box only and needs a token to install or remove apps.
 
 A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 
