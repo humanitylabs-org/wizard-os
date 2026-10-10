@@ -34,6 +34,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 - [`AGENT_SERVICE_API.md`](spec/AGENT_SERVICE_API.md): the `/wizard/...` API.
 - [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
 - [`SHELL.md`](spec/SHELL.md): the shell slot (Wizard UX as the system front end) and how owners customize it without forking (proposed).
+- [`PAGES.md`](spec/PAGES.md): pages, the agent-made reports, dashboards and shared docs that live in Files and need no container (proposed).
 
 ## Tools
 

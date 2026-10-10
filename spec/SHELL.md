@@ -13,7 +13,7 @@ It owns what every screen relies on:
 - notifications and the Ready/Working attention model
 - Chats (the one built-in view)
 - the [native bridge](NATIVE_BRIDGE.md) to Android and Mac
-- hosting other apps' views
+- hosting other apps' views and the agent's [pages](PAGES.md)
 
 Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wizard.md`), opened by the shell by URL. Examples: Files, Day/Week review, Mizel, DeFleur, Reader, Hermes Desktop in Browser.
 
@@ -39,7 +39,8 @@ Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wi
 Rules:
 - Layers 1–4 are plain files on the user's data volume. The agent edits them with a skill; no rebuild, no container change.
 - Shell updates never write to layers 1–4. If an update breaks an overlay, the shell starts with the overlay off and says which file failed.
-- New screens are **views (new apps)**, not shell edits. The agent builds them from `hello-wizard`.
+- Something to look at (a report, dashboard, write-up, shared doc) is a **page**: files in `media/Pages/<slug>/`, served at `/pages/<slug>/`, with no container ([PAGES.md](PAGES.md), #35).
+- A new screen becomes a **view (a new app)** only when it needs its own process, database, MCP or other people's installs. The agent builds those from the app template, `hello-wizard`. Either way it's never a shell edit.
 - What's in the shell vs a view gets decided by one test: does every other screen depend on it? If not, it's a view. The Day/Week/Month review screens are the first to move out.
 
 ## Done when (first version)
