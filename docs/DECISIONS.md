@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Oct 2026 (night) — James: app icons are sigils
+
+| # | Decision | Status |
+|---|---|---|
+| 33 | **Every Wizard app's icon is a sigil**: one solid silhouette, one bite of negative space, one colour per app, on a dark glass tile. The guide, glyph library, colour registry and icon exporter live in [`style/ICONS.md`](../style/ICONS.md) and [`style/sigils/`](../style/sigils/). A new app claims a glyph and a free hue in the registry and ships the exported icon files; no emoji, letters or stock icons. `wizard-ux` draws the same sigils live in the launcher. | Locked (James owns `style/`) |
+
 ## 10 Oct 2026 (evening) — Miguel: thin Runtipi fork
 
 | # | Decision | Status |
