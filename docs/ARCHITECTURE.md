@@ -32,6 +32,8 @@ A personal AI server you run by talking to it. You install it on your Mac to try
 
 The shells add what a browser can't (hotkeys, background mic, file sharing) through the [native bridge](../spec/NATIVE_BRIDGE.md). The Apps screen lives here.
 
+Wizard UX is the **shell**: a system app filling the `shell` slot, always exactly one per box. Other screens are views (normal apps). Owners reshape it through settings, layout, theme and overlay files rather than forks ([spec/SHELL.md](../spec/SHELL.md)).
+
 **Wizard Agent Service** (`wizard-agent-service`). The only thing the UX talks to.
 - It proxies the agent, and adds the Wizard OS instructions on the way in, so Hermes itself stays stock.
 - On every change to `apps.json` it connects each app's MCP and skill and tells the agent what's installed. That's the "knowledge transfer on install".
