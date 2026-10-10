@@ -39,7 +39,7 @@ summary: Edit a talking-head video into a finished vertical short.
 icon: icon.png              # optional; square PNG/JPEG, 512x512 recommended
 license: MIT
 source: https://github.com/humanitylabs-org/defleur-video
-publisher: npub1…            # optional; the Nostr key that publishes this app (stage 2+)
+publisher: npub1…            # optional; the Wizard ID (Nostr key) credited with this app (#33)
 
 runtime:                    # how the App Manager installs it (Runtipi today)
   kind: runtipi
@@ -87,7 +87,7 @@ health: /healthz
 10. `publisher`, if present, is a valid `npub1…`.
 11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
 12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
-13. App Manager only, for apps found on Nostr: the announcement's signature verifies, and if `publisher` is declared, the signer is that key or a listed maintainer.
+13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
 
 ## Skills: shipped skill + pointer skill
 
