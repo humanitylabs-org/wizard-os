@@ -8,7 +8,8 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 
 | Slot | Default app | Required | Notes |
 |---|---|---|---|
-| `shell` | `wizard-ux` + `wizard-agent-service` (one app; Archimedes packaging) | yes | Exactly one active per box ([SHELL.md](../spec/SHELL.md)) |
+| `shell` | `wizard-ux` | yes | Exactly one active per box ([SHELL.md](../spec/SHELL.md)). Oscar's Wizard App and `hermes-frontend-3` are alternatives |
+| `agent-service` | `wizard-agent-service` | yes | Headless; the `/wizard/...` API every shell talks to. Separate from the shell (#33) |
 | `agent` | `hermes-agent` | yes | Any MCP-speaking agent later |
 | `files` | `files` (File Browser on Runtipi `media/`) | yes | The one user-files root |
 | `ai-accounts` | `wizard-ai-accounts` | no | Subscription logins shared by agents |

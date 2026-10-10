@@ -2,6 +2,13 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Oct 2026 (night) — Miguel: agent service is its own app; public by default
+
+| # | Decision | Status |
+|---|---|---|
+| 33 | **Agent Service and shell are two apps, not one.** `wizard-agent-service` is a headless system app filling its own `agent-service` slot (its `/wizard/...` API on a box-only port). `wizard-ux` is a view app filling the `shell` slot, `uses: [agent-service]`, serving its static files and passing `/wizard/...` through. Any other shell (Oscar's Wizard App, `hermes-frontend-3`, community shells) can use the same Agent Service, and the Agent Service can be swapped without touching the shell. Updates #30's packaging ("one Runtipi app"); the container work in wizard-agent-service#3 carries over, split in two. | Miguel |
+| 34 | **Public by default.** Every Wizard app repo is public from its first commit, tagged `wizard-app`, and published to the index, so anyone can install it from the App Store straight away. Private only with a stated reason (customer data, secrets). | Miguel |
+
 ## 10 Oct 2026 (evening) — Miguel: thin Runtipi fork
 
 | # | Decision | Status |
