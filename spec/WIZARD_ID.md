@@ -1,6 +1,6 @@
-# Wizard ID v0.1 (draft)
+# Wizard ID v0.1
 
-**Status:** proposed by Archimedes, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #34). James to confirm; Jan to review the key handling and bridge.
+**Status:** approved by James, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #34). Jan to review the key handling and bridge. Build step 1 in progress (Archimedes).
 
 Your Wizard ID is a Nostr key pair. The public half (`npub`) is your name everywhere in Wizard: the apps you publish, who follows you, and what your Wizard does for you. The private half signs. It is created on your phone, inside the Wizard app, and no one else holds a copy. That includes Humanity Labs, your Wizard box and the agent.
 
