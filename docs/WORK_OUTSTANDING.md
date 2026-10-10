@@ -22,6 +22,8 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
 - [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
+- [ ] **Thin-fork terms (#32, Miguel):** frontend back to stock Runtipi (Wizard views handed to Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
+- [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code.
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
 - [ ] Uninstall keeps data. Verify Runtipi's behaviour and add an explicit `--delete-data`.

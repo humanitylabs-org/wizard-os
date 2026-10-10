@@ -10,7 +10,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 |---|---|---|
 | `wizard-ux` | James + Archimedes | The front end everywhere: phone app, desktop UX, and the native desktop app's hotkeys. Includes the Apps screen. |
 | `wizard-agent-service` | Jan | The service between any front end and the agent. Adds the Wizard OS instructions and the installed apps; Hermes stays unmodified. |
-| `wizard-app-manager` | Miguel | Wizard's layer on **stock** Runtipi (no fork): installs apps listed in the index into a small local Runtipi store, re-checks `wizard.md`, installs through Runtipi's API, writes `apps.json`. |
+| `wizard-app-manager` | Miguel | A **thin fork** of Runtipi (DECISIONS #32): a small backend patch that installs apps straight from the index, re-checks `wizard.md` and writes `apps.json`. The frontend is stock Runtipi (admin/break-glass); the image is a drop-in for `runtipi/runtipi`. |
 | `wizard-app-index` | Miguel | The shared app catalog: [apps.aiwizards.com](https://apps.aiwizards.com) (API) and [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps) (store page). Publish + topic crawl; a rebuildable cache. |
 | `wizard-app-store` | Miguel | Legacy hand-maintained Runtipi store. Every app in it now has its own repo; kept until boxes move to the App Manager. |
 | `wizard-os` (this repo) | shared | Architecture, rollout, decisions, contracts, style, checks. |
