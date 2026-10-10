@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Oct 2026 (evening) — Miguel: thin Runtipi fork
+
+| # | Decision | Status |
+|---|---|---|
+| 32 | **Answers #31; replaces #1 and #23 on the Runtipi question.** The App Manager is a **thin fork** of Runtipi (`wizard-app-manager`), not stock. Stock can't do two things Wizard needs: **permissions between apps** (Runtipi puts every app on one shared network, `runtipi_tipi_main_network`, so any app can reach any other; enforcing "A may use B" means choosing each app's networks inside Runtipi's compose builder) and **installing straight from the index** without a sync job that mirrors apps into a local store. Upstream is active but mostly one maintainer (about 148 of 170 human commits in the past year; a release every one to three months), so rebasing is cheap and we shouldn't wait on upstream for permissions. **Thin** means: the fork carries only a small backend patch (index store, Wizard categories, permission-aware networking); its frontend returns to stock Runtipi as the admin/break-glass screen; the Wizard views live in `packages/frontend/src/wizard-views` for the shell's Apps screen (#8 stands, one Apps screen); the "Open port" fix goes upstream and leaves the fork once merged; each Runtipi release is rebased, built by CI and smoke-tested; source stays public (GPL-3.0). #3 stands with one change: an app installs from its `wizard.md` plus Runtipi files, and the App Manager writes the Runtipi config. Discussion: [wizard-app-manager#6](https://github.com/humanitylabs-org/wizard-app-manager/issues/6). | Miguel; James + Jan to review |
+
 ## 10 Oct 2026 — James: shell, Agent Service owner, stock Runtipi
 
 | # | Decision | Status |
@@ -14,7 +20,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 23 | Confirms #1 (stock Runtipi, no fork) and #3 (an app = `wizard.md` + stock Runtipi files + MCP + skill). | Miguel |
+| 23 | Confirms #1 (stock Runtipi, no fork) and #3 (an app = `wizard.md` + stock Runtipi files + MCP + skill). | Miguel; **#1 part replaced by #32** |
 | 24 | **One shared index instead of per-box GitHub search.** Per-box search tops out at 100 apps today and 1,000 at best (GitHub's search cap), and every box re-clones every app. The index ([apps.aiwizards.com](https://apps.aiwizards.com), Cloudflare Worker + D1) takes publishes (API, webhook, or the app's own GitHub Action) and crawls the `wizard-app` topic in date slices as a fallback. It's a rebuildable cache; the repos stay the source of truth. Nostr becomes a third way into the same publish path. Boxes fetch only the apps they install. | Miguel |
 | 25 | **Replaces #12:** no core-apps repo. Every app is its own repo, Humanity Labs apps included; "core" is a slot plus a defaults list, not a property of an app. Files, Transcriber, Browser, Secret Drop, Hermes Agent, Hermes Frontend 3 and AI Accounts were split out with history on 9 Oct and are listed. | Miguel |
 | 26 | `wizard.md` gains optional `category` (agent / interface / app / system, the store shelf) and `icon`. The checker also refuses host-level container access (spec rule 12). | Miguel |
@@ -25,7 +31,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | Runtipi stays **stock**. Wizard adds a layer (`wizard-app-manager`) that compiles app repos into a Runtipi store and installs through Runtipi's API. No fork. | Approved by James; confirmed by Miguel (#23) |
+| 1 | Runtipi stays **stock**. Wizard adds a layer (`wizard-app-manager`) that compiles app repos into a Runtipi store and installs through Runtipi's API. No fork. | **Replaced by #32** (thin fork) |
 | 2 | Repos: `wizard-ux` (James), `wizard-agent-service` (Jan), `wizard-app-manager` (Miguel), `wizard-os` (shared), one repo per app. | Locked on the call |
 | 3 | An app is a repo with a root `wizard.md` (v0.2), stock Runtipi files, an MCP endpoint and a skill. A tag makes it found; only a passing check makes it listed. | Approved by James; confirmed by Miguel (#23) |
 | 4 | Discovery tag: **`wizard-app`** (singular, like `obsidian-plugin` and `raycast-extension`: the tag says what one repo *is*). Nobody else uses it. `wizard-ai` stays searched during the transition. Chosen over `wizard-apps` (reads as a collection repo) and `wizardos-app` (longer, and "Wizard OS" is the developer name, not what users see). | Approved by James, 9 Oct |
