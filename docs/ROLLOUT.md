@@ -33,6 +33,27 @@ The test:
 
 Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 
+### Run 1: existing Hermes (Telos), 10 Oct: job works, Wizard OS wiring missing
+
+Synthetic 25 s talking-head clip in `media/Videos/`, hidden test thread, prompt `edit e2e-synthetic-talking-head.mp4 from my Files with DeFleur`. Stack: `wizard-ux` daily 7b766e0, `wizard-agent-service` 3709e39, `wam` + stock Runtipi, DeFleur 0.6.5-testing.
+
+1. ✅ UX → Agent Service → Hermes: bootstrap, `/wizard/hermes` sessions and runs, health `upstream_reachable`.
+2. ✅ `wam doctor` 4 PASS; `/wizard/v1/apps` lists `defleur-video`. Installed with `wam` (no Apps screen); MCP-only, so no tile or capability row in the UX.
+3. ✅ by workaround: the agent found DeFleur by grepping the box and `apps.json`, then hand-wrote an MCP client. No Wizard OS instructions, no MCP registered with Hermes. A fresh Hermes would fail here.
+4. ✅ / ❌ Render (1080x1920, 19.7 s, delivery gate pass) landed in `media/Videos/Edited/`, but the UX Files tile on Telos opens the legacy file browser, which doesn't show `media/`.
+5. ✅ (vacuous): no skill written; no pointer-skill mechanism exists yet.
+
+Gaps, owner, smallest fix:
+- **Instruction injection** (Jan): apps.json block appended to every run. Fix proposed in [wizard-agent-service#2](https://github.com/humanitylabs-org/wizard-agent-service/pull/2) (not merged).
+- **apps.json reader / MCP registration** (Jan): register each app's `mcp.url` with Hermes on change.
+- **Pointer skills** (Jan): one ~10-line skill per `provides` job, rebuilt on change.
+- **Files tile shows the files root** (James + Archimedes for the tile; Miguel for the `files` app): install Runtipi Files, point the tile at it.
+- **Capabilities row, then the Apps screen** (James + Archimedes).
+- **App Manager API lock** (Miguel, #28): `:7790` binds 0.0.0.0 and `apps.json` advertises public-IP MCP urls.
+- **Dependencies in `apps.json`** (Miguel): transcriber and browser are installed by `uses:` but not listed.
+
+Run 2 (fresh Hermes) is the real gate for the first three items.
+
 ## Week 2
 
 - ⏳ **One files root, one transcription slot.** Resolve both collisions ([SYSTEM_APPS.md](SYSTEM_APPS.md)). Owners: Jan (Agent Service attachments), Miguel (Transcriber → slot).
