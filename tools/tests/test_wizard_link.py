@@ -109,11 +109,10 @@ class LinkTest(unittest.TestCase):
                            env=self.env, timeout=120)
         return p.returncode, json.loads(p.stdout)
 
-    def test_link_makes_the_four_edits_then_unlink_restores_bytes(self):
+    def test_link_makes_the_three_edits_then_unlink_restores_bytes(self):
         rc, out = self.wizard("link")
         self.assertEqual(rc, 0, out)
-        self.assertEqual(out["edits"], ["mcp_servers.wizard", "skills.external_dirs", "plugins.enabled",
-                                        "tools.tool_search.eager_tools"])
+        self.assertEqual(out["edits"], ["mcp_servers.wizard", "skills.external_dirs", "plugins.enabled"])
         cfg_text = (self.hh / "config.yaml").read_text()
         import yaml
         cfg = yaml.safe_load(cfg_text)
@@ -122,7 +121,7 @@ class LinkTest(unittest.TestCase):
         self.assertEqual(cfg["mcp_servers"]["sentinel"], {"url": "http://127.0.0.1:9/mcp", "enabled": False})
         self.assertEqual(cfg["skills"]["external_dirs"], ["~/shared-skills", str(self.wos / "skills")])
         self.assertEqual(cfg["plugins"]["enabled"], ["wizard-os"])
-        self.assertEqual(cfg["tools"]["tool_search"]["eager_tools"], ["mcp__wizard__wizard_apps"])
+        self.assertNotIn("eager_tools", cfg_text)   # stock Hermes has no such setting; link never writes it
         # only additions: every original line is still there, in order
         orig = OWNER_CONFIG.splitlines()
         it = iter(cfg_text.splitlines())
@@ -169,45 +168,23 @@ class LinkTest(unittest.TestCase):
         self.assertIn("isn't Wizard OS", out["error"]["message"])
         self.assertEqual(sha(p), before)
 
-    def test_tool_search_off_is_kept_and_unlink_still_restores_bytes(self):
+    def test_link_leaves_the_owner_tool_search_settings_alone(self):
         p = self.hh / "config.yaml"
-        p.write_text(p.read_text() + 'tools:\n  tool_search:\n    enabled: "off"\n')
+        owner_ts = 'tools:\n  tool_search:\n    enabled: "off"\n    defer:\n      - todo_list\n'
+        p.write_text(p.read_text() + owner_ts)
         before = sha(p)
         rc, out = self.wizard("link")
         self.assertEqual(rc, 0, out)
         self.assertEqual(out["edits"], ["mcp_servers.wizard", "skills.external_dirs", "plugins.enabled"])
-        self.assertTrue(any("Tool Search is off" in n for n in out["notes"]), out["notes"])
         import yaml
         cfg = yaml.safe_load(p.read_text())
-        self.assertEqual(cfg["tools"]["tool_search"], {"enabled": "off"})   # the owner's setting, untouched
+        self.assertEqual(cfg["tools"]["tool_search"], {"enabled": "off", "defer": ["todo_list"]})
         rc, doc = self.wizard("doctor")
-        row = next(r for r in doc["checks"] if r["check"] == "wizard_apps eager behind Tool Search")
-        self.assertTrue(row["ok"])
-        self.assertIn("every app tool is loaded eagerly", row["detail"])
+        self.assertFalse(any("eager" in r["check"] for r in doc["checks"]), doc["checks"])
         rc, out = self.wizard("unlink")
         self.assertEqual(rc, 0, out)
         self.assertTrue(out["config_byte_identical"])
         self.assertEqual(sha(p), before)
-
-    def test_unlink_keeps_owner_eager_tools_and_doctor_flags_a_missing_entry(self):
-        p = self.hh / "config.yaml"
-        p.write_text(p.read_text() + "tools:\n  tool_search:\n    eager_tools:\n      - mcp__mine__tool\n")
-        before = sha(p)
-        self.assertEqual(self.wizard("link")[0], 0)
-        import yaml
-        self.assertEqual(yaml.safe_load(p.read_text())["tools"]["tool_search"]["eager_tools"],
-                         ["mcp__mine__tool", "mcp__wizard__wizard_apps"])
-        linked = p.read_text()
-        dropped = "\n".join(l for l in linked.splitlines() if "mcp__wizard__wizard_apps" not in l) + "\n"
-        p.write_text(dropped)
-        rc, doc = self.wizard("doctor")
-        row = next(r for r in doc["checks"] if r["check"] == "wizard_apps eager behind Tool Search")
-        self.assertFalse(row["ok"])
-        p.write_text(linked)
-        rc, out = self.wizard("unlink")
-        self.assertEqual(rc, 0, out)
-        self.assertEqual(sha(p), before)
-        self.assertEqual(yaml.safe_load(p.read_text())["tools"]["tool_search"]["eager_tools"], ["mcp__mine__tool"])
 
     def test_link_twice_is_a_no_op(self):
         self.assertEqual(self.wizard("link")[0], 0)
@@ -225,7 +202,7 @@ class LinkTest(unittest.TestCase):
         self.assertTrue(by["linked (wizard link)"])
         self.assertTrue(by["Hermes has the wizard MCP server"])
         self.assertTrue(by["wizard-os plugin installed and enabled"])
-        self.assertTrue(by["wizard_apps eager behind Tool Search"])
+        self.assertNotIn("wizard_apps eager behind Tool Search", by)   # the dropped 4th edit has no check
         self.assertFalse(by["session history readable"])   # no state.db in the throwaway home
         self.assertFalse(by["Wizard shell answers"])
         token = (self.wos / "mcp-token").read_text().strip()

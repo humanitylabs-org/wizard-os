@@ -52,11 +52,12 @@ wizard unlink [--restart]   reverse exactly what link changed
 wizard doctor               PASS/FAIL lines + one live request through the bridge
 ```
 
-`link` backs up `~/.hermes/config.yaml` and records every change in `~/.wizard-os/linked.json`. It makes four stock-config edits, through Hermes's own Python and ruamel round-trip so comments and layout survive:
+`link` backs up `~/.hermes/config.yaml` and records every change in `~/.wizard-os/linked.json`. It makes three stock-config edits, through Hermes's own Python and ruamel round-trip so comments and layout survive:
 1. `mcp_servers.wizard` (the gateway URL, plus a bearer header reading `${WIZARD_MCP_TOKEN}`);
 2. `skills.external_dirs += ~/.wizard-os/skills`;
-3. `plugins.enabled += wizard-os` (installed with stock `hermes plugins install`);
-4. `tools.tool_search.eager_tools += mcp__wizard__wizard_apps`. App tools stay deferred behind Tool Search. If the owner has Tool Search `off`, their setting is kept and `doctor` says every app tool will be eager.
+3. `plugins.enabled += wizard-os` (installed with stock `hermes plugins install`).
+
+App tools, `wizard_apps` included, stay deferred behind Hermes's stock Tool Search: stock Hermes has no per-tool eager setting, so a planned fourth edit (`tools.tool_search.eager_tools`) was dropped (James, 11 Oct). The agent reaches `wizard_apps` through `tool_call`, which the weak-model gate passed ([AGENT_BRIDGE.md](AGENT_BRIDGE.md)).
 
 It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only if Hermes had none.
 
@@ -64,7 +65,7 @@ It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only
 
 `doctor` checks:
 - the link;
-- the four edits;
+- the three edits;
 - the token;
 - the Hermes API;
 - **session history readable**: the shell container reads the host `state.db` read-only, which needs a matching uid until the agent bridge stops reading it;
