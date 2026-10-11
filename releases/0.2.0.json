@@ -13,7 +13,7 @@
   "components": {
     "wizard-app-manager": {
       "repo": "humanitylabs-org/wizard-app-manager",
-      "commit": "43196d89241b6ca9d24e1fc6a09ac1f825e24b5f",
+      "commit": "92610596d93ad8a2d7856e70a34c902b9270b967",
       "branch": "feature/install-alongside",
       "note": "Alongside mode is wizard-app-manager PR #12 (on top of PR #9, arm64). Both await Miguel; this pin moves to main when they merge."
     },
@@ -30,7 +30,7 @@
     },
     "wizard-os": {
       "repo": "humanitylabs-org/wizard-os",
-      "commit": "74c9030aaf7d15594a56b9f4e4da5025b3678dec",
+      "commit": "6dc32193313c93f1877d107446e60b01cdcaba3c",
       "branch": "main",
       "note": "specs + the generic `wizard` CLI (link / unlink / doctor); byte-identical copy vendored at wizard-app-manager/wizard-cli/wizard. A release file cannot name the commit that adds it, so this pins the commit before it."
     }
