@@ -1,0 +1,106 @@
+{
+  "version": "0.2.0",
+  "name": "Wizard OS 0.2.0",
+  "date": "2026-10-11",
+  "about": "One Wizard OS version: the commit of every component repo, the images those commits produced, and the default app in each parking spot. Check with: python3 tools/check_release.py releases/0.2.0.json",
+  "install": {
+    "command": "curl -fsSL aiwizards.com/os.sh | bash",
+    "modes": {
+      "fresh": "blank Ubuntu/Debian box: Runtipi + App Manager + the default app in every spot (including hermes-agent)",
+      "alongside": "box that already runs Hermes (run as its owner): App Manager + apps + the Wizard shell pointed at that Hermes; `wizard link` connects it, `wizard unlink` reverses it byte for byte"
+    }
+  },
+  "components": {
+    "wizard-app-manager": {
+      "repo": "humanitylabs-org/wizard-app-manager",
+      "commit": "43196d89241b6ca9d24e1fc6a09ac1f825e24b5f",
+      "branch": "feature/install-alongside",
+      "note": "Alongside mode is wizard-app-manager PR #12 (on top of PR #9, arm64). Both await Miguel; this pin moves to main when they merge."
+    },
+    "wizard-agent-service": {
+      "repo": "humanitylabs-org/wizard-agent-service",
+      "commit": "f772b830ec4f3ba1faff885f8a66914b6010f062",
+      "branch": "main",
+      "note": "main after #8 (agent bridge) and #9 (shell 0.2.0)"
+    },
+    "wizard-ux": {
+      "repo": "humanitylabs-org/wizard-ux",
+      "commit": "a0c01ba04c9db375de37e7d44a42eb6834cc4376",
+      "branch": "daily"
+    },
+    "wizard-os": {
+      "repo": "humanitylabs-org/wizard-os",
+      "commit": "74c9030aaf7d15594a56b9f4e4da5025b3678dec",
+      "branch": "main",
+      "note": "specs + the generic `wizard` CLI (link / unlink / doctor); byte-identical copy vendored at wizard-app-manager/wizard-cli/wizard. A release file cannot name the commit that adds it, so this pins the commit before it."
+    }
+  },
+  "images": {
+    "wizard-shell": {
+      "ref": "ghcr.io/humanitylabs-org/wizard-shell:0.2.0",
+      "digest": "sha256:e84d005431c2349cac708d7678d2c563ad9110437e36c23275b0a6d57ff5e03f",
+      "built_from": "wizard-agent-service",
+      "bundles": "wizard-ux",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "ci_run": "https://github.com/humanitylabs-org/wizard-agent-service/actions/runs/38118085320"
+    },
+    "wizard-app-manager": {
+      "ref": "ghcr.io/humanitylabs-org/wizard-app-manager:latest",
+      "digest": "sha256:a178a773b9329313d48da4627fcfe03ab5a7b888cabf81edd6069970ddda432d",
+      "built_from": "wizard-app-manager",
+      "architectures": [
+        "amd64"
+      ],
+      "note": "arm64 arrives with PR #9; on Apple Silicon VMs it runs under Rosetta until then"
+    }
+  },
+  "default_apps": {
+    "shell": {
+      "app": "wizard-shell",
+      "repo": "humanitylabs-org/wizard-agent-service",
+      "index_version": "0.2.0",
+      "note": "index still lists 0.1.0 until the app index re-reads wizard-agent-service main"
+    },
+    "agent-service": {
+      "app": "wizard-shell",
+      "repo": "humanitylabs-org/wizard-agent-service",
+      "index_version": "0.2.0",
+      "note": "index still lists 0.1.0 until the app index re-reads wizard-agent-service main"
+    },
+    "agent": {
+      "app": "hermes-agent",
+      "repo": "oscarhenrycollins/hermes-agent",
+      "index_version": "2026.9.24-wizard1",
+      "alongside": "external: host Hermes"
+    },
+    "ai-accounts": {
+      "app": "wizard-ai-accounts",
+      "repo": "oscarhenrycollins/ai-accounts",
+      "index_version": "0.1.0"
+    },
+    "files": {
+      "app": "files",
+      "repo": "oscarhenrycollins/files",
+      "index_version": "2.63.23"
+    },
+    "transcription": {
+      "app": "transcriber",
+      "repo": "oscarhenrycollins/transcriber",
+      "index_version": "0.9.0-rc.3.cpu"
+    },
+    "browser": {
+      "app": "browser",
+      "repo": "oscarhenrycollins/browser",
+      "index_version": "155.0.8059.40"
+    },
+    "secrets": {
+      "app": "secret-drop",
+      "repo": "oscarhenrycollins/secret-drop",
+      "index_version": "0.1.1"
+    },
+    "notifications": null
+  }
+}
