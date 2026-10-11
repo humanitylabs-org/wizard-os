@@ -96,7 +96,10 @@ Hermes `state.db` reads, as of wizard-agent-service `feature/agent-bridge`:
   1. Archived threads: `/api/sessions` never lists archived sessions.
   2. Turns running on other surfaces (Telegram, TUI, cron), used to hold queued Wizard runs. Without the path, the queue counts only its own runs, and Hermes still serialises turns per session.
   3. The Helm closure overlay in the canonical listing (`read-human-sessions.py`), used only when a Helm DB is present. It is James's box only and is not part of Wizard OS.
-  4. Two reads outside this slice: thread titles after a rename (`/api/sessions/<id>` serves the title, so this one can move next) and session route truth (model and lineage, `session-truth.mjs`).
+  4. Thread-title authority (`title_source`, whether you or the agent named the thread). `/api/sessions/<id>` serves the title but not its source, so agent titling is off without the path.
+  5. Session route truth (model and lineage, `session-truth.mjs`), used to annotate the thread list.
+
+Without `WIZARD_HERMES_STATE_PATH` the Agent Service opens no Hermes file at all.
 
 A session-search or grants service is out of scope here; the agent-state proposal covers it.
 
