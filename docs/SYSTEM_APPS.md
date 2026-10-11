@@ -9,13 +9,14 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | Slot | Default app | Required | Notes |
 |---|---|---|---|
 | `shell` | `wizard-ux` | yes | Exactly one active per box ([SHELL.md](../spec/SHELL.md)). Oscar's Wizard App and `hermes-frontend-3` are alternatives |
-| `agent-service` | `wizard-agent-service` | yes | Headless; the `/wizard/...` API every shell talks to. Separate from the shell (#33) |
+| `agent-service` | `wizard-agent-service` | yes | Headless; the `/wizard/...` API every shell talks to. Separate from the shell (#36) |
 | `agent` | `hermes-agent` | yes | Any MCP-speaking agent later |
 | `files` | `files` (File Browser on Runtipi `media/`) | yes | The one user-files root |
 | `ai-accounts` | `wizard-ai-accounts` | no | Subscription logins shared by agents |
 | `transcription` | `transcriber` today; Wizard STT as its front later (below) | no | OpenAI-compatible `/v1/audio/transcriptions` |
 | `browser` | `browser` (headless Chromium) | no | |
 | `secrets` | `secret-drop` | no | One-time credential handoff |
+| `private-access` | Tailscale (native host integration) | no | Preinstalled by the installer; the owner joins their own tailnet. Cloudflare Tunnel + Access is the alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet an ordinary store app |
 | `notifications` | none yet | no | Spot exists; default to build |
 | `microphone` | native shell (Android, Mac) | no | Through the native bridge, not a container |
 

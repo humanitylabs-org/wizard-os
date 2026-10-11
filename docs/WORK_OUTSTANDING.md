@@ -12,6 +12,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **`spec/AGENT_SERVICE_API.md`.** The versioned `/wizard/...` contract the UX relies on.
 - [ ] **Release file.** `releases/<version>.json`: the commit of each repo that goes together.
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
+- [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
 ## App Manager (Miguel)
@@ -33,6 +34,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Wizard UX, including the desktop UX (James + Archimedes)
 
+- [ ] **Pages in the shell** ([PAGES.md](../spec/PAGES.md), #35): pass `/pages/` through, Pages list, open on a review desk, `doc.md` editor, page bridge (`feedback`, `save`).
 - [ ] **Apps screen sources**: label each app Public / Beta / Local / Link; GitHub sign-in for beta apps; `wizard://install` share links ([PRIVATE_BETA.md](PRIVATE_BETA.md)).
 
 - [x] **Desktop UX** of `wizard-ux`: one codebase, two shells. `web/core/` is shared; `desktop.html` is the Omarchy-style shell (workspaces, auto-tiling, ⌘K, ⌥ keys, ⌥V voice), picked by device so neither shell downloads the other's code. Live at `/wizard-os-home/` (`daily` 60e1489), qa-desktop 45/45. UX side of the native bridge done (v0.1).
@@ -68,7 +70,7 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 - [ ] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components.
 - [ ] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?"
-- [ ] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`.
+- [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.
 - [x] GitHub tag: `wizard-app` (approved by James, 9 Oct).

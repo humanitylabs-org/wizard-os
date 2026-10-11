@@ -13,14 +13,14 @@ It owns what every screen relies on:
 - notifications and the Ready/Working attention model
 - Chats (the one built-in view)
 - the [native bridge](NATIVE_BRIDGE.md) to Android and Mac
-- hosting other apps' views
+- hosting other apps' views and the agent's [pages](PAGES.md)
 
 Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wizard.md`), opened by the shell by URL. Examples: Files, Day/Week review, Mizel, DeFleur, Reader, Hermes Desktop in Browser.
 
 ## Packaging
 
 - The shell is a **system app** that fills the `shell` slot: `system: true`, `provides: [shell]`.
-- Default provider: `wizard-ux`, its own Runtipi app (static files plus a pass-through for `/wizard/...`). It `uses: [agent-service]`; the Agent Service is a separate app in its own slot, so any shell can sit on it and either can be swapped alone (#33).
+- Default provider: `wizard-ux`, its own Runtipi app (static files plus a pass-through for `/wizard/...`). It `uses: [agent-service]`; the Agent Service is a separate app in its own slot, so any shell can sit on it and either can be swapped alone (#36).
 - Every box has **exactly one active shell**. `wam bootstrap` installs the default, and the App Manager refuses to uninstall the last provider of `shell`. Installing another shell (for example `hermes-frontend-3`) and making it the default swaps it.
 - The shell talks only to the Agent Service (`/wizard/...`), never to Runtipi or the App Manager directly; the Agent Service relays install/uninstall to the App Manager's box-only API.
 
@@ -39,7 +39,8 @@ Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wi
 Rules:
 - Layers 1–4 are plain files on the user's data volume. The agent edits them with a skill; no rebuild, no container change.
 - Shell updates never write to layers 1–4. If an update breaks an overlay, the shell starts with the overlay off and says which file failed.
-- New screens are **views (new apps)**, not shell edits. The agent builds them from `hello-wizard`.
+- Something to look at (a report, dashboard, write-up, shared doc) is a **page**: files in `media/Pages/<slug>/`, served at `/pages/<slug>/`, with no container ([PAGES.md](PAGES.md), #35).
+- A new screen becomes a **view (a new app)** only when it needs its own process, database, MCP or other people's installs. The agent builds those from the app template, `hello-wizard`. Either way it's never a shell edit.
 - What's in the shell vs a view gets decided by one test: does every other screen depend on it? If not, it's a view. The Day/Week/Month review screens are the first to move out.
 
 ## Done when (first version)
