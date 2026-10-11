@@ -20,7 +20,7 @@ Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wi
 ## Packaging
 
 - The shell is a **system app** that fills the `shell` slot: `system: true`, `provides: [shell]`.
-- Default provider: `wizard-ux`, packaged together with `wizard-agent-service` as one Runtipi app (the UX is static files served by the service).
+- Default provider: `wizard-ux`, its own Runtipi app (static files plus a pass-through for `/wizard/...`). It `uses: [agent-service]`; the Agent Service is a separate app in its own slot, so any shell can sit on it and either can be swapped alone (#36).
 - Every box has **exactly one active shell**. `wam bootstrap` installs the default, and the App Manager refuses to uninstall the last provider of `shell`. Installing another shell (for example `hermes-frontend-3`) and making it the default swaps it.
 - The shell talks only to the Agent Service (`/wizard/...`), never to Runtipi or the App Manager directly; the Agent Service relays install/uninstall to the App Manager's box-only API.
 

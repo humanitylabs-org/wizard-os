@@ -23,7 +23,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
 - [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
-- [ ] **Thin-fork terms (#32, Miguel):** frontend back to stock Runtipi (Wizard views handed to Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
+- [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
 - [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code.
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
@@ -45,7 +45,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Shell customization (James + Archimedes, later; [spec/SHELL.md](../spec/SHELL.md))
 
-- [ ] **Shell slot**: `wam` refuses to uninstall the last `provides: [shell]` app; `wam bootstrap` installs the default shell.
+- [x] **Parking spots** (Miguel, 10 Oct): `wam slots`, `wam bootstrap` and the required-spot uninstall guard cover every slot, the shell included (`wam/defaults.json`). The shell spot's default fills in once the Wizard UX app is published.
 - [ ] **Theme / skin file** (`theme.json` over the style tokens): look changes on phone and desktop without a rebuild, survives updates.
 - [ ] **Overlay folder**: user CSS/JS and per-view overrides loaded last; a broken overlay starts with it off and names the file.
 - [ ] **Customize skill** so the owner's agent edits settings, layout, theme and overlay safely.

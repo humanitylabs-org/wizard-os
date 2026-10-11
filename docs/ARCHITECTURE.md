@@ -87,7 +87,7 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 - **One provider per slot by default.** Two apps can both provide `transcription`; `apps.json` names the default, and apps call the slot, not a specific app.
 - **User data outlives apps.** Uninstalling an app keeps its data. On a Mac, user files live in a Mac folder and survive uninstalling Wizard ([MAC.md](MAC.md)).
 - **Agents learn pointers, not copies.** When an agent picks up a workflow from an app, it writes a pointer to that app's skill, never a rewrite of it.
-- **A system app is a normal app with `system: true`.** It fills a slot and can be replaced by any app that fills the same slot.
+- **Slots are parking spots; system apps are only their defaults.** Every system capability, the shell included, is a slot. A system app is a normal app with `system: true` that we publish as a slot's default; any app that `provides:` the slot can replace it ([SYSTEM_APPS.md](SYSTEM_APPS.md)).
 
 ## Where it runs
 

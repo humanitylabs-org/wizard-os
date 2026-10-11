@@ -58,7 +58,7 @@ The agent sees this as `/files/Pages/` (the one user-files convention, [SYSTEM_A
 
 ## Who does what
 
-The Agent Service owns pages, so every shell gets them for free (shell and Agent Service are separate apps once #33 in PR #5 lands):
+The Agent Service owns pages, so every shell gets them for free (shell and Agent Service are separate apps (#36)):
 
 - **Agent Service:** serves `/pages/<slug>/...` read-only from `media/Pages/`, with the sandbox header below. It also:
   - lists pages: `GET /wizard/v1/pages` (from each `page.json`)

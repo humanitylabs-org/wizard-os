@@ -2,11 +2,18 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Oct 2026 (night) — Miguel: agent service is its own app; public by default
+
+| # | Decision | Status |
+|---|---|---|
+| 36 | **Agent Service and shell are two apps, not one.** `wizard-agent-service` is a headless system app filling its own `agent-service` slot (its `/wizard/...` API on a box-only port). `wizard-ux` is a view app filling the `shell` slot, `uses: [agent-service]`, serving its static files and passing `/wizard/...` through. Any other shell (Oscar's Wizard App, `hermes-frontend-3`, community shells) can use the same Agent Service, and the Agent Service can be swapped without touching the shell. Updates #30's packaging ("one Runtipi app"); the container work in wizard-agent-service#3 carries over, split in two. | Miguel |
+| 37 | **Public by default.** Every Wizard app repo is public from its first commit, tagged `wizard-app`, and published to the index, so anyone can install it from the App Store straight away. Private only with a stated reason (customer data, secrets). | Miguel |
+
 ## 10 Oct 2026 (night) — James: pages, not apps, for things to look at
 
 | # | Decision | Status |
 |---|---|---|
-| 35 | **Pages.** What the agent makes for its owner to look at (reports, write-ups, dashboards, previews, storyboards, docs to edit together) is a **page**, not an app: a folder at `media/Pages/<slug>/` with a `page.json`, served by the Agent Service at `/pages/<slug>/` behind a sandbox header, and versioned in one git repo over `media/Pages/`. A page with changing data is still a page; a job rewrites its `data.json`. It becomes an app only when it needs its own process, database, MCP or other people's installs. Amends [SHELL.md](../spec/SHELL.md) ("new screens are views (new apps)"). Spec: [PAGES.md](../spec/PAGES.md). Number may shift if #33/#34 in open PRs #5 and #7 take these slots. | Proposed by James; Jan (Agent Service API) and Miguel (files root) to confirm |
+| 35 | **Pages.** What the agent makes for its owner to look at (reports, write-ups, dashboards, previews, storyboards, docs to edit together) is a **page**, not an app: a folder at `media/Pages/<slug>/` with a `page.json`, served by the Agent Service at `/pages/<slug>/` behind a sandbox header, and versioned in one git repo over `media/Pages/`. A page with changing data is still a page; a job rewrites its `data.json`. It becomes an app only when it needs its own process, database, MCP or other people's installs. Amends [SHELL.md](../spec/SHELL.md) ("new screens are views (new apps)"). Spec: [PAGES.md](../spec/PAGES.md). | Proposed by James; Jan (Agent Service API) and Miguel (files root) to confirm |
 
 ## 10 Oct 2026 (night) — James: app icons are sigils
 

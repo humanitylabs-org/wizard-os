@@ -1,20 +1,31 @@
 # System apps, slots, and the two collisions
 
-## The rule
+## The rule: slots are parking spots
 
-A **system app** is a normal Wizard app with `system: true` in its `wizard.md`. It fills a **slot**, which is a capability other apps rely on. Any app that `provides:` the same slot can replace it. `wam bootstrap` installs every system app; the Apps screen hides them by default.
+A **slot** is a job every Wizard needs done (a shell, an agent, files, transcription …). Think of it as a **parking spot**: the spot is part of Wizard OS, the app parked in it is not. Any app whose `wizard.md` says `provides: [<slot>]` can park there, and the owner can swap it at any time. A **system app** is just a normal Wizard app (`system: true`) that we publish as the **default** for a spot.
 
-| Slot | Today's default | Notes |
-|---|---|---|
-| `files` | Files (File Browser on Runtipi `media/`) | The one user-files root |
-| `transcription` | Wizard STT (front) → Speaches/Transcriber (local backend) | OpenAI-compatible `/v1/audio/transcriptions` |
-| `browser` | Browser (Chromium) | Headless + viewable |
-| `notifications` | to build | |
-| `microphone` | native shell (Android, Mac) | Through the native bridge, not a container |
-| `secrets` | Secret Drop | One-time credential handoff |
-| `private-access` | Tailscale | Native host integration, preinstalled by the installer; owner joins their own tailnet. Cloudflare Tunnel + Access is an alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet managed as an ordinary store app |
+This holds for every spot, **including the shell**: Wizard UX is the default shell, not the only one. `hermes-frontend-3` or a community shell can fill the same spot.
 
-`apps.json` lists each slot's default and candidates. Apps call the **slot**, never a named app (`TRANSCRIPTION_URL`, not `http://transcriber:8000`).
+| Slot | Default app | Required | Notes |
+|---|---|---|---|
+| `shell` | `wizard-ux` | yes | Exactly one active per box ([SHELL.md](../spec/SHELL.md)). Oscar's Wizard App and `hermes-frontend-3` are alternatives |
+| `agent-service` | `wizard-agent-service` | yes | Headless; the `/wizard/...` API every shell talks to. Separate from the shell (#36) |
+| `agent` | `hermes-agent` | yes | Any MCP-speaking agent later |
+| `files` | `files` (File Browser on Runtipi `media/`) | yes | The one user-files root |
+| `ai-accounts` | `wizard-ai-accounts` | no | Subscription logins shared by agents |
+| `transcription` | `transcriber` today; Wizard STT as its front later (below) | no | OpenAI-compatible `/v1/audio/transcriptions` |
+| `browser` | `browser` (headless Chromium) | no | |
+| `secrets` | `secret-drop` | no | One-time credential handoff |
+| `private-access` | Tailscale (native host integration) | no | Preinstalled by the installer; the owner joins their own tailnet. Cloudflare Tunnel + Access is the alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet an ordinary store app |
+| `notifications` | none yet | no | Spot exists; default to build |
+| `microphone` | native shell (Android, Mac) | no | Through the native bridge, not a container |
+
+**How it works on a box** (built in `wizard-app-manager`, `wam/defaults.json`):
+- `wam slots` lists every spot: which app fills it, or that it's empty / has no default yet. `apps.json` carries the same list as `parking`, so the UX can show empty spots as placeholders.
+- `wam bootstrap` installs the default app for every empty spot that has one. A spot already filled by another provider is left alone.
+- `wam uninstall` refuses to empty a **required** spot; install another provider first.
+- `apps.json` `slots` records the owner's chosen default per spot when several apps provide it. Apps call the **slot**, never a named app (`TRANSCRIPTION_URL`, not `http://transcriber:8000`).
+- Swapping a spot's default changes `defaults.json` (for new boxes) or the owner's choice (on one box). It never needs a new OS release.
 
 ## Collision 1: two file roots → one root {#files}
 
