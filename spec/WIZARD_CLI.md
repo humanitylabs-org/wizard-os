@@ -68,7 +68,7 @@ It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only
 - the three edits;
 - the token;
 - the Hermes API;
-- **session history readable**: the shell container reads the host `state.db` read-only, which needs a matching uid until the agent bridge stops reading it;
+- **the Hermes home is not shared** (default): the shell reads chats over the Hermes API and sees only the agent's images folder (`~/.hermes/cache/images`), not the rest of `~/.hermes`. Agent thread titles, turns running on other surfaces and the archived list need `state.db`, so they are off. An owner can opt in with `wam alongside --share-history`; then the line is **session history readable** (matching uid, read-only), and doctor says the shell can read every file in the Hermes home, credentials included;
 - the shell, and that the shell reaches this Hermes;
 - one live `wizard_apps` request through the gateway.
 
