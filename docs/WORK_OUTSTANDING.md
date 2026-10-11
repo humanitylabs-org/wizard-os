@@ -12,6 +12,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **`spec/AGENT_SERVICE_API.md`.** The versioned `/wizard/...` contract the UX relies on.
 - [ ] **Release file.** `releases/<version>.json`: the commit of each repo that goes together.
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
+- [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
 ## App Manager (Miguel)
@@ -33,6 +34,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Wizard UX, including the desktop UX (James + Archimedes)
 
+- [ ] **Pages in the shell** ([PAGES.md](../spec/PAGES.md), #35): pass `/pages/` through, Pages list, open on a review desk, `doc.md` editor, page bridge (`feedback`, `save`).
 - [ ] **Apps screen sources**: label each app Public / Beta / Local / Link; GitHub sign-in for beta apps; `wizard://install` share links ([PRIVATE_BETA.md](PRIVATE_BETA.md)).
 
 - [x] **Desktop UX** of `wizard-ux`: one codebase, two shells. `web/core/` is shared; `desktop.html` is the Omarchy-style shell (workspaces, auto-tiling, ⌘K, ⌥ keys, ⌥V voice), picked by device so neither shell downloads the other's code. Live at `/wizard-os-home/` (`daily` 60e1489), qa-desktop 45/45. UX side of the native bridge done (v0.1).
