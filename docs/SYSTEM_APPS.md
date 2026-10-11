@@ -12,6 +12,7 @@ A **system app** is a normal Wizard app with `system: true` in its `wizard.md`. 
 | `notifications` | to build | |
 | `microphone` | native shell (Android, Mac) | Through the native bridge, not a container |
 | `secrets` | Secret Drop | One-time credential handoff |
+| `private-access` | Tailscale | Native host integration, preinstalled by the installer; owner joins their own tailnet. Cloudflare Tunnel + Access is an alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet managed as an ordinary store app |
 
 `apps.json` lists each slot's default and candidates. Apps call the **slot**, never a named app (`TRANSCRIPTION_URL`, not `http://transcriber:8000`).
 
