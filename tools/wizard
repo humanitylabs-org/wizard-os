@@ -1,0 +1,528 @@
+#!/usr/bin/env python3
+"""wizard: the generic Wizard OS CLI. List installed apps, read their MCP tools, call one.
+
+    wizard apps list [--json]
+    wizard tools <app>[.<tool>] [--json]
+    wizard call <app>.<tool> [ARGS] [--json]      ARGS: a JSON object, '-' for stdin, or @file
+
+Contract: spec/WIZARD_CLI.md. Stdlib only, Python 3.9+. Reads the installed-app registry
+(spec/APPS_JSON.md) and speaks MCP streamable HTTP to each app. Never prints credentials.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+VERSION = "0.1.0"
+MARKER = "wizard-os-generic-cli"  # lets the installer recognise its own copy
+PROTOCOL = "2025-06-18"
+SUPPORTED_TRANSPORTS = ("streamable-http",)
+
+# Exit codes (spec/WIZARD_CLI.md). Stable: scripts may branch on them.
+EXIT = {
+    "usage": 2, "bad_arguments": 2,
+    "registry_not_found": 3, "registry_invalid": 3,
+    "app_not_found": 4,
+    "app_not_running": 5, "app_has_no_mcp": 5, "unsupported_transport": 5,
+    "tool_not_found": 6,
+    "unreachable": 7, "http_error": 7, "protocol_error": 7, "timeout": 7,
+    "auth_failed": 8, "auth_missing": 8,
+    "tool_error": 9,
+}
+
+
+class Fail(Exception):
+    def __init__(self, code: str, message: str, **detail):
+        super().__init__(message)
+        self.code, self.message, self.detail = code, message, detail
+
+    @property
+    def exit(self) -> int:
+        return EXIT.get(self.code, 1)
+
+
+# ------------------------------------------------------------------ registry
+
+def os_home() -> Path:
+    return Path(os.environ.get("WIZARD_OS_HOME") or Path.home() / ".wizard-os").expanduser()
+
+
+def registry_path(arg: str | None) -> Path:
+    if arg:
+        return Path(arg).expanduser()
+    if os.environ.get("WIZARD_APPS_JSON"):
+        return Path(os.environ["WIZARD_APPS_JSON"]).expanduser()
+    return os_home() / "apps.json"
+
+
+def load_registry(path: Path) -> dict:
+    if not path.is_file():
+        raise Fail("registry_not_found", f"no installed-app registry at {path} (is the App Manager installed?)",
+                   registry=str(path))
+    try:
+        reg = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise Fail("registry_invalid", f"cannot read {path}: {e}", registry=str(path))
+    if not isinstance(reg, dict) or not isinstance(reg.get("apps", []), list):
+        raise Fail("registry_invalid", f"{path} is not an apps.json registry (no 'apps' list)", registry=str(path))
+    reg.setdefault("apps", [])
+    return reg
+
+
+def redact_url(url: str | None) -> str | None:
+    """Drop any user:password@ and query string so URLs are safe to print."""
+    if not url:
+        return url
+    try:
+        p = urllib.parse.urlsplit(url)
+    except ValueError:
+        return "<invalid url>"
+    host = p.hostname or ""
+    if p.port:
+        host = f"{host}:{p.port}"
+    return urllib.parse.urlunsplit((p.scheme, host, p.path, "", ""))
+
+
+def public_app(a: dict) -> dict:
+    """Registry row as printed: private (_-prefixed) fields and MCP auth details removed."""
+    out = {k: v for k, v in a.items() if not str(k).startswith("_")}
+    mcp = a.get("mcp")
+    if isinstance(mcp, dict):
+        out["mcp"] = {"url": redact_url(mcp.get("url")), "internal": redact_url(mcp.get("internal")),
+                      "transport": mcp.get("transport", "streamable-http"),
+                      "auth": (mcp.get("auth") or {}).get("type") if isinstance(mcp.get("auth"), dict) else None}
+    out["callable"] = callable_reason(a) is None
+    return out
+
+
+def callable_reason(a: dict) -> Fail | None:
+    st = a.get("status")
+    if st is not None and st != "running":
+        return Fail("app_not_running", f"{a.get('id')} is {st}, not running (start it in the Apps screen or `wam`)",
+                    app=a.get("id"), status=st)
+    mcp = a.get("mcp")
+    if not isinstance(mcp, dict) or not (mcp.get("url") or mcp.get("internal")):
+        return Fail("app_has_no_mcp", f"{a.get('id')} has no MCP endpoint (it is a view-only app)", app=a.get("id"))
+    tr = mcp.get("transport", "streamable-http")
+    if tr not in SUPPORTED_TRANSPORTS:
+        return Fail("unsupported_transport", f"{a.get('id')} speaks MCP over '{tr}'; this CLI supports "
+                    + ", ".join(SUPPORTED_TRANSPORTS), app=a.get("id"), transport=tr)
+    return None
+
+
+def find_app(reg: dict, app_id: str) -> dict:
+    for a in reg["apps"]:
+        if isinstance(a, dict) and a.get("id") == app_id:
+            return a
+    known = sorted(str(a.get("id")) for a in reg["apps"] if isinstance(a, dict))
+    raise Fail("app_not_found", f"no installed app '{app_id}'" + (f" (installed: {', '.join(known)})" if known
+                                                                    else " (no apps installed)"),
+               app=app_id, installed=known)
+
+
+# ------------------------------------------------------------------ auth
+
+def env_key(app_id: str) -> str:
+    return "WIZARD_MCP_TOKEN_" + re.sub(r"[^A-Z0-9]", "_", app_id.upper())
+
+
+def bearer_for(a: dict) -> str | None:
+    """Token from existing box configuration, never from argv (argv shows up in `ps`).
+
+    1. env WIZARD_MCP_TOKEN_<APP_ID> (e.g. WIZARD_MCP_TOKEN_DEFLEUR_VIDEO)
+    2. registry mcp.auth = {"type": "bearer", "secret": "<KEY>"} -> $WIZARD_OS_HOME/secrets/<id>.json [KEY]
+       (the file the App Manager already writes 0600 for generated app passwords)
+       or {"type": "bearer", "env": "<VAR>"} -> that environment variable.
+    """
+    app_id = str(a.get("id"))
+    tok = os.environ.get(env_key(app_id))
+    if tok:
+        return tok
+    auth = (a.get("mcp") or {}).get("auth")
+    if not isinstance(auth, dict) or not auth:
+        return None
+    if auth.get("type", "bearer") != "bearer":
+        raise Fail("unsupported_transport", f"{app_id} wants MCP auth '{auth.get('type')}'; only bearer is supported",
+                   app=app_id)
+    if auth.get("env"):
+        tok = os.environ.get(str(auth["env"]))
+        if not tok:
+            raise Fail("auth_missing", f"{app_id} needs a token in ${auth['env']} (not set)", app=app_id)
+        return tok
+    key = str(auth.get("secret") or "MCP_TOKEN")
+    f = os_home() / "secrets" / f"{app_id}.json"
+    try:
+        tok = json.loads(f.read_text(encoding="utf-8")).get(key)
+    except (OSError, ValueError, AttributeError):
+        tok = None
+    if not tok:
+        raise Fail("auth_missing", f"{app_id} needs a token: set {env_key(app_id)} or add '{key}' to {f}", app=app_id)
+    return str(tok)
+
+
+# ------------------------------------------------------------------ MCP client (streamable HTTP)
+
+class MCP:
+    def __init__(self, app: dict, endpoint: str, timeout: float):
+        mcp = app["mcp"]
+        url = mcp.get(endpoint) or mcp.get("url") or mcp.get("internal")
+        if urllib.parse.urlsplit(url).scheme not in ("http", "https"):
+            raise Fail("unsupported_transport", f"{app['id']} MCP url is not http(s)", app=app["id"])
+        self.app_id, self.url, self.timeout = app["id"], url, timeout
+        self.token = bearer_for(app)
+        self.session: str | None = None
+        self.proto: str | None = None
+        self.next_id = 0
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # box-local: never via a proxy
+
+    def _post(self, msg: dict) -> tuple[int, dict, bytes]:
+        h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+             "User-Agent": f"wizard-cli/{VERSION}"}
+        if self.token:
+            h["Authorization"] = f"Bearer {self.token}"
+        if self.session:
+            h["Mcp-Session-Id"] = self.session
+        if self.proto:
+            h["MCP-Protocol-Version"] = self.proto
+        req = urllib.request.Request(self.url, data=json.dumps(msg).encode(), headers=h, method="POST")
+        where = redact_url(self.url)
+        try:
+            with self.opener.open(req, timeout=self.timeout) as r:
+                return r.status, {k.lower(): v for k, v in r.headers.items()}, r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise Fail("auth_failed", f"{self.app_id} refused the call (HTTP {e.code}) at {where}"
+                           + ("" if self.token else f"; set {env_key(self.app_id)} if it needs a token"),
+                           app=self.app_id, status=e.code)
+            body = e.read()[:300].decode("utf-8", "replace")
+            raise Fail("http_error", f"{self.app_id} returned HTTP {e.code} at {where}: {body}".strip(),
+                       app=self.app_id, status=e.code)
+        except (TimeoutError, OSError) as e:
+            reason = getattr(e, "reason", e)
+            if isinstance(reason, TimeoutError) or "timed out" in str(reason):
+                raise Fail("timeout", f"{self.app_id} did not answer within {self.timeout:g}s at {where}",
+                           app=self.app_id)
+            raise Fail("unreachable", f"cannot reach {self.app_id} at {where}: {reason}", app=self.app_id)
+
+    def _decode(self, headers: dict, body: bytes, want_id: int) -> dict:
+        ctype = headers.get("content-type", "")
+        msgs: list = []
+        try:
+            if "text/event-stream" in ctype:
+                data: list[str] = []
+                for line in body.decode("utf-8", "replace").splitlines() + [""]:
+                    if line.startswith("data:"):
+                        data.append(line[5:].lstrip())
+                    elif not line.strip() and data:
+                        msgs.append(json.loads("\n".join(data)))
+                        data = []
+            else:
+                parsed = json.loads(body or b"null")
+                msgs = parsed if isinstance(parsed, list) else [parsed]
+        except ValueError as e:
+            raise Fail("protocol_error", f"{self.app_id} sent a reply that is not JSON-RPC: {e}", app=self.app_id)
+        for m in msgs:
+            if isinstance(m, dict) and m.get("id") == want_id and ("result" in m or "error" in m):
+                return m
+        raise Fail("protocol_error", f"{self.app_id} sent no JSON-RPC reply for request {want_id}", app=self.app_id)
+
+    def request(self, method: str, params: dict | None = None) -> dict:
+        self.next_id += 1
+        msg = {"jsonrpc": "2.0", "id": self.next_id, "method": method}
+        if params is not None:
+            msg["params"] = params
+        status, headers, body = self._post(msg)
+        if headers.get("mcp-session-id"):
+            self.session = headers["mcp-session-id"]
+        reply = self._decode(headers, body, self.next_id)
+        if "error" in reply:
+            err = reply["error"] or {}
+            raise Fail("tool_error" if method == "tools/call" else "protocol_error",
+                       f"{self.app_id} {method} failed: {err.get('message', err)}", app=self.app_id,
+                       rpc_code=err.get("code"), rpc_data=err.get("data"))
+        return reply.get("result") or {}
+
+    def notify(self, method: str) -> None:
+        self._post({"jsonrpc": "2.0", "method": method})
+
+    def open(self) -> dict:
+        info = self.request("initialize", {"protocolVersion": PROTOCOL, "capabilities": {},
+                                           "clientInfo": {"name": "wizard-cli", "version": VERSION}})
+        self.proto = info.get("protocolVersion") or PROTOCOL
+        self.notify("notifications/initialized")
+        return info
+
+    def close(self) -> None:
+        if not self.session:
+            return
+        h = {"Mcp-Session-Id": self.session}
+        if self.token:
+            h["Authorization"] = f"Bearer {self.token}"
+        try:
+            self.opener.open(urllib.request.Request(self.url, headers=h, method="DELETE"), timeout=5).close()
+        except Exception:  # noqa: BLE001 - ending a session is best effort
+            pass
+
+    def tools(self) -> list[dict]:
+        out, cursor = [], None
+        for _ in range(100):
+            res = self.request("tools/list", {"cursor": cursor} if cursor else None)
+            out += [t for t in res.get("tools") or [] if isinstance(t, dict)]
+            cursor = res.get("nextCursor")
+            if not cursor:
+                break
+        return out
+
+
+def connect(reg: dict, app_id: str, endpoint: str, timeout: float) -> MCP:
+    a = find_app(reg, app_id)
+    why = callable_reason(a)
+    if why:
+        raise why
+    c = MCP(a, endpoint, timeout)
+    c.open()
+    return c
+
+
+# ------------------------------------------------------------------ arguments
+
+def split_target(target: str, need_tool: bool) -> tuple[str, str | None]:
+    app, dot, tool = target.partition(".")
+    if not app or (dot and not tool):
+        raise Fail("usage", f"'{target}' is not <app> or <app>.<tool>")
+    if need_tool and not tool:
+        raise Fail("usage", f"name a tool: wizard call {app}.<tool> (see `wizard tools {app}`)")
+    return app, tool or None
+
+
+def parse_args_json(raw: str | None) -> dict:
+    if raw is None:
+        return {}
+    src = "ARGS"
+    if raw == "-":
+        raw, src = sys.stdin.read(), "stdin"
+    elif raw.startswith("@"):
+        src = raw[1:]
+        try:
+            raw = Path(src).expanduser().read_text(encoding="utf-8")
+        except OSError as e:
+            raise Fail("bad_arguments", f"cannot read arguments file {src}: {e}")
+    try:
+        val = json.loads(raw) if raw.strip() else {}
+    except ValueError as e:
+        raise Fail("bad_arguments", f"tool arguments from {src} are not valid JSON: {e}")
+    if not isinstance(val, dict):
+        raise Fail("bad_arguments", f"tool arguments must be a JSON object, got {type(val).__name__}")
+    return val
+
+
+JSON_TYPES = {"string": str, "integer": int, "number": (int, float), "boolean": bool, "object": dict,
+              "array": list, "null": type(None)}
+
+
+def check_args(tool: dict, args: dict) -> None:
+    """Catch the obvious mistakes locally (missing required, wrong top-level type, unknown key when the
+    schema forbids extras). The app's own validation still runs."""
+    s = tool.get("inputSchema") or {}
+    props = s.get("properties") or {}
+    missing = [k for k in s.get("required") or [] if k not in args]
+    if missing:
+        raise Fail("bad_arguments", f"{tool['name']} needs {', '.join(missing)}", missing=missing)
+    if s.get("additionalProperties") is False:
+        extra = sorted(k for k in args if k not in props)
+        if extra:
+            raise Fail("bad_arguments", f"{tool['name']} does not take {', '.join(extra)}", unexpected=extra)
+    for k, v in args.items():
+        spec = props.get(k) or {}
+        types = spec.get("type")
+        if not types and isinstance(spec.get("anyOf"), list):
+            types = [t.get("type") for t in spec["anyOf"] if isinstance(t, dict)]
+        if not types:
+            continue
+        types = types if isinstance(types, list) else [types]
+        ok = []
+        for t in types:
+            py = JSON_TYPES.get(t)
+            if py is None:
+                ok.append(True)
+            elif t in ("integer", "number") and isinstance(v, bool):
+                ok.append(False)
+            else:
+                ok.append(isinstance(v, py))
+        if not any(ok):
+            raise Fail("bad_arguments", f"{tool['name']}: '{k}' should be {' or '.join(map(str, types))}",
+                       argument=k)
+
+
+# ------------------------------------------------------------------ commands
+
+def cmd_apps_list(ns) -> dict:
+    path = registry_path(ns.registry)
+    reg = load_registry(path)
+    return {"ok": True, "registry": str(path), "schema": reg.get("schema"),
+            "apps": [public_app(a) for a in reg["apps"] if isinstance(a, dict)]}
+
+
+def tool_brief(t: dict) -> dict:
+    return {k: t[k] for k in ("name", "title", "description", "inputSchema", "outputSchema", "annotations") if k in t}
+
+
+def cmd_tools(ns) -> dict:
+    app_id, tool = split_target(ns.target, need_tool=False)
+    reg = load_registry(registry_path(ns.registry))
+    c = connect(reg, app_id, ns.endpoint, ns.timeout)
+    try:
+        tools = c.tools()
+    finally:
+        c.close()
+    if tool:
+        t = resolve_tool(app_id, tools, tool)
+        return {"ok": True, "app": app_id, "tool": tool_brief(t)}
+    return {"ok": True, "app": app_id, "tools": [tool_brief(t) for t in tools]}
+
+
+def resolve_tool(app_id: str, tools: list[dict], name: str) -> dict:
+    for t in tools:
+        if t.get("name") == name:
+            return t
+    names = sorted(str(t.get("name")) for t in tools)
+    near = [n for n in names if name.lower() in n.lower() or n.lower() in name.lower()]
+    raise Fail("tool_not_found", f"{app_id} has no tool '{name}'" + (f"; did you mean {', '.join(near)}?" if near
+                                                                      else f"; it has: {', '.join(names)}"),
+               app=app_id, tool=name, tools=names)
+
+
+def cmd_call(ns) -> dict:
+    app_id, tool = split_target(ns.target, need_tool=True)
+    args = parse_args_json(ns.args)  # bad JSON fails before any network I/O
+    reg = load_registry(registry_path(ns.registry))
+    c = connect(reg, app_id, ns.endpoint, ns.timeout)
+    try:
+        t = resolve_tool(app_id, c.tools(), tool)
+        check_args(t, args)
+        res = c.request("tools/call", {"name": tool, "arguments": args})
+    finally:
+        c.close()
+    texts = [b.get("text", "") for b in res.get("content") or [] if isinstance(b, dict) and b.get("type") == "text"]
+    data = res.get("structuredContent")
+    if data is None and len(texts) == 1:
+        try:
+            data = json.loads(texts[0])
+        except ValueError:
+            data = None
+    out = {"ok": not res.get("isError"), "app": app_id, "tool": tool, "arguments": args,
+           "text": "\n".join(texts), "data": data, "result": res}
+    if res.get("isError"):
+        raise Fail("tool_error", f"{app_id}.{tool} reported an error: {out['text'][:500]}", app=app_id, tool=tool,
+                   result=res)
+    return out
+
+
+# ------------------------------------------------------------------ output
+
+def human(cmd: str, out: dict) -> str:
+    if cmd == "apps":
+        if not out["apps"]:
+            return f"No apps installed ({out['registry']})."
+        rows = []
+        for a in out["apps"]:
+            mark = "mcp" if a["callable"] else ("off" if a.get("mcp") else "view")
+            rows.append(f"{a.get('id', '?'):<22} {str(a.get('status') or '-'):<10} {mark:<5} {a.get('summary') or ''}")
+        return "\n".join(rows)
+    if cmd == "tools":
+        if "tool" in out:
+            return json.dumps(out["tool"], indent=2)
+        lines = []
+        for t in out["tools"]:
+            req = (t.get("inputSchema") or {}).get("required") or []
+            desc = (t.get("description") or "").strip().splitlines()[0:1]
+            lines.append(f"{t['name']}({', '.join(req)})  {desc[0][:120] if desc else ''}")
+        return "\n".join(lines) or f"{out['app']} lists no tools."
+    if out.get("data") is not None and not out.get("text"):
+        return json.dumps(out["data"], indent=2)
+    return out.get("text") or json.dumps(out["result"], indent=2)
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):  # argparse errors become the deterministic `usage` failure
+        raise Fail("usage", f"{message} (try: {self.prog} --help)")
+
+
+def build_parser() -> Parser:
+    # Options are accepted before or after the subcommand. SUPPRESS keeps a subparser from overwriting
+    # a value given earlier; defaults are applied in options().
+    common = argparse.ArgumentParser(add_help=False)
+    S = argparse.SUPPRESS
+    common.add_argument("--json", action="store_true", default=S, help="machine-readable output on stdout (errors too)")
+    common.add_argument("--registry", metavar="PATH", default=S, help="apps.json to read (default $WIZARD_APPS_JSON, "
+                        "else $WIZARD_OS_HOME/apps.json, else ~/.wizard-os/apps.json)")
+    common.add_argument("--endpoint", choices=("url", "internal"), default=S,
+                        help="registry MCP address to use: url (from the host, default) or internal "
+                        "(from a container on the app network); env WIZARD_MCP_ENDPOINT")
+    common.add_argument("--timeout", type=float, default=S, help="seconds per HTTP request (default 120; env WIZARD_TIMEOUT)")
+    p = Parser(prog="wizard", description="Use any installed Wizard app's MCP tools.", parents=[common])
+    p.add_argument("--version", action="version", version=f"wizard {VERSION} ({MARKER})")
+    sub = p.add_subparsers(dest="cmd", metavar="{apps,tools,call}", parser_class=Parser)
+    apps = sub.add_parser("apps", help="installed apps", parents=[common])
+    apps_sub = apps.add_subparsers(dest="apps_cmd", metavar="{list}", parser_class=Parser)
+    apps_sub.add_parser("list", help="list installed apps from the registry", parents=[common])
+    t = sub.add_parser("tools", help="list an app's tools, or show one tool's schema", parents=[common])
+    t.add_argument("target", metavar="<app>[.<tool>]")
+    c = sub.add_parser("call", help="call one tool", parents=[common])
+    c.add_argument("target", metavar="<app>.<tool>")
+    c.add_argument("args", nargs="?", metavar="ARGS", help="JSON object of tool arguments, '-' to read stdin, "
+                   "or @file (default {})")
+    return p
+
+
+def options(ns) -> argparse.Namespace:
+    ns.json = getattr(ns, "json", False)
+    ns.registry = getattr(ns, "registry", None)
+    ns.endpoint = getattr(ns, "endpoint", None) or os.environ.get("WIZARD_MCP_ENDPOINT") or "url"
+    if ns.endpoint not in ("url", "internal"):
+        raise Fail("usage", f"--endpoint must be url or internal, not {ns.endpoint}")
+    try:
+        ns.timeout = float(getattr(ns, "timeout", None) or os.environ.get("WIZARD_TIMEOUT") or 120)
+    except ValueError:
+        raise Fail("usage", "WIZARD_TIMEOUT must be a number of seconds")
+    return ns
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    want_json = "--json" in argv[: argv.index("--")] if "--" in argv else "--json" in argv
+    p = build_parser()
+    try:
+        ns = options(p.parse_args(argv))
+        if ns.cmd == "apps" and getattr(ns, "apps_cmd", None) == "list":
+            out, kind = cmd_apps_list(ns), "apps"
+        elif ns.cmd == "tools":
+            out, kind = cmd_tools(ns), "tools"
+        elif ns.cmd == "call":
+            out, kind = cmd_call(ns), "call"
+        else:
+            raise Fail("usage", "usage: wizard apps list | wizard tools <app>[.<tool>] | wizard call <app>.<tool> [ARGS]"
+                       "  (add --json for machine-readable output)")
+    except Fail as e:
+        if want_json:
+            err = {"code": e.code, "message": e.message, "exit": e.exit}
+            err.update({k: v for k, v in e.detail.items() if v is not None})
+            print(json.dumps({"ok": False, "error": err}))
+        else:
+            print(f"wizard: {e.message}", file=sys.stderr)
+        return e.exit
+    except KeyboardInterrupt:
+        return 130
+    print(json.dumps(out) if want_json else human(kind, out))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

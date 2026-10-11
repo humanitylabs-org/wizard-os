@@ -6,8 +6,27 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 33 | **Amends #16 and #21.** **Who made an app = a Nostr identity, from v0.2.** Code stays on GitHub. Several agents and people commit to one repo (Telos, defleur-agents, oscarhenrycollins), so the GitHub owner says little about whose app it is. Publishing an app means signing a NIP-34 announcement with the publisher's `npub`. The store shows that person's name and photo, and tapping the name lists their apps. Credit needs both sides: `wizard.md` names `publisher:` (proves control of the repo) **and** that key signs an announcement whose `clone` and `euc` match the repo (proves control of the key). Co-authors and the publisher's Wizard are `maintainers`. Apps with no claim show "GitHub: *owner*". Downloads still come from GitHub at the checked commit. Stages 3–4 of #21 (Nostr as the main catalog, GRASP hosting) keep their triggers. | Approved by James; Miguel to confirm (index + `wam`) |
-| 34 | **Wizard ID is built into the Wizard app.** Nobody installs a separate signer app such as Amber. The key is created on the phone in `ai.wizards.os` and wrapped by a biometric/PIN-gated Android Keystore key. It is backed up through Android's own "save password" sheet to the phone's password manager, and the app reads it back once to confirm. A lost key can't be reset. Every owner signature goes through a native sheet whose wording is generated from the event itself. The web UX can ask for a signature through the bridge but never touches the key. Desktop devices route requests to the phone. Contract: [spec/WIZARD_ID.md](../spec/WIZARD_ID.md). | Approved by James; Jan to review the key handling and bridge |
+| 38 | **Amends #16 and #21.** **Who made an app = a Nostr identity, from v0.2.** Code stays on GitHub. Several agents and people commit to one repo (Telos, defleur-agents, oscarhenrycollins), so the GitHub owner says little about whose app it is. Publishing an app means signing a NIP-34 announcement with the publisher's `npub`. The store shows that person's name and photo, and tapping the name lists their apps. Credit needs both sides: `wizard.md` names `publisher:` (proves control of the repo) **and** that key signs an announcement whose `clone` and `euc` match the repo (proves control of the key). Co-authors and the publisher's Wizard are `maintainers`. Apps with no claim show "GitHub: *owner*". Downloads still come from GitHub at the checked commit. Stages 3–4 of #21 (Nostr as the main catalog, GRASP hosting) keep their triggers. | Approved by James; Miguel to confirm (index + `wam`) |
+| 39 | **Wizard ID is built into the Wizard app.** Nobody installs a separate signer app such as Amber. The key is created on the phone in `ai.wizards.os` and wrapped by a biometric/PIN-gated Android Keystore key. It is backed up through Android's own "save password" sheet to the phone's password manager, and the app reads it back once to confirm. A lost key can't be reset. Every owner signature goes through a native sheet whose wording is generated from the event itself. The web UX can ask for a signature through the bridge but never touches the key. Desktop devices route requests to the phone. Contract: [spec/WIZARD_ID.md](../spec/WIZARD_ID.md). | Approved by James; Jan to review the key handling and bridge |
+
+## 10 Oct 2026 (night) — Miguel: agent service is its own app; public by default
+
+| # | Decision | Status |
+|---|---|---|
+| 36 | **Agent Service and shell are two apps, not one.** `wizard-agent-service` is a headless system app filling its own `agent-service` slot (its `/wizard/...` API on a box-only port). `wizard-ux` is a view app filling the `shell` slot, `uses: [agent-service]`, serving its static files and passing `/wizard/...` through. Any other shell (Oscar's Wizard App, `hermes-frontend-3`, community shells) can use the same Agent Service, and the Agent Service can be swapped without touching the shell. Updates #30's packaging ("one Runtipi app"); the container work in wizard-agent-service#3 carries over, split in two. | Miguel |
+| 37 | **Public by default.** Every Wizard app repo is public from its first commit, tagged `wizard-app`, and published to the index, so anyone can install it from the App Store straight away. Private only with a stated reason (customer data, secrets). | Miguel |
+
+## 10 Oct 2026 (night) — James: pages, not apps, for things to look at
+
+| # | Decision | Status |
+|---|---|---|
+| 35 | **Pages.** What the agent makes for its owner to look at (reports, write-ups, dashboards, previews, storyboards, docs to edit together) is a **page**, not an app: a folder at `media/Pages/<slug>/` with a `page.json`, served by the Agent Service at `/pages/<slug>/` behind a sandbox header, and versioned in one git repo over `media/Pages/`. A page with changing data is still a page; a job rewrites its `data.json`. It becomes an app only when it needs its own process, database, MCP or other people's installs. Amends [SHELL.md](../spec/SHELL.md) ("new screens are views (new apps)"). Spec: [PAGES.md](../spec/PAGES.md). | Proposed by James; Jan (Agent Service API) and Miguel (files root) to confirm |
+
+## 10 Oct 2026 (night) — James: app icons are sigils
+
+| # | Decision | Status |
+|---|---|---|
+| 33 | **Every Wizard app's icon is a sigil**: one solid silhouette, one bite of negative space, one colour per app, on a dark glass tile. The guide, glyph library, colour registry and icon exporter live in [`style/ICONS.md`](../style/ICONS.md) and [`style/sigils/`](../style/sigils/). A new app claims a glyph and a free hue in the registry and ships the exported icon files; no emoji, letters or stock icons. `wizard-ux` draws the same sigils live in the launcher. | Locked (James owns `style/`) |
 
 ## 10 Oct 2026 (evening) — Miguel: thin Runtipi fork
 

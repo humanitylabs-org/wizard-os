@@ -12,9 +12,10 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **`spec/AGENT_SERVICE_API.md`.** The versioned `/wizard/...` contract the UX relies on.
 - [ ] **Release file.** `releases/<version>.json`: the commit of each repo that goes together.
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
+- [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
-## Wizard ID (Archimedes builds, Jan reviews; DECISIONS #33, #34)
+## Wizard ID (Archimedes builds, Jan reviews; DECISIONS #38, #39)
 
 - [ ] **Wizard ID in `ai.wizards.os`**: create or import a key, wrap it with a biometric/PIN Keystore key, save it to the password manager and read it back, publish the profile, Settings → Wizard ID, and the `identity.info/setup/sign` bridge methods ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md)). Built and emulator-tested on Thales.
 - [ ] **`wizard publish`**: the Agent Service drafts the NIP-34 announcement for an app (GitHub `clone`, `euc`, `t=wizard-app`, maintainers), the owner approves on the phone, then it is posted to relays and the index.
@@ -29,7 +30,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
 - [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
-- [ ] **Thin-fork terms (#32, Miguel):** frontend back to stock Runtipi (Wizard views handed to Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
+- [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
 - [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code.
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
@@ -40,6 +41,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Wizard UX, including the desktop UX (James + Archimedes)
 
+- [ ] **Pages in the shell** ([PAGES.md](../spec/PAGES.md), #35): pass `/pages/` through, Pages list, open on a review desk, `doc.md` editor, page bridge (`feedback`, `save`).
 - [ ] **Apps screen sources**: label each app Public / Beta / Local / Link; GitHub sign-in for beta apps; `wizard://install` share links ([PRIVATE_BETA.md](PRIVATE_BETA.md)).
 
 - [x] **Desktop UX** of `wizard-ux`: one codebase, two shells. `web/core/` is shared; `desktop.html` is the Omarchy-style shell (workspaces, auto-tiling, ⌘K, ⌥ keys, ⌥V voice), picked by device so neither shell downloads the other's code. Live at `/wizard-os-home/` (`daily` 60e1489), qa-desktop 45/45. UX side of the native bridge done (v0.1).
@@ -50,7 +52,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Shell customization (James + Archimedes, later; [spec/SHELL.md](../spec/SHELL.md))
 
-- [ ] **Shell slot**: `wam` refuses to uninstall the last `provides: [shell]` app; `wam bootstrap` installs the default shell.
+- [x] **Parking spots** (Miguel, 10 Oct): `wam slots`, `wam bootstrap` and the required-spot uninstall guard cover every slot, the shell included (`wam/defaults.json`). The shell spot's default fills in once the Wizard UX app is published.
 - [ ] **Theme / skin file** (`theme.json` over the style tokens): look changes on phone and desktop without a rebuild, survives updates.
 - [ ] **Overlay folder**: user CSS/JS and per-view overrides loaded last; a broken overlay starts with it off and names the file.
 - [ ] **Customize skill** so the owner's agent edits settings, layout, theme and overlay safely.
@@ -75,7 +77,7 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 - [ ] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components.
 - [ ] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?"
-- [ ] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`.
+- [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.
 - [x] GitHub tag: `wizard-app` (approved by James, 9 Oct).

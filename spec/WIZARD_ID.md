@@ -1,6 +1,6 @@
 # Wizard ID v0.1
 
-**Status:** approved by James, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #34). Jan to review the key handling and bridge. Build step 1 in progress (Archimedes).
+**Status:** approved by James, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #39). Jan to review the key handling and bridge. Build step 1 in progress (Archimedes).
 
 Your Wizard ID is a Nostr key pair. The public half (`npub`) is your name everywhere in Wizard: the apps you publish, who follows you, and what your Wizard does for you. The private half signs. It is created on your phone, inside the Wizard app, and no one else holds a copy. That includes Humanity Labs, your Wizard box and the agent.
 
@@ -53,7 +53,7 @@ People never have to install a separate signer app (Amber or anything else). The
 
 The box generates the Wizard's own key. The owner signs one attestation: "*<Wizard npub>* is my Wizard, within this scope, until revoked." Under its own key the Wizard signs its own work: it is listed as an app maintainer and posts as itself. Revoking the attestation never touches the owner's key. This is locked from 1 Sep.
 
-## App publishing ([DECISIONS](../docs/DECISIONS.md) #33)
+## App publishing ([DECISIONS](../docs/DECISIONS.md) #38)
 
 - Publishing an app means the owner signs a NIP-34 announcement. It carries:
   - kind `30617` and `t=wizard-app`;

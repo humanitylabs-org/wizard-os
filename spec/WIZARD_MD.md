@@ -20,7 +20,7 @@ Every app is its own repo, including the ones Humanity Labs makes: there are no 
 4. Pointer-skill rule (below): the Agent Service, not the app, owns the generic "when asked to do X, use app Y" skill.
 5. The topic alone never makes an app compatible.
 6. `category:` (optional) — the store shelf: `agent`, `interface`, `app` or `system`. Missing means `agent` for `type: agent`, `app` otherwise. `type` says how the app runs; `category` says where people find it.
-7. `icon:` (optional) — a square PNG or JPEG in the repo for the store and launcher. Missing falls back to Runtipi's `metadata/logo.jpg` next to `runtime.config`.
+7. `icon:` (optional) — a square PNG or JPEG in the repo for the store and launcher. Missing falls back to Runtipi's `metadata/logo.jpg` next to `runtime.config`. The icon is a sigil made to [`style/ICONS.md`](../style/ICONS.md); `style/sigils/make_icon.py` writes `icon.png` (DECISIONS #33).
 8. Container safety: the checker refuses host-level access in the compose file (rule 12).
 
 ## Shape
@@ -39,7 +39,7 @@ summary: Edit a talking-head video into a finished vertical short.
 icon: icon.png              # optional; square PNG/JPEG, 512x512 recommended
 license: MIT
 source: https://github.com/humanitylabs-org/defleur-video
-publisher: npub1…            # optional; the Wizard ID (Nostr key) credited with this app (#33)
+publisher: npub1…            # optional; the Wizard ID (Nostr key) credited with this app (#38)
 
 runtime:                    # how the App Manager installs it (Runtipi today)
   kind: runtipi
