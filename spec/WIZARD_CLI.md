@@ -42,6 +42,35 @@ Options work before or after the subcommand:
 | `--endpoint url\|internal` | `WIZARD_MCP_ENDPOINT` | `url` | `mcp.url` (from the host) or `mcp.internal` (from a container on the app network) |
 | `--timeout SECONDS` | `WIZARD_TIMEOUT` | `120` | Per HTTP request |
 
+## Linking an existing Hermes (alongside mode)
+
+`spec/AGENT_BRIDGE.md` → "Installing over an existing Hermes". The installer runs these for you in alongside mode; they also work by hand.
+
+```
+wizard link [--restart]     connect this box's Hermes to the apps
+wizard unlink [--restart]   reverse exactly what link changed
+wizard doctor               PASS/FAIL lines + one live request through the bridge
+```
+
+`link` backs up `~/.hermes/config.yaml` and records every change in `~/.wizard-os/linked.json`. It makes four stock-config edits, through Hermes's own Python and ruamel round-trip so comments and layout survive:
+1. `mcp_servers.wizard` (the gateway URL, plus a bearer header reading `${WIZARD_MCP_TOKEN}`);
+2. `skills.external_dirs += ~/.wizard-os/skills`;
+3. `plugins.enabled += wizard-os` (installed with stock `hermes plugins install`);
+4. `tools.tool_search.eager_tools += mcp__wizard__wizard_apps`. App tools stay deferred behind Tool Search. If the owner has Tool Search `off`, their setting is kept and `doctor` says every app tool will be eager.
+
+It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only if Hermes had none.
+
+`unlink` removes exactly those entries and the plugin, then restores `config.yaml` byte for byte. If the owner edited the file in between, their edits are kept and only Wizard's entries are removed. Values are never printed.
+
+`doctor` checks:
+- the link;
+- the four edits;
+- the token;
+- the Hermes API;
+- **session history readable**: the shell container reads the host `state.db` read-only, which needs a matching uid until the agent bridge stops reading it;
+- the shell, and that the shell reaches this Hermes;
+- one live `wizard_apps` request through the gateway.
+
 ## `--json` output
 
 With `--json`, stdout carries **exactly one JSON document**, and nothing goes to stderr. Without it, stdout gets readable text and errors go to stderr as `wizard: <message>`.
