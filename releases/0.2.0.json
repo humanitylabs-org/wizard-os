@@ -13,9 +13,9 @@
   "components": {
     "wizard-app-manager": {
       "repo": "humanitylabs-org/wizard-app-manager",
-      "commit": "92610596d93ad8a2d7856e70a34c902b9270b967",
+      "commit": "46f63f23d3c6fcc203a29120fdf51b57a5464fb9",
       "branch": "feature/install-alongside",
-      "note": "Alongside mode is wizard-app-manager PR #12 (on top of PR #9, arm64). Both await Miguel; this pin moves to main when they merge."
+      "note": "Alongside mode is wizard-app-manager PR #12, now on top of main (Miguel's #13 merged: fresh boxes + arm64). Second revision answers Miguel's review: a re-run keeps the box's mode, and the shell gets no Hermes home by default. This pin moves to main when #12 merges."
     },
     "wizard-agent-service": {
       "repo": "humanitylabs-org/wizard-agent-service",
@@ -30,9 +30,9 @@
     },
     "wizard-os": {
       "repo": "humanitylabs-org/wizard-os",
-      "commit": "6dc32193313c93f1877d107446e60b01cdcaba3c",
+      "commit": "b9e26274b818cc2007953a140414cc90b6c349da",
       "branch": "main",
-      "note": "specs + the generic `wizard` CLI (link / unlink / doctor); byte-identical copy vendored at wizard-app-manager/wizard-cli/wizard. A release file cannot name the commit that adds it, so this pins the commit before it."
+      "note": "specs + the generic `wizard` CLI: link makes three edits (#19 dropped the eager_tools edit stock Hermes ignores), doctor reports the shell's history mode (#20). Byte-identical copy vendored at wizard-app-manager/wizard-cli/ (SOURCE.json pins it). A release file cannot name the commit that adds it, so this pins the commit before it."
     }
   },
   "images": {
@@ -49,26 +49,25 @@
     },
     "wizard-app-manager": {
       "ref": "ghcr.io/humanitylabs-org/wizard-app-manager:latest",
-      "digest": "sha256:a178a773b9329313d48da4627fcfe03ab5a7b888cabf81edd6069970ddda432d",
+      "digest": "sha256:8afef790d701d8bdd6728187f943c5d4de50cd09da5dc29f245f636af32c1117",
       "built_from": "wizard-app-manager",
       "architectures": [
-        "amd64"
+        "amd64",
+        "arm64"
       ],
-      "note": "arm64 arrives with PR #9; on Apple Silicon VMs it runs under Rosetta until then"
+      "note": "multi-arch since wizard-app-manager #13 (arm64 built from x86)"
     }
   },
   "default_apps": {
     "shell": {
       "app": "wizard-shell",
       "repo": "humanitylabs-org/wizard-agent-service",
-      "index_version": "0.2.0",
-      "note": "index still lists 0.1.0 until the app index re-reads wizard-agent-service main"
+      "index_version": "0.2.0"
     },
     "agent-service": {
       "app": "wizard-shell",
       "repo": "humanitylabs-org/wizard-agent-service",
-      "index_version": "0.2.0",
-      "note": "index still lists 0.1.0 until the app index re-reads wizard-agent-service main"
+      "index_version": "0.2.0"
     },
     "agent": {
       "app": "hermes-agent",
