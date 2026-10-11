@@ -30,8 +30,23 @@ when ready. Login waits are bounded; actual package/service failures stop setup.
 The installer writes only provider/state metadata to
 `~/.wizard-os/private-access.json`, not credentials. It enables no Funnel, Tailscale
 SSH, subnet routes, exit node, or public app port. Native Tailscale installation
-is **not** proof that app screens are reachable: private proxy URLs remain a
-separate step, and app origins stay loopback-only.
+is **not** proof that app screens are reachable: the configured access path must
+still reach the app's existing Runtipi endpoint; current box-local origins remain
+loopback-only unless deliberately configured otherwise.
+
+## App opening and routing
+
+Reuse stock Runtipi for this part of the system. Its existing Open action supports
+the current hostname plus the assigned app port, an app domain, or a local domain;
+its existing Traefik integration handles domain routing. Wizard interfaces should
+reuse those endpoints and actions, not invent a parallel app proxy or per-app
+Tailscale Serve lifecycle.
+
+New apps use Runtipi's existing installation and routing configuration. Provider
+setup and owner enrollment are separate from app installation. A direct port URL
+still requires that port to be privately reachable, while domain routing requires
+the domain and access provider to be configured. Do not claim remote access works
+merely because Tailscale was installed or an Open URL was calculated.
 
 ## Alternatives and packaging
 
