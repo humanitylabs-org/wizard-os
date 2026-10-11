@@ -15,6 +15,14 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
+- [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
+  - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
+  - Agent Search system app: Hermes + Pi readers, per-agent index, MCP tools, grant checks, read log.
+  - Agent-data grants in `wizard-grants.json` and on the Apps screen.
+  - Wizard scheduler: jobs API, UX list, Hermes cron import for alongside mode, blueprint templates.
+- [ ] **Approval policy across agents**: which actions need the owner's yes, enforced in Wizard rather than per agent. Unowned.
+- [ ] **Lean-agent bake-off** (once a containerised box exists): 20 real tasks, four setups (Hermes + frontier model, Hermes + flash model, slim Hermes profile + flash model, Pi + flash model), scored on pass rate, cost, time and tool calls. Runs in fresh containers on Thales with stub app MCPs.
+
 ## Wizard ID (Archimedes builds, Jan reviews; DECISIONS #38, #39)
 
 - [ ] **Wizard ID in `ai.wizards.os`**: create or import a key, wrap it with a biometric/PIN Keystore key, save it to the password manager and read it back, publish the profile, Settings → Wizard ID, and the `identity.info/setup/sign` bridge methods ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md)). Built and emulator-tested on Thales.
