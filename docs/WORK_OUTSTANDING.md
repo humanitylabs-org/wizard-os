@@ -15,6 +15,13 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
+## Wizard ID (Archimedes builds, Jan reviews; DECISIONS #38, #39)
+
+- [ ] **Wizard ID in `ai.wizards.os`**: create or import a key, wrap it with a biometric/PIN Keystore key, save it to the password manager and read it back, publish the profile, Settings → Wizard ID, and the `identity.info/setup/sign` bridge methods ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md)). Built and emulator-tested on Thales.
+- [ ] **`wizard publish`**: the Agent Service drafts the NIP-34 announcement for an app (GitHub `clone`, `euc`, `t=wizard-app`, maintainers), the owner approves on the phone, then it is posted to relays and the index.
+- [ ] **Two-sided publisher rule** in the index and `wam` (Miguel): fill `publisher_npub` only when both sides match.
+- [ ] **Store publisher profiles** (James + Archimedes): name and photo from the npub's kind 0 profile, tap through to all of that npub's apps, and a "GitHub: *owner*" label for unclaimed apps.
+
 ## App Manager (Miguel)
 
 - [ ] Take over `wizard-app-manager`, and review the reference implementation's choices (CLI token auth, git smart-HTTP store, `apps.json` v1).
@@ -30,7 +37,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] Uninstall keeps data. Verify Runtipi's behaviour and add an explicit `--delete-data`.
 - [x] **Nostr catalog source behind a flag** (Archimedes, 9 Oct): `wam/nostr.py`, signature-verified NIP-34 discovery, publisher rule, GitHub/Nostr de-dupe, `commit` recorded per catalog row. Off unless `WAM_NOSTR=1`. Tested against four live relays.
 - [ ] **Pinned updates** (needed by stage 2): `wam update <id>` shows the commit diff, re-runs the checker, installs only after owner approval. Today a refresh moves to the latest commit.
-- [ ] **Stage 2 publish tooling**: one command that posts the NIP-34 announcement for an app (GitHub clone URL, `t=wizard-app`), signed through Wizard Authority, plus the Humanity Labs curated list.
+- [ ] **Stage 2 publish tooling**: see Wizard ID above (`wizard publish`), plus the Humanity Labs curated list.
 
 ## Wizard UX, including the desktop UX (James + Archimedes)
 
