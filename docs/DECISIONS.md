@@ -2,6 +2,18 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 11 Oct 2026 — James: agent state belongs to Wizard ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 43 | **One folder per agent instance:** `~/.wizard-os/agents/<id>/home`, bind-mounted into that agent's container as its home, with an `agent.json` saying where its skills, sessions and memory sit. Harness layouts stay native; nothing in Hermes changes. Outside `media/`, so other apps can't read it. Survives uninstall and host moves. | Proposed (James) |
+| 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent Search, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
+| 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
+| 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James) |
+| 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Proposed (James) |
+| 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | Proposed (James) |
+| 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent Search uses the same method across agents. | Proposed (James) |
+
 ## 11 Oct 2026 — James: Archimedes owns the Agent Service; agent bridge; install alongside Hermes
 
 | # | Decision | Status |
