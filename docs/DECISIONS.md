@@ -2,6 +2,14 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 11 Oct 2026 — James: Archimedes owns the Agent Service; agent bridge; install alongside Hermes
+
+| # | Decision | Status |
+|---|---|---|
+| 40 | **Agent bridge** ([spec/AGENT_BRIDGE.md](../spec/AGENT_BRIDGE.md)). Leaves the app spec unchanged: apps still ship MCP plus a skill, with no per-app CLIs. The Agent Service's half has three pieces. (1) **Discovery by skills:** one generated pointer skill per job plus each app's shipped skill, read through `skills.external_dirs`, so apps appear in the agent's normal skills list and load on demand. (2) **Calling through one `wizard` MCP gateway:** `<app>__<tool>`, one config entry, `tools/list_changed` on install. App tools stay deferred behind Hermes' Tool Search, so no app's schema goes into every session. (3) **A fixed, short Wizard OS kernel with no app list**, delivered by a stock Hermes plugin (system-prompt section) or per-run instructions for other harnesses. Release gate: a flash-tier model makes the right first app call in 7 of 8 plain requests, and session tokens stay flat as apps are added. | Proposed by Archimedes, revised after James's review 11 Oct (no per-session app list); James to confirm |
+| 41 | **Install alongside an existing Hermes first** (option A). `os.sh` detects a running Hermes and installs Wizard OS next to it: the Agent Service points at the host Hermes, the `agent` slot is "external", and linking is three reversible stock-config edits recorded in `~/.wizard-os/linked.json` (`wizard unlink` undoes them). Migrating Hermes into Wizard OS (option B) comes later as its own command. | James |
+| 42 | **Agent Service items move from Jan to Archimedes** (apps.json reader, pointer skills, API spec, release file). Archimedes builds; no review gate on Jan. Applies to wizard-os#6 (permissions) too: Archimedes reviews it against the agent bridge. | James |
+
 ## 10 Oct 2026 (night) — James: publisher identity and Wizard ID
 
 | # | Decision | Status |

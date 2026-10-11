@@ -9,7 +9,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 | Repo | Owner | What |
 |---|---|---|
 | `wizard-ux` | James + Archimedes | The front end everywhere: phone app, desktop UX, and the native desktop app's hotkeys. Includes the Apps screen. |
-| `wizard-agent-service` | Jan | The service between any front end and the agent. Adds the Wizard OS instructions and the installed apps; Hermes stays unmodified. |
+| `wizard-agent-service` | Archimedes (#42) | The service between any front end and the agent. Adds the Wizard OS instructions and the installed apps; Hermes stays unmodified. |
 | `wizard-app-manager` | Miguel | A **thin fork** of Runtipi (DECISIONS #32): a small backend patch that installs apps straight from the index, re-checks `wizard.md` and writes `apps.json`. The frontend is stock Runtipi (admin/break-glass); the image is a drop-in for `runtipi/runtipi`. |
 | `wizard-app-index` | Miguel | The shared app catalog: [apps.aiwizards.com](https://apps.aiwizards.com) (API) and [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps) (store page). Publish + topic crawl; a rebuildable cache. |
 | `wizard-app-store` | Miguel | Legacy hand-maintained Runtipi store. Every app in it now has its own repo; kept until boxes move to the App Manager. |
@@ -34,6 +34,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 - [`AGENT_SERVICE_API.md`](spec/AGENT_SERVICE_API.md): the `/wizard/...` API.
 - [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
+- [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the Wizard OS kernel text and app skills; install alongside an existing Hermes (proposed).
 - [`WIZARD_CLI.md`](spec/WIZARD_CLI.md): the generic `wizard` CLI (`apps list`, `tools`, `call`) for people and scripts; `--json` output and exit codes.
 - [`SHELL.md`](spec/SHELL.md): the shell slot (Wizard UX as the system front end) and how owners customize it without forking (proposed).
 - [`PAGES.md`](spec/PAGES.md): pages, the agent-made reports, dashboards and shared docs that live in Files and need no container (proposed).

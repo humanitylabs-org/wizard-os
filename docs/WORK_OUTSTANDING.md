@@ -2,15 +2,16 @@
 
 Components still to build. Pick one up: put your name on it in a PR, and close it with evidence. Ordered roughly by when it's needed.
 
-## Agent Service (Archimedes builds, Jan reviews; DECISIONS #30)
+## Agent Service (Archimedes; DECISIONS #30, #42)
 
 - [x] **Runs on stock Hermes** (Archimedes, 9 Oct): capability-aware runs, helper follow-through without a Hermes patch, settings/bootstrap/apps endpoints, orb router, serves Wizard UX. James's daily driver since 9 Oct; `main` = `2634564`, CI green.
 - [ ] **Container port** (Archimedes, 🔨): one Runtipi app = Agent Service + Wizard UX, `wizard.md` with `provides: [shell]`; Hermes at `hermes-agent-engine:8642`; sessions read from a read-only Hermes data volume; voice via the `transcription` slot; uploads into `media/`; every host path becomes a setting. Done when it passes the end-to-end test on a fresh stock-Runtipi VM.
 - [ ] **Wizard OS instruction injection.** Prepend "you are an agent inside Wizard OS" plus the installed-app summary to every agent run. Hermes stays unmodified. Built: [wizard-agent-service#2](https://github.com/humanitylabs-org/wizard-agent-service/pull/2), rebased on main, 183/183 tests; Jan to review.
-- [ ] **`apps.json` reader.** Watch `~/.wizard-os/apps.json` (or `GET :8790/api/apps`). On change, register each app's MCP with the agent and load its skill.
-- [ ] **Pointer skills.** One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
-- [ ] **`spec/AGENT_SERVICE_API.md`.** The versioned `/wizard/...` contract the UX relies on.
-- [ ] **Release file.** `releases/<version>.json`: the commit of each repo that goes together.
+- [ ] **Agent bridge** ([AGENT_BRIDGE.md](../spec/AGENT_BRIDGE.md), #40; Archimedes): `wizard` MCP gateway at `/wizard/mcp` over `apps.json`, `list_changed` on change, `wizard_apps` meta tool; kernel at `/wizard/v1/agent-context`; `wizard-os` Hermes plugin; weak-model gate. Replaces "`apps.json` reader: register each app's MCP".
+- [ ] **Pointer skills** (Archimedes, part of #40). One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
+- [ ] **`spec/AGENT_SERVICE_API.md`** (Archimedes). The versioned `/wizard/...` contract the UX relies on.
+- [ ] **Install alongside an existing Hermes** (#41; Archimedes): `os.sh` detect + alongside mode, `wizard link / unlink / doctor`, tested on a fresh VM with stock Hermes preinstalled.
+- [ ] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together.
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
 - [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
