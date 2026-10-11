@@ -948,15 +948,24 @@ def cmd_doctor(ns) -> dict:
         _check(rows, "Hermes API answers", code < 500, origin)
     except Exception as e:  # noqa: BLE001
         _check(rows, "Hermes API answers", False, f"{origin}: {str(e)[:100]}")
-    db = home / "state.db"
-    uid = (st.get("agent") or {}).get("uid", os.getuid())
-    try:
-        dst = db.stat()
-        readable = dst.st_uid == int(uid) and bool(dst.st_mode & 0o400) and os.access(home, os.X_OK)
-        detail = f"{db} (owner uid {dst.st_uid}, shell uid {uid}, mounted read-only)"
-    except OSError as e:
-        readable, detail = False, f"{db}: {e.strerror}"
-    _check(rows, "session history readable", readable, detail)
+    # The shell reads chats over the Hermes API and sees only the agent's images folder. Sharing the whole Hermes
+    # home (for state.db) is an owner opt-in (`wam alongside --share-history`): that mount also exposes .env,
+    # auth.json and any other credential there.
+    if (st.get("shell") or {}).get("share_history"):
+        db = home / "state.db"
+        uid = (st.get("agent") or {}).get("uid", os.getuid())
+        try:
+            dst = db.stat()
+            readable = dst.st_uid == int(uid) and bool(dst.st_mode & 0o400) and os.access(home, os.X_OK)
+            detail = (f"{db} (owner uid {dst.st_uid}, shell uid {uid}, read-only; the shell can read every file in "
+                      f"{home}, credentials included)")
+        except OSError as e:
+            readable, detail = False, f"{db}: {e.strerror}"
+        _check(rows, "session history readable", readable, detail)
+    else:
+        _check(rows, "Hermes home not shared with the shell", True,
+               "chats over the Hermes API, only the agent's images folder mounted; agent thread titles, other-surface "
+               "activity and the archived list are off (opt in: wam alongside --share-history)")
     base = url.rsplit("/wizard/mcp", 1)[0]
     try:
         code, health = _http_json(f"{base}/wizard/health")

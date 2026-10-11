@@ -113,9 +113,10 @@ A session-search or grants service is out of scope here; the agent-state proposa
    1. `mcp_servers.wizard`, with its token in `~/.hermes/.env` as `WIZARD_MCP_TOKEN`
    2. `skills.external_dirs += ~/.wizard-os/skills`
    3. `plugins.enabled += wizard-os`, after `hermes plugins install` of the plugin
-   If the owner set Tool Search `off`, keep their setting and report that every app tool will be eager.
-4. Leave alone: `SOUL.md`, memory, sessions, other skills, providers and every existing `mcp_servers` entry.
-5. Prove it with `wizard doctor`, which runs one gate request.
+   `wizard link` never touches `tools.tool_search`: an owner who set Tool Search `off` keeps that, and every app tool is then loaded eagerly.
+4. Give the shell **no access to the Hermes home** by default, apart from the agent's images folder (`cache/images`, read-only, so pictures in chats show). It reads chats over the Hermes API; the five `state.db` reads above stay off (no agent thread titles, other-surface activity or archived list). `wam alongside --share-history` opts in: the shell then mounts the Hermes home read-only and runs as the owner's uid, which lets it read every file there, `.env` and `auth.json` included. `wizard doctor` states which of the two a box uses.
+5. Leave alone: `SOUL.md`, memory, sessions, other skills, providers and every existing `mcp_servers` entry.
+6. Prove it with `wizard doctor`, which runs one gate request.
 
 Migrating the owner's Hermes into Wizard OS (option B) comes later, as its own command.
 

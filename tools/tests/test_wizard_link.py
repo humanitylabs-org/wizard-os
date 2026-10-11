@@ -203,7 +203,8 @@ class LinkTest(unittest.TestCase):
         self.assertTrue(by["Hermes has the wizard MCP server"])
         self.assertTrue(by["wizard-os plugin installed and enabled"])
         self.assertNotIn("wizard_apps eager behind Tool Search", by)   # the dropped 4th edit has no check
-        self.assertFalse(by["session history readable"])   # no state.db in the throwaway home
+        self.assertTrue(by["Hermes home not shared with the shell"])   # default: the shell reads chats over HTTP
+        self.assertNotIn("session history readable", by)
         self.assertFalse(by["Wizard shell answers"])
         token = (self.wos / "mcp-token").read_text().strip()
         self.assertNotIn(token, json.dumps(out))
