@@ -57,7 +57,7 @@ Skins supply type **roles** (`font-ui`, `font-reading`, `font-display`, `font-mo
 
 ## Building an app that conforms by default
 
-1. Start from the app template, which includes the appearance client and the shared primitives (`@wizard/ui`: buttons, inputs, panels, tabs, sheets, empty/loading states) wired to the tokens above.
+1. Start from the app template, which loads the centrally maintained `/wizard-os-home/core/app-client.js`; its `WizardApp.theme.get/onChange` exposes this Appearance v1 protocol. Use the shared primitives (`@wizard/ui`: buttons, inputs, panels, tabs, sheets, empty/loading states) wired to the tokens above. Per-app appearance transport/theme storage is prohibited by [shared system functions v1](APP_SYSTEM_FUNCTIONS.md).
 2. Background rule: `html, body { background: var(--wz-canvas) }`. Bars use `--wz-chrome`, sheets `--wz-overlay`, cards `--wz-surface`.
 3. Declare it in `wizard.md`: `appearance: 1` and the accepted type roles (field to confirm with Miguel).
 4. The checker mounts the app in a test host under a dark and a light skin, window and fullscreen, and fails on an opaque full-page canvas, horizontal overflow, contrast below AA, or a Back that leaves the app.
