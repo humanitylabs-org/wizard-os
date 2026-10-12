@@ -6,4 +6,5 @@ The `wizard-app-builder` skill reads this folder, the system apps and the checke
 
 ## Locked
 
+- **Shell · skin · app: [../spec/APPEARANCE.md](../spec/APPEARANCE.md).** Hosted apps paint a transparent canvas on the shell's window material and use only skin tokens for surfaces; layouts and intentional typography stay the app's own.
 - **App icons: [ICONS.md](ICONS.md).** Every app ships a sigil (one silhouette, one bite, one colour). `sigils/make_icon.py` exports the icon files for a new app.

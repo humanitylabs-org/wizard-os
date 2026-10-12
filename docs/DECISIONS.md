@@ -2,6 +2,15 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 12 Oct 2026 — James: shell, skin, app ([spec/APPEARANCE.md](../spec/APPEARANCE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 50 | **Three layers.** The **shell** owns how you move (orb, desks, windows, fullscreen, outer Back, the backdrop). A **skin** owns how everything looks (colours, window material, surfaces, type roles, motion) and never changes navigation; a new way of moving is a new shell. An **app** owns its content, layout, interactions and intentional typography, and never knows which shell hosts it. | **Locked (James)** |
+| 51 | **The shell owns the backdrop.** Hosted, every app's canvas is transparent and sits on the same window material as Chats; apps draw only skin surfaces inside it. Standalone, an app paints its own base. Content art keeps its own treatment. | **Locked (James)** |
+| 52 | **Appearance v1:** a versioned, typed shell→app message (canvas, base, chrome, overlay, surface, surface-raised, text ×3, border, accent ×3, reader-surface; presentation window/immersive/standalone), origin- and schema-checked, pushed live with revision acks, never reloading the app. | Approved by James |
+| 53 | **Apps conform by default:** the app template ships the appearance client and `@wizard/ui` primitives; `wizard.md` declares `appearance: 1` and accepted type roles; the checker tests dark + light skins, window + fullscreen. | Approved by James; **Miguel to confirm** the `wizard.md` field |
+
 ## 11 Oct 2026 — James: agent state belongs to Wizard ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md))
 
 | # | Decision | Status |
