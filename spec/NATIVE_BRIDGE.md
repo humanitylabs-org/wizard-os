@@ -42,3 +42,7 @@ Implemented in `wizard-ux` `web/core/bridge.js`. Both Wizard UX shells (phone an
 - **`wizard:dictation`** inserts at the composer cursor of the focused thread. On the desktop with the Chats list in front, it opens a new chat and inserts there.
 - **Shell choice.** The desktop shell is chosen automatically when `window.webkit.messageHandlers.wizardNative` exists, so Wizard for Mac should load `/wizard-os-home/` and will land on `desktop.html`. The Android app (`WizardOS-Android/` user agent or `window.WizardOSNative`) always gets the phone shell.
 - **Keys inside the page.** The desktop shell uses ⌥ (Option) as its window-manager modifier and ⌘K for search, so it doesn't fight Wizard for Mac's Caps Lock / Right ⌘ / Right ⌥ keys.
+
+## Background audio v1 (staged Android pilot)
+
+See [BACKGROUND_AUDIO.md](BACKGROUND_AUDIO.md) for the implemented Music-only admission, native canonical session/queue, authenticated media fetch and optional web adapter contract. Runtime discovery controls availability; existing shells and the wizard.md schema remain compatible.

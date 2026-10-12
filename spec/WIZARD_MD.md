@@ -121,3 +121,7 @@ Index sources today = publish + GitHub topic crawl, with `wizard.md` at the repo
 How an app is found on Nostr: a NIP-34 repository announcement (kind 30617) with hashtag `["t", "wizard-app"]`. Its `clone` tag can point at GitHub, so dual-publishing needs no new hosting. The index (and the App Manager, re-checking at install) verifies every event's id and signature, keeps the newest announcement per publisher + repo id, lists a repo found on both GitHub and Nostr once, and applies rule 11. The announcement's `euc` (earliest unique commit) links copies of the same project across hosts.
 
 Every catalog row records `commit`, `found_via` (`github` | `nostr`), `publisher` and, for Nostr, the announcement event id. Installs pin to that commit.
+
+## Optional native background audio (staged pilot)
+
+The Android [background-audio pilot](BACKGROUND_AUDIO.md) is discovered at runtime and does not add frontmatter fields or an installed permission system. A web app keeps its browser transport whenever the capability is absent. The initial admission is explicitly limited to the registered Music app.
