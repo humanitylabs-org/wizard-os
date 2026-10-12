@@ -1,5 +1,10 @@
 # Wizard OS rollout
 
+## Shared app system functions — James-approved, staged
+
+[APP_SYSTEM_FUNCTIONS v1](../spec/APP_SYSTEM_FUNCTIONS.md) governs the shared client, Back, Appearance v1, share, update holds and capture. Archimedes owns staged specs and builder integration; shared-resource/app adoption owners supply their separate candidates. Parent integrates and deploys after exact-source Thales receipts under the shared lock. Mandatory builder gate is source lint plus browser checklist, not a new manifest field or approval of the existing API/view-source proposals. No public push/self-merge or daily cutover is authorized to this child lane.
+
+
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
 ## Now: days 0–3 (week of 9 Oct)

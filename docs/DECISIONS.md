@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 12 Oct 2026 — James: shared app system functions ([contract](../spec/APP_SYSTEM_FUNCTIONS.md))
+
+| Decision | Status |
+|---|---|
+| **Shared app functions v1.** Every app loads `/wizard-os-home/core/app-client.js` and uses `WizardApp` for Back, Appearance v1, text/file share, update holds and durable capture. Apps keep domain callbacks/routes/task backends; permission/recorder, root exit guards, system theme storage, SW/install and reload policy exist once in shared core. Builder templates and mandatory source/browser QA teach/enforce this. No new wizard.md field is approved here; pending appearance/API/view-source schema proposals retain their statuses. | **James-approved**, 12 Oct 2026; implementation authorized by the shared-services agreement; candidates staged for parent integration, not yet released |
+
 ## 12 Oct 2026 — James: shell, skin, app ([spec/APPEARANCE.md](../spec/APPEARANCE.md))
 
 | # | Decision | Status |
