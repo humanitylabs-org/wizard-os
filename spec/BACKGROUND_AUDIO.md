@@ -4,7 +4,7 @@
 
 ## Ownership and API
 
-The shell exposes the origin-bound **main-frame-only** `wizardAudioPort`. Hosted apps use the host relay `wizard:background-audio:v1` with `{id, method, params}`; replies have `{id, ok, result, error}`. The relay validates the live registered app, attached iframe Window and document, current URL and iframe src before forwarding and again before returning. Native requests are bounded, carry `v:1` and appId, and accept an explicit method allowlist.
+The shell exposes the origin-bound **main-frame-only** `wizardAudioPort`. Hosted apps use the host relay `wizard:background-audio:v1` with `{id, method, params}`; replies have `{id, ok, result, error}`. The relay validates the host-owned registered window/frame grant, live app registry, attached iframe Window and document, current URL and iframe src before forwarding and again before returning. These are trusted first-party same-origin apps; this does not sandbox hostile same-origin code that can access its parent. Untrusted consumers require origin/sandbox isolation before admission. Native requests are bounded, carry `v:1` and appId, and accept an explicit method allowlist.
 
 - `capabilities` discovers the supported version/methods.
 - `attach` returns the live session; it never loads a saved browser queue over that session.
@@ -16,11 +16,11 @@ Canonical snapshots contain sessionId, appId, queueRevision, generation, index, 
 
 ## Native-owned continuation, server-owned policy
 
-The service consumes the hub's station continuation with a generation fence. Queue policy and preference learning stay in the hub. Bounded duplicate filtering, queue history and edits are native transport behavior. Native play/skip events carry stable per-transition idempotency IDs and a small persistent retry outbox; the Music view suppresses its playback reporter when native playback is active. The hub deduplicates event writes and replays continuation batches by requestId. Likes/dislikes still use the web/backend feedback path.
+The service consumes the hub's station continuation with a generation fence. Queue policy and preference learning stay in the hub. Bounded duplicate filtering, queue history and edits are native transport behavior. Native play/skip events carry stable per-transition idempotency IDs and a small persistent retry outbox; the Music view suppresses its playback reporter when native playback is active. The hub atomically commits station advancement and its requestId batch receipt, validates conflicting playback events, and leaves empty batches retryable. Native policy mutations fence stale continuation replies. Artwork, reports and continuation have independent bounded IO so image latency cannot block transport; failed player timelines are rebuilt from the canonical queue before skipping. Likes/dislikes still use the web/backend feedback path.
 
 Streams, artwork, continuation and feedback are confined to the bound origin and explicitly allowed Music paths. Native requests receive that origin's WebView cookies; hub credentials stay in the server proxy. Redirects are refused before following them or forwarding credentials. Foreign media URLs are rejected before a fetch. An app's claimed appId does not grant authority.
 
-Media3 supplies notification/lock-screen metadata and controls, audio focus and becoming-noisy handling. The service observes the existing microphone owner and temporarily pauses playback without taking or rerouting the mic; explicit user pause clears that temporary resume intention. Existing recorder input and Bluetooth-output routing remain owned by the recorder lane. Handset/call/Bluetooth behavior requires physical-device evidence.
+Media3 supplies notification/lock-screen metadata and controls, audio focus and becoming-noisy handling. The existing MicOwner, native recorder and app-voice paths notify a pure-Java recording gate synchronously. The service suspends playback before recording starts without taking or rerouting the mic. Explicit user play intention remains separate from suspension; a user pause stays paused after recording finishes. Existing recorder input and Bluetooth-output routing remain owned by the recorder lane. Handset/call/Bluetooth behavior requires physical-device evidence.
 
 ## Wizard app compatibility
 
