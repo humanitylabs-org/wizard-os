@@ -16,21 +16,18 @@
 - ⏳ **Miguel:** App Manager installs from the index and its API is locked down; move DeFleur's image build to `defleur-video`.
 - 🔨 **James + Archimedes:** the desktop UX in `wizard-ux`, including the native desktop app and its hotkeys (`spec/NATIVE_BRIDGE.md`). Done when James uses it as his daily desktop Wizard.
 
-## Days 3–7: the end-to-end test
+## Days 3–7: the end-to-end test (revised 12 Oct, DECISIONS #50)
 
-Run the same test on three setups:
-- an existing Hermes install
-- a fresh Hermes install
-- the Try Wizard Mac VM
+The release gate is people, not one app: **five Hermes users (James, Miguel, Jan, Robert, Nobert) on Wizard OS, on their own Ubuntu VPS boxes, alongside their Hermes.**
 
-The Company Wizard is spare capacity if a shared box is ever needed.
+The test, on each box:
+1. One command installs Wizard OS; Wizard UX on phone and desktop talks to that owner's Hermes.
+2. The owner installs an app from the App Store by asking for it, and the agent uses it with no MCP hint.
+3. The owner asks their Wizard to build a small app; it builds from `hello-wizard`, installs it and publishes it.
+4. A second owner installs that app from the store and it works on their box.
+5. An owner asks to change an installed app's screen; the change survives an app update (VIEWS.md).
 
-The test:
-1. Wizard UX → Agent Service → Hermes.
-2. Install DeFleur from the Apps screen (or `wam install defleur-video`).
-3. Say "edit X from my Files with DeFleur", with no MCP hint.
-4. The finished video lands in Files.
-5. Any skill the agent writes is a pointer to DeFleur, not a copy.
+DeFleur working the same on every box is a separate project (one app), tracked on its own.
 
 Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 

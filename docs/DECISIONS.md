@@ -2,6 +2,16 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 12 Oct 2026 — James: five people on Wizard OS first; app standard, views and folders
+
+| # | Decision | Status |
+|---|---|---|
+| 50 | **First goal: five Hermes users (James, Miguel, Jan, Robert, Nobert) on Wizard OS**, using the same apps, publishing their own and building together. All run Hermes on an Ubuntu VPS. Alongside mode (#41) is the stopgap for them; the product path is a plain Wizard OS install aimed at the mass market. Bringing other existing Hermes installs over is a later side quest (onboarding can note "needs Linux"). DeFleur working the same on every box is its own project, one app among many, not part of this release gate. | James |
+| 51 | **Every app with a back end exposes a documented HTTP API (`api:` in wizard.md) and an MCP**, whatever its type and even when it ships its own screen. Only pure front ends (`type: view`, `backend: none`) skip both. `api` is a checker warning in 0.2 and an error from `wizard: 0.3`. Existing apps become compatible by adding files (in their repo or a wrapper repo), never by restructuring or forking. ([WIZARD_MD.md](../spec/WIZARD_MD.md#every-app-with-a-back-end-has-an-api-and-an-mcp-51)) | Proposed (James) |
+| 52 | **Views: owners change any app's screen without forking it.** Ladder: shell settings → page → overlay → own version (copy-on-first-edit into `~/.wizard-os/views/<app-id>/`, git `upstream` + `main`, app updates merged in) → view app only when it needs its own process or is shared. No folder = the app's own screen. `view.source` in wizard.md says where the screen's source lives; no folder layout is required. ([VIEWS.md](../spec/VIEWS.md)) | Proposed (James) |
+| 53 | **Box layout: three areas.** `media/` = the owner's files and pages (every app may see it); `~/.wizard-os/` = system and anything that acts with authority (settings, views, dev, agents, generated skills, grants); `~/runtipi/` = machinery (app data, overrides). Customized screens and app source stay out of `media/` because every app can write there. ([FILESYSTEM.md](../spec/FILESYSTEM.md)) | Proposed (James) |
+| 54 | **`wizard-builder` system skill**: every agent on a Wizard box knows how Wizard OS works and picks the right step (setting, page, overlay, own version, new app, port an existing app, publish). Ships with the Agent Service in `~/.wizard-os/skills/`. | Proposed (James) |
+
 ## 11 Oct 2026 — James: agent state belongs to Wizard ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md))
 
 | # | Decision | Status |

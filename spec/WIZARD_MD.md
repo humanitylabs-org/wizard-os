@@ -46,7 +46,13 @@ runtime:                    # how the App Manager installs it (Runtipi today)
   config: runtipi/config.json
   compose: runtipi/docker-compose.yml
 
-mcp:                        # required for agent, service, external; optional for view
+api:                        # required for every app with a back end (#51)
+  port: 8787                # where the app's HTTP API listens (inside the app network)
+  path: /api
+  spec: openapi.json        # OpenAPI file in the repo or a URL the app serves (recommended),
+                            # or a Markdown file describing every route
+
+mcp:                        # required for every app with a back end (#51)
   path: /mcp
   port: 8787
   transport: streamable-http
@@ -56,6 +62,14 @@ skill: skill/SKILL.md       # required for every type except view; ships with th
 view:                       # required for view; optional for others
   path: /                   # opened by Wizard UX at /apps/<id>/
   port: 8080
+  source:                   # optional: where the screen's source lives, so an owner's agent can make
+    path: web/              #   its own version of it (spec/VIEWS.md). May point at another repo:
+    build: npm ci && npm run build   #   repo: filebrowser/filebrowser, ref: v2.63.23, path: frontend/
+    dist: web/dist
+backend: none               # only for a view with no server of its own (it uses other apps' APIs);
+                            # such a view needs neither api nor mcp
+replaces_view: mizel        # optional, views only: installing this view swaps it in for that app's
+                            # screen in the launcher; uninstalling it brings the original back (VIEWS.md)
 
 provides: [video-editing, short-form-video]   # capability slots (optional, recommended)
 recommends:                 # optional; the skill checks this first and warns
@@ -79,7 +93,7 @@ health: /healthz
 2. `id` matches `^[a-z0-9][a-z0-9-]{1,40}$`; `type` is one of the four types.
 3. `version` is semver-ish; `summary` ≤ 140 characters; `license` and `source` present.
 4. `runtime.config` and `runtime.compose` exist in the repo.
-5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
+5. `mcp` present for agent, service and external, and for every view that doesn't say `backend: none`; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
 7. Every `needs` entry is from the known capability list.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
@@ -88,6 +102,46 @@ health: /healthz
 11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
 12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
 13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
+14. `api` present (with `port`, `path` and `spec`) for every app that has `mcp`. **Warning in 0.2, error from `wizard: 0.3`**, so apps listed today stay listed while they add it.
+15. `view.source`, if present, names `path`, `build` and `dist`; with `repo` it also names `ref` (a tag or commit, never a branch).
+16. `backend: none` only on `type: view`, and never together with `api` or `mcp`.
+
+## Every app with a back end has an API and an MCP (#51)
+
+An app with a back end is anything that keeps state or does work beyond serving static files. Every such app, whatever its `type`, exposes two things:
+
+- **A documented HTTP API** (`api:`): the same API its own screen uses. This is what lets an owner's agent build a different screen for the app, and what other apps call.
+- **An MCP** (`mcp:`): how agents use the app. The MCP can be a thin layer over the API (the front-container pattern below does exactly that).
+
+The only apps that skip both are pure front ends (`type: view`, `backend: none`): a screen that runs entirely in the browser and talks to other apps' APIs through `uses:`.
+
+**The app's own screen is optional, and it is never the only way in.** Anything a person can do on the screen, an agent can do through the MCP and another screen can do through the API.
+
+**How customizable a screen is follows from what the app declares** (shown in the store; the full mechanics are in [VIEWS.md](VIEWS.md)):
+
+| The app declares | The owner's agent can |
+|---|---|
+| any screen (`view:`) | add an **overlay**: move, hide and restyle things on the existing screen |
+| `view.source` + a screen that talks only to `api` | make the owner's **own version** of the screen, kept in step with app updates |
+| `api` | build a **new screen** for the app's data from scratch |
+
+Single-page front ends over a JSON API (most modern self-hosted apps, File Browser included) can declare `view.source`, pointing at the upstream repo if the wrapper doesn't hold the source. Screens rendered on the server (Nextcloud, Gitea) get overlays and new screens, but not an own version. Both are fine; the store says which.
+
+## Making an existing app compatible (no fork)
+
+An existing open-source app becomes a Wizard app without moving a single folder in its repo. Two ways, same result:
+
+- **In the app's own repo:** add `wizard.md`, `runtipi/` (config + compose) and `skill/` at the root.
+- **In a small wrapper repo** (what Files, Transcriber, Browser and Hermes Agent do): the same three things, with the compose pointing at the upstream image. Nothing upstream changes, and updating means bumping the image tag.
+
+What it has to provide:
+1. **`wizard.md`** pointing at things where they already are: the API, its docs, the screen's source. Paths, not a required layout.
+2. **Runtipi files.** Most popular self-hosted apps already have them in the Runtipi or Umbrel app stores; adapt those.
+3. **An MCP.** If upstream has none, add the stdlib MCP front container (next section): a few narrow tools that call the upstream API.
+4. **A skill** that tells an agent how to do the app's jobs with those tools.
+5. **API docs.** Point `api.spec` at upstream's OpenAPI file or docs page. If upstream's API is undocumented, the wrapper documents the routes its MCP and screen use.
+
+Two guides follow with the `wizard-builder` skill (to write): `docs/BUILD_AN_APP.md` for a new app and `docs/PORT_AN_APP.md` for an existing one. The skill teaches agents the same steps.
 
 ## Skills: shipped skill + pointer skill
 
