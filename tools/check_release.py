@@ -82,10 +82,13 @@ def image_revision(ref: str, digest: str) -> tuple[str | None, str]:
             f"https://ghcr.io/v2/{name}/{path}", headers=hdr), timeout=30))
         top = get(f"manifests/{digest}")
         subs = top.get("manifests") or []
-        plat = next((d for d in subs if (d.get("platform") or {}).get("os") not in (None, "unknown")), None)
-        man = get(f"manifests/{plat['digest']}") if plat else top
-        cfg = get(f"blobs/{man['config']['digest']}")
-        rev = ((cfg.get("config") or {}).get("Labels") or {}).get("org.opencontainers.image.revision")
+        plats = [d for d in subs if (d.get("platform") or {}).get("os") not in (None, "unknown")]
+        mans = [get(f"manifests/{d['digest']}") for d in plats] if subs else [top]
+        labels = {((get(f"blobs/{m['config']['digest']}").get("config") or {}).get("Labels") or {})
+                  .get("org.opencontainers.image.revision") for m in mans}
+        if len(labels) > 1:
+            return None, "platforms carry different revision labels: " + ", ".join(sorted(str(x) for x in labels))
+        rev = labels.pop() if labels else None
         if rev:
             return rev, ""
         found = set()
@@ -116,6 +119,8 @@ def changed_inputs(repo: str, base: str, head: str, inputs: list[str]) -> tuple[
     d = json.loads(r.stdout)
     if d["status"] not in ("ahead", "identical"):
         return None, f"{base[:12]} is not an ancestor of {head[:12]} ({d['status']})"
+    if len(d["files"]) >= 300:   # GitHub's compare lists at most 300 files: can't prove nothing changed
+        return None, f"{len(d['files'])} files changed, at GitHub's compare cap; check with a local git diff"
     return [f for f in d["files"] if any(fnmatch.fnmatch(f, g) or f == g for g in inputs)], ""
 
 
@@ -200,13 +205,18 @@ def main(argv: list[str] | None = None) -> int:
         for name, c in rel["components"].items():
             ok, why = commit_exists(c["repo"], c["commit"])
             (ok_lines if ok else errs).append(f"{name}: {c['repo']}@{c['commit'][:12]}" + ("" if ok else f" missing ({why})"))
-            if ok and c.get("branch"):
+            if not c.get("branch"):
+                errs.append(f"{name}: no branch named, so it can't be shown to be released (only on a PR?)")
+            elif ok:
                 ok, why = on_branch(c["repo"], c["commit"], c["branch"])
                 (ok_lines if ok else errs).append(f"{name}: {c['commit'][:12]} on {c['branch']}" + ("" if ok else f" ({why})"))
         for name, im in (rel.get("images") or {}).items():
             ok, why = digest_exists(im["ref"], im["digest"])
             (ok_lines if ok else errs).append(f"image {name}: {im['digest'][:19]}" + ("" if ok else f" missing ({why})"))
             src = rel["components"].get(im.get("built_from") or "")
+            if not src:
+                errs.append(f"image {name}: built_from {im.get('built_from')!r} doesn't name a component, so its "
+                            "source can't be proven")
             if ok and src and im.get("source_commit"):
                 # The image was built from an earlier commit of the component; fine only if no image input changed.
                 rev, why = image_revision(im["ref"], im["digest"])
