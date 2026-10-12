@@ -124,6 +124,22 @@ def changed_inputs(repo: str, base: str, head: str, inputs: list[str]) -> tuple[
     return [f for f in d["files"] if any(fnmatch.fnmatch(f, g) or f == g for g in inputs)], ""
 
 
+def workflow_paths(repo: str, ref: str, workflow: str) -> tuple[list[str] | None, str]:
+    """The `paths:` filter of the image workflow at `ref`: the files whose change rebuilds the image."""
+    import base64
+    r = subprocess.run(["gh", "api", f"repos/{repo}/contents/{workflow}?ref={ref}", "-q", ".content"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None, f"can't read {workflow} at {ref[:12]}"
+    text = base64.b64decode(r.stdout).decode("utf-8", "replace")
+    found: list[str] = []
+    for m in re.finditer(r"^\s*paths:\s*\[([^\]]*)\]", text, re.M):
+        found += [x.strip().strip("'\"") for x in m.group(1).split(",") if x.strip()]
+    if not found:
+        return None, f"no paths: filter in {workflow} (every push rebuilds; pin the exact build commit instead)"
+    return sorted(set(found)), ""
+
+
 def index_drift(defaults: dict) -> list[str]:
     """Default apps whose version in the live index differs from the release (the installer takes the index's)."""
     out = []
@@ -224,6 +240,13 @@ def main(argv: list[str] | None = None) -> int:
                     errs.append(f"image {name}: built from {(rev or '?')[:12]}, release says source_commit "
                                 f"{im['source_commit'][:12]}" + (f" ({why})" if why else ""))
                 else:
+                    wf = im.get("image_workflow", ".github/workflows/image.yml")
+                    need, why_wf = workflow_paths(src["repo"], rev, wf)
+                    short = sorted(set(need or []) - set(im.get("image_inputs") or []))
+                    if need is None or short:
+                        errs.append(f"image {name}: image_inputs must cover {wf}'s paths at {rev[:12]}"
+                                    + (f"; missing {', '.join(short)}" if short else f" ({why_wf})"))
+                        continue
                     changed, why = changed_inputs(src["repo"], rev, src["commit"], im.get("image_inputs") or [])
                     if changed is None:
                         errs.append(f"image {name}: can't compare {rev[:12]}..{src['commit'][:12]} ({why})")
