@@ -50,6 +50,7 @@ REGISTRY = {
     'maps':          ('pin',      114, None),
     'v-inbox':       ('inbox',    166, None),
     'topics':        ('eye',      178, None),
+    'meeting-recorder': ('mic',   191, None),
     'wizard-signal': ('signal',   205, None),
     'meditation':    ('meditate', 218, None),
     'files':         ('files',    232, None),

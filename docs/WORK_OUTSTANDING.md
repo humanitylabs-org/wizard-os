@@ -79,7 +79,7 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 ## Apps (anyone)
 
 - [ ] **Context bridge** app: read Claude Code / Codex sessions and project folders; import ChatGPT and Claude exports; MCP tools `search_past_work`, `load_project_context` ([MAC.md](MAC.md#picking-up-where-claude-or-chatgpt-left-off)).
-- [ ] **Meeting Recorder** as a wizard.md app (Archimedes).
+- [ ] **Meeting Recorder** as a wizard.md app (Archimedes). Package staged in [meeting-recorder PR #1](https://github.com/humanitylabs-org/meeting-recorder/pull/1): v0.2 checker passes; four Thales fixture regressions pass; fresh Runtipi/App Manager system apps installed. Full recording/upload, hosted Back, Hermes gateway and uninstall-retention acceptance remains open. Private short-name install mapping is a separately dispatched WAM proposal; index PR publication awaits repository write access (READ account, forks disabled). [Acceptance checkpoint](https://github.com/humanitylabs-org/meeting-recorder/blob/feature/wizard-app-package/QA.md).
 - [ ] **Reader** as a wizard.md app (Archimedes).
 
 ## Shared (Archimedes unless noted)
