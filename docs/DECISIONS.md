@@ -2,6 +2,14 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 14 Oct 2026 — James: phone setup and no private config ([spec/PHONE_SETUP.md](../spec/PHONE_SETUP.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 55 | **Onboarding is a Setup app, not a chat.** A built-in Setup system app beside Chats opens on first launch and lists setup steps; the first item is "Use Wizard on your phone". | Approved by James (build), 14 Oct |
+| 56 | **Phone access is Tailscale, switched on only when the owner asks.** Setup signs the box into the owner's own tailnet, serves Wizard at the box's default `https://<machine>.<tailnet>.ts.net`, and shows QR codes for the Tailscale app and that address. Owner sign-in on the phone uses the Tailscale identity check (Service PR15) with the owner login recorded at enrollment. | Approved by James (build), 14 Oct |
+| 57 | **No private configuration in source.** Public and shared repos carry no owner domains, tailnet names, machine names or owner names; addresses come from settings or runtime discovery, and the owner's name from `owner.name`. CI rejects known private hosts. | Approved by James, 14 Oct |
+
 ## 14 Oct 2026 — James: more than one agent ([spec/AGENTS.md](../spec/AGENTS.md))
 
 | # | Decision | Status |

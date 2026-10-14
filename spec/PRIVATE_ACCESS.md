@@ -14,6 +14,12 @@ access: that would defeat the store's container-safety rules. Its lifecycle need
 a trusted host integration. The installer is the first implementation; store/UI
 management of this parking spot is not implemented yet.
 
+## Phone setup
+
+Owner sign-in and phone pairing move into the Setup app ([PHONE_SETUP.md](PHONE_SETUP.md), Decisions #55–#56):
+Tailscale stays installed and unpaired until the owner taps "Use Wizard on your phone". Until the installer adopts
+that flow, its printed sign-in link remains a valid manual path.
+
 ## Install and ownership
 
 `curl -fsSL aiwizards.com/os.sh | bash` installs the native Tailscale daemon,
