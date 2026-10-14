@@ -34,6 +34,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 - [`AGENT_SERVICE_API.md`](spec/AGENT_SERVICE_API.md): the `/wizard/...` API.
 - [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
+- [`AGENTS.md`](spec/AGENTS.md): more than one agent on a box — agent folder, harness / model provider / permissions, the `/wizard/v1/agents` API, per-agent chats (MVP, approved 14 Oct).
 - [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the Wizard OS kernel text and app skills; install alongside an existing Hermes (proposed).
 - [`WIZARD_CLI.md`](spec/WIZARD_CLI.md): the generic `wizard` CLI (`apps list`, `tools`, `call`) for people and scripts; `--json` output and exit codes.
 - [`SHELL.md`](spec/SHELL.md): the shell slot (Wizard UX as the system front end) and how owners customize it without forking (proposed).
