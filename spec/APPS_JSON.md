@@ -41,6 +41,6 @@ The one list of installed Wizard apps.
 - Readers ignore unknown fields. Adding a field is not a version bump; removing or renaming one is.
 - `status` is Runtipi's status (`running`, `stopped`, `installing`, …). Apps that are installed but missing from the compiled store still appear, with only their id, urn and status.
 - `mcp.url` is reachable from the host; `mcp.internal` is reachable from containers on Runtipi's network. The Agent Service uses whichever matches where the agent runs.
-- `agent_binding` is copied unchanged from `wizard.md` when the app declares one; absent otherwise. The Agent Service reads it to offer the app's "Routes through" picker ([AGENTS.md](AGENTS.md) section 5). The chosen agent is not stored here; it lives in the Agent Service's `app-bindings.json`.
+- `agent_binding` is copied unchanged from `wizard.md` when the app declares one; absent otherwise. The Agent Service reads it to offer the app's "Sends its work to" picker ([AGENTS.md](AGENTS.md) section 7). The chosen agent is not stored here; it lives in the Agent Service's `app-bindings.json`.
 - `skill` is a local path to the app's full skill. The Agent Service builds its own short pointer skills from `provides`.
 - Writes are atomic (temp file + rename). Readers may watch the file.
