@@ -8,7 +8,7 @@
   const NAMES = ['canvas','base','chrome','overlay','surface','surface-raised','text','text-secondary','text-muted','border','accent','accent-soft','on-accent','reader-surface'];
   const trustedHost = location.origin;
   let current = null, connected = false;
-  const isColor = v => typeof v === 'string' && v.length > 0 && v.length < 96 && !/[;{}]|url\(/i.test(v) && !!window.CSS?.supports('color', v);
+  const isColor = v => typeof v === 'string' && v.length > 0 && v.length < 96 && !/[;{}]|\b(?:url|var|env|attr)\s*\(/i.test(v) && !/^(?:inherit|initial|unset|revert|revert-layer|currentcolor)$/i.test(v.trim()) && !!window.CSS?.supports('color', v);
   function valid(a) {
     if (!a || a.version !== 1 || !Number.isSafeInteger(a.revision) || a.revision < 0) return false;
     if (!['window','immersive'].includes(a.presentation)) return false;
@@ -36,7 +36,7 @@
     if (parent === window || e.source !== parent || e.origin !== trustedHost || !e.data || e.data.type !== 'wizard:appearance') return;
     const a = e.data.appearance;
     // Re-acknowledge a retransmission without mutating state or emitting another theme event.
-    if (valid(a) && current && a.revision === current.revision && JSON.stringify(a.tokens) === JSON.stringify(current.tokens) && a.skin === current.skin && a.colorScheme === current.colorScheme && a.presentation === current.presentation) {
+    if (valid(a) && current && a.revision === current.revision && NAMES.every(k => a.tokens[k] === current.tokens[k]) && a.skin === current.skin && a.colorScheme === current.colorScheme && a.presentation === current.presentation) {
       parent.postMessage({ type: 'wizard:appearance:ack', version: 1, revision: current.revision }, trustedHost); return;
     }
     if (apply(a)) parent.postMessage({ type: 'wizard:appearance:ack', version: 1, revision: current.revision }, trustedHost);
