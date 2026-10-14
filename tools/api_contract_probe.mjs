@@ -11,6 +11,7 @@
 // and checks status and response shape. Negative controls prove that undocumented paths, un-allowlisted Hermes paths
 // and query keys, the proposed (not shipped) routes and the known gaps all answer 404, so a pass is not the catch-all.
 // Exit 0 = every case passed and every route was exercised; 1 = a failure (each printed); 2 = usage.
+import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -79,6 +80,7 @@ const app = createWizardServer({
   sttOrigin: auxOrigin, router: { url: `${auxOrigin}/router`, model: 'fixture-router', key: '' },
   mediaRoot: join(dir, 'media'), mediaAgentRoot: '/media', mediaIndexPath: join(dir, 'state/media-files.json'),
   runQueueStatePath: join(dir, 'state/run-queue.sqlite3'), runQueuePollIntervalMs: 50, runQueueRetryDelayMs: 50,
+  uploadStatePath: join(dir, 'state/uploads.sqlite3'), uploadStagingDir: join(dir, 'state/upload-staging'), uploadReserveBytes: 0,
   threadSeenStatePath: join(dir, 'state/thread-seen.json'), threadDispositionStatePath: join(dir, 'state/thread-dispositions.json'),
   threadTitleStatePath: join(dir, 'state/thread-titles.json'), threadStatusBackfillPath: join(dir, 'state/backfill.json'),
   dismissedFailureStatePath: join(dir, 'state/dismissed.json'), threadAppsStatePath: join(dir, 'state/thread-apps.json'),
@@ -122,7 +124,8 @@ try {
   // settings / bootstrap / apps / router
   let r = await call('GET', '/wizard/v1/bootstrap')
   check('GET /wizard/v1/bootstrap', 'boots', r.status === 200 && r.json.bootstrap === 1 && r.json.api === 'wizard-agent-service/1'
-    && has(r.json, ['settings', 'settings_source', 'capabilities', 'endpoints']) && has(r.json.endpoints, ['apps', 'sessions', 'runs', 'transcribe', 'route', 'upload'])
+    && has(r.json, ['settings', 'settings_source', 'capabilities', 'endpoints']) && has(r.json.endpoints, ['apps', 'sessions', 'runs', 'transcribe', 'route', 'upload', 'uploads', 'shares'])
+    && r.json.capabilities.resumable_uploads === true && r.json.endpoints.uploads === '/wizard/v1/uploads' && r.json.endpoints.shares === '/wizard/v1/shares'
     && r.json.settings.fast_router.endpoint === undefined && r.json.settings.network.base_url === 'https://box.example.ts.net', r)
   r = await call('GET', '/wizard/v1/apps')
   check('GET /wizard/v1/apps', 'launcher list', r.status === 200 && r.json.schema === 1 && r.json.apps.some((a) => a.source === 'apps.json') && r.json.apps.some((a) => a.source === 'launcher.json') && !r.text.includes('127.0.0.1:9/mcp'), r)
@@ -282,6 +285,53 @@ try {
   for (let i = 0; i < 80; i++) { r = await call('GET', `/wizard/hermes/v1/runs/${approvalRun}`); run = r.json; if (run?.status === 'waiting_for_approval') break; await wait(50) }
   r = await call('POST', `/wizard/hermes/v1/runs/${approvalRun}/approval`, { headers: J, body: JSON.stringify({ choice: 'deny', request_id: run?.approval?.request_id }) })
   check('POST /wizard/hermes/v1/runs/{id}/approval', 'answer', r.status === 200 && r.json?.accepted === true, r)
+
+  // resumable uploads and shares (Wizard OS box mode: mediaRoot)
+  const bytes = Buffer.from('resumable upload body, two chunks')
+  const digest = createHash('sha256').update(bytes).digest('hex')
+  const uploadBody = { client_upload_id: 'probe-upload-1', filename: 'notes.txt', mime: 'text/plain', bytes: bytes.length, sha256: digest }
+  r = await call('POST', '/wizard/v1/uploads', { headers: J, body: JSON.stringify(uploadBody) })
+  const uploadId = r.json?.upload_id
+  check('POST /wizard/v1/uploads', 'create', r.status === 201 && /^up_[0-9a-f]{32}$/u.test(uploadId || '') && r.json.offset === 0 && r.json.bytes === bytes.length && r.json.chunk_bytes === 8388608 && r.json.status === 'uploading', r)
+  r = await call('POST', '/wizard/v1/uploads', { headers: J, body: JSON.stringify({ ...uploadBody, client_upload_id: 'probe-too-big', bytes: 2 ** 52, sha256: undefined }) })
+  check('POST /wizard/v1/uploads', 'does not fit -> 507', r.status === 507 && r.json?.error === 'insufficient_storage', r)
+  const O = { 'Content-Type': 'application/offset+octet-stream' }
+  r = await call('PATCH', `/wizard/v1/uploads/${uploadId}`, { headers: { ...O, 'Upload-Offset': '0' }, body: bytes.subarray(0, 10) })
+  check('PATCH /wizard/v1/uploads/{id}', 'chunk -> 204 + Upload-Offset', r.status === 204 && r.headers.get('upload-offset') === '10', r)
+  r = await call('PATCH', `/wizard/v1/uploads/${uploadId}`, { headers: { ...O, 'Upload-Offset': '0' }, body: bytes.subarray(0, 10) })
+  check('PATCH /wizard/v1/uploads/{id}', 'offset mismatch -> 409 + server offset', r.status === 409 && r.json?.error === 'offset_mismatch' && r.json.offset === 10, r)
+  r = await call('POST', '/wizard/v1/uploads', { headers: J, body: JSON.stringify(uploadBody) })
+  check('POST /wizard/v1/uploads', 'same client_upload_id -> same upload, current offset', r.status === 201 && r.json?.upload_id === uploadId && r.json.offset === 10, r)
+  r = await call('GET', `/wizard/v1/uploads/${uploadId}`)
+  check('GET /wizard/v1/uploads/{id}', 'offset', r.status === 200 && r.json?.offset === 10 && r.json.status === 'uploading', r)
+  r = await call('POST', `/wizard/v1/uploads/${uploadId}/complete`, { headers: J, body: '{}' })
+  check('POST /wizard/v1/uploads/{id}/complete', 'incomplete -> 409', r.status === 409 && r.json?.error === 'upload_incomplete' && r.json.offset === 10, r)
+  r = await call('PATCH', `/wizard/v1/uploads/${uploadId}`, { headers: { ...O, 'Upload-Offset': '10' }, body: bytes.subarray(10) })
+  r = await call('POST', `/wizard/v1/uploads/${uploadId}/complete`, { headers: J, body: '{}' })
+  const uploadedFile = r.json?.file
+  check('POST /wizard/v1/uploads/{id}/complete', 'file, same shape as /wizard/files/upload', r.status === 200 && /^wf_[0-9a-f]{32}$/u.test(uploadedFile?.id || '') && uploadedFile.sha256 === digest && uploadedFile.bytes === bytes.length && !r.text.includes(dir), r)
+  r = await call('GET', `/wizard/files/${uploadedFile?.id}/content`)
+  check('GET /wizard/files/{id}/content', 'resumable upload is a Wizard file', r.status === 200 && r.text === bytes.toString(), r)
+  r = await call('POST', '/wizard/v1/shares', { headers: J, body: JSON.stringify({ client_share_id: 'probe-share-x', agent: 'nobody', files: [{ filename: 'a.txt', bytes: 1 }] }) })
+  check('POST /wizard/v1/shares', 'unknown agent -> 409, no fallback', r.status === 409 && r.json?.error === 'agent_unavailable', r)
+  const shareBody = JSON.stringify({ client_share_id: 'probe-share-1', note: 'Filed from the share sheet', files: [{ filename: 'scan.pdf', mime: 'application/pdf', bytes: bytes.length, sha256: digest }] })
+  r = await call('POST', '/wizard/v1/shares', { headers: J, body: shareBody })
+  const share = r.json
+  check('POST /wizard/v1/shares', 'create (default agent, new thread)', r.status === 201 && /^sh_[0-9a-f]{32}$/u.test(share?.share_id || '') && share.agent === 'hermes' && /^wizard_\d+_[0-9a-f]{12}$/u.test(share.thread_id) && share.status === 'uploading' && share.uploads?.length === 1, r)
+  r = await call('POST', '/wizard/v1/shares', { headers: J, body: shareBody })
+  check('POST /wizard/v1/shares', 'same client_share_id -> same share', r.status === 201 && r.json?.share_id === share?.share_id, r)
+  const shareUpload = share?.uploads?.[0]?.upload_id
+  await call('PATCH', `/wizard/v1/uploads/${shareUpload}`, { headers: { ...O, 'Upload-Offset': '0' }, body: bytes })
+  const runsBefore = sent.filter((s) => s.method === 'POST' && s.url === '/v1/runs').length
+  await Promise.all([1, 2, 3].map(() => call('POST', `/wizard/v1/uploads/${shareUpload}/complete`, { headers: J, body: '{}' })))
+  let shareStatus = null
+  for (let i = 0; i < 100; i++) { r = await call('GET', `/wizard/v1/shares/${share?.share_id}`); shareStatus = r.json; if (shareStatus?.status === 'delivered') break; await wait(50) }
+  await call('POST', '/wizard/v1/shares', { headers: J, body: shareBody })
+  for (let i = 0; i < 40 && sent.filter((s) => s.method === 'POST' && s.url === '/v1/runs').length === runsBefore; i++) await wait(50)
+  await wait(300)
+  const shareRuns = sent.filter((s) => s.method === 'POST' && s.url === '/v1/runs').slice(runsBefore).map((s) => JSON.parse(s.body || '{}'))
+  check('GET /wizard/v1/shares/{id}', 'delivered once into the new thread', r.status === 200 && shareStatus?.status === 'delivered' && shareStatus.thread_id === share?.thread_id
+    && shareRuns.length === 1 && shareRuns[0].session_id === share?.thread_id && JSON.stringify(shareRuns[0].input).includes('Filed from the share sheet'), r, `runs ${shareRuns.length}`)
 
   // pages and static
   r = await call('GET', '/wizard/')
