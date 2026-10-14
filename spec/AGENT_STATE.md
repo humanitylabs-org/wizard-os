@@ -122,6 +122,25 @@ Weak, cheap or private models do well on short jobs and poorly on long multi-ste
 - **Every workflow moved into an app tool moves work into the lean tier.** One `defleur_video__start_edit` call suits a flash model; sixty terminal steps doing the same job don't.
 - **Which harness for the lean tier** (a slim Hermes profile, Pi, or another) is decided by a bake-off once a containerised box exists (WORK_OUTSTANDING).
 
+## 9. Adding an agent: new or imported (James, 14 Oct 2026)
+
+Every agent arrives through one **Add agent** flow with two sources:
+
+- **New:** sign in with ChatGPT, Claude, or Wizard Private AI. First setup asks only this, with a small "Already have an agent? Bring it in" link. On a Mac with Hermes installed the link is offered more prominently.
+- **Import:** an existing agent comes in with its memory, skills, history, settings and sign-ins. **Hermes first**, built on stock `hermes backup` / `hermes import`. ChatGPT and Claude data exports come later as conversation history for a new or existing agent, searchable through Agent Search.
+
+Any agent can be **main** (the default for new chats, voice and schedules); the others are secondary and are picked per thread. Connecting an agent that keeps running on another machine is **not** being built: an external agent breaks the box's isolation, and alongside mode already covers agents on a VPS.
+
+**Import rules (Hermes):**
+
+- The archive is checked (no absolute or parent paths) and per-machine files stay out: `bin/` (a Mac's binaries), logs, runtime state, caches, locks, and Wizard's own plugins.
+- Wizard's wiring wins over the imported settings: the terminal in the box, the `wizard` app gateway, Wizard's plugins and system skills, and the API server the Agent Service uses.
+- **One active copy.** Messaging platforms come in with `enabled: false` (credentials kept for later) and every scheduled job comes in paused, so the imported copy never answers a chat or runs a job the original still owns.
+- The box's previous agent is saved first; **undo** puts it back exactly. The original agent on the other machine is never touched.
+- The archive holds sign-ins: it travels over the host–box channel (vsock on Mac), never through the shared Files folder, and is deleted when the import ends.
+
+**Packages:** an **agent package** is one agent's folder (for Hermes, its own backup zip). A **Wizard package** is every agent package plus app data, settings, schedules and Files. Import, backup/restore and moving a box to another machine use the same two formats.
+
 ## Not in this spec
 
 - **Keys and the Key Vault:** a separate proposal (Wizard Topics thread, 11 Oct): an egress proxy that holds the real keys so agents only hold stand-ins.
