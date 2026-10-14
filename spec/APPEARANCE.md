@@ -70,6 +70,10 @@ Apps that don't adopt the client still open in themed window chrome; the shell n
 - App Back closes its own overlay or nested view first and reports handled / at-root; the shell then leaves fullscreen or changes desk; a single Back never exits Wizard.
 - Pin the appearance version. Older hosts or no host: the app runs on its standalone defaults.
 
+## Shared assets
+
+The extracted Appearance v1 dependency lives in [`style/`](../style/README.md): `tokens.json` → generated `tokens.css`, the same-origin appearance client, pre-paint boot marker, plain CSS primitives and an executable demo. Colour roles are the approved v1 message; static type/layout/motion defaults remain CSS-only and do not extend its transport or approve a manifest field. WAM carries a generated, hash-locked snapshot for offline app builds, with this folder as the authoritative source.
+
 ## Next
 
 1. Persist the skin in `theme.json` and resolve it in `wizard-ux` (not only the preview origin).
