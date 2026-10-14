@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 14 Oct 2026 — James: apps route through an agent ([spec/AGENTS.md](../spec/AGENTS.md) section 5)
+
+| # | Decision | Status |
+|---|---|---|
+| 58 | **App → agent binding.** An app that produces work for an agent (recording recaps, reports, automations) declares `agent_binding` in `wizard.md`; the owner picks which agent it routes through at install and can change it later; the default is the main agent. The Agent Service stores the binding per installed app and apps deliver through one endpoint (`POST /wizard/v1/apps/<app_id>/deliveries`, app-scoped token) without ever naming an agent. A bound agent that is down fails the delivery loudly; nothing falls back to another agent. The agent's page shows the apps that send work to it; the app's settings show "Routes through". James, 14 Oct: "each app can have a configuration where do you want this app to route through, kind of like an automation", including choosing a non-private agent. | Proposed (James 14 Oct), Jan and Miguel to confirm |
+
 ## 14 Oct 2026 — James: one admin view of every device ([spec/DEVICES.md](../spec/DEVICES.md))
 
 | # | Decision | Status |
