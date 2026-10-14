@@ -2,6 +2,8 @@
 
 Components still to build. Pick one up: put your name on it in a PR, and close it with evidence. Ordered roughly by when it's needed.
 
+**Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
+
 ## Agent Service (Archimedes; DECISIONS #30, #42)
 
 - [x] **Runs on stock Hermes** (Archimedes, 9 Oct): capability-aware runs, helper follow-through without a Hermes patch, settings/bootstrap/apps endpoints, orb router, serves Wizard UX. James's daily driver since 9 Oct; `main` = `2634564`, CI green.
