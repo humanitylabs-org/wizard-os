@@ -50,7 +50,7 @@ Every installed agent gets one folder. Its id is the **instance**, not the harne
 }
 ```
 
-`privacy` is `private` (the model runs locally or in a confidential provider such as Tinfoil) or `standard`. It's a label used for warnings and defaults, never a hard wall (section 4).
+`privacy` is `private` (the model runs locally or in a confidential provider such as Tinfoil) or `standard`. A private agent is sealed: no other agent can read it, and it shares only by publishing a copy the owner approves (section 4, DECISIONS #59).
 
 ## 2. Skills: each agent keeps its own, and can look up the others'
 
@@ -88,7 +88,7 @@ A grant is one direction, **reader agent → source agent**, with a scope per ki
 - Scopes: `none`, `titles` (thread titles and dates), `search` (search results with snippets), `read` (whole sessions or skills).
 - `subjects` optionally limits it to threads in those subjects.
 - **Default: no grants.** Installing a second agent gives it nothing from the first. The owner turns it on per pair, in the Apps screen or by asking an agent that holds the "manage grants" right (owner-approved).
-- **No hard privacy wall.** Two private agents can read each other, which is useful when moving from one harness to another or split-testing. A grant that lets a `standard` agent read a `private` agent shows a plain warning ("Text from Private Hermes may be sent to *provider*"). The owner can still allow it.
+- **Private agents are sealed (#59, James 14 Oct; replaces the earlier "no hard wall" rule).** No grant can name a private agent as its source, for any reader, standard or private. A private agent shares by publishing a copy, item by item, after the owner approves it in that agent's chat; moving harness works the same way. Grants between standard agents keep the rules above.
 - Stored alongside app grants in `wizard-grants.json` (PERMISSIONS.md) as `kind: "agent-data"`, so one file and one screen show every permission on the box. Agent Search enforces them on every call and logs each cross-agent read (reader, source, kind, scope, no content).
 
 ## 5. Memory: opinionated by default

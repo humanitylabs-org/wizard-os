@@ -1,6 +1,6 @@
 # Agents: more than one agent on a box
 
-**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48 approved; #54 proposed). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
+**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54 proposed). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
 
 A box runs more than one agent. The first extra one is a **Private** agent: stock Hermes in its own container, talking only to a confidential model (Tinfoil GLM 5.3), with no outside tools. Its chats, memory and session history stay in its own folder. The main agent (the host Hermes, `hermes`) cannot see them.
 
@@ -57,7 +57,7 @@ agents/<id>/
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
 - `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here in the MVP; when app-to-app grants land they are mirrored as `wizard-grants.json` grants `{from: "agent:<id>", to: <app>}` so `wam connect` narrows to them.
-- `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later).
+- `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
 
@@ -67,6 +67,8 @@ agents/<id>/
 |---|---|---|---|---|
 | `private` | none | `own` | none | confidential provider only (`tinfoil`, `local`), `fallback: false` |
 | `standard` | harness defaults | `shared-write` | owner's choice | any provider; fallback allowed |
+
+Apps column at install (#58): a standard agent's box starts ticked, a private agent's starts unticked.
 
 A preset sets the starting values; the owner adjusts any field afterwards. `preset` keeps the name it was created with.
 
@@ -109,6 +111,24 @@ All under `/wizard/v1`, same access rules as the rest of the Service (owner acce
 ## 4. Recordings
 
 New Mizel.ai / Thales recording recaps go to the agent named by the recordings setting (`agent: "private"`), written into that agent's own session store as an assistant-only message (no inference). When the setting is off or the agent does not exist, the current behaviour stays. Existing recaps are not migrated; moving or exporting them out of the private agent happens only when the owner asks that agent to.
+
+## 5. Which agents can use an app (#58)
+
+Installing an app shows one tick box per agent: **"Which agents can use *App*?"** Standard agents start ticked, private agents start unticked. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
+
+Apps that produce work for an agent also show **"Sends its work to: [agent]"** (the app → agent binding). That decides where the app's output lands; it gives the app no right to run the agent or read its history.
+
+## 6. Private agents are sealed (#59)
+
+- No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent Search does not index private agents for other readers.
+- Sharing goes outward only, as a copy: the owner asks the private agent to share something; it shows the exact item and its destination (another agent's thread, or Files); it publishes only after the owner approves that item. The destination receives a copy; it never gets a way back in. Each publish is logged (item, destination, time, no content in the log).
+- Moving to a new harness works the same way: the private agent publishes what the owner approves into the new agent.
+- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent Search enforce it.
+
+## Deferred (James, 14 Oct; brought back when due)
+
+- Whether apps that can run an agent get their own unticked warning line at install. Due before apps from other publishers are installable.
+- Whether network isolation between apps (PR #6 layer 1, `WIZARD_APP_ISOLATION`) is required for the stable release. Due before any box installs another person's app.
 
 ## Not in this spec
 
