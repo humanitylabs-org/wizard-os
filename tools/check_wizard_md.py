@@ -134,6 +134,11 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     if rt.get("compose") and comp.is_file():
         risks = compose_risks(comp.read_text())
         rule("container asks for no host-level access", not risks, "; ".join(risks))
+    if d.get("agent_binding") is not None:
+        ab = d.get("agent_binding")
+        ok = ab is True or (isinstance(ab, dict) and set(ab) <= {"required", "purpose"}
+                            and isinstance(ab.get("required", False), bool) and len(str(ab.get("purpose", ""))) <= 120)
+        rule("agent_binding is true or {required, purpose}", ok, json.dumps(ab))
     if d.get("publisher") is not None:
         rule("publisher is an npub", bool(NPUB.fullmatch(str(d.get("publisher")))), str(d.get("publisher")))
     if github:

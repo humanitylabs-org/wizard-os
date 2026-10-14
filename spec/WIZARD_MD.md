@@ -66,6 +66,9 @@ system: false               # true = installed with Wizard OS, hidden from the
                             # launcher, known to the agent, replaceable by any
                             # app that provides the same slot
 
+agent_binding:              # optional; the app sends work (recaps, reports) to an
+  required: true            # agent the owner picks; default = the main agent
+  purpose: Where your recaps go   # (spec/AGENTS.md section 7)
 uses: [transcriber, browser, files]   # other app ids or slots it calls
 needs: []                   # device capabilities: mic, system-audio, camera,
                             # notifications, files, credentials:<provider>

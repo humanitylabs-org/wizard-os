@@ -1,6 +1,6 @@
 # Agents: more than one agent on a box
 
-**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54 proposed). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
+**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54, #60 proposed). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
 
 A box runs more than one agent. The first extra one is a **Private** agent: stock Hermes in its own container, talking only to a confidential model (Tinfoil GLM 5.3), with no outside tools. Its chats, memory and session history stay in its own folder. The main agent (the host Hermes, `hermes`) cannot see them.
 
@@ -91,9 +91,12 @@ All under `/wizard/v1`, same access rules as the rest of the Service (owner acce
 | GET | `/agents/<id>` | `{agent}` |
 | PATCH | `/agents/<id>` | edit `label`, `appearance`, `permissions`, `model`. → `{agent}` |
 | POST | `/agents/<id>/start`, `/agents/<id>/stop` | → 202 `{agent}` |
-| GET | `/agent-options` | `{harnesses, providers, presets, wizard_apps, agent_apps, outside_tools}` |
+| GET | `/agent-options` | `{harnesses, providers, presets, wizard_apps, agent_apps, outside_tools, binding_apps}` (`binding_apps` = every Binding, section 7) |
+| GET | `/app-bindings` | `{bindings:[Binding]}` (section 7) |
+| GET, PUT | `/apps/<app_id>/binding` | `{binding}`; PUT body `{agent}` (section 7) |
+| POST | `/apps/<app_id>/deliveries` | app-scoped token; section 7 |
 
-`Agent` = `{id, label, harness, privacy, appearance, model:{provider, model, allowed_models, fallback}, permissions, status: "running"|"stopped"|"starting"|"error", status_detail, is_default}`. Never secrets, keys, host paths or upstream URLs.
+`Agent` = `{id, label, harness, privacy, appearance, model:{provider, model, allowed_models, fallback}, permissions, status: "running"|"stopped"|"starting"|"error", status_detail, is_default, bound_apps:[{id,label,purpose}]}` (`bound_apps` = the apps that send work here, section 7). Never secrets, keys, host paths or upstream URLs.
 
 `agent-options.providers` = `[{id, label, confidential, models:[{id,label}]}]`: Tinfoil (confidential, `glm-5-3`) plus the providers signed in through AI Accounts.
 
@@ -110,7 +113,7 @@ All under `/wizard/v1`, same access rules as the rest of the Service (owner acce
 
 ## 4. Recordings
 
-New Mizel.ai / Thales recording recaps go to the agent named by the recordings setting (`agent: "private"`), written into that agent's own session store as an assistant-only message (no inference). When the setting is off or the agent does not exist, the current behaviour stays. Existing recaps are not migrated; moving or exporting them out of the private agent happens only when the owner asks that agent to.
+A recording app (the Meeting Recorder, or any app that turns recordings into recaps) is an app with an agent binding (section 7). Its recaps go to the bound agent as assistant-only messages in that agent's own session store (no inference). Existing recaps are not migrated; moving or exporting them out of an agent happens only when the owner asks that agent to.
 
 ## 5. Which agents can use an app (#58)
 
@@ -124,6 +127,51 @@ Apps that produce work for an agent also show **"Sends its work to: [agent]"** (
 - Sharing goes outward only, as a copy: the owner asks the private agent to share something; it shows the exact item and its destination (another agent's thread, or Files); it publishes only after the owner approves that item. The destination receives a copy; it never gets a way back in. Each publish is logged (item, destination, time, no content in the log).
 - Moving to a new harness works the same way: the private agent publishes what the owner approves into the new agent.
 - On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent Search enforce it.
+
+## 7. App → agent binding (#60, proposed)
+
+Some apps produce work for an agent: recording recaps, reports, automation results. Each such app routes through exactly one agent, chosen by the owner, like an automation's destination.
+
+**Declaration.** The app says so in `wizard.md`; the App Manager copies it into `apps.json` unchanged:
+
+```yaml
+agent_binding:
+  required: true                       # the app has nothing useful to do without an agent
+  purpose: Where your recording recaps go   # one line shown next to the picker
+```
+
+`agent_binding: true` is short for `{required: false, purpose: ""}`. Apps without it have no binding and cannot deliver.
+
+**Storage.** The Agent Service owns the bindings, one per installed app, in `<wizard-os home>/app-bindings.json`:
+
+```json
+{"schema": 1, "apps": {"meeting-recorder": {"agent": "private", "set_at": 1791960000}}}
+```
+
+No entry = the main agent (`hermes`). A fresh box therefore routes every app to its one agent with nothing to set. The owner picks the agent at install time and can change it later; setting the main agent removes the entry.
+
+`Binding` = `{app_id, label, required, purpose, agent, is_default, agent_info:{id,label,privacy,appearance}|null, problem?}`. `problem: "agent_missing"` when the bound agent no longer exists.
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/wizard/v1/apps/<app_id>/binding` | `{binding}`. 404 `check: "app.id"` (not installed), 409 `check: "app.agent_binding"` (installed, declares no binding). |
+| PUT | `/wizard/v1/apps/<app_id>/binding` | body `{agent}` → `{binding}`. Unknown agent → 404 `check: "agent.id"`. Owner access, JSON only. |
+| GET | `/wizard/v1/app-bindings` | `{bindings:[Binding]}` for every installed app that declares one. |
+| POST | `/wizard/v1/apps/<app_id>/deliveries` | app delivery, below. |
+
+**Delivery.** `POST /wizard/v1/apps/<app_id>/deliveries` with `Authorization: Bearer <app token>` and
+
+```json
+{"delivery_key": "meeting-42", "title": "Recording · Team sync", "body": "<markdown>", "thread": "recordings", "metadata": {"meeting_id": "42"}}
+```
+
+- The app token is per app: the Service creates `<wizard-os home>/app-tokens/<app_id>` (0600) when the binding is first read or set; the installer hands it to the app (`WIZARD_DELIVERY_TOKEN`, with `WIZARD_DELIVERY_URL` = this endpoint). Another app's token, the owner's session or the Service's internal tokens are refused: 403 `check: "app.delivery_token"`.
+- An app never names an agent or a session. The Service resolves the binding, derives the thread id from `(app_id, thread)` (`thread` defaults to `delivery_key`), pins the thread to the bound agent (section 3), and writes the assistant-only message through that agent's delivery path. `delivery_key` makes a retry idempotent (`already_delivered: true`); the same key with different content → 502 `check: "agent.delivery"`.
+- Answer: `{verified: true, already_delivered, session_id, agent:{id,label,privacy,appearance}}`.
+- **No fallback.** A bound agent that is stopped, starting or unreachable → 503 `check: "app.binding.agent_running"`; a bound agent that no longer exists → 409 `check: "app.binding.agent"`. The delivery never goes to another agent; the app keeps the item and retries.
+- Delivering to the main agent needs a runtime that can write to the main agent's session store (the agent-runtime helper names the main container); without it → 502 `check: "agent.delivery"`.
+
+**Where it shows.** An agent's page lists "Apps that send work here" (`Agent.bound_apps`). An app's info/settings sheet, and the System and Agents views, show **"Sends its work to: [agent ▾]"** (`Binding`), editable with PUT. Which agents can use an app (section 7) is separate: a binding only says where an app's deliveries go; it grants the app nothing else and gives the agent no new app.
 
 ## Deferred (James, 14 Oct; brought back when due)
 
