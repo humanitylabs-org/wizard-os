@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 14 Oct 2026 — James: one admin view of every device ([spec/DEVICES.md](../spec/DEVICES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 55 | **Devices: the Wizard monitors every machine it uses, modularly.** By default only the box it is installed on; the agent adds machines it has been given access to (registry `~/.wizard-os/devices.json`, `wizard-devices` CLI, usually by voice); other tailnet nodes are listed with online lights. Resources → Devices shows one card per device with CPU, memory and every disk; Home keeps one meter and warns only when another device is offline or a disk is ≥90 % full. Nothing machine-specific is hard-coded. | Approved by James (direction) |
+
 ## 14 Oct 2026 — James: more than one agent ([spec/AGENTS.md](../spec/AGENTS.md))
 
 | # | Decision | Status |
