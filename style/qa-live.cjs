@@ -25,7 +25,6 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 const transparent = 'rgba(0, 0, 0, 0)';
 const checks = [], report = {};
 const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name + (detail ? ' ' + JSON.stringify(detail) : '')); checks.push(name); };
-const norm = v => String(v || '').replace(/\s/g, '');
 
 (async () => {
   const browser = await pw.chromium.launch();
@@ -103,7 +102,11 @@ const norm = v => String(v || '').replace(/\s/g, '');
           mark(tag + ': app canvas transparent', o.html === transparent && o.body === transparent, o);
           mark(tag + ': frame-to-window chain transparent', c.themed && c.chain.every(x => x.bg === transparent), c.chain);
           mark(tag + ': window paints the skin window material', c.win === c.material, { win: c.win, material: c.material });
-          mark(tag + ': exact ink, accent, base, border roles', ['text', 'text-secondary', 'accent', 'base', 'border'].every(k => norm(o.vars[k]) === norm(tokens.skins[skin].tokens[k])), o.vars);
+          // Same colour, any notation: the shell sends computed rgba(), tokens.json records hex.
+          const roles = ['text', 'text-secondary', 'accent', 'base', 'border'];
+          const cmp = await frame.evaluate(([pairs]) => pairs.map(([a, b]) => { const r = v => { const e = document.createElement('i'); e.style.color = v; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; }; return [r(a), r(b)]; }),
+            [roles.map(k => [o.vars[k], tokens.skins[skin].tokens[k]])]);
+          mark(tag + ': exact ink, accent, base, border roles', cmp.every(([a, b]) => a === b), { got: o.vars, cmp });
           mark(tag + ': document retained (no reload, same URL and type)', o.identity && o.url === before.url && o.type === before.type);
           rec.views[skin + ':' + pres] = { window: c.win, material: c.material, ink: o.vars.text, accent: o.vars.accent, scheme: o.scheme };
           await page.screenshot({ path: path.join(shots, `${app}-${skin}-${pres}.png`) });
