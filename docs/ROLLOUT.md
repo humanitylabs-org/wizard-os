@@ -2,6 +2,10 @@
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
+## Receives voice input (15 Oct, approved; #62)
+
+Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
+
 ## Now: days 0–3 (week of 9 Oct)
 
 - ✅ **Agent Service cutover** (Jan's repo is live). Telos runs `wizard-agent-service` @ `fc0d022` since 9 Oct 09:45 UTC; `/wizard/health` answers 200.
