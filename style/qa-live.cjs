@@ -6,6 +6,7 @@
  *   QA_URL          (required) the shell entry, e.g. https://<box>.<tailnet>.ts.net/wizard-os-home/
  *   PLAYWRIGHT_PATH resolvable playwright module          STYLE_ROOT  this folder (default)
  *   QA_SHOTS        screenshot + receipt folder           QA_APPS     installed app ids (default topics,wizard-music,wizard-signal,wisdom)
+ *   QA_DEVICE       Playwright device profile (default Pixel 7)
  *   QA_INJECT       JSON [{id,name,prefix,upstream|dir}]  disposable apps added to the registry for this context only:
  *                   `upstream` proxies to a local container (writes allowed: it is disposable); `dir` serves files.
  * Candidate client: requests for a wizard-appearance.js path are answered with this folder's appearance-client.js.
@@ -29,7 +30,8 @@ const norm = v => String(v || '').replace(/\s/g, '');
 (async () => {
   const browser = await pw.chromium.launch();
   try {
-    const context = await browser.newContext({ viewport: { width: 412, height: 892 }, ignoreHTTPSErrors: true });
+    // A real phone profile (touch + mobile UA): a bare narrow viewport is redirected to the desktop shell.
+    const context = await browser.newContext({ ...pw.devices[process.env.QA_DEVICE || 'Pixel 7'], ignoreHTTPSErrors: true });
     await context.addInitScript(() => localStorage.setItem('wos.coached', 'true'));
     await context.route('**/*', async route => {
       const req = route.request(), u = new URL(req.url());
@@ -59,7 +61,7 @@ const norm = v => String(v || '').replace(/\s/g, '');
       const rec = report[app] = { client: null, views: {}, back: [] };
       await page.goto(url + '?open=' + encodeURIComponent(app), { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(id => Object.values(window.__wos?.wins || {}).some(w => w.appId === id), app, { timeout: 30000 });
-      const winId = await page.evaluate(id => Object.entries(window.__wos.wins).find(([, w]) => w.appId === id)[0], app);
+      const winId = await page.evaluate(id => Object.entries(window.__wos.wins).filter(([, w]) => w.appId === id).pop()[0], app);
       const winSel = `.win[data-win="${winId}"]`;
       const frame = await (await page.waitForSelector(winSel + ' iframe', { timeout: 30000 })).contentFrame();
       mark(app + ' cold canonical entry opens its frame', !!frame);

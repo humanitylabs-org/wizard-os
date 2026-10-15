@@ -99,7 +99,7 @@ window.send=(id,a,origin)=>document.getElementById(id).contentWindow.postMessage
       'inherit keyword': ctx(good + 1, 'grove', { tokens: { ...tokens.skins.grove.tokens, canvas: 'transparent', accent: 'inherit' } }),
       'url() injection': ctx(good + 1, 'grove', { tokens: { ...tokens.skins.grove.tokens, canvas: 'transparent', surface: 'url(https://x/y)' } }),
       'unknown presentation': ctx(good + 1, 'grove', { presentation: 'floating' }),
-      'bad skin id': ctx(good + 1, 'Grove!'),
+      'bad skin id': { ...ctx(good + 1, 'grove'), skin: 'Grove!' },
     };
     for (const [name, a] of Object.entries(bad)) {
       const n0 = await page.evaluate(() => acks.length);
