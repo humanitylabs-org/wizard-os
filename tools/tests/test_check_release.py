@@ -38,7 +38,9 @@ class Shape(unittest.TestCase):
         ver = (ROOT / "releases" / "stable").read_text().strip()
         rel = json.loads((ROOT / "releases" / f"{ver}.json").read_text())
         self.assertRegex(rel["components"]["wizard-app-manager"]["commit"], r"^[0-9a-f]{40}$")
-        for name in ("wizard-app-manager", "wizard-shell"):
+        names = ("wizard-app-manager", "wizard-ux", "wizard-agent-service") if "wizard-ux" in rel["images"] else (
+            "wizard-app-manager", "wizard-shell")
+        for name in names:
             self.assertRegex(rel["images"][name]["digest"], r"^sha256:[0-9a-f]{64}$")
         for slot, d in rel["default_apps"].items():
             if d:

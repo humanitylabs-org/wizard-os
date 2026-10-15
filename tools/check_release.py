@@ -84,7 +84,9 @@ def shape(rel: dict) -> list[str]:
             errs.append(f"image {name}: image_inputs must be nonempty positive path patterns")
         if "image_workflow" in im and not re.fullmatch(r"\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml", str(im["image_workflow"])):
             errs.append(f"image {name}: image_workflow must name a workflow file")
-        if not isinstance(im.get("architectures"), list) or set(im["architectures"]) != {"amd64", "arm64"}:
+        if (not isinstance(im.get("architectures"), list) or
+                not all(isinstance(a, str) for a in im["architectures"]) or
+                set(im["architectures"]) != {"amd64", "arm64"}):
             errs.append(f"image {name}: architectures must name amd64 and arm64")
     defaults = rel.get("default_apps")
     if not isinstance(defaults, dict):

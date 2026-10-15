@@ -65,7 +65,7 @@ class Shape(unittest.TestCase):
     def test_component_and_image_metadata_required(self):
         for field, value in (("built_from", None), ("built_from", "wizard-agent-service"),
                              ("ref", "https://not-an-image"), ("source_commit", "main"),
-                             ("architectures", ["arm64"]), ("image_inputs", []),
+                             ("architectures", ["arm64"]), ("architectures", [{}]), ("image_inputs", []),
                              ("image_inputs", ["!Dockerfile"]), ("image_workflow", "not-a-workflow")):
             rel = split()
             rel["images"]["wizard-ux"][field] = value
