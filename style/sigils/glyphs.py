@@ -97,6 +97,12 @@ def g_wisdom():
     flame = P("M256 186 C274 222 304 248 304 290 C304 322 282 344 256 344 C230 344 208 322 208 290 C208 256 240 236 256 186 Z")
     return D(book, flame, rrect(249, 330, 14, 90, 2))
 
+@glyph('reader', 'A page with a bookmark ribbon cut down from its top edge: where you left off.')
+def g_reader():
+    page = D(rrect(132, 84, 248, 344, 30), poly((316, 70), (396, 70), (396, 150)))
+    ribbon = poly((196, 70), (256, 70), (256, 252), (226, 222), (196, 252))
+    return D(page, ribbon)
+
 @glyph('music', 'An eighth note whose flag is the curl of the hat\u2019s hook.')
 def g_music():
     head = R(P("M140 368 a66 50 0 1 0 132 0 a66 50 0 1 0 -132 0 Z"), -22, 206, 368)

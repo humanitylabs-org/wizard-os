@@ -82,7 +82,7 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 - [ ] **Context bridge** app: read Claude Code / Codex sessions and project folders; import ChatGPT and Claude exports; MCP tools `search_past_work`, `load_project_context` ([MAC.md](MAC.md#picking-up-where-claude-or-chatgpt-left-off)).
 - [ ] **Meeting Recorder** as a wizard.md app (Archimedes).
-- [ ] **Reader** as a wizard.md app (Archimedes).
+- [x] **Reader** as a wizard.md app (Archimedes). Private repo `humanitylabs-org/reader`, package in [reader PR #1](https://github.com/humanitylabs-org/reader/pull/1) (merging it publishes the image). Fresh-VM acceptance at `7146f45` with the stock one-line install: both checkers COMPATIBLE, `wam install` of the private repo, save and read a markdown item inside Wizard UX, Back stays in the app, stock Hermes adds and finds items through the wizard gateway, uninstall keeps the library (it lives in `media/Reader`), reinstall brings it back ([QA.md](https://github.com/humanitylabs-org/reader/blob/feature/wizard-app-package/QA.md)). Still open elsewhere: index listing (index repo is read-only for this account; patch on the Reader task), the launcher tile on `wam` main (loopback view URLs are dropped until the `/apps/<id>/` route lands), and two fresh-box App Manager issues the run worked around (store folder owned by root; Runtipi deletes a locally built image on install).
 
 ## Shared (Archimedes unless noted)
 
