@@ -23,7 +23,7 @@ const inject = JSON.parse(process.env.QA_INJECT || '[]');
 const apps = (process.env.QA_APPS ?? 'topics,wizard-music,wizard-signal,wisdom').split(',').filter(Boolean).concat(inject.map(a => a.id));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const transparent = 'rgba(0, 0, 0, 0)';
-const checks = [], report = {}, issues = [], liveAssets = {}, assetReads = [];
+const checks = [], report = {}, issues = [], liveAssets = {}, assetReads = [], assetReadWarnings = [];
 const desktop = process.env.QA_DEVICE === 'Desktop Chrome';
 const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name + (detail ? ' ' + JSON.stringify(detail) : '')); checks.push(name); };
 
@@ -34,11 +34,12 @@ const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name 
     const context = await browser.newContext({ ...pw.devices[process.env.QA_DEVICE || 'Pixel 7'], ignoreHTTPSErrors: true });
     context.on('response', response => {
       const pathname = new URL(response.url()).pathname;
-      if (/\/(?:skins\.(?:js|css)|appearance-host\.(?:js|css)|app-client\.js)$/.test(pathname)) {
+      if (response.status() === 200 && response.request().method() === 'GET' && /\/(?:skins\.(?:js|css)|appearance-host\.(?:js|css)|app-client\.js)$/.test(pathname)) {
         assetReads.push(response.body().then(body => {
+          if (!body.length) return; // Ignore empty preload/navigation responses.
           const hash = require('node:crypto').createHash('sha256').update(body).digest('hex');
           (liveAssets[pathname] ||= []).push(hash);
-        }).catch(error => { issues.push({asset:pathname,error:error.message}); }));
+        }).catch(error => { assetReadWarnings.push({asset:pathname,error:error.message}); }));
       }
     });
     await context.addInitScript(() => localStorage.setItem('wos.coached', 'true'));
@@ -75,6 +76,7 @@ const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name 
       mark(skin + ': visible Skin control applies selection', await skinPage.locator(`[data-skinpick="${skin}"]`).getAttribute('aria-pressed') === 'true');
     }
     await skinPage.screenshot({path:path.join(shots, 'skin-entry.png')});
+    await Promise.all(assetReads);
     await skinPage.close();
     for (const app of apps) {
       const page = await context.newPage();
@@ -172,13 +174,15 @@ const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name 
         await page.goBack(); await page.waitForTimeout(300);
         mark(app + ': browser Back stays in Wizard', !page.isClosed() && page.url().includes('/wizard-os-home/'));
       } else rec.back.push('first:' + await page.evaluate(() => window.__wosNativeBack ? window.__wosNativeBack() : window.__wux.escStep()));
+      await Promise.all(assetReads);
       await page.close();
     }
     await Promise.all(assetReads);
     for (const key of Object.keys(liveAssets)) liveAssets[key] = [...new Set(liveAssets[key])];
+    for (const warning of assetReadWarnings) if (!liveAssets[warning.asset]?.length) issues.push(warning);
     await context.close();
   } finally { await browser.close(); }
-  fs.writeFileSync(path.join(shots, 'receipt.json'), JSON.stringify({ host: require('node:os').hostname(), status: issues.length ? 'ISSUES' : 'PASS', issues, liveAssets, browserOnlyInjection: inject.length > 0, entry: url + '?open=' + apps[0], device: process.env.QA_DEVICE || 'Pixel 7', count: checks.length, apps: report, checks, source: tokens.source.revision,
+  fs.writeFileSync(path.join(shots, 'receipt.json'), JSON.stringify({ host: require('node:os').hostname(), status: issues.length ? 'ISSUES' : 'PASS', issues, liveAssets, assetReadWarnings, browserOnlyInjection: inject.length > 0, entry: url + '?open=' + apps[0], device: process.env.QA_DEVICE || 'Pixel 7', count: checks.length, apps: report, checks, source: tokens.source.revision,
     scope: 'candidate demo injected only in this browser, NOT an installed live app; read-only real-shell cold entry; candidate client injected where an app loads wizard-appearance.js; injected QA apps are disposable' }, null, 2));
   console.log(`${checks.length} PASS checks; ${issues.length} issues`);
   if (issues.length) process.exitCode = 2;
