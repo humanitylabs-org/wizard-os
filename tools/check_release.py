@@ -32,25 +32,71 @@ VERSION = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 
 def shape(rel: dict) -> list[str]:
+    """Both historical bundled-shell and complete split releases, matching get.sh's keys."""
     errs: list[str] = []
-    if not VERSION.match(str(rel.get("version", ""))):
+    if not isinstance(rel, dict):
+        return ["release: expected an object"]
+    if not VERSION.fullmatch(str(rel.get("version", ""))):
         errs.append(f"version {rel.get('version')!r} is not semver")
     comps = rel.get("components")
     if not isinstance(comps, dict) or not comps:
         return errs + ["components: missing"]
     for name, c in comps.items():
-        if not REPO.match(str(c.get("repo", ""))):
+        if not isinstance(c, dict):
+            errs.append(f"{name}: expected a component object")
+            continue
+        if not REPO.fullmatch(str(c.get("repo", ""))):
             errs.append(f"{name}: repo {c.get('repo')!r} is not owner/name")
-        if not SHA.match(str(c.get("commit", ""))):
+        if not SHA.fullmatch(str(c.get("commit", ""))):
             errs.append(f"{name}: commit {c.get('commit')!r} is not a 40-char sha")
-    for name, im in (rel.get("images") or {}).items():
-        if not DIGEST.match(str(im.get("digest", ""))):
+        if not isinstance(c.get("branch"), str) or not c["branch"].strip():
+            errs.append(f"{name}: branch is required")
+    images = rel.get("images")
+    if not isinstance(images, dict) or not images:
+        return errs + ["images: missing"]
+    split = "wizard-ux" in images or "wizard-agent-service" in images
+    required = ("wizard-app-manager", "wizard-ux", "wizard-agent-service") if split else (
+        "wizard-app-manager", "wizard-shell")
+    for name in required:
+        if name not in images:
+            errs.append(f"image {name}: required for a {'split' if split else 'bundled'} release")
+    if split and "wizard-shell" in images:
+        errs.append("images: cannot mix wizard-shell with split UX/Service images")
+    for name, im in images.items():
+        if not isinstance(im, dict):
+            errs.append(f"image {name}: expected an object")
+            continue
+        if not DIGEST.fullmatch(str(im.get("digest", ""))):
             errs.append(f"image {name}: digest {im.get('digest')!r} is not sha256:<64 hex>")
-        if im.get("built_from") and im["built_from"] not in comps:
-            errs.append(f"image {name}: built_from {im['built_from']!r} is not a component")
-    for slot, d in (rel.get("default_apps") or {}).items():
-        if d is not None and not d.get("app"):
-            errs.append(f"default_apps.{slot}: needs app (or null)")
+        ref = str(im.get("ref", ""))
+        if not re.fullmatch(r"ghcr\.io/[a-z0-9._-]+/[a-z0-9._/-]+(?::[A-Za-z0-9._-]+|@sha256:[0-9a-f]{64})?", ref):
+            errs.append(f"image {name}: ref {ref!r} is not a supported GHCR image name")
+        if "@" in ref and ref.rsplit("@", 1)[1] != im.get("digest"):
+            errs.append(f"image {name}: ref digest differs from digest")
+        if not isinstance(im.get("built_from"), str) or im["built_from"] not in comps:
+            errs.append(f"image {name}: built_from {im.get('built_from')!r} is not a component")
+        elif name in ("wizard-app-manager", "wizard-ux", "wizard-agent-service") and im["built_from"] != name:
+            errs.append(f"image {name}: built_from must name {name}")
+        if "source_commit" in im and not SHA.fullmatch(str(im["source_commit"])):
+            errs.append(f"image {name}: source_commit is not a 40-char sha")
+        if "image_inputs" in im and (not isinstance(im["image_inputs"], list) or not im["image_inputs"] or
+                not all(isinstance(p, str) and p and not p.startswith("!") for p in im["image_inputs"])):
+            errs.append(f"image {name}: image_inputs must be nonempty positive path patterns")
+        if "image_workflow" in im and not re.fullmatch(r"\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml", str(im["image_workflow"])):
+            errs.append(f"image {name}: image_workflow must name a workflow file")
+        if not isinstance(im.get("architectures"), list) or set(im["architectures"]) != {"amd64", "arm64"}:
+            errs.append(f"image {name}: architectures must name amd64 and arm64")
+    defaults = rel.get("default_apps")
+    if not isinstance(defaults, dict):
+        return errs + ["default_apps: expected an object"]
+    for slot, d in defaults.items():
+        if d is not None and (not isinstance(d, dict) or not d.get("app") or not d.get("index_version")):
+            errs.append(f"default_apps.{slot}: needs app and index_version (or null)")
+    for slot, app in (("shell", "wizard-ux" if split else "wizard-shell"),
+                      ("agent-service", "wizard-agent-service" if split else "wizard-shell")):
+        d = defaults.get(slot)
+        if not isinstance(d, dict) or d.get("app") != app:
+            errs.append(f"default_apps.{slot}: must name {app}")
     return errs
 
 
@@ -65,7 +111,7 @@ def on_branch(repo: str, sha: str, branch: str) -> tuple[bool, str]:
                    ((r.stderr or "").strip().splitlines() or ["compare failed"])[-1][:160])
 
 
-def image_revision(ref: str, digest: str) -> tuple[str | None, str]:
+def image_revision(ref: str, digest: str, architectures: list[str] | None = None) -> tuple[str | None, str]:
     """The git commit the image was built from: the OCI label org.opencontainers.image.revision, else the commit in
     the BuildKit SLSA provenance attestation (docker/build-push-action records it by default). None = unknown."""
     m = re.match(r"^ghcr\.io/([^:@]+)", ref)
@@ -83,6 +129,11 @@ def image_revision(ref: str, digest: str) -> tuple[str | None, str]:
         top = get(f"manifests/{digest}")
         subs = top.get("manifests") or []
         plats = [d for d in subs if (d.get("platform") or {}).get("os") not in (None, "unknown")]
+        if architectures and not {("linux", a) for a in architectures} <= {
+                (d["platform"]["os"], d["platform"].get("architecture")) for d in plats}:
+            return None, "manifest does not contain all declared Linux architectures"
+        if subs and not plats:
+            return None, "manifest index has no runnable platforms"
         mans = [get(f"manifests/{d['digest']}") for d in plats] if subs else [top]
         labels = {((get(f"blobs/{m['config']['digest']}").get("config") or {}).get("Labels") or {})
                   .get("org.opencontainers.image.revision") for m in mans}
@@ -91,15 +142,20 @@ def image_revision(ref: str, digest: str) -> tuple[str | None, str]:
         rev = labels.pop() if labels else None
         if rev:
             return rev, ""
-        found = set()
+        proven = {}
         for att in subs:
             if (att.get("annotations") or {}).get("vnd.docker.reference.type") != "attestation-manifest":
                 continue
             for layer in get(f"manifests/{att['digest']}").get("layers", []):
                 if "provenance" not in (layer.get("annotations") or {}).get("in-toto.io/predicate-type", ""):
                     continue
-                found |= set(re.findall(r'"(?:vcs:revision|revision)":\s*"([0-9a-f]{40})"',
-                                        json.dumps(get(f"blobs/{layer['digest']}"))))
+                target = (att.get("annotations") or {}).get("vnd.docker.reference.digest")
+                proven.setdefault(target, set()).update(re.findall(
+                    r'"(?:vcs:revision|revision)":\s*"([0-9a-f]{40})"',
+                    json.dumps(get(f"blobs/{layer['digest']}"))))
+        if not plats or any(len(proven.get(p["digest"], set())) != 1 for p in plats):
+            return None, "no unambiguous provenance for every platform"
+        found = set().union(*(proven[p["digest"]] for p in plats))
         if len(found) == 1:
             return found.pop(), ""
         return None, ("provenance names several commits: " + ", ".join(sorted(found))) if found else "no provenance"
@@ -113,7 +169,8 @@ def changed_inputs(repo: str, base: str, head: str, inputs: list[str]) -> tuple[
     if not inputs:
         return None, "image_inputs not given"
     r = subprocess.run(["gh", "api", f"repos/{repo}/compare/{base}...{head}",
-                        "--jq", "{status: .status, files: [.files[].filename]}"], capture_output=True, text=True)
+                        "--jq", "{status: .status, files: [.files[] | {filename, previous_filename}]}"],
+                       capture_output=True, text=True)
     if r.returncode != 0:
         return None, ((r.stderr or "").strip().splitlines() or ["compare failed"])[-1][:160]
     d = json.loads(r.stdout)
@@ -121,7 +178,9 @@ def changed_inputs(repo: str, base: str, head: str, inputs: list[str]) -> tuple[
         return None, f"{base[:12]} is not an ancestor of {head[:12]} ({d['status']})"
     if len(d["files"]) >= 300:   # GitHub's compare lists at most 300 files: can't prove nothing changed
         return None, f"{len(d['files'])} files changed, at GitHub's compare cap; check with a local git diff"
-    return [f for f in d["files"] if any(fnmatch.fnmatch(f, g) or f == g for g in inputs)], ""
+    # A rename OUT of an input directory is still a change to an image input.
+    paths = {p for f in d["files"] for p in (f["filename"], f.get("previous_filename")) if p}
+    return sorted(f for f in paths if any(fnmatch.fnmatch(f, g) for g in inputs)), ""
 
 
 def workflow_paths(repo: str, ref: str, workflow: str) -> tuple[list[str] | None, str]:
@@ -204,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as e:
             print(f"no stable release: {e}", file=sys.stderr)
             return 2
-        if not VERSION.match(ver):
+        if not VERSION.fullmatch(ver):
             print(f"FAIL  releases/stable: {ver!r} is not a version")
             return 1
         a.file = str(stable.parent / f"{ver}.json")
@@ -235,14 +294,15 @@ def main(argv: list[str] | None = None) -> int:
                             "source can't be proven")
             if ok and src and im.get("source_commit"):
                 # The image was built from an earlier commit of the component; fine only if no image input changed.
-                rev, why = image_revision(im["ref"], im["digest"])
+                rev, why = image_revision(im["ref"], im["digest"], im["architectures"])
                 if rev != im["source_commit"]:
                     errs.append(f"image {name}: built from {(rev or '?')[:12]}, release says source_commit "
                                 f"{im['source_commit'][:12]}" + (f" ({why})" if why else ""))
                 else:
                     wf = im.get("image_workflow", ".github/workflows/image.yml")
                     need, why_wf = workflow_paths(src["repo"], rev, wf)
-                    short = sorted(set(need or []) - set(im.get("image_inputs") or []))
+                    # The recipe itself must not drift, even if its paths filter omits itself.
+                    short = sorted((set(need or []) | {wf}) - set(im.get("image_inputs") or []))
                     if need is None or short:
                         errs.append(f"image {name}: image_inputs must cover {wf}'s paths at {rev[:12]}"
                                     + (f"; missing {', '.join(short)}" if short else f" ({why_wf})"))
@@ -257,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
                         ok_lines.append(f"image {name}: built from {rev[:12]}; no image input changed up to "
                                         f"{im['built_from']}@{src['commit'][:12]}")
             elif ok and src:
-                rev, why = image_revision(im["ref"], im["digest"])
+                rev, why = image_revision(im["ref"], im["digest"], im["architectures"])
                 if rev is None:
                     errs.append(f"image {name}: can't prove it was built from {im['built_from']}@{src['commit'][:12]}"
                                 + (f" ({why})" if why else ""))
@@ -273,7 +333,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"DRIFT {w}")
     for e in errs:
         print(f"FAIL  {e}")
-    print(f"release {rel.get('version')}: {'ok' if not errs else f'{len(errs)} problem(s)'}")
+    version = rel.get('version') if isinstance(rel, dict) else '?'
+    print(f"release {version}: {'ok' if not errs else f'{len(errs)} problem(s)'}")
     return 0 if not errs else 1
 
 
