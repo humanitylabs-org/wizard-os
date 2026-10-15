@@ -11,7 +11,7 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | `shell` | `wizard-ux` | yes | Exactly one active per box ([SHELL.md](../spec/SHELL.md)). Oscar's Wizard App and `hermes-frontend-3` are alternatives |
 | `agent-service` | `wizard-agent-service` | yes | Headless; the `/wizard/...` API every shell talks to. Separate from the shell (#36) |
 | `agent` | `hermes-agent` | yes | Any MCP-speaking agent later |
-| `files` | `files` (File Browser on Runtipi `media/`) | yes | The one user-files root |
+| `files` | `wizard-files` (Wizard Files on Runtipi `media/`) | yes | Approved replacement; active on the owner's box. New-box default rollout remains pending; see [adoption decision](WIZARD_FILES_DECISION.md). |
 | `ai-connection` | one app per provider: `claude`, `chatgpt` (#61) | no | Many may be filled at once; each owns one provider sign-in ([AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md)). Replaces `ai-accounts` / `wizard-ai-accounts` |
 | `transcription` | `transcriber` today; Wizard STT as its front later (below) | no | OpenAI-compatible `/v1/audio/transcriptions` |
 | `browser` | `browser` (headless Chromium) | no | |
