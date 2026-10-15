@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026 — Miguel: one connection app per AI provider ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 61 | **One app per AI provider, not one central AI Accounts app.** Each provider (Claude, ChatGPT, later OpenRouter, Tinfoil…) is its own small `external`/`system` connection app that owns one sign-in and `provides: [ai-connection, <provider>-…]`. Each serves the same read-only `GET /api/connection` (status, plan, usage; never a token). The Agent Service builds `/wizard/ai-usage` from every installed `ai-connection` app, so Home → Resources → AI accounts is the one place to see them all. Claude keeps the `wizard-ai-accounts-claude` volume so existing sign-ins carry over; AI Accounts is deprecated once Claude and ChatGPT ship. | **Decided (Miguel, 15 Oct)** |
+
 ## 14 Oct 2026 — James: apps route through an agent ([spec/AGENTS.md](../spec/AGENTS.md) section 7)
 
 | # | Decision | Status |
