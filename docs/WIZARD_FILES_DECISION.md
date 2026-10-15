@@ -1,7 +1,7 @@
 # Owner-files browser fork: bounded adoption decision
 
-Status: owner-approved direction; staged candidate, canonical slot activation awaits
-independent storage-boundary review. No public catalog/default change in this PR.
+Status: owner-approved and activated on the owner's box after independent
+storage-boundary review. Public catalog and other-box defaults remain unchanged.
 
 ## Decision
 
