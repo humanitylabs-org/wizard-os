@@ -2,6 +2,13 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026 — James: account connectors and private-data routing ([spec/CONNECTORS.md](../spec/CONNECTORS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 63 | **Protected connectors with a Contains private data designation.** Real-account sessions stay in isolated connectors; agents receive scoped capabilities. Private payloads and their derivatives route to the user's preferred eligible privacy model before reaching an ordinary model; public-only content may use the ordinary route. Read-only summarization is the first use case. Per-payload classification, a tool-less summary lane, protected output rendering and no private-to-public fallback are proposed enforcement details. [Synthetic MVP and real-chat release gates](CONNECTORS_MVP.md). Extends #60 with private-data admission checks and keeps #61's per-provider connection apps. | **Direction approved by James (15 Oct); technical contract/MVP proposed, Jan + App Manager owner review required for cross-component adoption. No live account authorization or implementation claimed.** |
+
+
 ## 15 Oct 2026 — James: apps receive voice and own their feedback ([spec/VOICE_INPUT.md](../spec/VOICE_INPUT.md))
 
 | # | Decision | Status |

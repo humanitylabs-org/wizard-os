@@ -4,6 +4,10 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 **Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
 
+## Account connectors and privacy routing (15 Oct, proposed; #63)
+
+Archimedes owns the [proposed contract](../spec/CONNECTORS.md) and [synthetic MVP / real-data release checklist](CONNECTORS_MVP.md). Direction approved by James: protected account sessions, Contains private data labels, and automatic use of the owner's preferred privacy model. Technical details, packaging and cross-component enforcement remain proposed; Jan and the App Manager owner review their seams. First suggested increment: fictional public catalog + fictional private conversation summaries, with deterministic route and adversarial containment tests. Real accounts remain gated; this is not added to the v1 critical path or an active implementation claim.
+
 ## Receives voice input (15 Oct, approved; #62)
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
