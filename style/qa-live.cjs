@@ -1,49 +1,127 @@
-/* Thales-only hosted acceptance. Runs read-only against daily Wizard; candidate assets are
- * intercepted in this isolated browser context. No daily files, APIs or selections are written.
- * Requires: PLAYWRIGHT_PATH, STYLE_ROOT; QA_URL defaults to the stock tailnet URL.
- * The release reviewer must inspect the captured screenshots, not only these assertions. */
-const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const pw=require(process.env.PLAYWRIGHT_PATH || 'playwright');
-const root=process.env.STYLE_ROOT || __dirname;
-const url=process.env.QA_URL || 'https://wizard.tailc0f369.ts.net/wizard-os-home/';
-const shots=process.env.QA_SHOTS || path.resolve('style-qa-shots');fs.mkdirSync(shots,{recursive:true});
-const tokens=JSON.parse(fs.readFileSync(path.join(root,'tokens.json')));
-const client=fs.readFileSync(path.join(root,'appearance-client.js'),'utf8');
-const checks=[];const transparent='rgba(0, 0, 0, 0)';
-const mark=(name,value)=>{assert(value,name);checks.push(name);};
-(async()=>{
- const browser=await pw.chromium.launch();
- try{
-  const context=await browser.newContext({viewport:{width:412,height:892},ignoreHTTPSErrors:true});
-  await context.addInitScript(()=>localStorage.setItem('wos.coached','true'));
-  await context.route('**/*',async route=>{
-   const req=route.request();
-   if(!['GET','HEAD'].includes(req.method()))return route.fulfill({status:403,body:'Read-only QA'});
-   if(/\/wizard-appearance\.js(?:\?|$)/.test(req.url()))return route.fulfill({contentType:'text/javascript',body:client});
-   return route.continue();
-  });
-  for(const app of ['topics','wizard-music','wizard-signal','wisdom']){
-   const page=await context.newPage();
-   await page.goto(url+'?open='+app,{waitUntil:'domcontentloaded'});
-   await page.waitForFunction(id=>Object.values(window.__wos?.wins||{}).some(w=>w.appId===id),app);
-   const frame=page.frames().find(f=>f!==page.mainFrame());
-   assert(frame,'cold canonical app frame '+app);
-   await frame.waitForFunction(()=>window.WizardTheme?.connected);
-   const before=await frame.evaluate(()=>{window.__styleQAIdentity={};return{url:location.href,type:getComputedStyle(document.querySelector('h1,h2')||document.body).fontFamily};});
-   for(const skin of Object.keys(tokens.skins)){
-    // Device-local browser preference only. Blocked server writes prevent box settings changes.
-    await page.evaluate(id=>WosSkin.set(id),skin);
-    await frame.waitForFunction(id=>WizardTheme.current?.skin===id,skin);
-    const observed=await frame.evaluate(()=>({skin:WizardTheme.current.skin,tokens:WizardTheme.current.tokens,html:getComputedStyle(document.documentElement).backgroundColor,body:getComputedStyle(document.body).backgroundColor,url:location.href,type:getComputedStyle(document.querySelector('h1,h2')||document.body).fontFamily,identity:!!window.__styleQAIdentity}));
-    mark(app+' '+skin+' transparent',observed.html===transparent && observed.body===transparent);
-    mark(app+' '+skin+' retained document',observed.identity && observed.url===before.url && observed.type===before.type);
-    mark(app+' '+skin+' exact colors',Object.keys(tokens.skins[skin].tokens).every(k=>k==='canvas'||observed.tokens[k].replace(/\s/g,'')===tokens.skins[skin].tokens[k].replace(/\s/g,'')));
-    await page.screenshot({path:path.join(shots,app+'-'+skin+'.png')});
-   }
-   await page.close();
-  }
-  await context.close();
- }finally{await browser.close();}
- fs.writeFileSync(path.join(shots,'receipt.json'),JSON.stringify({host:require('node:os').hostname(),status:'PASS',checks,source:tokens.source,scope:'read-only daily cold entry with candidate appearance client; other fixture and generated-app checks reported separately'},null,2));
- console.log('PASS: '+checks.length+' live app appearance checks');
-})().catch(e=>{console.error(e);process.exitCode=1});
+/* Real-shell Appearance v1 acceptance. Read-only against a running Wizard shell: every non-GET request is refused
+ * inside this isolated browser context, except to disposable QA apps injected below. No box settings, apps or data
+ * are written. The release reviewer must inspect the captured screenshots, not only these assertions.
+ *
+ * Env:
+ *   QA_URL          (required) the shell entry, e.g. https://<box>.<tailnet>.ts.net/wizard-os-home/
+ *   PLAYWRIGHT_PATH resolvable playwright module          STYLE_ROOT  this folder (default)
+ *   QA_SHOTS        screenshot + receipt folder           QA_APPS     installed app ids (default topics,wizard-music,wizard-signal,wisdom)
+ *   QA_INJECT       JSON [{id,name,prefix,upstream|dir}]  disposable apps added to the registry for this context only:
+ *                   `upstream` proxies to a local container (writes allowed: it is disposable); `dir` serves files.
+ * Candidate client: requests for a wizard-appearance.js path are answered with this folder's appearance-client.js.
+ * Apps that take the theme from the shell's own app-client.js are checked too; the receipt records which client ran. */
+'use strict';
+const fs = require('node:fs'), path = require('node:path');
+const pw = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const root = process.env.STYLE_ROOT || __dirname;
+const url = process.env.QA_URL; if (!url) throw new Error('Set QA_URL to the shell entry URL.');
+const shots = path.resolve(process.env.QA_SHOTS || 'style-qa-shots'); fs.mkdirSync(shots, { recursive: true });
+const tokens = JSON.parse(fs.readFileSync(path.join(root, 'tokens.json')));
+const client = fs.readFileSync(path.join(root, 'appearance-client.js'), 'utf8');
+const inject = JSON.parse(process.env.QA_INJECT || '[]');
+const apps = (process.env.QA_APPS ?? 'topics,wizard-music,wizard-signal,wisdom').split(',').filter(Boolean).concat(inject.map(a => a.id));
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const transparent = 'rgba(0, 0, 0, 0)';
+const checks = [], report = {};
+const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name + (detail ? ' ' + JSON.stringify(detail) : '')); checks.push(name); };
+const norm = v => String(v || '').replace(/\s/g, '');
+
+(async () => {
+  const browser = await pw.chromium.launch();
+  try {
+    const context = await browser.newContext({ viewport: { width: 412, height: 892 }, ignoreHTTPSErrors: true });
+    await context.addInitScript(() => localStorage.setItem('wos.coached', 'true'));
+    await context.route('**/*', async route => {
+      const req = route.request(), u = new URL(req.url());
+      const qa = inject.find(a => u.pathname.startsWith(a.prefix));
+      if (qa && qa.upstream) {
+        const target = qa.upstream.replace(/\/$/, '') + '/' + u.pathname.slice(qa.prefix.length) + u.search;
+        const headers = { ...req.headers() }; delete headers.host;
+        return route.fulfill({ response: await route.fetch({ url: target, headers }) });
+      }
+      if (qa && qa.dir) {
+        const f = path.join(qa.dir, path.normalize(u.pathname.slice(qa.prefix.length) || 'index.html'));
+        if (!f.startsWith(qa.dir) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return route.fulfill({ status: 404, body: '' });
+        return route.fulfill({ contentType: TYPES[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) });
+      }
+      if (!['GET', 'HEAD'].includes(req.method())) return route.fulfill({ status: 403, body: 'Read-only QA' });
+      if (/\/wizard-appearance\.js$/.test(u.pathname)) return route.fulfill({ contentType: 'text/javascript', body: client });
+      if (/\/wizard\/v1\/apps\/?$/.test(u.pathname) && inject.length) {
+        const r = await route.fetch(); const body = await r.json();
+        for (const a of inject) body.apps.push({ id: a.id, name: a.name, desc: 'Disposable style QA app', url: a.prefix, icon: '✓', colors: ['#b99bff', '#7fd8ff'], source: 'qa' });
+        return route.fulfill({ response: r, json: body });
+      }
+      return route.continue();
+    });
+
+    for (const app of apps) {
+      const page = await context.newPage();
+      const rec = report[app] = { client: null, views: {}, back: [] };
+      await page.goto(url + '?open=' + encodeURIComponent(app), { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(id => Object.values(window.__wos?.wins || {}).some(w => w.appId === id), app, { timeout: 30000 });
+      const winId = await page.evaluate(id => Object.entries(window.__wos.wins).find(([, w]) => w.appId === id)[0], app);
+      const winSel = `.win[data-win="${winId}"]`;
+      const frame = await (await page.waitForSelector(winSel + ' iframe', { timeout: 30000 })).contentFrame();
+      mark(app + ' cold canonical entry opens its frame', !!frame);
+      await frame.waitForLoadState('load');
+      // The shell marks the window themed only after the document acknowledged a context.
+      await page.waitForFunction(sel => document.querySelector(sel)?.classList.contains('wz-themed'), winSel, { timeout: 20000 })
+        .catch(() => { throw new Error(`FAILED: ${app} never acknowledged an appearance context (window not .wz-themed)`); });
+      rec.client = await frame.evaluate(() => [...document.scripts].some(s => /wizard-appearance\.js|theme-client\.js|appearance-client\.js/.test(s.src)) ? 'candidate appearance client' : 'shell app-client.js');
+      rec.path = await frame.evaluate(() => location.pathname);
+      await frame.evaluate(() => { window.__styleQAIdentity = {}; });
+      const before = await frame.evaluate(() => ({ url: location.href, type: getComputedStyle(document.querySelector('h1,h2,main') || document.body).fontFamily }));
+      for (const skin of Object.keys(tokens.skins)) {
+        // Device-local preference in this throwaway context; the box settings write is refused above.
+        await page.evaluate(id => WosSkin.set(id), skin);
+        for (const pres of ['window', 'immersive']) {
+          const isFull = await page.evaluate(sel => document.querySelector(sel).classList.contains('full'), winSel);
+          if ((pres === 'immersive') !== isFull) await page.click(winSel + ' [data-wact="full"]');
+          await page.waitForFunction(([sel, s, p]) => {
+            const f = document.querySelector(sel + ' iframe'); const st = window.WizAppearance?.inspect().find(x => x.src === f.getAttribute('src'));
+            const el = f.contentDocument?.documentElement; return st && st.acked && st.presentation === p && el?.dataset.skin === s && el?.dataset.presentation === p;
+          }, [winSel, skin, pres], { timeout: 10000 }).catch(() => { throw new Error(`FAILED: ${app} ${skin} ${pres} context not applied`); });
+          await page.waitForTimeout(250);
+          const o = await frame.evaluate(names => {
+            const cs = getComputedStyle(document.documentElement);
+            return { html: cs.backgroundColor, body: getComputedStyle(document.body).backgroundColor, scheme: cs.colorScheme, url: location.href,
+              type: getComputedStyle(document.querySelector('h1,h2,main') || document.body).fontFamily, identity: !!window.__styleQAIdentity,
+              vars: Object.fromEntries(names.map(k => [k, cs.getPropertyValue('--wz-' + k).trim()])) };
+          }, Object.keys(tokens.skins[skin].tokens));
+          const c = await page.evaluate(sel => {
+            const win = document.querySelector(sel), f = win.querySelector('iframe'), chain = [];
+            for (let el = f; el && el !== win; el = el.parentElement) chain.push({ el: el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''), bg: getComputedStyle(el).backgroundColor });
+            const probe = document.createElement('div'); probe.style.background = 'var(--sk-win)'; win.appendChild(probe);
+            const material = getComputedStyle(probe).backgroundColor; probe.remove();
+            return { chain, win: getComputedStyle(win).backgroundColor, material, themed: win.classList.contains('wz-themed') };
+          }, winSel);
+          const tag = `${app} ${skin} ${pres}`;
+          mark(tag + ': app canvas transparent', o.html === transparent && o.body === transparent, o);
+          mark(tag + ': frame-to-window chain transparent', c.themed && c.chain.every(x => x.bg === transparent), c.chain);
+          mark(tag + ': window paints the skin window material', c.win === c.material, { win: c.win, material: c.material });
+          mark(tag + ': exact ink, accent, base, border roles', ['text', 'text-secondary', 'accent', 'base', 'border'].every(k => norm(o.vars[k]) === norm(tokens.skins[skin].tokens[k])), o.vars);
+          mark(tag + ': document retained (no reload, same URL and type)', o.identity && o.url === before.url && o.type === before.type);
+          rec.views[skin + ':' + pres] = { window: c.win, material: c.material, ink: o.vars.text, accent: o.vars.accent, scheme: o.scheme };
+          await page.screenshot({ path: path.join(shots, `${app}-${skin}-${pres}.png`) });
+        }
+      }
+      if (await page.evaluate(sel => document.querySelector(sel).classList.contains('full'), winSel)) await page.click(winSel + ' [data-wact="full"]');
+      // Back: an open in-app sheet closes first (nested); the next Back is the shell's own step (root).
+      const hasSheet = await frame.evaluate(() => { const d = document.querySelector('dialog'); if (d && !d.open && typeof window.__wizardCloseOverlay === 'function') { d.showModal(); return true; } return false; });
+      if (hasSheet) {
+        const r1 = await page.evaluate(() => window.__wosNativeBack());
+        const open = await frame.evaluate(() => document.querySelector('dialog').open);
+        mark(app + ' nested Back closes the in-app sheet inside its window', r1 === 'hosted' && !open && (await page.$(winSel)) !== null, { r1, open });
+        rec.back.push('nested:' + r1);
+        const r2 = await page.evaluate(() => window.__wosNativeBack());
+        mark(app + ' root Back passes to the shell', r2 !== 'hosted', { r2 });
+        rec.back.push('root:' + r2);
+      } else rec.back.push('first:' + await page.evaluate(() => window.__wosNativeBack()));
+      await page.close();
+    }
+    await context.close();
+  } finally { await browser.close(); }
+  fs.writeFileSync(path.join(shots, 'receipt.json'), JSON.stringify({ host: require('node:os').hostname(), status: 'PASS', count: checks.length, apps: report, checks, source: tokens.source.revision,
+    scope: 'read-only real-shell cold entry; candidate client injected where an app loads wizard-appearance.js; injected QA apps are disposable' }, null, 2));
+  console.log('PASS: ' + checks.length + ' real-shell appearance checks');
+})().catch(e => { console.error(e); process.exitCode = 1; });
