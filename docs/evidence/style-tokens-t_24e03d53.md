@@ -50,9 +50,13 @@ Screenshots were inspected by eye: every cell sits on its skin's glass with legi
 - [Full screen, all apps × skins](style-tokens-t_24e03d53/shell-immersive.jpg)
 - [Browser fixtures: standalone, Grove, Signal, synthetic light](style-tokens-t_24e03d53/fixtures.jpg)
 
+### Side by side with Chats (desktop shell, Nebula)
+
+The component demo opened next to the shell's own Chats window (read-only, same lock). Both windows paint the same glass (`rgba(14, 9, 30, 0.9)`); Chats' ink and the demo's ink both resolve to `rgb(243, 239, 255)`; the demo accent is the Nebula accent `rgb(185, 155, 255)`; the demo card is 14 px round with the faint ink-tinted surface and hairline Chats uses, and the input is the same pill shape. [Screenshot](style-tokens-t_24e03d53/side-by-side-chats.jpg).
+
 ## Not covered
 
-- The desktop shell (`desktop.html`) was not driven; the same host script serves it.
+- The desktop shell was driven only for the side-by-side (it has no skin switcher; Nebula).
 - Topics, Music and Signal were verified with the live client, not the candidate one, because they do not load `wizard-appearance.js`.
 
 ## Next
