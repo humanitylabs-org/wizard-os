@@ -8,7 +8,7 @@
  *   QA_SHOTS        screenshot + receipt folder           QA_APPS     installed app ids (default topics,wizard-music,wizard-signal,wisdom)
  *   QA_DEVICE       Playwright device profile (default Pixel 7)
  *   QA_INJECT       JSON [{id,name,prefix,upstream|dir}]  disposable apps added to the registry for this context only:
- *                   `upstream` proxies to a local container (writes allowed: it is disposable); `dir` serves files.
+ *                   `upstream` proxies to a local container (writes allowed: it is disposable); `dir` serves files (`index` names its entry page).
  * Candidate client: requests for a wizard-appearance.js path are answered with this folder's appearance-client.js.
  * Apps that take the theme from the shell's own app-client.js are checked too; the receipt records which client ran. */
 'use strict';
@@ -42,7 +42,7 @@ const norm = v => String(v || '').replace(/\s/g, '');
         return route.fulfill({ response: await route.fetch({ url: target, headers }) });
       }
       if (qa && qa.dir) {
-        const f = path.join(qa.dir, path.normalize(u.pathname.slice(qa.prefix.length) || 'index.html'));
+        const f = path.join(qa.dir, path.normalize(u.pathname.slice(qa.prefix.length) || qa.index || 'index.html'));
         if (!f.startsWith(qa.dir) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return route.fulfill({ status: 404, body: '' });
         return route.fulfill({ contentType: TYPES[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) });
       }
