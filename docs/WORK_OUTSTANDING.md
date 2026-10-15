@@ -6,7 +6,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 ## Account connectors and privacy routing (15 Oct, proposed; #63)
 
-Archimedes owns the [proposed contract](../spec/CONNECTORS.md) and [synthetic MVP / real-data release checklist](CONNECTORS_MVP.md). Direction approved by James: protected account sessions, Contains private data labels, and automatic use of the owner's preferred privacy model. Technical details, packaging and cross-component enforcement remain proposed; Jan and the App Manager owner review their seams. First suggested increment: fictional public catalog + fictional private conversation summaries, with deterministic route and adversarial containment tests. Real accounts remain gated; this is not added to the v1 critical path or an active implementation claim.
+Archimedes owns the [proposed contract](../spec/CONNECTORS.md) and [YouTube Music + simulated-chat MVP / release checklist](CONNECTORS_MVP.md). Direction approved by James: protected account sessions, Contains private data labels, and automatic use of the owner's preferred privacy model. Technical details, packaging and cross-component enforcement remain proposed; Jan and the App Manager owner review their seams. Revised selected MVP: real YouTube Music account binding/search/playback plus simulated private conversation summaries; first live private-content integration is a chat app. Recommend a Google credential broker with separate service connectors; the exact Account Manager seam remains for shared review. Real credential use and private-chat activation retain their respective security/authorization gates; this is not added to the v1 critical path or an active implementation claim.
 
 ## Receives voice input (15 Oct, approved; #62)
 
