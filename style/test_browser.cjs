@@ -81,6 +81,7 @@ window.send=(id,a,origin)=>document.getElementById(id).contentWindow.postMessage
     }
     // 3. Generic light scheme (synthetic; no retired skin name).
     rev++;
+    await page.evaluate(() => { document.body.style.background = '#f2efe8'; }); // a light host behind a light scheme
     await page.evaluate(([a]) => send('same', a), [{ version: 1, revision: rev, skin: 'fixture-light', colorScheme: 'light', presentation: 'immersive', tokens: LIGHT }]);
     await page.waitForFunction(r => acks.some(a => a.revision === r), rev);
     const lt = await fr.evaluate(() => ({ cs: getComputedStyle(document.documentElement).colorScheme, pres: document.documentElement.dataset.presentation, ink: document.documentElement.style.getPropertyValue('--wz-text') }));

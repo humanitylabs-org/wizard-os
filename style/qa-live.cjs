@@ -70,6 +70,9 @@ const mark = (name, ok, detail) => { if (!ok) throw new Error('FAILED: ' + name 
         .catch(() => { throw new Error(`FAILED: ${app} never acknowledged an appearance context (window not .wz-themed)`); });
       rec.client = await frame.evaluate(() => [...document.scripts].some(s => /wizard-appearance\.js|theme-client\.js|appearance-client\.js/.test(s.src)) ? 'candidate appearance client' : 'shell app-client.js');
       rec.path = await frame.evaluate(() => location.pathname);
+      // Let the app finish its first content load so screenshots show real content, not a spinner.
+      await frame.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1500);
       await frame.evaluate(() => { window.__styleQAIdentity = {}; });
       const before = await frame.evaluate(() => ({ url: location.href, type: getComputedStyle(document.querySelector('h1,h2,main') || document.body).fontFamily }));
       for (const skin of Object.keys(tokens.skins)) {
