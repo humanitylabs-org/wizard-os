@@ -90,8 +90,8 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 ## Shared (Archimedes unless noted)
 
-- [ ] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components.
-- [ ] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?"
+- [x] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components. Appearance v1, five skins, `tokens.json` → `tokens.css` with a drift check; demo sits on the same glass as Chats; Wisdom and a fresh generated app re-dress live in all five skins, window and full screen, on Thales (308 real-shell + 43 browser checks). [evidence](evidence/style-tokens-t_24e03d53.md). Staged in #36, awaiting James's style review.
+- [x] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?" Pointer in `system-skills/wizard-app-builder/`; WAM's builder takes `style/` as a hash-locked copy (wizard-app-manager#32, `wam new` app imports it byte-identically and passes the checker). [evidence](evidence/style-tokens-t_24e03d53.md). Awaiting Oscar's review.
 - [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.
