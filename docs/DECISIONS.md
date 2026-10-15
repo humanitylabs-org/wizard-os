@@ -2,6 +2,44 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026 — James: apps receive voice and own their feedback ([spec/VOICE_INPUT.md](../spec/VOICE_INPUT.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 62 | **Receives voice input.** An app declares an input capability, independent of the shell. The shell chooses how to expose voice; the app owns processing and feedback. App actions need no automatic Chats thread. An app may use its configured agent and choose an appropriate reply channel. First implementation covers Manager, Video Editor and Search, with a visible app destination and explicit general-agent bypass. `receives_voice_input: true` is the optional manifest boolean; receiver details and the Wizard UX gesture trial are in the linked contract. | **Approved by James (15 Oct); App Manager mirror subject to its owner review** |
+
+## 15 Oct 2026 — Miguel: one connection app per AI provider ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 61 | **One app per AI provider, not one central AI Accounts app.** Each provider (Claude, ChatGPT, later OpenRouter, Tinfoil…) is its own small `external`/`system` connection app that owns one sign-in and `provides: [ai-connection, <provider>-…]`. Each serves the same read-only `GET /api/connection` (status, plan, usage; never a token). The Agent Service builds `/wizard/ai-usage` from every installed `ai-connection` app, so Home → Resources → AI accounts is the one place to see them all. Claude keeps the `wizard-ai-accounts-claude` volume so existing sign-ins carry over; AI Accounts is deprecated once Claude and ChatGPT ship. | **Decided (Miguel, 15 Oct)** |
+
+## 14 Oct 2026 — James: apps route through an agent ([spec/AGENTS.md](../spec/AGENTS.md) section 7)
+
+| # | Decision | Status |
+|---|---|---|
+| 60 | **App → agent binding.** An app that produces work for an agent (recording recaps, reports, automations) declares `agent_binding` in `wizard.md`; the owner picks which agent it routes through at install and can change it later; the default is the main agent. The Agent Service stores the binding per installed app and apps deliver through one endpoint (`POST /wizard/v1/apps/<app_id>/deliveries`, app-scoped token) without ever naming an agent. A bound agent that is down fails the delivery loudly; nothing falls back to another agent. The agent's page shows the apps that send work to it; the app's settings show "Sends its work to" (the label from #58). James, 14 Oct: "each app can have a configuration where do you want this app to route through, kind of like an automation", including choosing a non-private agent. | Proposed (James 14 Oct), Jan and Miguel to confirm |
+## 14 Oct 2026 — James: which apps each agent can use; private agents are sealed ([spec/AGENTS.md](../spec/AGENTS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 58 | **The owner picks which agents can use an app when installing it.** The install screen lists every agent with a tick box: standard agents start ticked, private agents start unticked. Editable later from the app or from the agent. No agent gains an app silently. Replaces the draft default in PR #6 (every agent gets every app at install). Apps that produce work for an agent also show where their work goes (app → agent binding, separate setting). | **Approved by James (14 Oct)** |
+| 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent Search never indexes it for another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
+
+Deferred by James (14 Oct), brought back when due: whether apps that can run an agent need a separate warning at install (due before apps from other publishers are installable), and whether network isolation between apps is required before the stable release (due before any box installs another person's app).
+
+## 14 Oct 2026 — James: one admin view of every device ([spec/DEVICES.md](../spec/DEVICES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 55 | **Devices: the Wizard monitors every machine it uses, modularly.** By default only the box it is installed on; the agent adds machines it has been given access to (registry `~/.wizard-os/devices.json`, `wizard-devices` CLI, usually by voice); other tailnet nodes are listed with online lights. Resources → Devices shows one card per device with CPU, memory and every disk; Home keeps one meter and warns only when another device is offline or a disk is ≥90 % full. Nothing machine-specific is hard-coded. | Approved by James (direction) |
+
+## 14 Oct 2026 — James: more than one agent ([spec/AGENTS.md](../spec/AGENTS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 54 | **Agents app is a system app separate from Apps; chats are per agent; workspace naming deferred.** Agents (harness, model provider, permissions preset then adjustable) live in their own Agents app reached from Home, never in the Apps list or Store. Each agent has its own chats with a persistent indicator of which agent is open. The back end is built as agents; a "workspace" object and naming wait for a later UX decision. | Proposed (James, 14 Oct) |
+
 ## 12 Oct 2026 — James: shell, skin, app ([spec/APPEARANCE.md](../spec/APPEARANCE.md))
 
 | # | Decision | Status |
@@ -15,12 +53,12 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 43 | **One folder per agent instance:** `~/.wizard-os/agents/<id>/home`, bind-mounted into that agent's container as its home, with an `agent.json` saying where its skills, sessions and memory sit. Harness layouts stay native; nothing in Hermes changes. Outside `media/`, so other apps can't read it. Survives uninstall and host moves. | Proposed (James) |
+| 43 | **One folder per agent instance:** `~/.wizard-os/agents/<id>/home`, bind-mounted into that agent's container as its home, with an `agent.json` saying where its skills, sessions and memory sit. Harness layouts stay native; nothing in Hermes changes. Outside `media/`, so other apps can't read it. Survives uninstall and host moves. | **Approved (James, 14 Oct)** |
 | 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent Search, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
 | 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
-| 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James) |
+| 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James); **amended by #59** for private agents |
 | 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Proposed (James) |
-| 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | Proposed (James) |
+| 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | **Approved (James, 14 Oct)** |
 | 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent Search uses the same method across agents. | Proposed (James) |
 
 ## 11 Oct 2026 — James: Archimedes owns the Agent Service; agent bridge; install alongside Hermes

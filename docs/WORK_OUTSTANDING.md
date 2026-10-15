@@ -2,6 +2,12 @@
 
 Components still to build. Pick one up: put your name on it in a PR, and close it with evidence. Ordered roughly by when it's needed.
 
+**Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
+
+## Receives voice input (15 Oct, approved; #62)
+
+Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
+
 ## Agent Service (Archimedes; DECISIONS #30, #42)
 
 - [x] **Runs on stock Hermes** (Archimedes, 9 Oct): capability-aware runs, helper follow-through without a Hermes patch, settings/bootstrap/apps endpoints, orb router, serves Wizard UX. James's daily driver since 9 Oct; `main` = `2634564`, CI green.
@@ -40,7 +46,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
-- [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code.
+- [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code. James 14 Oct: install-time per-agent app choice (#58) and sealed private agents (#59) approved; app-runs-agent warning and isolation-for-stable deferred until due (spec/AGENTS.md).
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
 - [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
 - [ ] Uninstall keeps data. Verify Runtipi's behaviour and add an explicit `--delete-data`.
@@ -80,12 +86,12 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 - [ ] **Context bridge** app: read Claude Code / Codex sessions and project folders; import ChatGPT and Claude exports; MCP tools `search_past_work`, `load_project_context` ([MAC.md](MAC.md#picking-up-where-claude-or-chatgpt-left-off)).
 - [ ] **Meeting Recorder** as a wizard.md app (Archimedes).
-- [ ] **Reader** as a wizard.md app (Archimedes).
+- [x] **Reader** as a wizard.md app (Archimedes). Private repo `humanitylabs-org/reader`, package in [reader PR #1](https://github.com/humanitylabs-org/reader/pull/1) (merging it publishes the image). Fresh-VM acceptance at `7146f45` with the stock one-line install: both checkers COMPATIBLE, `wam install` of the private repo, save and read a markdown item inside Wizard UX, Back stays in the app, stock Hermes adds and finds items through the wizard gateway, uninstall keeps the library (it lives in `media/Reader`), reinstall brings it back ([QA.md](https://github.com/humanitylabs-org/reader/blob/feature/wizard-app-package/QA.md)). Still open elsewhere: index listing (index repo is read-only for this account; patch on the Reader task), the launcher tile on `wam` main (loopback view URLs are dropped until the `/apps/<id>/` route lands), and two fresh-box App Manager issues the run worked around (store folder owned by root; Runtipi deletes a locally built image on install).
 
 ## Shared (Archimedes unless noted)
 
-- [ ] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components.
-- [ ] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?"
+- [x] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components. Appearance v1, five skins, `tokens.json` → `tokens.css` with a drift check; demo sits on the same glass as Chats; Wisdom and a fresh generated app re-dress live in all five skins, window and full screen, on Thales (308 real-shell + 43 browser checks). [evidence](evidence/style-tokens-t_24e03d53.md). Staged in #36, awaiting James's style review.
+- [x] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?" Pointer in `system-skills/wizard-app-builder/`; WAM's builder takes `style/` as a hash-locked copy (wizard-app-manager#32, `wam new` app imports it byte-identically and passes the checker). [evidence](evidence/style-tokens-t_24e03d53.md). Awaiting Oscar's review.
 - [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.

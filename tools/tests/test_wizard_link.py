@@ -209,6 +209,176 @@ class LinkTest(unittest.TestCase):
         token = (self.wos / "mcp-token").read_text().strip()
         self.assertNotIn(token, json.dumps(out))
 
+    # ---- failures part-way through link (wizard-os#28): every fault point, raised and killed
+
+    FAULT_POINTS = [f"{w}:{k}" for k in ("mcp_servers.wizard", "skills.external_dirs", "plugin", "plugins.enabled",
+                                         "env", "apikey") for w in ("before", "after")] + \
+        [f"mid:{k}" for k in ("mcp_servers.wizard", "skills.external_dirs", "plugins.enabled", "env", "apikey")]
+
+    def assert_restored(self):
+        for p, h in self.before.items():
+            self.assertEqual(sha(self.hh / p), h, f"{p} not restored byte for byte")
+        self.assertFalse((self.hh / "plugins").exists(), "plugin left behind")
+        left = sorted(x.name for x in self.hh.iterdir() if x.name != "fake-hermes.log")   # the stand-in's own log
+        self.assertEqual(left, [".env", "SOUL.md", "config.yaml"])
+
+    def test_a_failure_at_any_step_rolls_link_back(self):
+        for point in self.FAULT_POINTS:
+            with self.subTest(point=point):
+                self.env["WIZARD_LINK_FAULT"] = point
+                rc, out = self.wizard("link")
+                self.assertNotEqual(rc, 0, out)
+                self.assertEqual(out["error"]["stage"], "rolled_back")
+                self.assertIn("injected fault", out["error"]["message"])
+                self.assert_restored()
+                rec = json.loads((self.wos / "linked.json").read_text())
+                self.assertEqual((rec["state"], rec["linked"]), ("rolled_back", False))
+                # the next, healthy link works and unlinks back to the owner's bytes
+                del self.env["WIZARD_LINK_FAULT"]
+                self.assertEqual(self.wizard("link")[0], 0)
+                self.assertEqual(self.wizard("unlink")[0], 0)
+                self.assert_restored()
+
+    def test_a_kill_at_any_step_is_rolled_back_by_unlink(self):
+        for point in self.FAULT_POINTS:
+            with self.subTest(point=point):
+                self.env["WIZARD_LINK_FAULT"] = point + "=kill"
+                p = subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, text=True,
+                                   env=self.env, timeout=120)
+                self.assertEqual(p.returncode, 137)
+                del self.env["WIZARD_LINK_FAULT"]
+                rec = json.loads((self.wos / "linked.json").read_text())
+                self.assertEqual((rec["state"], rec["linked"]), ("linking", False))
+                rc, doc = self.wizard("doctor")
+                self.assertNotEqual(rc, 0)
+                self.assertIn({"check": "no unfinished link", "ok": False,
+                               "detail": "a link stopped half-way; `wizard unlink` rolls it back"}, doc["checks"])
+                rc, out = self.wizard("unlink")
+                self.assertEqual(rc, 0, out)
+                self.assertTrue(out["recovered_unfinished_link"])
+                self.assertTrue(out["config_byte_identical"] and out["env_byte_identical"], out)
+                self.assert_restored()
+
+    def test_a_kill_is_recovered_by_the_next_link(self):
+        self.env["WIZARD_LINK_FAULT"] = "after:plugin=kill"
+        subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, env=self.env, timeout=120)
+        del self.env["WIZARD_LINK_FAULT"]
+        rc, out = self.wizard("link")
+        self.assertEqual(rc, 0, out)
+        self.assertTrue(out["recovered_unfinished_link"]["config_byte_identical"])
+        self.assertEqual(out["edits"], ["mcp_servers.wizard", "skills.external_dirs", "plugins.enabled"])
+        self.assertEqual(self.wizard("unlink")[0], 0)
+        self.assert_restored()
+
+    def test_a_failing_plugin_install_rolls_back(self):
+        (self.bin / "hermes").write_text(FAKE_HERMES.format(python=sys.executable).replace(
+            'if a[:2] == ["plugins", "install"]:', 'if a[:2] == ["plugins", "install"]:\n'
+            '    (home / "plugins" / "wizard-os").mkdir(parents=True); sys.exit(1)\nif False:'))
+        rc, out = self.wizard("link")
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(out["error"]["stage"], "rolled_back")
+        self.assert_restored()
+
+    def test_kill_without_an_owner_env_file_leaves_none(self):
+        (self.hh / ".env").unlink()
+        del self.before[".env"]
+        self.env["WIZARD_LINK_FAULT"] = "after:apikey=kill"
+        subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, env=self.env, timeout=120)
+        del self.env["WIZARD_LINK_FAULT"]
+        self.assertTrue((self.hh / ".env").exists())
+        rc, out = self.wizard("unlink")
+        self.assertEqual(rc, 0, out)
+        self.assertFalse((self.hh / ".env").exists())
+        for p, h in self.before.items():
+            self.assertEqual(sha(self.hh / p), h)
+
+    def test_kill_mid_edit_without_an_owner_env_file_leaves_none(self):
+        # killed after the .env was written but before link journalled it: the sha is unknown, so rollback removes
+        # Wizard's names and must then delete the (now empty) file it created
+        (self.hh / ".env").unlink()
+        del self.before[".env"]
+        for point in ("mid:env", "mid:apikey"):
+            with self.subTest(point=point):
+                self.env["WIZARD_LINK_FAULT"] = point + "=kill"
+                subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, env=self.env,
+                               timeout=120)
+                del self.env["WIZARD_LINK_FAULT"]
+                rc, out = self.wizard("unlink")
+                self.assertEqual(rc, 0, out)
+                self.assertTrue(out["env_byte_identical"], out)
+                self.assertFalse((self.hh / ".env").exists())
+                for p, h in self.before.items():
+                    self.assertEqual(sha(self.hh / p), h)
+
+    def test_a_second_link_or_unlink_while_one_runs_fails_fast(self):
+        import fcntl
+        (self.wos / "linked.json.lock").touch()
+        fd = os.open(self.wos / "linked.json.lock", os.O_RDWR)
+        fcntl.flock(fd, fcntl.LOCK_EX)   # stands in for a link that is still running
+        try:
+            for cmd in ("link", "unlink"):
+                with self.subTest(cmd=cmd):
+                    rc, out = self.wizard(cmd)
+                    self.assertNotEqual(rc, 0, out)
+                    self.assertEqual(out["error"]["stage"], "locked")
+            self.assertFalse((self.wos / "linked.json").exists())
+            for p, h in self.before.items():
+                self.assertEqual(sha(self.hh / p), h)
+        finally:
+            os.close(fd)
+        self.assertEqual(self.wizard("link")[0], 0)   # once the other run ends, link works
+
+    def test_a_failing_unlink_rollback_keeps_the_json_contract(self):
+        self.env["WIZARD_LINK_FAULT"] = "after:mcp_servers.wizard=kill"
+        subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, env=self.env, timeout=120)
+        del self.env["WIZARD_LINK_FAULT"]
+        rec = json.loads((self.wos / "linked.json").read_text())
+        rec["hermes_home"] = str(self.dir / "gone")   # rollback cannot work: no such Hermes home
+        (self.wos / "linked.json").write_text(json.dumps(rec))
+        rc, out = self.wizard("unlink")
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(out["error"]["stage"], "rollback_incomplete")
+        self.assertEqual(json.loads((self.wos / "linked.json").read_text())["state"], "linking")   # journal kept
+
+    def test_relink_gives_hermes_the_same_api_key(self):
+        # the shell captured the key at install; unlink -> link must not mint a new one it doesn't know
+        self.assertEqual(self.wizard("link")[0], 0)
+        key1 = [l for l in (self.hh / ".env").read_text().splitlines() if l.startswith("API_SERVER_KEY=")]
+        self.assertEqual(self.wizard("unlink")[0], 0)
+        self.assertNotIn("API_SERVER_KEY", (self.hh / ".env").read_text())
+        self.assertEqual(self.wizard("link")[0], 0)
+        key2 = [l for l in (self.hh / ".env").read_text().splitlines() if l.startswith("API_SERVER_KEY=")]
+        self.assertEqual(len(key1), 1)
+        self.assertEqual(key1, key2)
+        self.assertEqual(os.stat(self.wos / "hermes-api-key").st_mode & 0o777, 0o600)
+
+    def test_relink_after_an_older_link_keeps_its_api_key(self):
+        # a box linked before the key file existed: unlink saves the key it removes, relink reuses it
+        self.assertEqual(self.wizard("link")[0], 0)
+        (self.wos / "hermes-api-key").unlink()
+        key1 = [l for l in (self.hh / ".env").read_text().splitlines() if l.startswith("API_SERVER_KEY=")]
+        self.assertEqual(self.wizard("unlink")[0], 0)
+        self.assertEqual(self.wizard("link")[0], 0)
+        key2 = [l for l in (self.hh / ".env").read_text().splitlines() if l.startswith("API_SERVER_KEY=")]
+        self.assertEqual(key1, key2)
+
+    def test_owner_edits_during_an_unfinished_link_are_kept(self):
+        self.env["WIZARD_LINK_FAULT"] = "after:plugins.enabled=kill"
+        subprocess.run([sys.executable, str(CLI), "link", "--json"], capture_output=True, env=self.env, timeout=120)
+        del self.env["WIZARD_LINK_FAULT"]
+        p = self.hh / "config.yaml"
+        p.write_text(p.read_text().replace('default: "some/model"', 'default: "other/model"'))
+        rc, out = self.wizard("unlink")
+        self.assertEqual(rc, 0, out)
+        self.assertFalse(out["config_byte_identical"])
+        import yaml
+        cfg = yaml.safe_load(p.read_text())
+        self.assertEqual(cfg["model"]["default"], "other/model")
+        self.assertNotIn("wizard", cfg["mcp_servers"])
+        self.assertNotIn("plugins", cfg)
+        self.assertEqual(cfg["skills"]["external_dirs"], ["~/shared-skills"])
+        self.assertFalse((self.hh / "plugins").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

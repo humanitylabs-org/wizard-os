@@ -63,6 +63,8 @@ It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only
 
 `unlink` removes exactly those entries and the plugin, then restores `config.yaml` byte for byte. If the owner edited the file in between, their edits are kept and only Wizard's entries are removed. Values are never printed.
 
+**A failed link leaves nothing behind.** `linked.json` is a write-ahead journal: it is saved (fsync'd, 0600) before the first edit, and each edit is added to it before it is made. If any step fails (a config edit, `hermes plugins install`, the `.env`), `link` rolls everything back to the backed-up bytes and exits non-zero with `"stage": "rolled_back"`. If the process is killed mid-way, the journal stays in state `linking`: `doctor` reports `no unfinished link` as FAIL, and the next `wizard unlink` or `wizard link` rolls it back first. Owner edits made in between are kept; only Wizard OS's keys are removed. Fault-injection tests cover a failure and a kill before and after every step (`tools/tests/test_wizard_link.py`).
+
 `doctor` checks:
 - the link;
 - the three edits;

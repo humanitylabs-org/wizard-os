@@ -53,6 +53,7 @@ REGISTRY = {
     'wizard-signal': ('signal',   205, None),
     'meditation':    ('meditate', 218, None),
     'files':         ('files',    232, None),
+    'reader':        ('reader',   244, None),
     'wizard-search': ('search',   256, None),
     'projects':      ('projects', 276, None),
     'wizard':        ('chats',    296, None),
