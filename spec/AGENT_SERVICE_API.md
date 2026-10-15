@@ -48,6 +48,8 @@ GET,PATCH       /wizard/v1/uploads/{id}                           stable       -
 POST            /wizard/v1/uploads/{id}/complete                  stable       -   -
 POST            /wizard/v1/shares                                 stable       -   -
 GET             /wizard/v1/shares/{id}                            stable       -   -
+GET             /wizard/v1/user-files                             stable       -   folder
+GET,HEAD        /wizard/v1/user-files/content                     stable       -   path,download
 GET             /wizard/attention                                 stable       ux  -
 POST            /wizard/attention/{id}/retry                      stable       ux  -
 POST            /wizard/attention/{id}/dismiss                    stable       ux  -
@@ -105,12 +107,12 @@ Settings, capabilities and endpoint addresses. It still answers when Hermes is d
    "clock":{"timezone":"Asia/Bangkok","day_starts_at":"04:00"},"voice":{"language":"en","vocabulary":["Runtipi"]},
    "fast_router":{"account":"","model":""},"network":{"base_url":"https://box.example.ts.net","aliases":[]}},
  "settings_source":"file",
- "capabilities":{"voice":true,"router":true,"files":true,"resumable_uploads":true,"approvals":true,"steer":true,"joined_delegation":false,"markdown":false},
+ "capabilities":{"voice":true,"router":true,"files":true,"resumable_uploads":true,"upload_destinations":true,"approvals":true,"steer":true,"joined_delegation":false,"markdown":false},
  "endpoints":{"apps":"/wizard/v1/apps","sessions":"/wizard/hermes/api/sessions","runs":"/wizard/hermes/v1/runs",
    "transcribe":"/wizard/voice/transcribe","route":"/wizard/v1/route","upload":"/wizard/files/upload",
-   "uploads":"/wizard/v1/uploads","shares":"/wizard/v1/shares"}}
+   "uploads":"/wizard/v1/uploads","shares":"/wizard/v1/shares","user_files":"/wizard/v1/user-files"}}
 ```
-`fast_router` shows only `account` and `model`, never the endpoint or key. `resumable_uploads` (with `endpoints.uploads` and `endpoints.shares`) is present when the service can store files and its upload state is writable; a client that does not see it uses `POST /wizard/files/upload`. `network.base_url` is for links that leave Wizard; in-app links stay relative. An endpoint is `""` when its capability is off.
+`fast_router` shows only `account` and `model`, never the endpoint or key. `resumable_uploads` (with `endpoints.uploads` and `endpoints.shares`) is present when the service can store files and its upload state is writable; a client that does not see it uses `POST /wizard/files/upload`. `upload_destinations` (with `endpoints.user_files`) is present when, in addition, the box has a user-files root (`WIZARD_USER_FILES_ROOT`): uploads may then carry a `destination` and the Files app can list that root ([Upload destination](#upload-destination-files-app)). `network.base_url` is for links that leave Wizard; in-app links stay relative. An endpoint is `""` when its capability is off.
 
 ### `GET /wizard/v1/apps`
 The launcher list: installed apps from the App Manager's `apps.json` (the shell itself left out) plus the owner's links from `launcher.json`. Only what a tile needs leaves the box: no MCP address, health URL, repo or skill path.
@@ -150,6 +152,15 @@ One upload path for every file a client sends: chat attachments and shares. Byte
 - `POST /wizard/v1/uploads/{id}/complete` (empty JSON body) verifies the size and, when given, the sha256, then stores the file → `200 {"file":{…}}`, the same shape `/wizard/files/upload` returns, so `file.id` is a `wizard_file_id` for runs and steers. Idempotent: a repeat returns the same file. `409 {"error":"upload_incomplete","offset":n}` before the last byte; `422 {"error":"sha256_mismatch"}` fails the upload (and its share) and keeps nothing.
 - Storage: Wizard Files, as for `/wizard/files/upload`. On a Wizard OS box chunks stage in `<media root>/.wizard-uploads/` (same filesystem) and the finished file is moved into `Inbox/<date>/<name>` without being read into memory. On James's box the Wizard Inbox drop service owns the bytes: with `sha256` declared, chunks stream straight through to a drop upload; without it they stage locally and are pushed to the drop service at completion.
 - Incomplete uploads expire 7 days after their last chunk; their bytes are removed.
+
+### Upload destination (Files app)
+The Files app uploads into the owner's user-files root (Runtipi's `media/` folder on a Wizard OS box, docs/SYSTEM_APPS.md) through the same resumable path. Needs `capabilities.upload_destinations`.
+
+- `POST /wizard/v1/uploads` takes an optional `"destination":{"folder":"Projects/Clips"}`. `folder` is relative to the user-files root, `/`-separated; `""` or omitted means `Inbox/<YYYY-MM-DD>` with the date in the owner's time zone (`settings.clock.timezone`), fixed when the upload is created. A named folder must exist and be writable when the upload is created (`404 folder_not_found`, `403 folder_not_writable`, `409 not_a_folder`); the dated Inbox folder is created as needed. Refused with `400 invalid_request`, `field:"destination.folder"`: absolute paths, `..`, hidden segments (leading `.`), backslashes or control characters, and any folder that resolves (through symlinks) outside the root. `destination` with any other key is `400`, `field:"destination"`. No user-files root → `409 destination_unavailable`.
+- Everything else is unchanged (PATCH, GET, offsets, 507, expiry, idempotent `client_upload_id`). On `complete` the finished file is placed in the folder under its own (cleaned) file name without being read into memory (hard link from the staging folder `<root>/.wizard-uploads/`, a checked rename where links are unsupported). It never overwrites: a taken name becomes `name (2).ext`, `name (3).ext`, …. A repeated `complete` returns the same placement. The response is `200 {"file":{"filename":"clip.mp4","path":"Projects/Clips/clip.mp4","folder":"Projects/Clips","mime":"video/mp4","bytes":123,"sha256":"…","created_at":"…","location":"files_root"}}`: a user file addressed by `path`, not a Wizard file id (it is not attached to a chat). Uploads without `destination` (chat attachments, shares) keep going to Wizard Files exactly as before.
+- `GET /wizard/v1/user-files?folder=<path>` → `200 {"folder":"Projects","entries":[{"name":"Clips","is_dir":true,"size":0,"mtime":"<ISO>"},{"name":"b.txt","is_dir":false,"size":11,"mtime":"<ISO>"}],"truncated"?:true}`. Folders first, then names (case-insensitive, numeric). Hidden names (leading `.`) are left out, and so are symlinks that resolve outside the root; at most 5000 entries. `folder` omitted = the root. Same folder rules as above (`400`, `404 folder_not_found`, `409 not_a_folder`); `503 service_unavailable` without a user-files root.
+- `GET|HEAD /wizard/v1/user-files/content?path=<path>[&download=1]` → the file's bytes, `inline` for images, audio, video, PDF and plain text, else (or with `download=1`) `attachment`; single `Range` requests (`206`, `416`). `Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff`. `404 not_found` for a missing file, a folder, or a symlink out of the root.
+- Configuration: `WIZARD_USER_FILES_ROOT` (the root as this service sees it). It is separate from `WIZARD_MEDIA_ROOT`, which moves chat attachments into the files root, and from `WIZARD_FILES_ROOT`, the agent-facing path named in the kernel text. The placement index lives next to the upload state (`WIZARD_USER_FILES_INDEX_PATH` to override).
 
 ### Shares (`/wizard/v1/shares`)
 Files shared into Wizard from another app (Android share sheet; later Mac and iOS), delivered server-side as one message.

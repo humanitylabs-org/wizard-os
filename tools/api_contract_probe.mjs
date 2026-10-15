@@ -81,6 +81,7 @@ const app = createWizardServer({
   mediaRoot: join(dir, 'media'), mediaAgentRoot: '/media', mediaIndexPath: join(dir, 'state/media-files.json'),
   runQueueStatePath: join(dir, 'state/run-queue.sqlite3'), runQueuePollIntervalMs: 50, runQueueRetryDelayMs: 50,
   uploadStatePath: join(dir, 'state/uploads.sqlite3'), uploadStagingDir: join(dir, 'state/upload-staging'), uploadReserveBytes: 0,
+  userFilesRoot: join(dir, 'userfiles'),
   threadSeenStatePath: join(dir, 'state/thread-seen.json'), threadDispositionStatePath: join(dir, 'state/thread-dispositions.json'),
   threadTitleStatePath: join(dir, 'state/thread-titles.json'), threadStatusBackfillPath: join(dir, 'state/backfill.json'),
   dismissedFailureStatePath: join(dir, 'state/dismissed.json'), threadAppsStatePath: join(dir, 'state/thread-apps.json'),
@@ -125,7 +126,7 @@ try {
   let r = await call('GET', '/wizard/v1/bootstrap')
   check('GET /wizard/v1/bootstrap', 'boots', r.status === 200 && r.json.bootstrap === 1 && r.json.api === 'wizard-agent-service/1'
     && has(r.json, ['settings', 'settings_source', 'capabilities', 'endpoints']) && has(r.json.endpoints, ['apps', 'sessions', 'runs', 'transcribe', 'route', 'upload', 'uploads', 'shares'])
-    && r.json.capabilities.resumable_uploads === true && r.json.endpoints.uploads === '/wizard/v1/uploads' && r.json.endpoints.shares === '/wizard/v1/shares'
+    && r.json.capabilities.resumable_uploads === true && r.json.capabilities.upload_destinations === true && r.json.endpoints.user_files === '/wizard/v1/user-files' && r.json.endpoints.uploads === '/wizard/v1/uploads' && r.json.endpoints.shares === '/wizard/v1/shares'
     && r.json.settings.fast_router.endpoint === undefined && r.json.settings.network.base_url === 'https://box.example.ts.net', r)
   r = await call('GET', '/wizard/v1/apps')
   check('GET /wizard/v1/apps', 'launcher list', r.status === 200 && r.json.schema === 1 && r.json.apps.some((a) => a.source === 'apps.json') && r.json.apps.some((a) => a.source === 'launcher.json') && !r.text.includes('127.0.0.1:9/mcp'), r)
@@ -332,6 +333,26 @@ try {
   const shareRuns = sent.filter((s) => s.method === 'POST' && s.url === '/v1/runs').slice(runsBefore).map((s) => JSON.parse(s.body || '{}'))
   check('GET /wizard/v1/shares/{id}', 'delivered once into the new thread', r.status === 200 && shareStatus?.status === 'delivered' && shareStatus.thread_id === share?.thread_id
     && shareRuns.length === 1 && shareRuns[0].session_id === share?.thread_id && JSON.stringify(shareRuns[0].input).includes('Filed from the share sheet'), r, `runs ${shareRuns.length}`)
+
+  // upload destination (Files app) and the user-files read API
+  mkdirSync(join(dir, 'userfiles', 'Projects'), { recursive: true })
+  const destBytes = Buffer.from('placed in a folder')
+  r = await call('POST', '/wizard/v1/uploads', { headers: J, body: JSON.stringify({ client_upload_id: 'probe-dest-1', filename: 'clip.txt', mime: 'text/plain', bytes: destBytes.length, destination: { folder: 'Projects' } }) })
+  const destId = r.json?.upload_id
+  check('POST /wizard/v1/uploads', 'destination folder -> create', r.status === 201 && /^up_[0-9a-f]{32}$/u.test(destId || ''), r)
+  await call('PATCH', `/wizard/v1/uploads/${destId}`, { headers: { ...O, 'Upload-Offset': '0' }, body: destBytes })
+  r = await call('POST', `/wizard/v1/uploads/${destId}/complete`, { headers: J, body: '{}' })
+  check('POST /wizard/v1/uploads/{id}/complete', 'destination -> placed in the folder by path', r.status === 200 && r.json?.file?.path === 'Projects/clip.txt' && r.json.file.location === 'files_root' && !r.text.includes(dir), r)
+  r = await call('POST', '/wizard/v1/uploads', { headers: J, body: JSON.stringify({ client_upload_id: 'probe-dest-2', filename: 'x', bytes: 1, destination: { folder: '../escape' } }) })
+  check('POST /wizard/v1/uploads', 'destination outside the root -> 400', r.status === 400 && r.json?.field === 'destination.folder', r)
+  r = await call('GET', '/wizard/v1/user-files?folder=Projects')
+  check('GET /wizard/v1/user-files', 'list a folder', r.status === 200 && r.json?.folder === 'Projects' && r.json.entries?.some((e) => e.name === 'clip.txt' && e.is_dir === false && e.size === destBytes.length), r)
+  r = await call('GET', '/wizard/v1/user-files?folder=..')
+  check('GET /wizard/v1/user-files', 'escaping folder -> 400', r.status === 400, r)
+  r = await call('GET', '/wizard/v1/user-files/content?path=Projects/clip.txt', { headers: { Range: 'bytes=0-5' } })
+  check('GET /wizard/v1/user-files/content', 'range', r.status === 206 && r.text === 'placed', r)
+  r = await call('HEAD', '/wizard/v1/user-files/content?path=Projects/clip.txt')
+  check('HEAD /wizard/v1/user-files/content', 'head', r.status === 200 && r.headers.get('content-length') === String(destBytes.length), r)
 
   // pages and static
   r = await call('GET', '/wizard/')
