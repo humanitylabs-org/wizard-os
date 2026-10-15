@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026 — James: apps receive voice and own their feedback ([spec/VOICE_INPUT.md](../spec/VOICE_INPUT.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 62 | **Receives voice input.** An app declares an input capability, independent of the shell. The shell chooses how to expose voice; the app owns processing and feedback. App actions need no automatic Chats thread. An app may use its configured agent and choose an appropriate reply channel. First implementation covers Manager, Video Editor and Search, with a visible app destination and explicit general-agent bypass. `receives_voice_input: true` is the optional manifest boolean; receiver details and the Wizard UX gesture trial are in the linked contract. | **Approved by James (15 Oct); App Manager mirror subject to its owner review** |
+
 ## 15 Oct 2026 — Miguel: one connection app per AI provider ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md))
 
 | # | Decision | Status |

@@ -57,6 +57,8 @@ view:                       # required for view; optional for others
   path: /                   # opened by Wizard UX at /apps/<id>/
   port: 8080
 
+receives_voice_input: true  # optional boolean: app owns voice requests and feedback
+
 provides: [video-editing, short-form-video]   # capability slots (optional, recommended)
 recommends:                 # optional; the skill checks this first and warns
   agent: hermes
@@ -76,6 +78,10 @@ health: /healthz
 ---
 ```
 
+## Receives voice input
+
+Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
+
 ## Rules the checker enforces
 
 1. Front matter parses and `wizard` is a known spec version (0.1, 0.2).
@@ -85,6 +91,7 @@ health: /healthz
 5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
 7. Every `needs` entry is from the known capability list.
+8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
 10. `publisher`, if present, is a valid `npub1…`.
