@@ -78,7 +78,9 @@ const norm = v => String(v || '').replace(/\s/g, '');
         await page.evaluate(id => WosSkin.set(id), skin);
         for (const pres of ['window', 'immersive']) {
           const isFull = await page.evaluate(sel => document.querySelector(sel).classList.contains('full'), winSel);
-          if ((pres === 'immersive') !== isFull) await page.click(winSel + ' [data-wact="full"]');
+          // Enter through the visible window-bar button; leave through the shell's own API (full screen hides the bar).
+          if (pres === 'immersive' && !isFull) await page.click(winSel + ' [data-wact="full"]');
+          if (pres === 'window' && isFull) await page.evaluate(id => window.__wos.setFull(id, false), winId);
           await page.waitForFunction(([sel, s, p]) => {
             const f = document.querySelector(sel + ' iframe'); const st = window.WizAppearance?.inspect().find(x => x.src === f.getAttribute('src'));
             const el = f.contentDocument?.documentElement; return st && st.acked && st.presentation === p && el?.dataset.skin === s && el?.dataset.presentation === p;
@@ -107,7 +109,7 @@ const norm = v => String(v || '').replace(/\s/g, '');
           await page.screenshot({ path: path.join(shots, `${app}-${skin}-${pres}.png`) });
         }
       }
-      if (await page.evaluate(sel => document.querySelector(sel).classList.contains('full'), winSel)) await page.click(winSel + ' [data-wact="full"]');
+      await page.evaluate(id => window.__wos.setFull(id, false), winId);
       // Back: an open in-app sheet closes first (nested); the next Back is the shell's own step (root).
       const hasSheet = await frame.evaluate(() => { const d = document.querySelector('dialog'); if (d && !d.open && typeof window.__wizardCloseOverlay === 'function') { d.showModal(); return true; } return false; });
       if (hasSheet) {
