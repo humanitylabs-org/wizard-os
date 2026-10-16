@@ -7,7 +7,7 @@ type: service
 category: system
 summary: Prototype system supervisor for private maintenance decisions and verified recovery.
 license: GPL-3.0-only
-source: https://github.com/humanitylabs-org/wizard-os/tree/prototype/supervisor-v01/prototypes/supervisor
+source: https://github.com/humanitylabs-org/wizard-supervisor
 runtime:
   kind: runtipi
   config: runtipi/config.json
