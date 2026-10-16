@@ -2,6 +2,10 @@
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
+## App-owned model consistency (16 Oct, approved; #63)
+
+Every installation uses each app's packaged AI model/workflow unless its owner explicitly approves a scoped override. Archimedes owns the [shared contract](../spec/APP_WORKFLOWS.md) and Wisdom's first implementation repair. Done when the package contains its actual prompt/model, changed orchestrator defaults preserve that route, missing/mismatched models stop, and the requested rewrite preserves reading history. The builder documentation mirror remains subject to App Manager owner review; other apps need their own execution evidence.
+
 ## Receives voice input (15 Oct, approved; #62)
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.

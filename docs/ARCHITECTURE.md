@@ -52,7 +52,7 @@ Apps come in four types: view, service, agent and external. An app can declare:
 - what it **provides**, as capability slots like `transcription` or `video-editing`
 - what it **uses**, meaning other apps it depends on
 - what it **needs**, meaning device permissions
-- the agent and model it **recommends**
+- the agent and model it **recommends**; for AI processes the declared model and shipped workflow are binding unless the owner explicitly approves an override ([app-owned workflows](../spec/APP_WORKFLOWS.md))
 
 **Wizard App Index** (`wizard-app-index`). One shared catalog for every Wizard: [apps.aiwizards.com](https://apps.aiwizards.com), with the store page at [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps). Publishers push (API, webhook or the app's own GitHub Action); a crawler searches the `wizard-app` topic in date slices as a fallback. It runs the same checker and records the passing commit. It's a cache: the repos are the source of truth and it can be rebuilt from them. Nostr announcements become a third way in.
 
