@@ -19,6 +19,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from engine import Supervisor
+from agent import AgentPlanner
 
 VERSION = '0.1.0-prototype'
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,20 +34,51 @@ COOKIE_PATH = os.environ.get('SUPERVISOR_COOKIE_PATH', '/supervisor-prototype/')
 ENGINE = Supervisor(DATA / 'supervisor.sqlite3', CONFIG)
 LOCK = threading.RLock()
 SESSIONS, TICKETS = {}, {}
-LAST_TICK = {'at': None, 'error': None}
+LAST_TICK: dict = {'at': None, 'error': None}
+PLANNER = AgentPlanner(DATA / 'private-runs', os.environ['WIZARD_AGENT_URL'],
+    os.environ.get('WIZARD_AGENT_MODEL', ''), os.environ.get('WIZARD_AGENT_PROVIDER', ''),
+    os.environ.get('WIZARD_AGENT_TOKEN', '')) if os.environ.get('WIZARD_AGENT_URL') else None
+
+
+def cycle():
+    if PLANNER is None:
+        result = ENGINE.tick()
+    else:
+        result = []
+        for target in ENGINE.snapshot()['targets']:
+            incident = ENGINE.observe(target['id'])
+            if not incident.get('id') or incident['state'] == 'resolved':
+                continue
+            if incident['verification']['status'] == 'failed' and incident['state'] != 'awaiting_approval':
+                recommendation = PLANNER.recommendation(incident, target)
+                if recommendation is None:
+                    continue
+                ENGINE.decide(incident['id'], recommendation)
+            result.append(ENGINE.execute(incident['id']))
+    LAST_TICK.update(at=time.time(), error=None)
+    return result
 
 
 def snapshot():
     with LOCK:
         result = ENGINE.snapshot()
     result.update(version=VERSION, scope='Enrolled prototype targets only', controller=dict(LAST_TICK))
+    result['reasoning'] = {'mode': 'private-agent' if PLANNER else 'baseline-policy',
+                           'receipts': PLANNER.receipts() if PLANNER else []}
+    for target in result['targets']:
+        check = target.get('verification') or {}
+        target.update(status=check.get('status', 'unknown'), last_checked=check.get('checked_at'))
+    for incident in result['incidents']:
+        incident['summary'] = incident.get('reason', '')
+        target = next((t for t in result['targets'] if t['id'] == incident['target_id']), {})
+        incident['action_description'] = target.get('description', '') + ' — once, for this incident only.'
     return result
 
 
 class Handler(BaseHTTPRequestHandler):
     server_version = 'WizardSupervisor/0.1'
 
-    def log_message(self, fmt, *args):
+    def log_message(self, format, *args):
         # Access paths and bootstrap tickets are deliberately omitted.
         return
 
@@ -145,12 +177,17 @@ class Handler(BaseHTTPRequestHandler):
                     result = ENGINE.approve(str(body['incident_id']), str(body['digest']))
                 elif path == '/api/feedback':
                     result = ENGINE.feedback(str(body['incident_id']), str(body['text']), mode='candidate')
+                elif path == '/api/preference':
+                    text = str(body['text']).strip().lower()
+                    if text not in ENGINE.PREFERENCES:
+                        raise ValueError('Choose one of the displayed scoped preferences')
+                    result = ENGINE.feedback(str(body['incident_id']), text, mode='owner')
                 elif path == '/api/rule':
                     if not isinstance(body.get('enabled'), bool):
                         raise ValueError('enabled must be a boolean')
                     result = ENGINE.set_rule(str(body['rule_id']), body['enabled'])
                 elif path == '/api/tick' and op:
-                    result = ENGINE.tick()
+                    result = cycle()
                 elif path == '/api/decide' and op:
                     result = ENGINE.decide(str(body['incident_id']), body['recommendation'])
                 else:
@@ -197,7 +234,7 @@ def ticker():
     while True:
         try:
             with LOCK:
-                ENGINE.tick()
+                cycle()
             LAST_TICK.update(at=time.time(), error=None)
         except Exception:
             LAST_TICK.update(at=time.time(), error='Check could not complete; health is unknown.')
@@ -205,5 +242,6 @@ def ticker():
 
 
 if __name__ == '__main__':
-    threading.Thread(target=ticker, daemon=True).start()
-    ThreadingHTTPServer(('0.0.0.0', int(os.environ.get('PORT', '8798'))), Handler).serve_forever()
+    if os.environ.get('SUPERVISOR_AUTOTICK', '1') == '1':
+        threading.Thread(target=ticker, daemon=True).start()
+    ThreadingHTTPServer((os.environ.get('HOST', '0.0.0.0'), int(os.environ.get('PORT', '8798'))), Handler).serve_forever()

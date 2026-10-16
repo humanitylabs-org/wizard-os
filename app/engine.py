@@ -221,14 +221,22 @@ class Supervisor:
                         'detail': 'Functional probe unavailable or invalid.'}
         try:
             req = urllib.request.Request(target['probe_url'], headers={'Accept': 'application/json'})
-            with self._http.open(req, timeout=self.HTTP_TIMEOUT) as response:
+            try:
+                response = self._http.open(req, timeout=self.HTTP_TIMEOUT)
+            except urllib.error.HTTPError as error:
+                # A bounded JSON error response establishes functional failure;
+                # transport failure or a redirect still means unknown.
+                if error.code < 400:
+                    return verification
+                response = error
+            with response:
                 body = response.read(self.MAX_BODY + 1)
-                if response.status != 200 or len(body) > self.MAX_BODY:
+                if len(body) > self.MAX_BODY:
                     return verification
                 actual = json.loads(body, parse_constant=lambda _: None)
                 if not isinstance(actual, dict):
                     return verification
-                healthy = self._matches(target['expected'], actual)
+                healthy = response.status == 200 and self._matches(target['expected'], actual)
                 verification.update(status='healthy' if healthy else 'failed',
                                     detail='Expected functional JSON matched.' if healthy else 'Expected functional JSON did not match.')
         except (OSError, ValueError, urllib.error.URLError):

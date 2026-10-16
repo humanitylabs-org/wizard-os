@@ -38,7 +38,7 @@ class TargetHandler(BaseHTTPRequestHandler):
             return
         body = (b'not json' if state['probe_mode'] == 'invalid' else
                 json.dumps({'ok': state['ok'], 'private': 'not retained', 'work': {'done': state['ok']}}).encode())
-        self.send_response(200)
+        self.send_response(503 if state['probe_mode'] == 'json_error' else 200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
@@ -107,6 +107,14 @@ class EngineTests(unittest.TestCase):
         decision = self.engine.decide(inc['id'], {})
         self.assertEqual(decision['state'], 'awaiting_approval')
         return inc, decision
+
+    def test_json_http_error_establishes_failure_but_cannot_prove_health(self):
+        self.state['probe_mode'] = 'json_error'
+        engine = Supervisor(self.db, self.config)
+        inc = engine.observe('demo')
+        self.assertEqual(inc['verification']['status'], 'failed')
+        self.state['ok'] = True
+        self.assertEqual(engine.observe('demo')['verification']['status'], 'failed')
 
     def test_real_repair_and_verified_resolution(self):
         result = self.engine.tick()[0]
