@@ -4,7 +4,7 @@ James approved this prototype on 2026-10-16: “Sounds good. Lock it in as proto
 
 Supervisor is a Wizard OS system component. Its first job is self-maintenance: detect current impact, privately diagnose, decide within existing authority, execute, independently verify, then report a useful result or a genuine owner-only decision with a recommendation. Workers never publish raw maintenance alerts. A timeout or unnecessary worker approval request stays system-owned.
 
-Prototype identity: `wizard-supervisor`, system slot `supervisor`, version `0.1.0-prototype`. Source is initially staged under `prototypes/supervisor/` on this named branch; extraction into a separate component repository can follow without delaying a runnable prototype. Prototype adoption does not change the default install or take over existing production recovery.
+Prototype identity: `wizard-supervisor`, system slot `supervisor`, version `0.1.0-prototype`. Source was initially staged under `prototypes/supervisor/` on this named branch. The installed isolated prototype now lives in `humanitylabs-org/wizard-supervisor`, branch `prototype/supervisor-package`; extraction retained the component history. Prototype adoption does not change the default install or take over existing production recovery.
 
 Acceptance:
 1. Managed packaged service recovers a real disposable target and records functional evidence without owner approval when a grant exists.

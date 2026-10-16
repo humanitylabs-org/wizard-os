@@ -1,4 +1,6 @@
-# Wizard Supervisor — prototype
+# Wizard Supervisor — historical staging snapshot
+
+**Canonical implementation moved to [humanitylabs-org/wizard-supervisor](https://github.com/humanitylabs-org/wizard-supervisor/tree/prototype/supervisor-package).** The installed isolated prototype and final acceptance are maintained there, starting with source `2ab9b22`. This subtree is retained as the original source/history checkpoint; the statements below describe its pre-extraction state. Production maintenance and default installs remain unchanged.
 
 Supervisor is the Wizard OS system component responsible for maintenance judgment: detect impact, decide within permission, repair, verify the affected function, and retain a useful decision record. This prototype enrolls only its disposable service and internal job. Existing production maintenance and default installations remain unchanged.
 
