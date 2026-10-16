@@ -1,30 +1,68 @@
-# Supervisor prototype — implementation checkpoint
+# Wizard Supervisor — prototype
 
-Approved outcome: `spec/SUPERVISOR.md`. Prototype isolated from production maintenance; no default-install cutover. Source lives in this component subtree pending extraction.
+Supervisor is the Wizard OS system component responsible for maintenance judgment: detect impact, decide within permission, repair, verify the affected function, and retain a useful decision record. This prototype enrolls only its disposable service and internal job. Existing production maintenance and default installations remain unchanged.
 
-## Current state
-- Parent owns package, HTTP/MCP, UI and live integration on `prototype/supervisor-v01`.
-- Engine integrated and pushed; parent independently matched remote hashes and ran 31 real engine/HTTP tests on Thales. Current runnable source `df8ddce`; shared-core UI and private Agent Service adapter included.
-- Opus design verified: first-party `claude-opus-5-5`, valid JSON, nonempty artifact, no permission errors. Initial full-HTML call timed out; compact design contract succeeded. Parent implemented `web/index.html` from `docs/DESIGN.md`.
-- WAM manifest/container/shared-function checks pass; Python and JS syntax pass. Container/live-inference acceptance is next via durable key `supervisor-package-df8ddce-01`, source `/Volumes/ThalesMedia/Supervisor/prototype`, output `/Volumes/ThalesMedia/Supervisor/evidence/df8ddce-01`. Read-only review `deleg_72517414` completed and its receipt is pending delivery; inspect it on resume. Browser and managed install remain undone; nothing installed.
+## Place in Wizard
 
-## Next exact gates
-1. Consume engine completion, verify SHA and remote tests, integrate its committed files only; reconcile snapshot shapes in UI and exceptions in server.
-2. Package via `python3 scripts/package.py`; checker against current WAM. Compose bundles stdlib source in stock Python image (normal template mechanism), root-only app-data init then uid/gid 1000. Record pulled image digest/provenance.
-3. Exercise on Thales external media, with container/test/browser jobs through durable heavy queue where sustained. No VPS builds. Test actual canary `/fault` → Supervisor tick → repaired `/function` and new `/job` receipt. Engine must send canary idempotency key correctly. Canary uses bearer from generated installation env, never source.
-4. Complete actual Agent Service private-reasoning adapter and admitted-notification receipt transport. Relevant current Service routes: `/wizard/hermes/api/sessions` create then PATCH hidden=true then GET assert hidden BEFORE any input; `/wizard/hermes/v1/runs` with stable Idempotency-Key and configured model/provider unchanged. Operator preset routes are a different model; never use that as substitute. Freeze packet, bounded recommendation only, no authority from model text. Current package exposes MCP recommendation but is not yet automatic inference-connected.
-5. Complete feedback-to-active scoped interpretation/reversal and replay; unknown prose stays candidate. Current browser records candidates and disables existing rules; it must not claim arbitrary text is understood.
-6. Fresh read-only consequential review of approval replay, authority/CSRF/session surface, crash/retry ownership and truthful verification. Repair concrete blockers.
-7. Actual managed install in isolated target using WAM's private source adapter (archive this exact component subtree), not manual registry-only installation. Source pinned/pushed first. No local Docker build; stock source bundle or Thales-built image only. Do not install into live maintenance slot/default.
-8. Integrate reachable System entry and verify phone deep-link inside shell, nested/root Back, approval + feedback readback. Use owner-private origin in deployment config only. No public exposure. Existing System UI under `web/system/` in wizard-ux; preserve current live base and shared ownership, isolated branch/target-specific promotion.
-9. Independent parent live readback; final first link is tested in-Wizard System/Prototype destination. Clearly distinguish installed prototype scope from production maintenance takeover. Record project transition and review evidence.
+```text
+System view / owner conversation
+          |
+Supervisor: incident ledger, policy, approval and verification
+          |                         |
+scoped execution adapter       tool-free judgment adapter
+          |                         |
+enrolled service or job        configured Hermes model/provider
+```
 
-## Current interface / security notes
-- Prototype shipped config enrolls only two synthetic targets, auto-granted service repair + internal-job rerun. Existing services, jobs and alerts are untouched.
-- `server.py`: owner-network reverse proxy required. Read-only state is available to that network; mutations need operator bearer or one-use ticket → HttpOnly session + CSRF + exact Origin. Bootstrap expires in five minutes; browser session in one hour; restart invalidates sessions. Operator token length >=24.
-- Validate same-origin sibling-app risks before any real-target enrollment. Never treat the prototype UI cookie as general platform authority. Model tool permissions do not grant owner approvals.
-- Normal `/api/tick` and engine background loop use same lock; independent domain engine owns transaction correctness. Sanitize exceptions and probe evidence before displaying secrets.
-- Set_rule must not convert arbitrary candidate prose to grants. Approvals bind exact immutable target/action/config/current generation and expire.
+Sibling components: `wizard-os` defines the platform contract; `wizard-agent-service` connects agents and owner conversations; `wizard-ux` supplies System, shared appearance and Back; `wizard-app-manager` admits and installs this package.
 
-## Source commands
-`python3 scripts/check_view.py` is a source-only check. `python3 scripts/package.py` waits for integrated engine. Actual install/run evidence remains required. Workload placement: `/Volumes/ThalesMedia/Supervisor/` on Thales. System source and this checkpoint are shared on the pushed prototype branch.
+The `supervisor` slot and `wizard-supervisor` package are approved prototype identities. They are not yet default-install requirements. Source began in `wizard-os/prototypes/supervisor` on `prototype/supervisor-v01`.
+
+## Structure
+
+- `app/engine.py`: SQLite-backed generations, fenced approvals, bounded execution and scoped reversible preferences.
+- `app/server.py`: HTTP/MCP, separate worker/owner credentials, controller and session/CSRF boundary.
+- `app/agent.py`: durable, fail-closed client for enforced tool-free private judgment.
+- `app/canary.py`: real disposable service operation and durable internal-job receipt.
+- `web/`: the System-facing view using the shared WizardApp client, appearance kit and Back registration.
+- `adapters/`: optional native Hermes SDK judgment gateway; no Hermes core changes or other-profile edits.
+- `runtipi/`, `wizard.md`, `skill/`: normal Wizard package and its agent contract.
+- `tests/`: focused engine, actual HTTP and planner-boundary tests.
+
+## Run and verify
+
+Run development/container/browser verification on Thales external media. The controller itself is a lightweight service. Packaging bundles exact stdlib Python source into a stock Python image, following the App Manager template; no local image build is required.
+
+```sh
+python3 scripts/package.py
+wam check /absolute/path/to/wizard-supervisor --proposal
+python3 -m unittest discover -s tests -v
+```
+
+The package is installable through the App Manager's private repository route after its source commit is published. It ships a synthetic companion target. `scripts/acceptance.py` exercises the exact Compose payload in disposable containers and writes evidence; it is distinct from managed-registration and in-shell browser proof.
+
+## Configuration and authority
+
+Required managed variables:
+- `SUPERVISOR_TOKEN`: owner/lifecycle credential, never provided to reasoning workers.
+- `SUPERVISOR_WORKER_TOKEN`: distinct scoped MCP credential; cannot approve actions, mint owner sessions, or change active rules.
+- `SUPERVISOR_ORIGIN`: exact owner HTTPS origin for browser writes.
+- `SUPERVISOR_COOKIE_PATH`: the hosted path prefix.
+
+Optional private judgment: `WIZARD_AGENT_URL`, `WIZARD_AGENT_MODEL`, `WIZARD_AGENT_PROVIDER`, `WIZARD_AGENT_TOKEN`. All are passed explicitly into the main container. The URL must advertise enforced `tool_execution: none`; ordinary full-tool agent runs fail closed. No fallback model/provider is selected. Without an adapter configured, the visible mode is baseline policy.
+
+The native adapter runs beside the installation's Agent Service using the existing Hermes interpreter and selected provider credentials. Set `JUDGMENT_DATA`, `JUDGMENT_TOKEN`, `JUDGMENT_MODEL`, `JUDGMENT_PROVIDER`, `JUDGMENT_PYTHON`, `JUDGMENT_PORT` and `PYTHONPATH` to the installed Hermes source, then run `adapters/judgment_gateway.py`. It starts with a native empty-toolset preflight, stores sessions separately, bounds admission, and launches only `sdk_worker.py`. It does not forward requests to the full-tool API. The worker asserts zero tools before and after inference and preserves the exact configured model/provider. Input cannot select executables, paths, credentials or toolsets.
+
+Browser writes use a one-use setup ticket, an HttpOnly session, CSRF and exact Origin. Worker and owner methods remain distinct even when the worker knows the entire API. Treat this prototype's owner-network session as authority for its enrolled synthetic targets only; broader platform approval/signing remains a separate integration.
+
+## Learning and results
+
+Ordinary feedback is a candidate lesson. The owner can explicitly choose ask-first, wait, or handle-already-authorized for one target. These preferences are reversible, invalidate old approvals/advice, and do not enlarge underlying grants. The view shows effective versus overridden rules. A first-target diagnosis failure remains visible without starving later targets or manufacturing an owner gate.
+
+Decision history and verified results are stored locally. Managed chat publication and production-alert cutover are separate delivery gates; no raw worker output is sent to human chats by this package.
+
+## Evidence and release boundary
+
+Initial engine/HTTP/planner regression suite: 39 checks passed on Thales after the first authority review. Native same-route enforcement probe returned zero available/dispatched tools and left the attempted tool-execution sentinel absent. Packaged live reasoning, managed installation and browser proof must be recorded for the final candidate; these source-level results alone do not establish them.
+
+Every shared commit is pushed on a named branch. Production/default changes use normal PR and release authority. No full Mac guest image rebuild is needed for this prototype. Keep credentials, deployment origins, private receipts and generated state out of Git. Source provenance: in-repo implementation plus the App Manager's GPL-3.0-only UI kit; upstream shared client is loaded from Wizard at runtime, never copied or forked.

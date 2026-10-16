@@ -12,7 +12,7 @@
   "description": "System-component prototype enrolled only for disposable services and jobs. Existing maintenance stays unchanged.",
   "tipi_version": 1,
   "version": "0.1.0-prototype",
-  "source": "https://github.com/humanitylabs-org/wizard-os",
+  "source": "https://github.com/humanitylabs-org/wizard-supervisor",
   "exposable": false,
   "supported_architectures": [
     "amd64",
@@ -25,6 +25,10 @@
   "uid": 1000,
   "gid": 1000,
   "form_fields": [
+    {"type":"text","env_variable":"WIZARD_AGENT_URL","label":"Tool-free judgment endpoint","required":false},
+    {"type":"text","env_variable":"WIZARD_AGENT_MODEL","label":"Configured model","required":false},
+    {"type":"text","env_variable":"WIZARD_AGENT_PROVIDER","label":"Configured provider","required":false},
+    {"type":"password","env_variable":"WIZARD_AGENT_TOKEN","label":"Scoped judgment credential","required":false},
     {"type":"password","env_variable":"SUPERVISOR_WORKER_TOKEN","label":"Scoped worker credential","required":true},
     {
       "type": "password",

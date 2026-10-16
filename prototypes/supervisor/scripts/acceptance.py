@@ -28,7 +28,7 @@ compose=json.loads((ROOT/'runtipi/docker-compose.yml').read_text())
 a=compose['services']['wizard-supervisor'];b=compose['services']['wizard-supervisor-canary']
 a['ports']=['127.0.0.1:19898:8798'];b['ports']=['127.0.0.1:19899:8800']
 a['environment'].update(SUPERVISOR_AUTOTICK='0',SUPERVISOR_ORIGIN=base,SUPERVISOR_COOKIE_PATH='/')
-for k in ('WIZARD_AGENT_URL','WIZARD_AGENT_MODEL','WIZARD_AGENT_PROVIDER'):
+for k in ('WIZARD_AGENT_URL','WIZARD_AGENT_MODEL','WIZARD_AGENT_PROVIDER','WIZARD_AGENT_TOKEN'):
     a['environment'][k]=settings.get(k,'')
 for s in compose['services'].values():s.pop('x-runtipi',None)
 compose.pop('x-runtipi',None)
@@ -76,11 +76,14 @@ try:
         receipts=status['reasoning']['receipts'];assert receipts and any(r['state']=='complete' for r in receipts)
         report['private_runs']=receipts
         for r in receipts:
-            request=urllib.request.Request(settings['WIZARD_AGENT_URL'].rstrip('/')+'/api/sessions/'+r['session_id'])
-            with urllib.request.urlopen(request,timeout=15) as response:session=json.load(response)
-            session=session.get('data',session)
-            assert session['hidden'] in (True,1)
-        report['steps'].append('Configured real private agent completed; sessions verified hidden')
+            if r['state'] != 'complete':
+                continue
+            request=urllib.request.Request(settings['WIZARD_AGENT_URL'].rstrip('/')+'/v1/runs/'+r['run_id'],headers={'Authorization':'Bearer '+settings['WIZARD_AGENT_TOKEN']})
+            with urllib.request.urlopen(request,timeout=15) as response:judgment=json.load(response)
+            assert judgment['execution_policy']=={'tools':[],'tool_count':0,'tool_execution':'none','enforced':True}
+            assert judgment['private_session_store'] is True
+            assert judgment['model']==settings['WIZARD_AGENT_MODEL'] and judgment['provider']==settings['WIZARD_AGENT_PROVIDER']
+        report['steps'].append('Configured real private judgment completed with enforced zero tools and isolated session storage')
     report['steps'].append('Real failed service repaired and function independently verified without owner approval')
     # Persisted data survives a real container restart.
     command(cmd+['restart','wizard-supervisor'],'restart.log')
