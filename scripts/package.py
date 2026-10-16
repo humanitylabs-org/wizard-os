@@ -4,7 +4,7 @@ Run after source changes, before commit. No Docker build or local service startu
 from pathlib import Path
 import base64,json
 root=Path(__file__).resolve().parent.parent
-paths=sorted([*root.glob('app/*.py'),*root.glob('web/*.html')])
+paths=sorted([*root.glob('app/*.py'),*(p for p in (root/'web').rglob('*') if p.is_file())])
 files={str(p.relative_to(root)):p.read_text() for p in paths}
 if 'app/engine.py' not in files:
     raise SystemExit('Engine has not been integrated yet')
@@ -13,6 +13,8 @@ code="import base64,json,pathlib,runpy,sys;root=pathlib.Path('/tmp/supervisor');
 def svc(role):
     return {'image':'python:3.12-alpine','restart':'unless-stopped','read_only':True,'cap_drop':['ALL'],'cap_add':['CHOWN','SETUID','SETGID'],'security_opt':['no-new-privileges:true'],'mem_limit':'128m','tmpfs':['/tmp:size=16m,mode=1777'],'environment':{'ROLE':role,'DATA_DIR':'/data','SUPERVISOR_TOKEN':'${SUPERVISOR_TOKEN}','SUPERVISOR_ORIGIN':'${SUPERVISOR_ORIGIN:-}','SUPERVISOR_COOKIE_PATH':'${SUPERVISOR_COOKIE_PATH:-/supervisor-prototype/}'},'volumes':['${APP_DATA_DIR}/data/'+role+':/data'],'command':['python','-c',code]}
 a,b=svc('supervisor'),svc('canary');a['x-runtipi']={'is_main':True,'internal_port':8798};a['depends_on']=['wizard-supervisor-canary']
+for key in ('WIZARD_AGENT_URL','WIZARD_AGENT_MODEL','WIZARD_AGENT_PROVIDER','WIZARD_AGENT_TOKEN'):
+    a['environment'][key]='${'+key+':-}'
 compose={'services':{'wizard-supervisor':a,'wizard-supervisor-canary':b},'x-runtipi':{'schema_version':2,'overrides':[]}}
 (root/'runtipi').mkdir(exist_ok=True)
 (root/'runtipi/docker-compose.yml').write_text(json.dumps(compose,indent=2)+'\n')

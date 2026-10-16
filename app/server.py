@@ -135,6 +135,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'ok': True, 'service': 'wizard-supervisor', 'version': VERSION})
         if path in ('/', '/index.html'):
             return self.reply(200, (ROOT / 'web/index.html').read_text(), 'text/html; charset=utf-8')
+        if path in ('/boot.js', '/wizard-ui.css'):
+            mime = 'text/javascript' if path.endswith('.js') else 'text/css'
+            return self.reply(200, (ROOT / 'web' / path[1:]).read_text(), mime)
         if path == '/api/session':
             row = self.session()
             return self.reply(200, {'authorized': bool(row), 'csrf': row['csrf'] if row else None})
