@@ -116,6 +116,15 @@ class EngineTests(unittest.TestCase):
         self.state['ok'] = True
         self.assertEqual(engine.observe('demo')['verification']['status'], 'failed')
 
+    def test_explicit_owner_preference_retires_worker_wait(self):
+        inc = self.incident()
+        before = self.engine.snapshot()['targets'][0]['policy_digest']
+        self.engine.decide(inc['id'], {'action': 'wait', 'why': 'Awaiting more context'})
+        self.assertEqual(self.engine.execute(inc['id'])['status'], 'deferred')
+        self.engine.feedback(inc['id'], 'handle authorized repairs', mode='owner')
+        self.assertNotEqual(before, self.engine.snapshot()['targets'][0]['policy_digest'])
+        self.assertEqual(self.engine.execute(inc['id'])['status'], 'resolved')
+
     def test_real_repair_and_verified_resolution(self):
         result = self.engine.tick()[0]
         self.assertEqual(result['status'], 'resolved')

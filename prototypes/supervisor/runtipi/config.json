@@ -25,6 +25,7 @@
   "uid": 1000,
   "gid": 1000,
   "form_fields": [
+    {"type":"password","env_variable":"SUPERVISOR_WORKER_TOKEN","label":"Scoped worker credential","required":true},
     {
       "type": "password",
       "env_variable": "SUPERVISOR_TOKEN",

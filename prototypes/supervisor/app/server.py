@@ -27,6 +27,9 @@ DATA = Path(os.environ.get('DATA_DIR', '/data'))
 DATA.mkdir(parents=True, exist_ok=True)
 CONFIG = json.loads(Path(os.environ.get('SUPERVISOR_CONFIG', '/data/config.json')).read_text())
 TOKEN = os.environ.get('SUPERVISOR_TOKEN', '')
+WORKER_TOKEN = os.environ.get('SUPERVISOR_WORKER_TOKEN', '')
+if WORKER_TOKEN and (len(WORKER_TOKEN) < 24 or hmac.compare_digest(WORKER_TOKEN, TOKEN)):
+    raise SystemExit('Worker credential must be distinct and at least 24 characters')
 if len(TOKEN) < 24:
     raise SystemExit('SUPERVISOR_TOKEN must contain at least 24 characters')
 ORIGIN = os.environ.get('SUPERVISOR_ORIGIN', '').rstrip('/')
@@ -45,17 +48,23 @@ def cycle():
         result = ENGINE.tick()
     else:
         result = []
+        failures = {}
         for target in ENGINE.snapshot()['targets']:
-            incident = ENGINE.observe(target['id'])
-            if not incident.get('id') or incident['state'] == 'resolved':
-                continue
-            if incident['verification']['status'] == 'failed' and incident['state'] != 'awaiting_approval':
-                recommendation = PLANNER.recommendation(incident, target)
-                if recommendation is None:
+            try:
+                incident = ENGINE.observe(target['id'])
+                if not incident.get('id') or incident['state'] == 'resolved':
                     continue
-                ENGINE.decide(incident['id'], recommendation)
-            result.append(ENGINE.execute(incident['id']))
-    LAST_TICK.update(at=time.time(), error=None)
+                if incident['verification']['status'] == 'failed' and incident['state'] != 'awaiting_approval':
+                    recommendation = PLANNER.recommendation(incident, target)
+                    if recommendation is None:
+                        continue
+                    ENGINE.decide(incident['id'], recommendation)
+                result.append(ENGINE.execute(incident['id']))
+            except Exception:
+                failures[target['id']] = 'Private diagnosis unavailable; this target remains system-owned.'
+                continue
+        LAST_TICK['targets'] = failures
+    LAST_TICK.update(at=time.time(), error='Some targets need internal diagnosis recovery.' if LAST_TICK.get('targets') else None)
     return result
 
 
@@ -109,6 +118,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def operator(self):
         return hmac.compare_digest(self.headers.get('Authorization', ''), 'Bearer ' + TOKEN)
+
+    def worker(self):
+        return bool(WORKER_TOKEN) and hmac.compare_digest(self.headers.get('Authorization', ''), 'Bearer ' + WORKER_TOKEN)
 
     def session(self):
         cookies = SimpleCookie()
@@ -170,10 +182,10 @@ class Handler(BaseHTTPRequestHandler):
                     TICKETS[hashlib.sha256(ticket.encode()).hexdigest()] = time.time() + 300
                 return self.reply(200, {'ticket': ticket, 'expires_in': 300})
             if path == '/mcp':
-                if not op:
+                if not (op or self.worker()):
                     return self.reply(403, {'error': 'Operator permission required'})
                 return self.mcp(body)
-            if not (op or self.browser_write()):
+            if not (op or self.browser_write() or path == '/api/decide' and self.worker()):
                 return self.reply(403, {'error': 'Open an owner setup link to make changes, or ask your Wizard here.'})
             with LOCK:
                 if path == '/api/approve':
@@ -191,7 +203,7 @@ class Handler(BaseHTTPRequestHandler):
                     result = ENGINE.set_rule(str(body['rule_id']), body['enabled'])
                 elif path == '/api/tick' and op:
                     result = cycle()
-                elif path == '/api/decide' and op:
+                elif path == '/api/decide' and (op or self.worker()):
                     result = ENGINE.decide(str(body['incident_id']), body['recommendation'])
                 else:
                     return self.reply(404, {'error': 'Not found'})
@@ -238,7 +250,6 @@ def ticker():
         try:
             with LOCK:
                 cycle()
-            LAST_TICK.update(at=time.time(), error=None)
         except Exception:
             LAST_TICK.update(at=time.time(), error='Check could not complete; health is unknown.')
         time.sleep(max(5, int(os.environ.get('SUPERVISOR_INTERVAL', '15'))))

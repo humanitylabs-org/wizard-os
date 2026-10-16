@@ -431,6 +431,9 @@ class Supervisor:
         # Revocation is durable, not merely a comparison with today's policy.
         # Toggling a rule back must never resurrect a previously issued digest.
         for inc in self._all(db, 'incident'):
+            if inc['target_id'] == target_id and inc['state'] not in ('resolved', 'superseded') and inc.get('worker_wait'):
+                inc['worker_wait'] = False
+                self._save_inc(db, inc)
             if inc['target_id'] == target_id and inc['state'] == 'awaiting_approval':
                 inc.update(state='detected', approval_digest=None, approval_used=True,
                            owner_required=False, reason='Scoped owner policy changed; approval revoked.')
@@ -474,6 +477,7 @@ class Supervisor:
             for ident, target in self.config['targets'].items():
                 record = {key: target[key] for key in ('name', 'kind', 'action', 'description', 'grant')}
                 record.update(id=ident, effective_preference=self._policy(db, ident)[0],
+                              policy_digest=self._policy(db, ident)[1],
                               verification=self._get(db, 'target', ident))
                 targets.append(record)
             return self._clean({'mode': 'prototype', 'incidents': self._all(db, 'incident'),

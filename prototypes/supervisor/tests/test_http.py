@@ -21,7 +21,7 @@ def port():
 class HTTPTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
-        self.token=secrets.token_urlsafe(32);self.sp=port();self.cp=port()
+        self.token=secrets.token_urlsafe(32);self.worker_token=secrets.token_urlsafe(32);self.sp=port();self.cp=port()
         self.base='http://127.0.0.1:'+str(self.sp);self.canary='http://127.0.0.1:'+str(self.cp)
         self.processes=[];self.logs=[]
         self.config={'targets':{}}
@@ -32,7 +32,7 @@ class HTTPTests(unittest.TestCase):
         self.cookies=http.cookiejar.CookieJar();self.browser=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookies))
 
     def start(self,name,p,data):
-        env=dict(os.environ,DATA_DIR=str(data),HOST='127.0.0.1',PORT=str(p),SUPERVISOR_TOKEN=self.token,SUPERVISOR_CONFIG=str(self.config_file),SUPERVISOR_AUTOTICK='0',SUPERVISOR_ORIGIN=self.base,SUPERVISOR_COOKIE_PATH='/')
+        env=dict(os.environ,DATA_DIR=str(data),HOST='127.0.0.1',PORT=str(p),SUPERVISOR_TOKEN=self.token,SUPERVISOR_WORKER_TOKEN=self.worker_token,SUPERVISOR_CONFIG=str(self.config_file),SUPERVISOR_AUTOTICK='0',SUPERVISOR_ORIGIN=self.base,SUPERVISOR_COOKIE_PATH='/')
         env.pop('WIZARD_AGENT_URL',None)
         log=(self.root/(name+str(len(self.logs))+'.log')).open('w');self.logs.append(log)
         proc=subprocess.Popen([sys.executable,str(ROOT/'app'/name)],env=env,stdout=log,stderr=log);self.processes.append(proc)
@@ -53,9 +53,10 @@ class HTTPTests(unittest.TestCase):
         for f in self.logs:f.close()
         self.tmp.cleanup()
 
-    def req(self,path,body=None,operator=True,browser=False,csrf=None,origin=None,base=None):
+    def req(self,path,body=None,operator=True,browser=False,csrf=None,origin=None,base=None,worker=False):
         headers={}
         if operator:headers['Authorization']='Bearer '+self.token
+        if worker:headers['Authorization']='Bearer '+self.worker_token
         if body is not None:headers['Content-Type']='application/json'
         if csrf:headers['X-Supervisor-CSRF']=csrf
         if origin:headers['Origin']=origin
@@ -101,6 +102,12 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(self.req('/api/rule',{'rule_id':r[1]['result']['id'],'enabled':False},False,True,csrf,origin=self.base)[0],200)
         self.req('/api/tick',{});self.assertEqual([i for i in self.snapshot()['incidents'] if i['target_id']=='service'][-1]['status'],'resolved')
         self.assertEqual([t for t in self.snapshot()['targets'] if t['id']=='job'][0]['effective_preference'],'authorized')
+
+    def test_worker_is_denied_every_owner_route(self):
+        for path,body in [('/api/ticket',{}),('/api/approve',{'incident_id':'x','digest':'x'}),('/api/preference',{'incident_id':'x','text':'handle authorized repairs'}),('/api/rule',{'rule_id':'x','enabled':True}),('/api/tick',{}),('/api/feedback',{'incident_id':'x','text':'x'})]:
+            with self.subTest(path=path):
+                self.assertEqual(self.req(path,body,operator=False,worker=True)[0],403)
+        self.assertEqual(self.req('/mcp',{'jsonrpc':'2.0','id':1,'method':'tools/list'},operator=False,worker=True)[0],200)
 
     def test_mcp_only_exposes_bounded_worker_tools(self):
         body={'jsonrpc':'2.0','id':1,'method':'tools/list'}
