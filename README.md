@@ -4,9 +4,9 @@ Approved outcome: `spec/SUPERVISOR.md`. Prototype isolated from production maint
 
 ## Current state
 - Parent owns package, HTTP/MCP, UI and live integration on `prototype/supervisor-v01`.
-- Engine is being implemented by delegated Hermes worker `deleg_64c647c0` / `sa-0-c3d41cd7` in its separate worktree/branch `prototype/supervisor-engine`. Await its completion event, inspect and cherry-pick; do not poll files or start duplicate engine work.
+- Engine integrated and pushed; parent independently matched remote hashes and ran 31 real engine/HTTP tests on Thales. Current runnable source `df8ddce`; shared-core UI and private Agent Service adapter included.
 - Opus design verified: first-party `claude-opus-5-5`, valid JSON, nonempty artifact, no permission errors. Initial full-HTML call timed out; compact design contract succeeded. Parent implemented `web/index.html` from `docs/DESIGN.md`.
-- Parent source syntax/diff checks passed. No runtime, packaging, UI or authority verdict yet; nothing installed.
+- WAM manifest/container/shared-function checks pass; Python and JS syntax pass. Container/live-inference acceptance is next via durable key `supervisor-package-df8ddce-01`, source `/Volumes/ThalesMedia/Supervisor/prototype`, output `/Volumes/ThalesMedia/Supervisor/evidence/df8ddce-01`. Read-only review `deleg_72517414` completed and its receipt is pending delivery; inspect it on resume. Browser and managed install remain undone; nothing installed.
 
 ## Next exact gates
 1. Consume engine completion, verify SHA and remote tests, integrate its committed files only; reconcile snapshot shapes in UI and exceptions in server.
