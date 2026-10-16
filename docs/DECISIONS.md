@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 16 Oct 2026 — James: app-owned model and workflow consistency ([spec/APP_WORKFLOWS.md](../spec/APP_WORKFLOWS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 63 | **An app's AI process uses the model and workflow shipped by that app on every installation, including its creator's.** A different chat/default/worker model does not override it. Substitution requires asking the owner and receiving explicit approval for the named process/model and scope. Ship the actual versioned prompts, model declarations, acceptance checks and provenance; fail visibly when the required route is unavailable. This strengthens the earlier `recommends` warning into an execution contract and separates app process models from app→agent binding. | **Approved by James (16 Oct); implementation coverage must be evidenced per app** |
+
 ## 15 Oct 2026 — James: apps receive voice and own their feedback ([spec/VOICE_INPUT.md](../spec/VOICE_INPUT.md))
 
 | # | Decision | Status |
