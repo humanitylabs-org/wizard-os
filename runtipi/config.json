@@ -1,0 +1,49 @@
+{
+  "name": "Supervisor",
+  "id": "wizard-supervisor",
+  "wizard_type": "service",
+  "available": true,
+  "short_desc": "Private prototype maintenance supervisor.",
+  "author": "Humanity Labs",
+  "port": 8798,
+  "categories": [
+    "utilities"
+  ],
+  "description": "System-component prototype enrolled only for disposable services and jobs. Existing maintenance stays unchanged.",
+  "tipi_version": 1,
+  "version": "0.1.0-prototype",
+  "source": "https://github.com/humanitylabs-org/wizard-os",
+  "exposable": false,
+  "supported_architectures": [
+    "amd64",
+    "arm64"
+  ],
+  "created_at": 1792152000000,
+  "updated_at": 1792152000000,
+  "dynamic_config": true,
+  "min_tipi_version": "4.8.0",
+  "uid": 1000,
+  "gid": 1000,
+  "form_fields": [
+    {
+      "type": "password",
+      "env_variable": "SUPERVISOR_TOKEN",
+      "label": "Prototype operator credential",
+      "required": true
+    },
+    {
+      "type": "text",
+      "env_variable": "SUPERVISOR_ORIGIN",
+      "label": "Exact owner HTTPS origin",
+      "required": false
+    },
+    {
+      "type": "text",
+      "env_variable": "SUPERVISOR_COOKIE_PATH",
+      "label": "Hosted path",
+      "required": false,
+      "default": "/supervisor-prototype/"
+    }
+  ],
+  "no_gui": false
+}

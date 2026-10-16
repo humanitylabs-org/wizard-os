@@ -1,0 +1,126 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wizard Supervisor prototype",
+    "version": "0.1.0-prototype"
+  },
+  "paths": {
+    "/api/status": {
+      "get": {
+        "summary": "Read enrolled prototype state",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "summary": "Read current browser session",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/approve": {
+      "post": {
+        "summary": "Approve one exact incident action",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "summary": "Record candidate feedback",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/rule": {
+      "post": {
+        "summary": "Change an existing scoped rule",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/decide": {
+      "post": {
+        "summary": "Operator bounded recommendation",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/ticket": {
+      "post": {
+        "summary": "Operator mints one-use owner bootstrap",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/bootstrap": {
+      "post": {
+        "summary": "Consume one-use owner bootstrap",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    },
+    "/api/tick": {
+      "post": {
+        "summary": "Operator triggers a check",
+        "responses": {
+          "200": {
+            "description": "Current result"
+          },
+          "403": {
+            "description": "Permission required"
+          }
+        }
+      }
+    }
+  }
+}
