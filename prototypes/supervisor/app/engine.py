@@ -12,7 +12,7 @@ Public JSON API (unknown IDs / invalid proposals raise ValueError):
 Incident: id, target_id, generation, state, status (same as state), kind,
   created_at, updated_at, config_digest, policy_digest, attempts, uncertain,
   decision_id, approval_digest, approval_expires_at, approval_used,
-  verification, owner_required, reason. States: detected, unknown, deferred,
+  verification, owner_required, reason, worker_wait. States: detected, unknown, deferred,
   ready, awaiting_approval, executing, verifying, resolved, superseded.
 Decision: id, incident_id, target_id, generation, action, what, why, state,
   owner_required, policy_digest, approval_digest, expires_at, verification,
@@ -35,6 +35,8 @@ this intentionally simple prototype favors correctness over throughput.
 The executor commits a reservation BEFORE POST, includes an idempotency key,
 never follows redirects, and never resends an uncertain action. A crashed POST
 is verified/deferred, not retried. An adapter must enforce idempotency itself.
+Worker 'wait' decisions remain deferred until an explicit new decide() call.
+Uncertain dispatch remains fenced even across owner configuration changes.
 Only a fresh matching functional GET may resolve an incident. A positive POST
 acknowledgement alone cannot. Exhausted retries do not manufacture owner gates.
 """
@@ -52,6 +54,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from typing import Any
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -70,7 +73,7 @@ class Supervisor:
     }
 
     def __init__(self, db_path, config, clock=time.time):
-        self.db_path = os.path.abspath(os.fspath(db_path))
+        self.db_path = os.path.realpath(os.fspath(db_path))
         self.config = copy.deepcopy(config)
         self.clock = clock
         self._validate_config()
@@ -81,8 +84,14 @@ class Supervisor:
         with self._locked(check_config=False) as db:
             db.execute('CREATE TABLE IF NOT EXISTS records '
                        '(kind TEXT, id TEXT, value TEXT NOT NULL, PRIMARY KEY(kind,id))')
+            previous = self._get(db, 'meta', 'config')
             self._save(db, 'meta', 'config', {'digest': self.config_digest})
             for inc in self._all(db, 'incident'):
+                if (previous and previous['digest'] != self.config_digest
+                        and inc['state'] == 'awaiting_approval'):
+                    inc.update(state='detected', approval_digest=None, approval_used=True,
+                               owner_required=False, reason='Owner configuration changed; approval revoked.')
+                    self._save_inc(db, inc)
                 if inc['state'] == 'executing':
                     inc.update(state='verifying', uncertain=True,
                                reason='Interrupted action; verify before any further action.')
@@ -119,7 +128,7 @@ class Supervisor:
                 raise ValueError('invalid action token')
         self._hash(self.config)  # Reject non-JSON config, NaN and Infinity.
 
-    def _clean(self, value):
+    def _clean(self, value: Any) -> Any:
         if isinstance(value, str):
             for target in self.config['targets'].values():
                 for key in ('action_token', 'action_url', 'probe_url'):
@@ -127,7 +136,11 @@ class Supervisor:
                         value = value.replace(target[key], '[redacted]')
             return re.sub(r'https?://[^\s<>]+', '[redacted-url]', value)
         if isinstance(value, dict):
-            return {k: self._clean(v) for k, v in value.items()}
+            # Only display text can contain untrusted content. Never rewrite opaque
+            # IDs/digests/enums: a short owner token could otherwise corrupt the ledger.
+            text_keys = {'name', 'description', 'text', 'why', 'what', 'reason', 'detail'}
+            return {k: self._clean(v) if k in text_keys or isinstance(v, (dict, list)) else v
+                    for k, v in value.items()}
         if isinstance(value, list):
             return [self._clean(v) for v in value]
         return value
@@ -143,7 +156,8 @@ class Supervisor:
                 db.execute('PRAGMA busy_timeout=10000')
                 db.execute('PRAGMA synchronous=FULL')
                 db.execute('BEGIN IMMEDIATE')
-                if check_config and self._get(db, 'meta', 'config')['digest'] != self.config_digest:
+                current = self._get(db, 'meta', 'config') if check_config else None
+                if check_config and (current is None or current['digest'] != self.config_digest):
                     raise ValueError('stale supervisor configuration; reload current owner config')
                 yield db
                 db.commit()
@@ -227,6 +241,7 @@ class Supervisor:
         self._save(db, 'target', target_id, check)
         history = [i for i in self._all(db, 'incident') if i['target_id'] == target_id]
         inc = history[-1] if history and history[-1]['state'] not in ('resolved', 'superseded') else None
+        interrupted = bool(inc and inc['uncertain'])
         if inc and inc['config_digest'] != self.config_digest:
             inc.update(state='superseded', owner_required=False, approval_digest=None,
                        reason='Owner configuration changed; old generation fenced.')
@@ -240,7 +255,7 @@ class Supervisor:
                    'generation': history[-1]['generation'] + 1 if history else 1,
                    'kind': target['kind'], 'created_at': self.clock(),
                    'config_digest': self.config_digest, 'policy_digest': self._policy(db, target_id)[1],
-                   'attempts': 0, 'uncertain': False, 'decision_id': None,
+                   'attempts': 0, 'uncertain': interrupted, 'decision_id': None, 'worker_wait': False,
                    'approval_digest': None, 'approval_expires_at': None, 'approval_used': False,
                    'owner_required': False, 'state': 'detected', 'reason': 'Functional failure detected.'}
         inc['verification'] = check
@@ -282,17 +297,20 @@ class Supervisor:
         action = recommendation.get('action', target['action'])
         if action not in (target['action'], 'wait', 'needs_approval', 'needs approval'):
             raise ValueError('recommendation action is outside configured scope')
-        if 'generation' in recommendation and recommendation['generation'] != inc['generation']:
+        if 'generation' in recommendation and (type(recommendation['generation']) is not int
+                                               or recommendation['generation'] != inc['generation']):
             raise ValueError('stale recommendation generation')
+        if 'needs_approval' in recommendation and type(recommendation['needs_approval']) is not bool:
+            raise ValueError('needs_approval must be a boolean hint')
         why = recommendation.get('why', '')
         if not isinstance(why, str) or len(why) > 1000:
             raise ValueError('why must be a bounded string')
         preference, policy = self._policy(db, inc['target_id'])
-        if (inc['state'] == 'awaiting_approval' and inc['policy_digest'] == policy
+        if (inc['state'] == 'awaiting_approval' and action != 'wait' and inc['policy_digest'] == policy
                 and inc['approval_expires_at'] > self.clock()):
             return self._get(db, 'decision', inc['decision_id'])
         inc.update(policy_digest=policy, approval_digest=None, approval_expires_at=None,
-                   owner_required=False)
+                   owner_required=False, worker_wait=action == 'wait')
         if inc['uncertain'] or inc['state'] in ('executing', 'verifying'):
             inc.update(state='deferred', reason='Prior action outcome uncertain; verification only, no replay.')
         elif inc['verification']['status'] == 'unknown':
@@ -341,7 +359,7 @@ class Supervisor:
         if inc['state'] == 'resolved' or inc['verification']['status'] != 'failed':
             return self._result(db, inc)
         if not approved:
-            self._decide(db, inc, {})
+            self._decide(db, inc, {'action': 'wait'} if inc.get('worker_wait') else {})
             if inc['state'] != 'ready':
                 return self._result(db, inc)
         target = self._target(inc['target_id'])
@@ -401,6 +419,15 @@ class Supervisor:
                     results.append(self._execute(db, inc))
         return results
 
+    def _invalidate_approvals(self, db, target_id):
+        # Revocation is durable, not merely a comparison with today's policy.
+        # Toggling a rule back must never resurrect a previously issued digest.
+        for inc in self._all(db, 'incident'):
+            if inc['target_id'] == target_id and inc['state'] == 'awaiting_approval':
+                inc.update(state='detected', approval_digest=None, approval_used=True,
+                           owner_required=False, reason='Scoped owner policy changed; approval revoked.')
+                self._save_inc(db, inc)
+
     def feedback(self, incident_id, text, mode='candidate'):
         if mode not in ('owner', 'candidate') or not isinstance(text, str) or not text.strip() or len(text) > 1000:
             raise ValueError('feedback requires bounded text and owner/candidate mode')
@@ -414,6 +441,8 @@ class Supervisor:
                     'mode': 'owner' if preference else 'candidate', 'preference': preference,
                     'enabled': bool(preference), 'created_at': self.clock(), 'updated_at': self.clock()}
             self._save(db, 'rule', rule['id'], rule)
+            if preference:
+                self._invalidate_approvals(db, inc['target_id'])
             return rule
 
     def set_rule(self, rule_id, enabled):
@@ -425,6 +454,8 @@ class Supervisor:
                 raise ValueError('unknown rule')
             if enabled and rule['mode'] != 'owner':
                 raise ValueError('candidate feedback is not an executable rule')
+            if rule['enabled'] != enabled and rule['mode'] == 'owner':
+                self._invalidate_approvals(db, rule['target_id'])
             rule.update(enabled=enabled, updated_at=self.clock())
             self._save(db, 'rule', rule_id, rule)
             return rule

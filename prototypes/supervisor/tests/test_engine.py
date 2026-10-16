@@ -354,6 +354,65 @@ s.execute(sys.argv[3])
         self.state['ok'] = 1
         self.assertEqual(self.incident()['verification']['status'], 'failed')
 
+    def test_config_round_trip_cannot_resurrect_an_old_approval(self):
+        inc, decision = self.gate()
+        original = copy.deepcopy(self.config)
+        self.config['targets']['demo']['description'] += ' temporary change'
+        self.restart()
+        self.config = original
+        self.restart()
+        with self.assertRaises(ValueError):
+            self.engine.approve(inc['id'], decision['approval_digest'])
+        self.assertEqual(self.state['requests'], [])
+
+    def test_reversing_owner_policy_cannot_resurrect_an_old_approval(self):
+        inc, decision = self.gate()
+        rule = self.engine.feedback(inc['id'], 'wait', mode='owner')
+        self.engine.set_rule(rule['id'], False)
+        with self.assertRaises(ValueError):
+            self.engine.approve(inc['id'], decision['approval_digest'])
+        fresh = self.engine.decide(inc['id'], {})
+        self.assertNotEqual(fresh['approval_digest'], decision['approval_digest'])
+        self.assertEqual(self.engine.approve(inc['id'], fresh['approval_digest'])['status'], 'resolved')
+
+    def test_short_token_redaction_cannot_corrupt_record_identity(self):
+        self.config['targets']['demo']['action_token'] = 'a'
+        self.restart()
+        inc = self.incident()
+        self.assertRegex(inc['id'], r'^[a-f0-9]{32}$')
+        self.assertEqual(self.engine.execute(inc['id'])['status'], 'resolved')
+        self.assertEqual(self.state['requests'][0]['body']['action'], 'repair')
+
+    def test_worker_wait_is_preserved_until_a_new_decision(self):
+        inc = self.incident()
+        self.engine.decide(inc['id'], {'action': 'wait', 'why': 'Investigating the affected function.'})
+        self.assertEqual(self.restart().execute(inc['id'])['status'], 'deferred')
+        self.assertEqual(self.state['requests'], [])
+        self.engine.decide(inc['id'], {'action': 'repair'})
+        self.assertEqual(self.engine.execute(inc['id'])['status'], 'resolved')
+
+    def test_config_change_cannot_replay_uncertain_action(self):
+        self.state.update(post_mode='disconnect', repairs=False)
+        self.engine.tick()
+        self.config['targets']['demo']['description'] += ' Updated owner description.'
+        self.restart().tick()
+        self.assertEqual(len(self.state['requests']), 1)
+        newest = self.engine.snapshot()['incidents'][-1]
+        self.assertEqual(newest['state'], 'deferred')
+        self.assertTrue(newest['uncertain'])
+
+    def test_independent_processes_share_one_dispatch(self):
+        code = ('import json,sys; from app.engine import Supervisor; '
+                'Supervisor(sys.argv[1],json.loads(sys.argv[2])).tick()')
+        processes = [subprocess.Popen([sys.executable, '-c', code, self.db, json.dumps(self.config)],
+                     cwd=str(Path(__file__).resolve().parents[1]), stdout=subprocess.PIPE,
+                     stderr=subprocess.PIPE) for _ in range(4)]
+        for proc in processes:
+            _, stderr = proc.communicate(timeout=10)
+            self.assertEqual(proc.returncode, 0, stderr)
+        self.assertEqual(len(self.state['requests']), 1)
+        self.assertEqual(len(self.engine.snapshot()['incidents']), 1)
+
     def test_config_is_detached_from_callers_and_input_validation(self):
         self.config['targets']['demo']['action_url'] = 'http://example.invalid/'
         self.assertEqual(self.engine.tick()[0]['status'], 'resolved')
