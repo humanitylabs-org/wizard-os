@@ -29,17 +29,24 @@ for ident in docker('ps','-aq').split():
     name=d['Name'].lstrip('/')
     if 'ai-accounts' in name or 'hermes-agent' in name:
         rows.append(d)
-accounts=[d for d in rows if 'ai-accounts' in d['Name']]
-assert len(accounts)==1,'expected exactly one packaged AI Accounts container'
-a=accounts[0]
-assert a['State']['Running'],'AI Accounts container is not running'
-password_present=any(x.startswith('AI_ACCOUNTS_PASSWORD=') and x.split('=',1)[1] for x in a['Config'].get('Env',[]))
-assert not password_present,'package has an additional password gate; preserve it and resolve supported access'
-ports=a['NetworkSettings']['Ports'].get('8795/tcp') or []
-loopbacks=[p for p in ports if p['HostIp']=='127.0.0.1']
-assert len(loopbacks)==1,'expected one loopback-only AI Accounts published port'
-assert all(p['HostIp'] in ('127.0.0.1','::1') for p in ports),'unexpected non-loopback account listener'
-port=int(loopbacks[0]['HostPort']); base='http://127.0.0.1:'+str(port)
+# The 0.1.1 package is a main MCP front plus a private page engine behind it.
+def service(d):
+    return d['Config'].get('Labels',{}).get('com.docker.compose.service')
+fronts=[d for d in rows if service(d)=='wizard-ai-accounts']
+engines=[d for d in rows if service(d)=='wizard-ai-accounts-engine']
+assert len(fronts)==1 and len(engines)==1,'expected the packaged AI Accounts front and engine'
+a,engine=fronts[0],engines[0]
+assert a['State']['Running'] and engine['State']['Running'],'AI Accounts is not running'
+# Presence only; the value is never read into evidence.
+password_gate=any(x.startswith('AI_ACCOUNTS_PASSWORD=') and x.split('=',1)[1] for x in engine['Config'].get('Env',[]))
+published=[]
+for proto,binds in (a['NetworkSettings'].get('Ports') or {}).items():
+    for b in binds or []:published.append({'container':proto,'host_ip':b['HostIp'],'host_port':b['HostPort']})
+networks=a['NetworkSettings']['Networks']
+ips=[n['IPAddress'] for n in networks.values() if n.get('IPAddress')]
+assert ips,'AI Accounts front has no container address'
+front_env=dict(x.split('=',1) for x in a['Config'].get('Env',[]) if '=' in x)
+port=int(front_env.get('FRONT_PORT','8795')); base='http://'+ips[0]+':'+str(port)
 def fetch(route,method='GET',headers=None,data=None):
     req=urllib.request.Request(base+route,method=method,headers=headers or {},data=data)
     try:
@@ -53,6 +60,11 @@ while True:
     except (OSError,TimeoutError):pass
     assert time.monotonic()<end,'AI Accounts did not become ready'
     time.sleep(2)
+if password_gate:
+    # Preserve the package's own page password; never read or bypass it.
+    code,_,_=fetch('/');assert code==401,'password gate did not protect the page'
+    print(json.dumps({'scope':'read-only packaged auth preflight; no login or inference','password_gate':True,
+        'published':published,'networks':sorted(networks)}));raise SystemExit(0)
 assets={}
 for route in ('/','/app.js','/app.css'):
     code,raw,headers=fetch(route)
@@ -70,13 +82,13 @@ assert code==403,'official origin rejection failed'
 origin_rejection=code
 code,_,_=fetch('/api/claude/code',method='POST',headers={'Content-Type':'text/plain'},data=b'')
 assert code==415,'official JSON requirement failed'
-image=json.loads(docker('image','inspect',a['Image']))[0]
+image=json.loads(docker('image','inspect',engine['Image']))[0]
 containers=[]
 for d in rows:
     containers.append({'name':d['Name'],'image_ref':d['Config']['Image'],'image_id':d['Image'],
         'mounts':[{'type':m['Type'],'name':m.get('Name'),'source':m['Source'],'destination':m['Destination'],'rw':m['RW']} for m in d['Mounts']],
         'provider_config':[x for x in d['Config'].get('Env',[]) if x.split('=',1)[0] in ('CLAUDE_SUBSCRIPTION_DIRECTSDK_CONFIG_DIR','CLAUDE_CONFIG_DIR','HERMES_MODEL','HERMES_PROVIDER')]})
-result={'scope':'read-only packaged auth preflight; no login or inference','port':port,'assets':assets,'accounts':status,
+result={'scope':'read-only packaged auth preflight; no login or inference','password_gate':False,'published':published,'networks':sorted(networks),'port':port,'assets':assets,'accounts':status,
     'origin_rejection':origin_rejection,'json_requirement':code,'containers':containers,
     'account_image':{'digests':image.get('RepoDigests',[]),'architecture':image.get('Architecture'),'revision':image.get('Config',{}).get('Labels',{}).get('org.opencontainers.image.revision')},
     'auth_modes_separate':True}
@@ -114,7 +126,7 @@ def main():
         out=run(['limactl','shell','--workdir=/',args.vm,'--','python3','-'],input=GUEST,text=True,capture_output=True,timeout=600)
         result=json.loads(out.stdout)
         (evidence/'package-private.json').write_text(json.dumps(result,indent=2)+'\n')
-        receipt.update({'preflight':'pass','accounts':result['accounts'],'asset_hashes':result['assets']})
+        receipt.update({'preflight':'pass','password_gate':result['password_gate'],'accounts':result.get('accounts'),'asset_hashes':result.get('assets'),'published':result['published']})
     except Exception as e:
         receipt.update({'preflight':'failed','error_type':type(e).__name__})
         # Raw command output is kept private and never streamed to the job log.

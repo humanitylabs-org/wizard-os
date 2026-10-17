@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Fake `sudo -n docker ...` for the AI Accounts preflight regression test."""
+import json, os, sys
+args = sys.argv[1:]
+assert args[:2] == ['-n', 'docker'], args
+args = args[2:]
+gate = os.environ.get('FAKE_GATE', '')
+def row(ident, service, image, env):
+    return {'Name': '/wizard-ai-accounts_wizardapps-' + service + '-1', 'Image': image,
+            'State': {'Running': True},
+            'Config': {'Labels': {'com.docker.compose.service': service}, 'Image': image, 'Env': env},
+            'NetworkSettings': {'Ports': {'8795/tcp': None},
+                                'Networks': {'wizardapps': {'IPAddress': '127.0.0.1'}}},
+            'Mounts': [{'Type': 'volume', 'Name': 'wizard-ai-accounts-claude', 'Source': '/var/lib/docker/volumes/x',
+                        'Destination': '/claude', 'RW': True}] if service.endswith('engine') else []}
+rows = {
+    'front': row('front', 'wizard-ai-accounts', 'sha256:front', ['WIZARD_APP=wizard-ai-accounts','FRONT_PORT=18795']),
+    'engine': row('engine', 'wizard-ai-accounts-engine', 'sha256:engine', ['AI_ACCOUNTS_PASSWORD=' + gate]),
+    'other': {**row('other', 'browser', 'sha256:other', []), 'Name': '/browser_wizardapps-browser-1'},
+}
+if args == ['ps', '-aq']:
+    print('front\nengine\nother')
+elif args[0] == 'inspect':
+    print(json.dumps([rows[args[1]]]))
+elif args[:2] == ['image', 'inspect']:
+    print(json.dumps([{'RepoDigests': ['ghcr.io/humanitylabs-org/wizard-ai-accounts@sha256:53ad8157'],
+                       'Architecture': 'amd64', 'Config': {'Labels': {}}}]))
+else:
+    raise SystemExit('unexpected docker call: %r' % args)
