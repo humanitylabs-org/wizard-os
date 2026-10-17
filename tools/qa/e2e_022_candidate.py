@@ -16,6 +16,7 @@ def main():
     p.add_argument('--root', type=Path, required=True)
     p.add_argument('--candidate-sha', required=True)
     p.add_argument('--vm', default='fresh-022-candidate')
+    p.add_argument('--arch', choices=('aarch64', 'x86_64'), default='aarch64')
     a = p.parse_args()
     if not re.fullmatch(r'[0-9a-f]{40}', a.candidate_sha):
         p.error('candidate SHA must be full lowercase hex')
@@ -50,10 +51,12 @@ def main():
     created = False
     rc = 1
     try:
+        machine = ['--arch=aarch64', '--memory=4', '--vm-type=vz', '--rosetta'] if a.arch == 'aarch64' else ['--arch=x86_64', '--memory=8', '--vm-type=qemu']
+        record['arch'] = a.arch
         rc = run('create', ['limactl', 'create', '--tty=false', '--name=' + a.vm,
-                  '--cpus=4', '--memory=4', '--disk=40', '--vm-type=vz', '--rosetta',
+                  '--cpus=4', '--disk=60', *machine,
                   '--mount-none', '--containerd=none',
-                  '--set=.portForwards = [{"guestIP":"0.0.0.0","guestPortRange":[1,65535],"ignore":true}]',
+                  '--set=.portForwards = [{"guestIP":"127.0.0.1","guestPortRange":[1,65535],"ignore":true},{"guestIP":"0.0.0.0","guestPortRange":[1,65535],"ignore":true}]',
                   'template://ubuntu-24.04'], timeout=1200)
         if rc: return rc
         created = True
@@ -63,6 +66,7 @@ def main():
 export PATH="$HOME/.local/bin:$PATH"
 printf 'OS baseline\\n'
 uname -a
+test "$(uname -m)" = EXPECTED_ARCH
 cat /etc/os-release
 for d in "$HOME/.hermes" "$HOME/runtipi" "$HOME/wizard-app-manager"; do
  test ! -e "$d" || { printf 'Unexpected prior state: %s\\n' "$d"; exit 20; }
@@ -74,7 +78,7 @@ git clone -q https://github.com/humanitylabs-org/wizard-app-manager.git "$HOME/w
 git -C "$HOME/wam-candidate" checkout --detach CANDIDATE_SHA
 export WIZARD_MODE=fresh
 python3 "$HOME/wam-candidate/scripts/qa-release-candidate.py" --manifest "$HOME/wam-candidate/releases/0.2.2.json" --evidence "$HOME/candidate-022-evidence"
-'''.replace('CANDIDATE_SHA', a.candidate_sha)
+'''.replace('CANDIDATE_SHA', a.candidate_sha).replace('EXPECTED_ARCH', a.arch)
         (evidence / 'guest-command.sh').write_text(script)
         rc = run('candidate-install', ['limactl', 'shell', '--workdir=/', a.vm, '--', 'bash', '-s'], script, 6600)
         readback = '''set -u
