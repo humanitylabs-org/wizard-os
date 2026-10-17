@@ -280,15 +280,23 @@ def guest(phase):
                       WIZARD_MODE='alongside', WIZARD_PRIVATE_ACCESS='none', WIZARD_STRICT='1',
                       WIZARD_PLUGIN_REF=PLUGIN_SHA, PYTHONDONTWRITEBYTECODE='1', NO_COLOR='1')
     h = home / '.hermes'
-    if phase == 'provision':
-        for name in ('.hermes', '.wizard-os', 'runtipi', 'wizard-app-manager', 'wam-candidate'):
-            require(not (home / name).exists(), 'guest has prior installation state')
-        checked(['sudo', '-n', 'apt-get', 'update', '-qq'], timeout=600)
-        checked(['sudo', '-n', 'apt-get', 'install', '-y', '-qq', 'git', 'curl', 'xz-utils', 'python3', 'python3-yaml'], timeout=600)
+    if phase in ('provision', 'resume-provision'):
+        for name in ('.wizard-os', 'runtipi', 'wizard-app-manager', 'wam-candidate'):
+            require(not (home / name).exists(), 'guest has prior Wizard installation state')
         installer = evidence / 'stock-hermes-install.sh'
-        url = f'https://raw.githubusercontent.com/NousResearch/hermes-agent/{HERMES_SHA}/scripts/install.sh'
-        checked(['curl', '-fsSL', '--retry', '3', url, '-o', installer])
-        save(evidence / 'installer-source.json', {'url': url, 'sha256': hashlib.sha256(installer.read_bytes()).hexdigest()})
+        if phase == 'resume-provision':
+            require(installer.is_file() and not (evidence / 'before').exists()
+                    and not (evidence / 'installer-originals').exists(), 'not a partial dependency-only provision')
+            require(output(['git', '-C', h / 'hermes-agent', 'rev-parse', 'HEAD']) == HERMES_SHA,
+                    'partial stock checkout revision changed')
+        else:
+            require(not h.exists(), 'guest has prior Hermes state')
+            checked(['sudo', '-n', 'apt-get', 'update', '-qq'], timeout=600)
+            checked(['sudo', '-n', 'apt-get', 'install', '-y', '-qq', 'git', 'curl', 'xz-utils', 'python3', 'python3-yaml'], timeout=600)
+            url = f'https://raw.githubusercontent.com/NousResearch/hermes-agent/{HERMES_SHA}/scripts/install.sh'
+            checked(['curl', '-fsSL', '--retry', '3', url, '-o', installer])
+            save(evidence / 'installer-source.json', {'url': url, 'sha256': hashlib.sha256(installer.read_bytes()).hexdigest()})
+        require(hashlib.sha256(installer.read_bytes()).hexdigest() == json.loads((evidence / 'installer-source.json').read_text())['sha256'], 'stock installer bytes changed')
         checked(['bash', installer, '--branch', 'main', '--commit', HERMES_SHA,
                  '--non-interactive', '--skip-browser', '--skip-computer-use'], timeout=3600)
         stock_proof(h, evidence, 'installed')
@@ -369,7 +377,8 @@ def host(args):
     if args.arch == 'x86_64':
         require(shutil.which('qemu-system-x86_64', path=env['PATH']) is not None,
                 'x86_64 needs QEMU preinstalled by the build-host owner')
-    require(not (root / 'lima' / vm).exists(), 'refusing existing guest; preserve previous evidence')
+    require((root / 'lima' / vm).exists() == args.resume_provision,
+            'existing guest requires explicit dependency-only resume; new run requires absence')
     os.umask(0o077)
     evidence = root / 'evidence' / ('alongside-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
     evidence.mkdir(parents=True, mode=0o700)
@@ -413,7 +422,7 @@ def host(args):
         machine = ['--arch=aarch64', '--memory=6', '--vm-type=vz', '--rosetta'] if args.arch == 'aarch64' else [
             '--arch=x86_64', '--memory=8', '--vm-type=qemu']
         receipt['arch'] = args.arch
-        rc = run('create', ['limactl', 'create', '--tty=false', '--name=' + vm,
+        rc = 0 if args.resume_provision else run('create', ['limactl', 'create', '--tty=false', '--name=' + vm,
                  '--cpus=4', '--disk=60', *machine,
                  '--mount-none', '--containerd=none', '--set=.portForwards = ' + json.dumps(forwards),
                  'template://ubuntu-24.04'], timeout=1200)
@@ -423,9 +432,12 @@ def host(args):
         if rc == 0:
             # No host mounts or inherited credentials. Payload is only this public-safe script.
             stage = "from pathlib import Path; import sys; p=Path.home()/'.alongside-022-qa'; p.mkdir(mode=0o700); (p/'owned-guest').write_text('alongside-022'); (p/'runner.py').write_bytes(sys.stdin.buffer.read())"
+            if args.resume_provision:
+                stage = "from pathlib import Path; import sys; p=Path.home()/'.alongside-022-qa'; assert (p/'owned-guest').read_text() == 'alongside-022'; assert not (p/'evidence/before').exists(); assert not (p/'evidence/installer-originals').exists(); (p/'runner.py').write_bytes(sys.stdin.buffer.read())"
             rc = run('stage', shell + ['python3', '-c', stage], source.read_bytes())
         if rc == 0:
-            for phase, timeout in [('provision', 4800), ('install', 7500), ('linked', 900), ('unlink', 900), ('relink', 900)]:
+            provision = 'resume-provision' if args.resume_provision else 'provision'
+            for phase, timeout in [(provision, 4800), ('install', 7500), ('linked', 900), ('unlink', 900), ('relink', 900)]:
                 guest_cmd = ['bash', '-c', 'exec python3 "$HOME/.alongside-022-qa/runner.py" --guest-phase "$1"', '--', phase]
                 rc = run(phase, shell + guest_cmd, timeout=timeout)
                 if rc:
@@ -471,7 +483,8 @@ def main():
     p.add_argument('--root', type=Path)
     p.add_argument('--arch', choices=('aarch64', 'x86_64'), default='aarch64',
                    help='x86_64 uses QEMU/8 GiB; no Rosetta; not DeFleur acceptance')
-    p.add_argument('--guest-phase', choices=('provision', 'install', 'linked', 'unlink', 'relink', 'ready'), help=argparse.SUPPRESS)
+    p.add_argument('--resume-provision', action='store_true', help='retry failed stock dependencies in the owned guest before any owner baseline exists')
+    p.add_argument('--guest-phase', choices=('provision', 'resume-provision', 'install', 'linked', 'unlink', 'relink', 'ready'), help=argparse.SUPPRESS)
     args = p.parse_args()
     if args.guest_phase:
         try:
