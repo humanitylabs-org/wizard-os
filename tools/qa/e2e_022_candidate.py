@@ -88,6 +88,8 @@ printf '\\nIMAGE DIGESTS\\n'
 sudo docker image inspect $(sudo docker image ls -q | sort -u) --format '{{json .RepoDigests}}'
 printf '\\nINSTALLED SOURCE\\n'
 git -C "$HOME/wizard-app-manager" rev-parse HEAD
+printf '\\nPRIVATE MANAGER ERROR LOG\\n'
+sudo test ! -f "$HOME/runtipi/logs/error.log" || sudo cat "$HOME/runtipi/logs/error.log"
 '''
         run('readback', ['limactl', 'shell', '--workdir=/', a.vm, '--', 'bash', '-s'], readback, 60)
         return rc
