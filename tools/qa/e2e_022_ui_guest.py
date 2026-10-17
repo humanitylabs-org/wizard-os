@@ -277,10 +277,14 @@ def main():
         if needed:
             run(['sudo', '-n', 'apt-get', 'update', '-qq'], timeout=300)
             run(['sudo', '-n', 'env', 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', '-qq', *needed], timeout=600)
-        target = c.runtipi_root / 'media/Videos' / run_id
-        run(['sudo', '-n', 'mkdir', '-p', target])
-        run(['sudo', '-n', 'chown', f'{os.getuid()}:{os.getgid()}', target])
-        run(['chmod', '755', target])
+        videos = c.runtipi_root / 'media/Videos'
+        # Do not let the private evidence umask create an unreadable root-owned
+        # Videos parent on a fresh guest. Preserve an existing owner's directory.
+        if not videos.exists():
+            run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), videos])
+        target = videos / run_id
+        require(not target.exists(), 'synthetic target already exists')
+        run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), target])
         wav = work / 'synthetic-speech.wav'
         run(['espeak-ng', '-s', '165', '-w', wav, SPEECH])
         with wave.open(str(wav)) as w:
