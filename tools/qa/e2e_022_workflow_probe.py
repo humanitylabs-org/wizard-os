@@ -12,10 +12,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path.home() / 'wizard-app-manager'))
 from wam.cli import Config
 c = Config()
-rt = c.runtipi()
 deadline = time.monotonic() + 180
 while True:
     try:
+        rt = c.runtipi()  # Creating the client also probes the operator endpoint.
         rt.req('GET', '/marketplace/all')
         print('APP_MANAGER_READY', flush=True)
         break
