@@ -23,7 +23,7 @@ import time
 
 HERMES_SHA = 'bebe448a2bdb57043ca8ebd820807bf7eed6320d'
 HERMES_REPO = 'https://github.com/NousResearch/hermes-agent.git'
-CANDIDATE_SHA = '2fb67c714c0c85be49d12e37e8a556d25cd23bba'
+CANDIDATE_SHA = 'f3d96643fc80c82f623b3ce76f98f0d2378de805'
 PLUGIN_SHA = 'eac2ea0fe8f81b2b1f8a1eb0217b7d3cfcd77764'
 GUEST_DIR = '.alongside-022-qa'
 # Owner documents/config only; runtime DBs/logs/caches are intentionally not immutable.
@@ -321,7 +321,15 @@ def guest(phase):
         checked(['git', 'clone', '-q', 'https://github.com/humanitylabs-org/wizard-app-manager.git', home / 'wam-candidate'], timeout=600)
         checked(['git', '-C', home / 'wam-candidate', 'checkout', '--detach', CANDIDATE_SHA])
         require(output(['git', '-C', home / 'wam-candidate', 'rev-parse', 'HEAD']) == CANDIDATE_SHA, 'wrong candidate source')
-    elif phase == 'install':
+    elif phase in ('install', 'resume-install'):
+        if phase == 'resume-install':
+            require(not (home / '.wizard-os/linked.json').exists(), 'refuse install recovery after linking')
+            verify_original(h, evidence, 'before-install-recovery')
+            old = home / 'candidate-022-evidence'
+            saved = home / 'candidate-022-evidence-before-index-permissions'
+            require(old.is_dir() and not saved.exists(), 'missing or already preserved prior candidate evidence')
+            old.rename(saved)
+        require(output(['git', '-C', home / 'wam-candidate', 'rev-parse', 'HEAD']) == CANDIDATE_SHA, 'candidate checkout changed')
         # Unchanged helper drives ordinary get.sh/install.sh; no override of core image pins.
         checked([sys.executable, home / 'wam-candidate/scripts/qa-release-candidate.py',
                  '--manifest', home / 'wam-candidate/releases/0.2.2.json',
@@ -377,7 +385,7 @@ def host(args):
     if args.arch == 'x86_64':
         require(shutil.which('qemu-system-x86_64', path=env['PATH']) is not None,
                 'x86_64 needs QEMU preinstalled by the build-host owner')
-    require((root / 'lima' / vm).exists() == args.resume_provision,
+    require((root / 'lima' / vm).exists() == (args.resume_provision or args.resume_install),
             'existing guest requires explicit dependency-only resume; new run requires absence')
     os.umask(0o077)
     evidence = root / 'evidence' / ('alongside-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
@@ -422,7 +430,7 @@ def host(args):
         machine = ['--arch=aarch64', '--memory=6', '--vm-type=vz', '--rosetta'] if args.arch == 'aarch64' else [
             '--arch=x86_64', '--memory=8', '--vm-type=qemu']
         receipt['arch'] = args.arch
-        rc = 0 if args.resume_provision else run('create', ['limactl', 'create', '--tty=false', '--name=' + vm,
+        rc = 0 if (args.resume_provision or args.resume_install) else run('create', ['limactl', 'create', '--tty=false', '--name=' + vm,
                  '--cpus=4', '--disk=60', *machine,
                  '--mount-none', '--containerd=none', '--set=.portForwards = ' + json.dumps(forwards),
                  'template://ubuntu-24.04'], timeout=1200)
@@ -434,10 +442,13 @@ def host(args):
             stage = "from pathlib import Path; import sys; p=Path.home()/'.alongside-022-qa'; p.mkdir(mode=0o700); (p/'owned-guest').write_text('alongside-022'); (p/'runner.py').write_bytes(sys.stdin.buffer.read())"
             if args.resume_provision:
                 stage = "from pathlib import Path; import sys; p=Path.home()/'.alongside-022-qa'; assert (p/'owned-guest').read_text() == 'alongside-022'; assert not (p/'evidence/before').exists(); assert not (p/'evidence/installer-originals').exists(); (p/'runner.py').write_bytes(sys.stdin.buffer.read())"
+            elif args.resume_install:
+                stage = "from pathlib import Path; import sys,subprocess; p=Path.home()/'.alongside-022-qa'; assert (p/'owned-guest').read_text() == 'alongside-022'; assert (p/'evidence/before/inventory.json').is_file(); (p/'runner.py').write_bytes(sys.stdin.buffer.read()); repo=Path.home()/'wam-candidate'; subprocess.run(['git','-C',str(repo),'fetch','origin','integration/e2e-022-bootstrap'],check=True); subprocess.run(['git','-C',str(repo),'checkout','--detach','" + CANDIDATE_SHA + "'],check=True)"
             rc = run('stage', shell + ['python3', '-c', stage], source.read_bytes())
         if rc == 0:
             provision = 'resume-provision' if args.resume_provision else 'provision'
-            for phase, timeout in [(provision, 4800), ('install', 7500), ('linked', 900), ('unlink', 900), ('relink', 900)]:
+            phases = [('resume-install', 7500)] if args.resume_install else [(provision, 4800), ('install', 7500)]
+            for phase, timeout in phases + [('linked', 900), ('unlink', 900), ('relink', 900)]:
                 guest_cmd = ['bash', '-c', 'exec python3 "$HOME/.alongside-022-qa/runner.py" --guest-phase "$1"', '--', phase]
                 rc = run(phase, shell + guest_cmd, timeout=timeout)
                 if rc:
@@ -484,8 +495,11 @@ def main():
     p.add_argument('--arch', choices=('aarch64', 'x86_64'), default='aarch64',
                    help='x86_64 uses QEMU/8 GiB; no Rosetta; not DeFleur acceptance')
     p.add_argument('--resume-provision', action='store_true', help='retry failed stock dependencies in the owned guest before any owner baseline exists')
-    p.add_argument('--guest-phase', choices=('provision', 'resume-provision', 'install', 'linked', 'unlink', 'relink', 'ready'), help=argparse.SUPPRESS)
+    p.add_argument('--resume-install', action='store_true', help='retry verified pre-link installer failure with original owner baseline intact')
+    p.add_argument('--guest-phase', choices=('provision', 'resume-provision', 'install', 'resume-install', 'linked', 'unlink', 'relink', 'ready'), help=argparse.SUPPRESS)
     args = p.parse_args()
+    if args.resume_provision and args.resume_install:
+        p.error('choose only one recovery phase')
     if args.guest_phase:
         try:
             guest(args.guest_phase)
