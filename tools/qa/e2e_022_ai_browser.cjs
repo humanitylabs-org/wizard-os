@@ -18,6 +18,10 @@ const {execFileSync} = require('node:child_process');
 
 const MODEL = 'claude-opus-5-5';
 const MODEL_ALIASES = new Set([MODEL, MODEL + '[1m]']);
+// Claude Opus 5.5 as the installed catalogue names it: the DirectSDK plugin collapses opus/opus[1m]
+// onto the 1M route id, so the exact catalogue id is chosen at runtime (plain id preferred if offered).
+let routeModel = MODEL;
+const pickRouteId = values => values.includes(MODEL) ? MODEL : values.includes(MODEL + '[1m]') ? MODEL + '[1m]' : '';
 const PROVIDER = 'claude-subscription-directsdk-experimental';
 const READY_PROMPT = 'Reply with exactly the word READY.';
 const ANSWER = 'Trim the pauses and add captions, then save it to my Files.';
@@ -27,7 +31,7 @@ const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted', 'ex
 const [modulePath, origin, shellPath, evidence, runId, phase, rawCfg] = process.argv.slice(2);
 const cfg = JSON.parse(rawCfg || '{}');
 const {chromium} = require(modulePath);
-const report = {phase, runId, stages: [], requests: [], blockedExternalRequests: 0, blockedAccountsNavigations: [],
+const report = {phase, runId, stages: [], requests: [], postPaths: [], blockedExternalRequests: 0, blockedAccountsNavigations: [],
   authStatuses: [], screenshotsSkipped: [], status: 'fail'};
 const receiptFile = path.join(evidence, `browser-${phase}.json`);
 const save = () => fs.writeFileSync(receiptFile, JSON.stringify(report, null, 2), {mode: 0o600});
@@ -99,6 +103,7 @@ function guestProbe(cmd) {
     page.on('response', r => { if ([401, 403].includes(r.status())) report.authStatuses.push({path: safePath(r.url()), status: r.status()}); });
     page.on('request', req => {
       const p = safePath(req.url());
+      if (req.method() === 'POST' && /^\/wizard\//.test(p)) report.postPaths.push({at: now(), device, path: p});
       if (req.method() !== 'POST' || !/^\/wizard\/hermes\/(api\/sessions(\/[^/]+\/model)?|v1\/runs(\/[^/]+\/steer)?)$/.test(p)) return;
       let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch {}
       const row = {at: now(), device, path: p, body: pick(body, ['id', 'session_id', 'model', 'provider', 'require_model_lock', 'source'])};
@@ -184,18 +189,21 @@ function guestProbe(cmd) {
     const openSheet = async () => {
       await chip.click({timeout: 10000});
       await page.locator('.ch-msheet:visible').first().waitFor({state: 'visible', timeout: 10000});
-      await page.waitForFunction(() => window.WosModels?.ready, null, {timeout: 30000});
+      // The catalogue comes from the account's own Claude CLI handshake; slow under emulation.
+      await page.waitForFunction(() => window.WosModels?.ready, null, {timeout: 240000});
       await delay(400);
     };
     await openSheet();
     row.screenshots.push(await shot(page, `${b.device}-${row.stage}-model-sheet`));
-    const catalogue = await page.evaluate(([m, p]) => ({
+    const catalogue = await page.evaluate(p => ({
       ready: !!window.WosModels?.ready,
-      matching: (window.WosModels?.options || []).filter(o => o.value === m && o.provider === p).length,
+      subscriptionIds: (window.WosModels?.options || []).filter(o => o.provider === p).map(o => o.value),
       providers: [...new Set((window.WosModels?.options || []).map(o => o.provider))],
-    }), [MODEL, PROVIDER]);
+    }), PROVIDER);
+    routeModel = pickRouteId(catalogue.subscriptionIds);
+    catalogue.chosen = routeModel;
     row.catalogue = catalogue;
-    check(catalogue.matching === 1, 'Claude Opus 5.5 on the Claude subscription is not in the installed model catalogue');
+    check(routeModel, 'Claude Opus 5.5 on the Claude subscription is not in the installed model catalogue');
     // 1) the short list: a single "Claude Opus · Claude subscription" row
     const rows = page.locator('.ch-msheet [data-mpick]');
     const labels = await rows.evaluateAll(xs => xs.map(x => x.innerText.replace(/\s+/g, ' ').trim()));
@@ -206,14 +214,14 @@ function guestProbe(cmd) {
     if (idx >= 0) steps.push('short-list:' + await activate(page, rows.nth(idx), row, 'short-list row'));
     const chipModel = async () => (await chip.getAttribute('title')) || '';
     await delay(800);
-    if (idx < 0 || await chipModel() !== MODEL) {
+    if (idx < 0 || await chipModel() !== routeModel) {
       // 2) "More models": the full catalogue, in WosModels.options order (sheetHtml: all -> M.options).
       if (idx >= 0) { row.shortListPicked = await chipModel(); await openSheet(); }
       const more = page.locator('.ch-msheet [data-mall]');
       check(await visible(more), 'picker has no matching row and no More models');
       steps.push('more-models:' + await activate(page, more, row, 'More models'));
       await delay(600);
-      idx = await page.evaluate(([m, p]) => window.WosModels.options.findIndex(o => o.value === m && o.provider === p), [MODEL, PROVIDER]);
+      idx = await page.evaluate(([m, p]) => window.WosModels.options.findIndex(o => o.value === m && o.provider === p), [routeModel, PROVIDER]);
       check(idx >= 0, 'full catalogue lacks the required route');
       const exact = page.locator(`.ch-msheet [data-mpick="${idx}"]`);
       check(await visible(exact), 'full catalogue row not rendered');
@@ -223,7 +231,7 @@ function guestProbe(cmd) {
     }
     row.pickerSteps = steps;
     row.modelChip = {title: await chipModel(), label: clip(await chip.innerText(), 60), aria: clip(await chip.getAttribute('aria-label'), 120)};
-    check(row.modelChip.title === MODEL, 'model chip does not show claude-opus-5-5 after picking');
+    check(row.modelChip.title === routeModel, 'model chip does not show Claude Opus 5.5 after picking');
     return {method: 'ui-picker', via, labels};
   }
 
@@ -231,13 +239,13 @@ function guestProbe(cmd) {
   async function pickModelRoute(b, row) {
     const sid = `wizard_${Date.now()}_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`;
     const H = {'Content-Type': 'application/json', Origin: origin};
-    const c = await b.page.request.post(origin + '/wizard/hermes/api/sessions', {headers: H, data: {source: 'wizard-mobile', id: sid, model: MODEL, provider: PROVIDER}});
+    const c = await b.page.request.post(origin + '/wizard/hermes/api/sessions', {headers: H, data: {source: 'wizard-mobile', id: sid, model: routeModel, provider: PROVIDER}});
     check(c.ok() || c.status() === 409, `session create -> ${c.status()}`);
-    const r = await b.page.request.post(origin + `/wizard/hermes/api/sessions/${sid}/model`, {headers: H, data: {model: MODEL, provider: PROVIDER, require_model_lock: true}});
+    const r = await b.page.request.post(origin + `/wizard/hermes/api/sessions/${sid}/model`, {headers: H, data: {model: routeModel, provider: PROVIDER, require_model_lock: true}});
     check(r.ok(), `model route -> ${r.status()}`);
     const ack = await r.json();
     row.routeAck = pick(ack.runtime || {}, ['model', 'provider', 'model_lock', 'selection_version']);
-    check(ack.runtime?.model_lock === 'accepted' && ack.runtime?.model === MODEL && ack.runtime?.provider === PROVIDER, 'service did not confirm model lock');
+    check(ack.runtime?.model_lock === 'accepted' && MODEL_ALIASES.has(ack.runtime?.model) && ack.runtime?.provider === PROVIDER, 'service did not confirm model lock');
     await b.page.goto(b.root + '?session=' + encodeURIComponent(sid), {waitUntil: 'domcontentloaded'});
     await delay(2500);
     await b.page.locator('.ch-compose textarea:visible').first().waitFor({state: 'visible', timeout: 15000});
@@ -259,6 +267,13 @@ function guestProbe(cmd) {
     await ta.click(); await ta.fill(message); await delay(200);
     const row = report.stages[report.stages.length - 1] || {};
     row.sendActivation = await activate(b.page, b.page.locator('button.ch-send:visible'), row, 'Send');
+    await delay(2500);
+    // What the owner sees right after Send (toast, list, thread): diagnostic only.
+    row.screenshots.push(await shot(b.page, `${b.device}-${row.stage}-after-send`));
+    row.afterSend = await b.page.evaluate(() => ({
+      toast: (document.querySelector('.toast, [role=status]')?.innerText || '').slice(0, 160),
+      composerEmpty: !(document.querySelector('.ch-compose textarea')?.value || ''),
+    })).catch(() => null);
   }
 
   // Wait for the outbox's real POSTs: the new session id and its run receipt.
