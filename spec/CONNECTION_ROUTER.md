@@ -113,7 +113,7 @@ The app shows the model that answered ("Answered by Sonnet 5"). Errors use the A
 1. `GET /api/connection` gains `models: [{id, label, tier, abilities, context}]`. Readers of `/1` ignore it.
 2. `POST /api/infer`: one isolated call. No memory, no persona, no tools except the requested abilities the model supports; returns the same event stream and the effective model the provider reported. Only the router may call it (grant from `connection-router`).
 
-For Claude this is the pattern Wisdom's helper service already runs: `claude -p` with its own config directory and the app's own sign-in. For ChatGPT, see open question 1.
+For Claude this is the pattern Wisdom's helper service already runs: `claude -p` with its own config directory and the app's own sign-in. For ChatGPT it forwards to a raw-inference route in the `wizard-os` Hermes plugin, so Hermes stays the only holder of the ChatGPT login (open question 1).
 
 ## Exporting an app
 
@@ -131,6 +131,6 @@ An app that talks only to the router can run outside Wizard OS. A small stand-in
 
 ## Open questions
 
-1. **ChatGPT sign-in.** ChatGPT refresh tokens are single-use, and Hermes owns today's login. The ChatGPT app either holds its own separate sign-in or asks Hermes to make the call. A spike is deciding; this section will record the answer.
+1. **ChatGPT sign-in: settled (spike, 18 Oct).** ChatGPT stays one login, owned by Hermes, so the owner never signs in twice and no refresh token is copied. The ChatGPT app's `/api/infer` forwards to a new raw-inference route in the `wizard-os` Hermes plugin, next to the existing `/ai-usage/chatgpt` route that already lets the app show usage without holding a token. The route calls the provider directly with the app's messages only: no agent, persona, memory, skills, session record or tools; a pinned model allowlist; fail closed. Hermes' agent API (`/v1/chat/completions`, `/v1/responses`) is not usable for this, because it always runs the full agent with tools and memory. A second independent Codex CLI login stays a fallback only: it needs a phone approval and `codex exec` is a coding agent with tools, not a plain model call.
 2. **Until PR #6 lands**, grants are not enforced on the box. The router accepts calls from apps on its network and checks `X-Wizard-Grant` in report-only mode, the same rollout PR #6 proposes.
 3. **Cost and quota.** Subscription quotas are shared with the owner's own agent use. The router should show per-app usage and let the owner cap an app; shape to follow the first real usage data.

@@ -11,7 +11,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 ## Connection Router (Archimedes; DECISIONS #65, [CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
 
 - [ ] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider.
-- [ ] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT once the sign-in question is settled.
+- [ ] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT through a raw-inference route in the `wizard-os` Hermes plugin (no second login).
 - [ ] **Shell**: install sheet (connect the recommended provider or approve a swap) and per-app "Models and connections".
 - [ ] **Wisdom first adopter**: ask = standard, lookup = fast, author = frontier `swap: never`; its helper service retires.
 - [ ] **Acceptance on Thales**: Claude only, ChatGPT only, both, neither.
