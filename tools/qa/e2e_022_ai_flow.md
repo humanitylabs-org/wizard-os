@@ -143,7 +143,7 @@ Both jobs use cwd:
 ```sh
 /opt/homebrew/bin/python3 tools/qa/e2e_022_signin_window.py hold \
   --root /Volumes/ThalesMedia/wizard-os/e2e-022 \
-  --vm alongside-022-amd64 --guest-port 8797 \
+  --vm alongside-022-amd64 --guest-port 18797 \
   --node /opt/homebrew/bin/node \
   --playwright /Volumes/ThalesMedia/wizard-manager/qa/node_modules/playwright \
   --https-port 18449 --relay-port 18450 --tunnel-port 18451 --minutes 90
@@ -151,7 +151,7 @@ Both jobs use cwd:
 
 This is a local copy of the audited sign-in runner, **not a modification of
 os-runner**. Guest port defaults to 8795 for the existing package page; alongside
-requires 8797 and `hold`. The relay's owner identity check, path/header allowlists,
+requires 18797 and `hold`. The relay's owner identity check, path/header allowlists,
 non-body/query/cookie logging, handler ownership check, Serve snapshot comparison
 and single-handler removal are unchanged (unit tests fingerprint their ASTs).
 443, 8447 and 8847 are explicitly forbidden as the test HTTPS port. There is no
@@ -200,7 +200,7 @@ interactive sign-in window and does not capture the OAuth code/login form.
 reads its local image `RepoDigests`, requires AMD64 and uses that immutable
 `sha256:<image-id>` with `--pull=never`. It **never pulls a new tag**. Its container
 is `e2e-alongside-host-claude`, `--rm --user <uid>:<gid> --read-only --tmpfs /tmp`,
-with `/home/<owner>/.claude:/claude` and only `127.0.0.1:8797:8795` published.
+with `/home/<owner>/.claude:/claude` and only `127.0.0.1:18797:8795` published.
 The owner directory is created 0700 and its ownership checked, never populated
 from another account/store. `--stop` removes only that name with this runner's
 ownership label. Docker uses the normal socket or `sudo -n docker` fallback.

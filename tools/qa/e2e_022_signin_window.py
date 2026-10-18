@@ -246,9 +246,9 @@ def run_window(a):
     assert a.https_port not in (443, 8447, 8847), 'production Serve ports are forbidden'
     assert all(1024 <= p <= 65535 for p in (a.https_port, a.relay_port, a.tunnel_port))
     assert len({a.https_port, a.relay_port, a.tunnel_port}) == 3
-    host_page = a.vm == owner_claude.VM and a.guest_port == 8797
-    assert a.vm != owner_claude.VM or host_page, 'alongside sign-in requires --guest-port 8797'
-    assert a.guest_port == 8795 or host_page, 'port 8797 is alongside-owner only'
+    host_page = a.vm == owner_claude.VM and a.guest_port == 18797
+    assert a.vm != owner_claude.VM or host_page, 'alongside sign-in requires --guest-port 18797'
+    assert a.guest_port == 8795 or host_page, 'port 18797 is alongside-owner only'
     root = a.root.resolve()
     assert str(root).startswith('/Volumes/ThalesMedia/'), 'window state belongs on the media volume'
     os.umask(0o077)
@@ -377,7 +377,7 @@ def parser():
         o = sub.add_parser(name)
         o.add_argument('--root', type=Path, required=True)
         o.add_argument('--vm', choices=VMS, required=True)
-        o.add_argument('--guest-port', type=int, choices=(8795, 8797), default=GUEST_PORT)
+        o.add_argument('--guest-port', type=int, choices=(8795, 18797), default=GUEST_PORT)
         o.add_argument('--node', default='/opt/homebrew/bin/node')
         o.add_argument('--playwright', required=True, help='path to an installed playwright module')
         o.add_argument('--https-port', type=int, default=18449)

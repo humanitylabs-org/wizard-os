@@ -186,7 +186,7 @@ class AlongsideClaudeTests(unittest.TestCase):
                     '--read-only', '--tmpfs', '/tmp', '--label', c.LABEL,
                     '-e', 'AI_ACCOUNTS_CLAUDE_DIR=/claude', '-e', 'AI_ACCOUNTS_BIND=0.0.0.0',
                     '-e', 'AI_ACCOUNTS_PORT=8795', '-v', '/home/owner/.claude:/claude',
-                    '-p', '127.0.0.1:8797:8795', '--name', c.NAME, image]
+                    '-p', '127.0.0.1:18797:8795', '--name', c.NAME, image]
         self.assertEqual(c.container_argv(['sudo', '-n', 'docker'], Path('/home/owner'), 501, 20, image), expected)
         with self.assertRaises(c.CheckError):
             c.container_argv(['docker'], Path('/home/owner'), 501, 20, 'latest')
@@ -208,7 +208,7 @@ class AlongsideClaudeTests(unittest.TestCase):
         base = ['hold', '--root', '/Volumes/ThalesMedia/wizard-os/e2e-022',
                 '--vm', 'alongside-022-amd64', '--playwright', '/installed/playwright']
         self.assertEqual(w.parser().parse_args(base).guest_port, 8795)
-        self.assertEqual(w.parser().parse_args(base + ['--guest-port', '8797']).guest_port, 8797)
+        self.assertEqual(w.parser().parse_args(base + ['--guest-port', '18797']).guest_port, 18797)
         # Audited os-runner original: AST fingerprints exclude whitespace only.
         expected = {
             'Relay': '4eb300c11ece3f1858af352309862d8f40ef397c33638aa4733ddf060692b540',

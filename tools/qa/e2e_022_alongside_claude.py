@@ -229,7 +229,7 @@ def container_argv(docker, home, uid, gid, image):
             '--read-only', '--tmpfs', '/tmp', '--label', LABEL,
             '-e', 'AI_ACCOUNTS_CLAUDE_DIR=/claude', '-e', 'AI_ACCOUNTS_BIND=0.0.0.0',
             '-e', 'AI_ACCOUNTS_PORT=8795', '-v', f'{home}/.claude:/claude',
-            '-p', '127.0.0.1:8797:8795', '--name', NAME, image]
+            '-p', '127.0.0.1:18797:8795', '--name', NAME, image]
 
 
 def docker_prefix():
@@ -269,6 +269,9 @@ def signin_page(home, stop=False):
     ds = json.loads(run([*docker, 'image', 'inspect', '--format', '{{json .RepoDigests}}', image]).stdout)
     require(ds and all('@sha256:' in d for d in ds), 'AI Accounts local image has no RepoDigest')
     require(run([*docker, 'image', 'inspect', '--format', '{{.Architecture}}', image]).stdout.strip() == 'amd64', 'AI Accounts architecture drift')
+    # The alongside shell runs on the host network (8787-8797 range), so the page uses a high test port.
+    held = subprocess.run(['sh', '-c', "ss -Hltn 'sport = :18797' | wc -l"], capture_output=True, text=True).stdout.strip()
+    require(held == '0', 'guest port 18797 is already in use')
     argv = container_argv(docker, home, os.getuid(), os.getgid(), image)
     started = run(argv, check=False)
     # docker's own error text carries no secrets (only fixed AI_ACCOUNTS_* settings are passed).
@@ -278,10 +281,10 @@ def signin_page(home, stop=False):
     running, observed, user, ports, mounts, readonly = [json.loads(v) for v in raw.strip().split('\t')]
     require(running and observed == image and user == f'{os.getuid()}:{os.getgid()}' and readonly,
             'one-shot container identity mismatch')
-    require(ports == {'8795/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '8797'}]}, 'one-shot port exposure mismatch')
+    require(ports == {'8795/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '18797'}]}, 'one-shot port exposure mismatch')
     require(any(m['Source'] == str(claude_dir) and m['Destination'] == '/claude' and m['RW'] for m in mounts), 'owner Claude mount mismatch')
     return {'name': NAME, 'source_engine': engines[0], 'image_id': image, 'repo_digests': ds,
-            'uid': os.getuid(), 'gid': os.getgid(), 'guest_port': 8797, 'running': True}
+            'uid': os.getuid(), 'gid': os.getgid(), 'guest_port': 18797, 'running': True}
 
 
 def status_payload(data):
