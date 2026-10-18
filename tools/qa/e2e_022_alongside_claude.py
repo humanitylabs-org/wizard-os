@@ -111,9 +111,18 @@ def link_info(home):
     # Journal contains public config edits and hashes, not the gateway credential.
     rec = json.loads((home / '.wizard-os/linked.json').read_text())
     require(Path(rec['hermes_home']) == home / '.hermes', 'link belongs to another Hermes home')
+    ref = rec.get('plugin_ref')
+    if not ref and rec.get('linked'):
+        # Older wizard journals omit plugin_ref; native plugin install metadata
+        # still records the exact pin. Do not fall back to main/a new revision.
+        meta_path = home / '.hermes/plugins/.install-metadata.json'
+        meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+        entry = meta.get('wizard-os') or {}
+        if entry.get('pinned') is True:
+            ref = entry.get('revision')
     return {'linked': rec.get('linked') is True,
             'baseline': {'config.yaml': rec.get('config_sha_before'), '.env': rec.get('env_sha_before')},
-            'plugin_ref': rec.get('plugin_ref')}
+            'plugin_ref': ref}
 
 
 def wizard(home, command, plugin_ref=None):
@@ -191,6 +200,8 @@ def setup(home):
         # An unset list is normal on a stock installation. Read only this public key.
         p = run([home / '.local/bin/hermes', 'config', 'get', 'plugins.enabled', '--json'],
                 env=owner_env(home), check=False)
+        require(p.returncode == 0 or 'Config key not set: plugins.enabled' in p.stdout + p.stderr,
+                'could not read plugins.enabled through Hermes CLI')
         enabled = json.loads(p.stdout) if p.returncode == 0 else []
         require(isinstance(enabled, list), 'plugins.enabled is not a list')
         if PLUGIN_NAME not in enabled:

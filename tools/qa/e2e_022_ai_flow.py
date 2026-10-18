@@ -30,7 +30,7 @@ import time
 
 GUESTS = ('fresh-022-candidate-amd64', 'alongside-022-amd64')
 HERE = Path(__file__).resolve().parent
-SOURCES = ('e2e_022_ai_flow.py', 'e2e_022_ai_guest.py', 'e2e_022_ai_browser.cjs')
+SOURCES = ('e2e_022_ai_flow.py', 'e2e_022_ai_guest.py', 'e2e_022_ai_browser.cjs', 'e2e_022_alongside_claude.py')
 MODEL = 'claude-opus-5-5'
 PROVIDER = 'claude-subscription-directsdk-experimental'
 PREFLIGHT_REQUIRED = ('marketplace-ready', 'ai-accounts-status-connected', 'defleur-installed-pinned',
@@ -128,17 +128,23 @@ def session_ok(row, final_stages):
     return bool(rec) and rec.get('billing_provider') == PROVIDER and rec.get('model') in (MODEL, MODEL + '[1m]')
 
 
-def verdicts(pre, browser, final, files):
+def preflight_required(vm):
+    return tuple(k for k in PREFLIGHT_REQUIRED if k != 'agent-link' or vm != GUESTS[1])
+
+
+def verdicts(pre, browser, final, files, vm=GUESTS[0]):
     """Pure: step verdicts from the three guest/browser receipts (unit tested)."""
     pre_s, fin_s = stage_map(pre), stage_map(final)
     stages = {s['stage']: s for s in (browser or {}).get('stages', [])}
     chat, df = stages.get('chat-ready', {}), stages.get('defleur-edit', {})
     out = {}
-    out['0-preflight'] = {'pass': all(pre_s.get(k, {}).get('status') == 'pass' for k in PREFLIGHT_REQUIRED),
-                          'stages': {k: pre_s.get(k, {}).get('status', 'missing') for k in PREFLIGHT_REQUIRED}}
+    required = preflight_required(vm)
+    out['0-preflight'] = {'pass': all(pre_s.get(k, {}).get('status') == 'pass' for k in required),
+                          'stages': {k: pre_s.get(k, {}).get('status', 'missing') for k in required}}
     images = (pre_s.get('image-digests-readback') or {}).get('result') or {}
-    out['0-image-digests'] = {'pass': bool(images.get('hermes_digest_match')) and not images.get('missing'),
-                              'hermes_digest_match': images.get('hermes_digest_match'), 'missing': images.get('missing')}
+    identity_key = 'hermes_source_match' if vm == GUESTS[1] else 'hermes_digest_match'
+    out['0-image-digests'] = {'pass': bool(images.get(identity_key)) and not images.get('missing'),
+                              identity_key: images.get(identity_key), 'missing': images.get('missing')}
     out['1-chat'] = {'pass': chat.get('status') == 'pass' and session_ok(chat.get('session'), fin_s) and model_ok(chat.get('runBody')),
                      'model_selection': (chat.get('modelSelection') or {}).get('method'),
                      'session_model': pick(chat.get('session'), ('model', 'provider')),
@@ -162,6 +168,10 @@ def verdicts(pre, browser, final, files):
     out['5-accounts-page-never-opened'] = {'pass': browser is not None and not (browser or {}).get('blockedAccountsNavigations') and
                                            not (browser or {}).get('screenshotsSkipped'),
                                            'status_api': ((pre_s.get('ai-accounts-status-connected') or {}).get('result'))}
+    if vm == GUESTS[1]:
+        unlink = fin_s.get('alongside-unlink') or {}
+        out['6-alongside-unlink'] = {'pass': unlink.get('status') == 'pass',
+                                     'result': unlink.get('result'), 'reason': unlink.get('reason')}
     return out
 
 
@@ -234,8 +244,18 @@ def main():
         save(receipt_file, receipt)
         return rc, out
 
-    guest_argv = ['limactl', 'shell', '--workdir=/', vm, '--', 'python3', '-']
+    guest_argv = ['limactl', 'shell', '--workdir=/', vm, '--', 'env', 'E2E_022_VM=' + vm, 'python3', '-']
     guest_src = (HERE / 'e2e_022_ai_guest.py').read_text()
+    if vm == GUESTS[1]:
+        # Embed public helper source for stdin execution and browser probes; no guest import-path assumptions.
+        helper = (HERE / 'e2e_022_alongside_claude.py').read_text()
+        guest_src = ('import sys, types\n'
+                     '_m = types.ModuleType("e2e_022_alongside_claude")\n'
+                     'sys.modules[_m.__name__] = _m\n'
+                     'exec(' + repr(helper) + ', _m.__dict__)\n') + guest_src
+    probe_script = evidence / 'guest-source.py'
+    probe_script.write_text(guest_src)
+    probe_script.chmod(0o600)
 
     def guest(cmd, timeout, extra=None):
         # Extra args travel base64url-encoded: limactl shell re-joins argv through a remote shell.
@@ -267,7 +287,7 @@ def main():
         pre = guest('preflight', 3600)
         receipt['images'] = (stage_map(pre).get('image-digests-readback') or {}).get('result')
         receipt['clip'] = (stage_map(pre).get('synthetic-source-clip') or {}).get('result')
-        failed = [k for k in PREFLIGHT_REQUIRED if stage_map(pre).get(k, {}).get('status') != 'pass']
+        failed = [k for k in preflight_required(vm) if stage_map(pre).get(k, {}).get('status') != 'pass']
         require(not failed, 'preflight failed: ' + ', '.join(failed))
         target = pre.get('browser_target') or {}
         port = target.get('guest_port')
@@ -323,7 +343,7 @@ def main():
         wait_s = args.wait_minutes * 60
         browser_cfg = {'message': message, 'waitSeconds': wait_s, 'pollSeconds': args.poll_seconds,
                        'idleGraceSeconds': args.idle_grace_minutes * 60,
-                       'probe': {'argv': guest_argv, 'script': str(HERE / 'e2e_022_ai_guest.py')}}
+                       'probe': {'argv': guest_argv, 'script': str(probe_script)}}
         rc, _ = command('browser-ai', [args.node, HERE / 'e2e_022_ai_browser.cjs', args.playwright_module.resolve(), origin,
                                        target['path'], evidence, run_id, 'ai', json.dumps(browser_cfg)], wait_s + 2400)
         bp = evidence / 'browser-ai.json'
@@ -351,6 +371,15 @@ def main():
     finally:
         terminate(tunnel)
         receipt['cleanup']['tunnel_stopped'] = tunnel is None or tunnel.poll() is not None
+        if started and pre is not None and vm == GUESTS[1]:
+            # Always exercise rollback/relink, including after browser or preflight failure.
+            try:
+                cleanup = guest('alongside-unlink', 2400)
+            except Exception as e:
+                cleanup = {'stages': [{'stage': 'alongside-unlink', 'status': 'fail',
+                                       'reason': type(e).__name__}]}
+            final = final or {'stages': []}
+            final['stages'].extend(cleanup.get('stages', []))
         if started:
             stop_rc, _ = command('stop', ['limactl', 'stop', vm], 300)
             receipt['cleanup']['stop_exit_code'] = stop_rc
@@ -361,7 +390,7 @@ def main():
         states = {r['name']: r.get('status') for r in parse_lima(raw)} if rc == 0 else {}
         receipt['cleanup']['guest_state_after'] = states.get(vm)
         receipt['cleanup']['guest_stopped'] = states.get(vm) == 'Stopped'
-        receipt['steps'] = verdicts(pre, browser, final, files)
+        receipt['steps'] = verdicts(pre, browser, final, files, vm)
         receipt['screenshots'] = {p.name: sha(p) for p in sorted(evidence.glob('*.png'))}
         receipt['status'] = 'pass' if all(v['pass'] for v in receipt['steps'].values()) and \
             receipt['cleanup']['guest_stopped'] and 'error_class' not in receipt else 'fail'

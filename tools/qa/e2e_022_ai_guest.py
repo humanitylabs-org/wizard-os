@@ -11,6 +11,7 @@ stdout is one allowlisted JSON receipt. Never prints raw command output, Docker 
 HTTP bodies, .env values, auth stores, or full config.yaml. Never writes media itself
 except the synthetic SOURCE clip when none can be reused.
 """
+import argparse
 import base64
 import hashlib
 import json
@@ -354,9 +355,12 @@ def get_json(url, timeout=10):
 
 
 class Ctx:
-    def __init__(self, run_id):
+    def __init__(self, run_id, vm='fresh-022-candidate-amd64'):
         require(bool(re.fullmatch(r'ai-flow-[0-9TZ]+', run_id)), 'invalid evidence id')
         self.run_id = run_id
+        require(vm in ('fresh-022-candidate-amd64', 'alongside-022-amd64'), 'unknown VM mode')
+        self.alongside = vm == 'alongside-022-amd64'
+        REPORT['vm'] = vm
         self.home = Path.home()
         self.state = self.home / '.wizard-os'
         self.work = self.home / '.e2e-022-ai-flow' / run_id
@@ -364,7 +368,11 @@ class Ctx:
         from wam.cli import Config
         self.c = Config()
         self.media = self.c.runtipi_root / 'media'
-        self.hermes = self.c.runtipi_root / 'app-data' / 'wizardapps' / 'hermes-agent' / 'data'
+        self.hermes = self.home / '.hermes' if self.alongside else self.c.runtipi_root / 'app-data' / 'wizardapps' / 'hermes-agent' / 'data'
+        if self.alongside:
+            import e2e_022_alongside_claude as owner_claude
+            self.owner_claude = owner_claude
+            owner_claude.owner_guard(self.home)
 
     def registry(self):
         return {a['id']: a for a in json.loads((self.state / 'apps.json').read_text())['apps']}
@@ -410,7 +418,127 @@ def valid_video(info):
     return duration > 0 and any(s.get('codec_type') == 'video' for s in info.get('streams', []))
 
 
+# ---------------------------------------------------------------- alongside owner lifecycle
+
+OWNER_MODEL_SRC = '''
+import json, sys, yaml
+c = yaml.safe_load(open(sys.argv[1])) or {}
+m = c.get('model')
+# Only the two public route fields, never any credential or other model key.
+print(json.dumps({'present': 'model' in c, 'mapping': isinstance(m, dict),
+                  'scalar': m if isinstance(m, str) else None,
+                  'empty': isinstance(m, dict) and not m,
+                  'other_keys_present': isinstance(m, dict) and bool(set(m) - {'provider', 'default'}),
+                  'route_state_present': isinstance(m, dict) and any(m.get(k) not in (None, '') for k in ('base_url', 'api_mode', 'api_base', 'api_key')),
+                  'keys': {k: m[k] for k in ('provider', 'default') if isinstance(m, dict) and k in m}}))
+'''
+
+
+def alongside_default_model(x):
+    c = x.owner_claude
+    setup = json.loads((x.home / '.e2e-022-alongside-claude/setup.json').read_text())
+    require(c.link_info(x.home)['baseline'] == setup['setup_unlinked'], 'link baseline differs from owner setup')
+    before = sudo_py(OWNER_MODEL_SRC, str(x.hermes / 'config.yaml'))
+    require(not before['present'] or before['mapping'] or isinstance(before['scalar'], str),
+            'unsupported model shape; native CLI round-trip is not proven')
+    require(not before['route_state_present'], 'pre-existing model endpoint/credential route cannot be changed by this QA path')
+    require(all(v is None or isinstance(v, str) for v in before['keys'].values()), 'unsupported owner model field type')
+    x.save('owner-model-restore.json', before)  # before the first write, including a partial failure
+    for key, value in (('model.provider', PROVIDER), ('model.default', MODEL)):
+        c.hermes(x.home, 'config', 'set', key, value)
+    after = x.config_model()
+    require(after.get('provider') == PROVIDER and after.get('default') == MODEL, 'owner model readback mismatch')
+    c.hermes(x.home, 'gateway', 'restart')
+    deadline = time.monotonic() + 180
+    while True:
+        try:
+            with urllib.request.urlopen('http://127.0.0.1:8642/health', timeout=5) as r:
+                if r.status == 200:
+                    break
+        except OSError:
+            pass
+        require(time.monotonic() < deadline, 'owner Hermes API did not return after supported restart')
+        time.sleep(3)
+    return {'before': before, 'after': after, 'method': 'owner hermes config set + hermes gateway restart',
+            'setup_unlinked_hashes': setup['setup_unlinked'], 'model_step_linked_hashes': c.hashes(x.home),
+            'restore_at_final_unlink': True}
+
+
+def alongside_apps(x):
+    # Native link configuration plus the registry as read inside Agent Service.
+    src = '''
+import json, sys, yaml
+c = yaml.safe_load(open(sys.argv[1])) or {}
+w = (c.get('mcp_servers') or {}).get('wizard') or {}
+print(json.dumps({'wizard_mcp': '/wizard/mcp' in str(w.get('url', '')),
+                  'skills_external_dirs': (c.get('skills') or {}).get('external_dirs') or [],
+                  'wizard_plugin_enabled': 'wizard-os' in ((c.get('plugins') or {}).get('enabled') or [])}))
+'''
+    cfg = sudo_py(src, str(x.hermes / 'config.yaml'))
+    require(cfg['wizard_mcp'] and cfg['wizard_plugin_enabled'], 'owner Hermes missing wizard link MCP/plugin')
+    require(str(x.state / 'skills') in cfg['skills_external_dirs'], 'owner Hermes missing Wizard external skills')
+    service = [r['name'] for r in containers() if 'wizard-agent-service' in r['name'] and r['status'] == 'running']
+    require(len(service) == 1, 'Agent Service not uniquely running')
+    shared = x.c.runtipi_root / 'app-data/wizard-os/apps.json'
+    mode = run(['sudo', '-n', 'stat', '-c', '%a', shared])
+    if not (int(mode, 8) & 0o004):
+        owner_wam(x, 'apps', '--json', timeout=600)
+    raw = run(['sudo', '-n', 'docker', 'exec', service[0], 'cat', '/wizard-os/apps.json'])
+    ids = [a.get('id') for a in json.loads(raw).get('apps', [])]
+    require(APP_ID in ids, 'DeFleur absent from Agent Service apps.json')
+    return {'host_link': cfg, 'service_app_ids': ids, 'link_method': 'existing wizard link',
+            'agent_link_skipped': 'alongside has no hermes-agent container'}
+
+
+def alongside_unlink(x):
+    c = x.owner_claude
+    setup = json.loads((x.home / '.e2e-022-alongside-claude/setup.json').read_text())
+    info = c.link_info(x.home)
+    require(info['linked'] and info['baseline'] == setup['setup_unlinked'], 'setup baseline changed; refusing destructive rollback')
+    result = {'original_prelink': setup['original_prelink'], 'setup_unlinked': setup['setup_unlinked'],
+              'before_unlink': c.hashes(x.home), 'owner_setup_preserved': False, 'left_linked': False}
+    # QA's temporary global route is restored via native settings commands before
+    # unlink. Session model locks stay recorded. This permits a BYTE comparison to
+    # the setup-only baseline, not an excuse for arbitrary owner/config drift.
+    restore = x.work / 'owner-model-restore.json'
+    if restore.is_file():
+        before = json.loads(restore.read_text())
+        if before['present'] and not before['mapping']:
+            c.hermes(x.home, 'config', 'set', 'model', before['scalar'], '--force')
+        elif before['present']:
+            for key in ('provider', 'default'):
+                if key in before['keys']:
+                    c.hermes(x.home, 'config', 'set', 'model.' + key, json.dumps(before['keys'][key])
+                             if before['keys'][key] is None else str(before['keys'][key]))
+                else:
+                    c.hermes(x.home, 'config', 'unset', 'model.' + key)
+            if before.get('empty'):
+                c.hermes(x.home, 'config', 'set', 'model', '{}', '--force')
+        else:
+            current = sudo_py(OWNER_MODEL_SRC, str(x.hermes / 'config.yaml'))
+            require(not current['other_keys_present'], 'model gained unrelated fields; refusing to remove them')
+            c.hermes(x.home, 'config', 'unset', 'model')
+        result['qa_model_restored'] = True
+    try:
+        result['unlink'] = c.wizard(x.home, 'unlink')
+        result['after_unlink'] = c.hashes(x.home)
+        result['owner_setup_preserved'] = result['after_unlink'] == setup['setup_unlinked']
+        result['equals_original_prelink'] = result['after_unlink'] == setup['original_prelink']
+    finally:
+        if not c.link_info(x.home)['linked']:
+            c.wizard(x.home, 'link', setup['wizard_plugin_ref'])
+        result['after_relink'] = c.hashes(x.home)
+        result['left_linked'] = c.link_info(x.home)['linked']
+        x.save('alongside-unlink.json', result)
+    require(result['owner_setup_preserved'] and result['left_linked'],
+            'unlink did not restore setup-only byte hashes: ' + json.dumps(result))
+    # Read back link's host contract after re-link; don't merely trust exit 0.
+    result['relinked_apps'] = alongside_apps(x)
+    return result
+
+
 # ---------------------------------------------------------------- subcommands
+
 
 def preflight(x):
     x.work.mkdir(parents=True, exist_ok=False)
@@ -420,6 +548,10 @@ def preflight(x):
         return
 
     def accounts():
+        if x.alongside:
+            status = x.owner_claude.status(x.home)
+            require(status['logged_in'], 'owner Claude subscription is not connected')
+            return {'status': 'connected', 'source': 'owner claude auth status', **status}
         # Status API only (GET, guest loopback), read ONCE after it answers. The AI Accounts page is never opened.
         deadline, payload = time.monotonic() + 180, None
         while payload is None and time.monotonic() < deadline:
@@ -476,6 +608,23 @@ def preflight(x):
 
     def digests():
         found = image_digests()
+        if x.alongside:
+            require(not found.get('hermes-agent'), 'alongside unexpectedly has a Hermes container')
+            # Same app image readback; the host Hermes has a source pin, not a Docker digest.
+            setup = json.loads((x.home / '.e2e-022-alongside-claude/setup.json').read_text())
+            require(x.owner_claude.sha(x.home / '.local/bin/claude') == setup['claude']['binary_sha256'], 'owner Claude binary drift')
+            require(all(x.owner_claude.sha(x.hermes / 'plugins' / PROVIDER / n) == d
+                        for n, d in x.owner_claude.PLUGIN_FILES.items()), 'owner DirectSDK plugin drift')
+            stock_repo = x.hermes / 'hermes-agent'
+            stock = run(['git', '-C', stock_repo, 'rev-parse', 'HEAD'])
+            dirty = run(['git', '-C', stock_repo, 'status', '--porcelain', '--untracked-files=no'])
+            remote = run(['git', '-C', stock_repo, 'remote', 'get-url', 'origin'])
+            require(stock == 'bebe448a2bdb57043ca8ebd820807bf7eed6320d' and not dirty
+                    and remote == 'https://github.com/NousResearch/hermes-agent.git', 'stock Hermes source pin/origin/bytes drift')
+            return {'containers': found, 'hermes_kind': 'stock-owner', 'hermes_source_commit': stock,
+                    'hermes_source_match': True, 'hermes_digest_scope': 'not applicable: verified source and add-on pins instead',
+                    'owner_claude': setup['claude'], 'directsdk_ref': x.owner_claude.PLUGIN_REF,
+                    'missing': [k for k in CONTAINER_KEYS if k != 'hermes-agent' and k not in found]}
         hermes = [d for r in found.get('hermes-agent', []) for d in r['repo_digests']]
         return {'containers': found, 'hermes_expected_digest': HERMES_IMAGE_DIGEST,
                 'hermes_digest_match': any(d.endswith('@' + HERMES_IMAGE_DIGEST) for d in hermes),
@@ -543,6 +692,8 @@ def preflight(x):
     stage('hermes-before', before)
 
     def owner_default_model():
+        if x.alongside:
+            return alongside_default_model(x)
         # Stock Hermes v2026.9.24 resolves its global default provider before honouring a
         # per-request model lock, so a fresh box with no default fails every chat ("not connected
         # to any AI provider"). Set exactly the owner's required route through the Hermes app's own
@@ -565,6 +716,8 @@ def preflight(x):
     REPORT['owner_default_model'] = stage('owner-default-model', owner_default_model)
 
     def agent_sees_apps():
+        if x.alongside:
+            return alongside_apps(x)
         # The Agent Service (another uid in its container) must be able to read the shared apps.json,
         # or the agent sees no installed apps at all. An earlier runner installed DeFleur under umask
         # 077, which left that share 0600; regenerate it with the owner's own `wam apps`.
@@ -640,7 +793,8 @@ print(json.dumps({k: (v or {}).get('url') for k, v in (c.get('mcp_servers') or {
         require(rec.get('linked') is True, 'agent-link did not verify the gateway: %s' % json.dumps(rec)[:400])
         require('wizard-job-video-editing' in (rec.get('skills_visible') or []), 'Hermes cannot see the DeFleur pointer skill')
         return {'wam_commit': AGENT_LINK_WAM, **rec}
-    REPORT['agent_link'] = stage('agent-link', agent_link)
+    if not x.alongside:
+        REPORT['agent_link'] = stage('agent-link', agent_link)
 
     def files_writable():
         # DeFleur (uid 1000) saves to Files -> Videos -> Edited. The Files app creates Videos and Videos/Edited as
@@ -753,10 +907,17 @@ def finish():
 
 def main():
     os.umask(0o077)
-    command, run_id = sys.argv[1], sys.argv[2]
-    args = json.loads(base64.urlsafe_b64decode(sys.argv[3].encode())) if len(sys.argv) > 3 else {}
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=('preflight', 'snapshot', 'poll', 'final', 'alongside-unlink'))
+    parser.add_argument('run_id')
+    parser.add_argument('payload', nargs='?')
+    parser.add_argument('--vm', choices=('fresh-022-candidate-amd64', 'alongside-022-amd64'),
+                        default=os.environ.get('E2E_022_VM', 'fresh-022-candidate-amd64'))
+    ns = parser.parse_args()
+    command, run_id = ns.command, ns.run_id
+    args = json.loads(base64.urlsafe_b64decode(ns.payload.encode())) if ns.payload else {}
     REPORT['command'] = command
-    x = Ctx(run_id)
+    x = Ctx(run_id, ns.vm)
     if command == 'preflight':
         preflight(x)
     elif command == 'snapshot':
@@ -765,6 +926,9 @@ def main():
         poll(x)
     elif command == 'final':
         final(x, args)
+    elif command == 'alongside-unlink':
+        require(x.alongside, 'unlink acceptance is alongside-only')
+        stage('alongside-unlink', lambda: alongside_unlink(x))
     else:
         raise CheckError('unknown subcommand')
     finish()

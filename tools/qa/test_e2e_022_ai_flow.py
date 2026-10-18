@@ -222,6 +222,125 @@ class AlongsideClaudeTests(unittest.TestCase):
                  for n in tree.body if isinstance(n, (ast.ClassDef, ast.FunctionDef)) and n.name in expected}
         self.assertEqual(found, expected)
 
+    def test_alongside_stages_and_unlink_are_required(self):
+        required = host.preflight_required('alongside-022-amd64')
+        self.assertNotIn('agent-link', required)
+        self.assertIn('agent-link', host.preflight_required('fresh-022-candidate-amd64'))
+        self.assertEqual(set(required), set(host.PREFLIGHT_REQUIRED) - {'agent-link'})
+        pre = {'stages': [{'stage': k, 'status': 'pass'} for k in required] + [
+            {'stage': 'image-digests-readback', 'status': 'pass',
+             'result': {'hermes_source_match': True, 'missing': []}}]}
+        out = host.verdicts(pre, None, None, None, 'alongside-022-amd64')
+        self.assertTrue(out['0-preflight']['pass'])
+        self.assertTrue(out['0-image-digests']['pass'])
+        self.assertFalse(out['6-alongside-unlink']['pass'])
+        final = {'stages': [{'stage': 'alongside-unlink', 'status': 'pass', 'result': {'left_linked': True}}]}
+        self.assertTrue(host.verdicts(pre, None, final, None, 'alongside-022-amd64')['6-alongside-unlink']['pass'])
+        self.assertFalse(host.verdicts(pre, None, None, None)['0-preflight']['pass'])
+        self.assertFalse(host.verdicts(pre, None, None, None)['0-image-digests']['pass'])
+
+    def test_unlink_compares_setup_bytes_and_relinks_even_on_mismatch(self):
+        import tempfile
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        for match, mapping in ((True, True), (False, True), (True, False), (False, False)):
+            with self.subTest(match=match, mapping=mapping), tempfile.TemporaryDirectory() as td:
+                home = Path(td)
+                work = home / 'work'
+                work.mkdir()
+                state = home / '.e2e-022-alongside-claude'
+                state.mkdir()
+                baseline = {'config.yaml': 'setup-cfg-hash', '.env': 'setup-dotenv-hash'}
+                setup = {'original_prelink': {'config.yaml': 'original-cfg', '.env': 'original-dotenv'},
+                         'setup_unlinked': baseline, 'wizard_plugin_ref': 'a' * 40}
+                (state / 'setup.json').write_text(json.dumps(setup))
+                (work / 'owner-model-restore.json').write_text(json.dumps(
+                    {'present': True, 'mapping': mapping, 'scalar': None if mapping else 'owner-old-model',
+                     'keys': {'default': None} if mapping else {}}))
+                c = Mock()
+                c.link_info.side_effect = [dict(linked=True, baseline=baseline), dict(linked=False), dict(linked=True)]
+                c.hashes.side_effect = [{'config.yaml': 'model-step', '.env': 'linked'},
+                                       baseline if match else {'config.yaml': 'drift', '.env': baseline['.env']},
+                                       {'config.yaml': 'linked-again', '.env': 'linked'}]
+                c.wizard.return_value = {'ok': True}
+                x = SimpleNamespace(home=home, work=work, owner_claude=c, save=Mock())
+                with patch.object(guest, 'alongside_apps', return_value={'linked': True}):
+                    if match:
+                        result = guest.alongside_unlink(x)
+                        self.assertTrue(result['owner_setup_preserved'])
+                        self.assertFalse(result['equals_original_prelink'])
+                        self.assertTrue(result['left_linked'])
+                    else:
+                        with self.assertRaisesRegex(guest.CheckError, 'setup-only byte hashes'):
+                            guest.alongside_unlink(x)
+                self.assertEqual([a.args[1] for a in c.wizard.call_args_list], ['unlink', 'link'])
+                if mapping:
+                    c.hermes.assert_any_call(home, 'config', 'unset', 'model.provider')
+                    c.hermes.assert_any_call(home, 'config', 'set', 'model.default', 'null')
+                else:
+                    c.hermes.assert_called_once_with(home, 'config', 'set', 'model', 'owner-old-model', '--force')
+                x.save.assert_called_once()
+
+    def test_binary_install_is_idempotent_and_rejects_bad_integrity(self):
+        import tempfile
+        from unittest.mock import Mock
+        c = load('e2e_022_alongside_claude')
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td)
+            dest = home / '.local/bin/claude'
+            dest.parent.mkdir(parents=True)
+            dest.write_bytes(b'unit-test-only-not-a-real-binary')
+            previous = {'version': c.VERSION, 'npm_integrity': c.NPM_INTEGRITY,
+                        'binary_sha256': c.sha(dest)}
+            with patch.object(c.urllib.request, 'urlopen') as fetch:
+                self.assertFalse(c.install_claude(home, previous)['changed'])
+                fetch.assert_not_called()
+            bad = Mock()
+            bad.read.return_value = b'invalid-untrusted-archive'
+            with patch.object(c.urllib.request, 'urlopen', return_value=bad), patch.object(c, 'run') as child:
+                with self.assertRaisesRegex(c.CheckError, 'integrity mismatch'):
+                    c.install_claude(home, {})
+                child.assert_not_called()
+            self.assertEqual(dest.read_bytes(), b'unit-test-only-not-a-real-binary')
+
+    def test_gateway_path_detection_never_overrides_a_different_binary(self):
+        import tempfile
+        from types import SimpleNamespace
+        c = load('e2e_022_alongside_claude')
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td)
+            output = SimpleNamespace(stdout='PATH=/usr/bin:/bin')
+            with patch.object(c, 'run', return_value=output), patch.object(c.shutil, 'which', return_value=None):
+                self.assertFalse(c.gateway_claude_on_path(home))
+            with patch.object(c, 'run', return_value=output), patch.object(c.shutil, 'which', return_value='/other/claude'):
+                with self.assertRaisesRegex(c.CheckError, 'different Claude'):
+                    c.gateway_claude_on_path(home)
+            with patch.object(c, 'run', return_value=output), patch.object(c.shutil, 'which', return_value=str(home / '.local/bin/claude')):
+                self.assertTrue(c.gateway_claude_on_path(home))
+
+    def test_older_link_journal_uses_native_metadata_pin(self):
+        import tempfile
+        c = load('e2e_022_alongside_claude')
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td)
+            (home / '.wizard-os').mkdir()
+            (home / '.hermes/plugins').mkdir(parents=True)
+            (home / '.wizard-os/linked.json').write_text(json.dumps({'hermes_home': str(home / '.hermes'), 'linked': True}))
+            metadata = home / '.hermes/plugins/.install-metadata.json'
+            metadata.write_text(json.dumps({'wizard-os': {'pinned': True, 'revision': 'b' * 40}}))
+            self.assertEqual(c.link_info(home)['plugin_ref'], 'b' * 40)
+            metadata.write_text('{}')
+            self.assertIsNone(c.link_info(home)['plugin_ref'])
+
+    def test_immutable_pin_values_match_acceptance_route(self):
+        c = load('e2e_022_alongside_claude')
+        self.assertEqual(c.VERSION, '2.1.296')
+        self.assertEqual(c.PLUGIN_REF, 'ef73726cfaf2fa0ee041e55572f406e2c24fed83')
+        self.assertEqual(c.PLUGIN_NAME, guest.PROVIDER)
+        self.assertEqual(guest.PROVIDER, host.PROVIDER)
+        self.assertEqual(guest.MODEL, host.MODEL)
+        self.assertEqual(len(c.PLUGIN_FILES), 9)
+
     def test_no_command_prints_credentials(self):
         import ast
         for name in ('e2e_022_alongside_claude.py', 'e2e_022_signin_window.py', 'e2e_022_ai_guest.py'):

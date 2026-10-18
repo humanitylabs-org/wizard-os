@@ -249,6 +249,7 @@ def run_window(a):
     host_page = a.vm == owner_claude.VM and a.guest_port == 8797
     assert a.vm != owner_claude.VM or host_page, 'alongside sign-in requires --guest-port 8797'
     assert not host_page or a.cmd == 'hold', 'owner setup is hold-only'
+    assert a.guest_port == 8795 or host_page, 'port 8797 is alongside-owner only'
     root = a.root.resolve()
     assert str(root).startswith('/Volumes/ThalesMedia/'), 'window state belongs on the media volume'
     os.umask(0o077)

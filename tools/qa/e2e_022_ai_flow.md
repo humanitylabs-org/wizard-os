@@ -126,3 +126,150 @@ never stored.
   chosen with `--vm`.
 - Lines a pointer skill paraphrases from the app skill below the 40-char /
   5-line threshold.
+
+## Alongside: owner Claude, sign-in, then the same AI flow
+
+These are **source-only handoff commands**, not proof of a live pass. Both jobs
+require the retained guest to begin **Stopped**, and stop it afterwards. They
+must not overlap another owner of this guest. They never operate on the fresh
+guest when `--vm alongside-022-amd64` is selected. Submit through the existing
+Thales job admission path; do not start them from Telos.
+
+Both jobs use cwd:
+`/Volumes/ThalesMedia/wizard-os/e2e-022/ai-flow-source` at the pushed detached HEAD.
+
+### A. Owner sign-in hold (timeout 10800 seconds)
+
+```sh
+/opt/homebrew/bin/python3 tools/qa/e2e_022_signin_window.py hold \
+  --root /Volumes/ThalesMedia/wizard-os/e2e-022 \
+  --vm alongside-022-amd64 --guest-port 8797 \
+  --node /opt/homebrew/bin/node \
+  --playwright /Volumes/ThalesMedia/wizard-manager/qa/node_modules/playwright \
+  --https-port 18449 --relay-port 18450 --tunnel-port 18451 --minutes 90
+```
+
+This is a local copy of the audited sign-in runner, **not a modification of
+os-runner**. Guest port defaults to 8795 for the existing package page; alongside
+requires 8797 and `hold`. The relay's owner identity check, path/header allowlists,
+non-body/query/cookie logging, handler ownership check, Serve snapshot comparison
+and single-handler removal are unchanged (unit tests fingerprint their ASTs).
+443, 8447 and 8847 are explicitly forbidden as the test HTTPS port. There is no
+`serve reset`. Expiry closes only this handler, tunnel, one-shot container and VM.
+
+Before exposing the page, `hold` runs `e2e_022_alongside_claude.py setup` and
+`signin-page` inside the guest as its login owner. Afterwards it runs
+`signin-page --stop`, including failures after an attempted container launch.
+The hold's `/api/accounts` status check targets the **one-shot owner directory**,
+not the app's shared named volume. It reports connected, expires, or is stopped;
+expiry is not evidence of a successful sign-in. The emitted receipt names the
+window expiry and run directory. Its existing rendering check precedes the
+interactive sign-in window and does not capture the OAuth code/login form.
+
+`setup`:
+- Requires the existing isolated guest marker, non-root owner, stock launcher and
+  an existing Wizard link. UID/GID are discovered at runtime, **not assumed 501**.
+- Installs `~/.local/bin/claude` **2.1.296**, authenticating the official npm AMD64
+  archive against the **same SHA512 integrity** as the image's
+  `fetch-claude-code.py`:
+  `+m01urgelnI+VJxPaKPEK0wixgq42uZ8PeCaUk5tX/8YoDBvSmC/REVQG2jQfJAr8dxunpjJ600FvLrcj1WWTw==`.
+  The recipe contains no SHA256 pin. Setup derives archive/binary SHA256 from
+  those authenticated bytes, verifies staged and installed binary SHA256, and
+  records both. Repeat setup checks the installed SHA256 and avoids downloading
+  an unchanged binary. It never executes a model request.
+- Installs `NousResearch/hermes-plugin-claude-subscription-directsdk` at
+  `ef73726cfaf2fa0ee041e55572f406e2c24fed83` with native
+  `hermes plugins install … --ref … --no-enable --no-deps`, verifies all nine
+  pinned file SHA256s from the image recipe, and adds the manifest provider name
+  to `plugins.enabled` through `hermes config`. The existing Wizard plugin pin
+  comes from its link journal or native install metadata; there is no main-branch
+  fallback.
+- Stores `DISABLE_AUTOUPDATER=1` via `hermes config`. Only when the gateway's
+  declared systemd PATH cannot resolve the pinned binary does it set
+  `CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND`. A conflicting binary or unavailable
+  service PATH fails closed. **It does not set model/provider defaults.**
+- Temporarily unlinks first, compares both files to the link journal's original
+  pre-link hashes, installs/enables the owner's provider while unlinked, then
+  re-links with the same pinned Wizard plugin. This is necessary because native
+  `wizard unlink` restores the whole previous `plugins.enabled` list. It would
+  otherwise remove a provider enabled after the link. Every config/env mutation
+  uses native Hermes/Wizard commands. `~/.e2e-022-alongside-claude/setup.json` records
+  original pre-link, before, setup-unlinked and after-linked SHA256s; no file values.
+
+`signin-page` resolves `.Image` from the one running `wizard-ai-accounts` engine,
+reads its local image `RepoDigests`, requires AMD64 and uses that immutable
+`sha256:<image-id>` with `--pull=never`. It **never pulls a new tag**. Its container
+is `e2e-alongside-host-claude`, `--rm --user <uid>:<gid> --read-only --tmpfs /tmp`,
+with `/home/<owner>/.claude:/claude` and only `127.0.0.1:8797:8795` published.
+The owner directory is created 0700 and its ownership checked, never populated
+from another account/store. `--stop` removes only that name with this runner's
+ownership label. Docker uses the normal socket or `sudo -n docker` fallback.
+
+The helper can also be dispatched independently from Thales (no lifecycle):
+
+```sh
+/opt/homebrew/bin/python3 tools/qa/e2e_022_alongside_claude.py status \
+  --root /Volumes/ThalesMedia/wizard-os/e2e-022 --vm alongside-022-amd64
+```
+
+`status` calls owner `claude auth status --json`; it emits only subscription
+logged-in boolean, allowlisted plan label and a masked email domain. No code
+opens the contents of `~/.claude`, an auth store, or parses `.env` values.
+
+### B. Alongside AI acceptance (timeout 10800 seconds)
+
+Run only after A's receipt says **connected**:
+
+```sh
+/opt/homebrew/bin/python3 tools/qa/e2e_022_ai_flow.py \
+  --root /Volumes/ThalesMedia/wizard-os/e2e-022 \
+  --node /opt/homebrew/bin/node \
+  --playwright-module /Volumes/ThalesMedia/wizard-manager/qa/node_modules/playwright \
+  --vm alongside-022-amd64 --wait-minutes 75 --poll-seconds 20 --idle-grace-minutes 30
+```
+
+The guest helper also accepts `--vm alongside-022-amd64` directly. The host and
+browser probes pass that mode explicitly and embed the public helper source;
+there is no reliance on a previously installed QA module.
+
+Alongside differences:
+- `claude-connected`: owner CLI status, **not** the package's named-volume login.
+- `owner-default-model`: owner `hermes config set model.provider
+  claude-subscription-directsdk-experimental` and `hermes config set model.default
+  claude-opus-5-5`, followed by `hermes gateway restart` and API health readback.
+  Restart is present in stock Hermes `bebe448a2bdb57043ca8ebd820807bf7eed6320d`
+  (`hermes_cli/subcommands/gateway.py`), verified from source, not exercised here.
+- `agent-sees-apps`: host `mcp_servers.wizard`, `skills.external_dirs`, enabled
+  Wizard plugin, plus DeFleur visible in Agent Service's actual `apps.json`.
+  Container `agent-link` is omitted; alongside uses `wizard link`.
+- Owner Hermes source commit and add-on file hashes replace the **inapplicable**
+  Hermes-container digest check. A Hermes container is forbidden in this mode.
+  Other image digests, Files writability, source clip, pinned DeFleur,
+  browser model locks/READY, exact edit prompt, owner OKs, Back, pointer-only
+  skills and output-video readback retain the same checks and browser script.
+- Final `alongside-unlink` runs even after preflight/browser failure when the
+  guest was reached. It first restores **only QA's temporary model/provider
+  changes** using native Hermes config commands, then runs `wizard unlink`.
+  Both config and env must exactly match the **setup-unlinked** SHA256s. The
+  receipt separately shows the original pre-link hashes and whether they match;
+  intended owner CLI/plugin setup changes are not misreported as drift. It then
+  re-links in `finally` using the original Wizard plugin pin, restarts the gateway,
+  and reads the host link/app contract back. No arbitrary drift is waived.
+  Global QA defaults are therefore restored; the per-session model locks and the
+  owner's new Claude login/plugin remain. Legacy scalar model IDs are restored
+  with native `hermes config set model … --force`. Unsupported model shapes or
+  pre-existing custom endpoint/credential route fields fail before mutation;
+  switching providers can otherwise clear endpoint fields in stock Hermes.
+
+Receipt verdict `6-alongside-unlink` is mandatory. Additional guest reports
+include the setup/hash provenance and `alongside-unlink.json`. An absent final
+unlink proof is a failed acceptance, never a pass based only on chat/video.
+
+### Verification boundary
+
+Local unit tests exercise argv, pin constants, masked status, port parsing,
+relay security-function equivalence, alongside stage selection and both success
+and byte-drift rollback/relink paths. Python compilation and Node syntax checks
+are source verification only. Live owner UID/GID, systemd PATH, local AI Accounts
+image ID/RepoDigests, sign-in, app access and completed AI output remain runtime
+acceptance evidence; none were fabricated or fetched from the fresh guest.
