@@ -274,20 +274,35 @@ def main():
             s.bind(('127.0.0.1', 0))
             local_port = s.getsockname()[1]
         # Only the Wizard shell port is forwarded; AI Accounts (8795) is never reachable from the browser.
-        argv = ['ssh', '-F', str(cfg), '-N', '-T', '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes',
+        # Independent connection (no ControlMaster mux), stderr kept privately,
+        # retried while the guest's sshd settles. The local listener is the readiness signal.
+        argv = ['/usr/bin/ssh', '-F', str(cfg), '-N', '-T', '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes',
+                '-o', 'ControlMaster=no', '-o', 'ControlPath=none',
                 '-o', 'ServerAliveInterval=10', '-o', 'ServerAliveCountMax=6',
                 '-L', f'127.0.0.1:{local_port}:127.0.0.1:{port}', host]
-        tunnel = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                  stderr=subprocess.DEVNULL, start_new_session=True)
-        deadline = time.monotonic() + 30
-        connected = False
-        while time.monotonic() < deadline and tunnel.poll() is None:
-            try:
-                with socket.create_connection(('127.0.0.1', local_port), timeout=1):
-                    connected = True
-                    break
-            except OSError:
-                time.sleep(0.2)
+        tunnel_log = evidence / 'tunnel-private.log'
+        deadline = time.monotonic() + 180
+        connected, attempts = False, 0
+        while not connected and time.monotonic() < deadline:
+            attempts += 1
+            with tunnel_log.open('ab') as tl:
+                tunnel = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                          stderr=tl, start_new_session=True)
+            attempt_end = min(deadline, time.monotonic() + 30)
+            while time.monotonic() < attempt_end and tunnel.poll() is None:
+                try:
+                    with socket.create_connection(('127.0.0.1', local_port), timeout=1):
+                        connected = True
+                        break
+                except OSError:
+                    time.sleep(0.2)
+            if not connected:
+                terminate(tunnel)
+                time.sleep(3)
+        receipt['tunnel_attempts'] = attempts
+        if not connected:
+            receipt['tunnel_exit_code'] = tunnel.poll()
+            receipt['tunnel_stderr_tail'] = tunnel_log.read_text(errors='replace')[-600:] if tunnel_log.exists() else ''
         require(connected, 'process-owned SSH tunnel failed')
         receipt['tunnel'] = {'argv': argv, 'bind': '127.0.0.1', 'guest_port': port}
         origin = f'http://127.0.0.1:{local_port}'
