@@ -1,0 +1,35 @@
+{
+ "run": "haiku2",
+ "helper_invocations": [
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku2 && cat > fetch_toolkit.py << 'FETCH_EOF'\n# wisdom-toolkit-bootstrap-v1\nimport base64, hashlib, io, json, os, stat, zipfile\nfrom pathlib import Path\nfrom urllib.parse import urlsplit\nfrom urllib.request import Request, build_opener, HTTPRedirectHandler\nMAX = 1024 * 1024\nALLOW = {'LICENSE', 'authoring_contract.py', 'authoring_admission.py', "
+  },
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku2 && cat > fetch_toolkit.py << 'FETCH_EOF'\n# wisdom-toolkit-bootstrap-v1\nimport base64, hashlib, io, json, os, stat, zipfile\nfrom pathlib import Path\nfrom urllib.parse import urlsplit\nfrom urllib.request import Request, build_opener, HTTPRedirectHandler\nMAX = 1024 * 1024\nALLOW = {'LICENSE', 'authoring_contract.py', 'authoring_admission.py', "
+  },
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku2/toolkit && python3 tools/author_chapter.py --help"
+  },
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku2/toolkit && python3 tools/author_chapter.py \\\n  --chapter \"qa-empty-hub\" \\\n  --brief \"$RUN/rerun/work-haiku2/brief.txt\" \\\n  --sources \"$RUN/rerun/work-haiku2/source-packet.json\" \\\n  --output \"$RUN/rerun/work-haiku2/chapter.md\" \\\n  --receipt \"/"
+  }
+ ],
+ "file_writing_calls": [
+  {
+   "tool": "terminal",
+   "arg": "{\"command\": \"cd $RUN/rerun/work-haiku2 && cat > fetch_toolkit.py << 'FETCH_EOF'\\n# wisdom-toolkit-bootstrap-v1\\nimport base64, hashlib, io, json, os, stat, zipfile\\nfrom pathlib import Path\\nfrom urllib.parse import urlsplit\\nfrom urllib.request import Request, build"
+  },
+  {
+   "tool": "terminal",
+   "arg": "{\"command\": \"cd $RUN/rerun/work-haiku2 && cat > fetch_toolkit.py << 'FETCH_EOF'\\n# wisdom-toolkit-bootstrap-v1\\nimport base64, hashlib, io, json, os, stat, zipfile\\nfrom pathlib import Path\\nfrom urllib.parse import urlsplit\\nfrom urllib.request import Request, build"
+  },
+  {
+   "tool": "write_file",
+   "arg": "{\"path\": \"$RUN/rerun/work-haiku2/brief.txt\", \"content\": \"Audience: modern reader seeking practical wisdom on usefulness and emptiness.\\nArgument: in Laozi chapter 11, usefulness does not reside in the material substance of a made thing, but in the empty space it fram"
+  }
+ ]
+}

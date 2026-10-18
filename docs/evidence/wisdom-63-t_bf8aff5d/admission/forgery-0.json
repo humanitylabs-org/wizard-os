@@ -1,0 +1,9 @@
+[
+ {
+  "case": "shape-broken (two bold-led movements)",
+  "zip_sha256": "22db2a7b5f6fd6e65fb2adc46f06a90def201549764b41419d2e8aa85ef5fb3b",
+  "http": 400,
+  "response": "Authoring receipt rejected: qa-empty-hub fails the compression v1 checks the pinned runner applies (Wrong compression v1 section order or compression); a receipt cannot vouch for a draft the runner rejected. No output admitted. Re-author the chapter with the pinned Wisdom workflow (anthropic / claude-opus-5-5) and export again.",
+  "library": []
+ }
+]
