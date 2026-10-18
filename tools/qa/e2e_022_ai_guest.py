@@ -146,6 +146,9 @@ def digest(path):
     return digest_bytes(Path(path).read_bytes())
 
 
+DIAGNOSTIC_TOOLS = {'apt-get', 'install', 'ffmpeg', 'ffprobe', 'espeak-ng'}
+
+
 def run(argv, timeout=90, data=None):
     argv = [str(a) for a in argv]
     try:
@@ -156,6 +159,12 @@ def run(argv, timeout=90, data=None):
     except subprocess.TimeoutExpired:
         REPORT['commands'].append({'argv': argv[:3], 'exit_code': 124})
         raise CheckError('command timeout; output suppressed') from None
+    if p.returncode != 0:
+        # Package/media tools only: their stderr is diagnostic, never credential-bearing.
+        tool = next((a for a in argv if not a.startswith('-') and a not in ('sudo', 'env') and '=' not in a), '')
+        if Path(tool).name in DIAGNOSTIC_TOOLS:
+            REPORT['commands'][-1]['stderr_tail'] = (p.stderr or '')[-600:]
+            raise CheckError('%s failed (exit %d); see stderr_tail' % (Path(tool).name, p.returncode))
     require(p.returncode == 0, 'command failed; output suppressed')
     return p.stdout.strip()
 
