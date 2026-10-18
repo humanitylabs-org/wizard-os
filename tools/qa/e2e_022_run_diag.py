@@ -16,7 +16,15 @@ import json, re, subprocess, sys, urllib.request
 run_id, session_id = sys.argv[1], sys.argv[2]
 SECRET = re.compile(r'(sk-[A-Za-z0-9_-]{8,}|Bearer\s+\S+|(?i:token|key|secret|password|authorization)["\']?\s*[:=]\s*["\']?[^\s"\',]{6,})')
 KEEP = re.compile(r'(?i)error|exception|traceback|failed|refused|denied|not found|unauthori|forbidden|timeout|directsdk|claude|provider|model')
-def red(s): return SECRET.sub('[redacted]', s)[:600]
+SECRET_KEY = re.compile(r'(?i)token|secret|password|authorization|api_?key|cookie|credential')
+def scrub(s): return SECRET.sub('[redacted]', s)
+def red(s): return scrub(s)[:600]
+def walk(v):
+    # Structure-preserving redaction: secret-named keys lose their values, strings are scrubbed.
+    if isinstance(v, dict): return {k: ('[redacted]' if SECRET_KEY.search(str(k)) else walk(x)) for k, x in v.items()}
+    if isinstance(v, list): return [walk(x) for x in v]
+    if isinstance(v, str): return scrub(v)[:4000]
+    return v
 def get(path):
     try:
         with urllib.request.urlopen('http://127.0.0.1:8796' + path, timeout=30) as r:
@@ -29,9 +37,9 @@ def docker(*a):
     return subprocess.run(['sudo', '-n', 'docker', *a], capture_output=True, text=True, timeout=120)
 out = {}
 code, run = get('/wizard/hermes/v1/runs/' + run_id)
-out['run'] = {'http': code, 'data': json.loads(red(json.dumps(run)))}
+out['run'] = {'http': code, 'data': walk(run)}
 code, sess = get('/wizard/hermes/api/sessions/' + session_id)
-out['session'] = {'http': code, 'data': json.loads(red(json.dumps(sess)))}
+out['session'] = {'http': code, 'data': walk(sess)}
 code, msgs = get('/wizard/hermes/api/sessions/%s/messages?order=oldest&limit=50&offset=0&include_compacted=true&view=wizard' % session_id)
 rows = msgs.get('data') or msgs.get('messages') or []
 out['messages'] = [{'role': m.get('role'), 'text': red(m['content'] if isinstance(m.get('content'), str) else json.dumps(m.get('content')))[:400]} for m in rows]
