@@ -24,7 +24,10 @@ let routeModel = MODEL;
 const pickRouteId = values => values.includes(MODEL) ? MODEL : values.includes(MODEL + '[1m]') ? MODEL + '[1m]' : '';
 const PROVIDER = 'claude-subscription-directsdk-experimental';
 const READY_PROMPT = 'Reply with exactly the word READY.';
-const ANSWER = 'Trim the pauses and add captions, then save it to my Files.';
+// Owner replies when the agent stops to ask or to get an OK (DeFleur asks before cutting and rendering).
+const ANSWERS = ['Yes, go ahead with those cuts and captions. Skip the motion graphic. Render it and save it to my Files.',
+                 'Yes, go ahead and render it to my Files.'];
+const ASKS_OWNER = /\?|\byour (ok|okay|go-ahead|approval|sign-off)\b|\b(approve|confirm|go ahead|let me know|reply (yes|ok))\b/i;
 const WORKING = new Set(['submitting', 'queued', 'accepted', 'running', 'stopping']);
 const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted', 'expired']);
 
@@ -388,7 +391,8 @@ function guestProbe(cmd) {
         row.screenshots.push(await shot(m.page, 'mobile-defleur-sent'));
         const started = Date.now(), limit = cfg.waitSeconds * 1000, every = cfg.pollSeconds * 1000;
         row.timeline = [];
-        let answered = false, stableFor = 0, lastSizes = '', outcome = 'timeout', idleSince = 0;
+        let answered = 0, stableFor = 0, lastSizes = '', outcome = 'timeout', idleSince = 0;
+        row.questions = [];
         while (Date.now() - started < limit) {
           await delay(every);
           const info = await sessionInfo(m.page, sid).catch(() => null);
@@ -418,14 +422,17 @@ function guestProbe(cmd) {
             const msgs = await messages(m.page, sid).catch(() => []);
             const a = msgs.filter(x => x.role === 'assistant' && x.text.trim());
             const last = a.length ? a[a.length - 1].text : '';
-            if (!answered && /\?/.test(last.trim().slice(-300))) {
-              // The agent asked something: answer once, briefly, like a person would.
-              row.question = clip(last.slice(-400), 400);
+            if (answered < ANSWERS.length && last !== row.lastAnswered && ASKS_OWNER.test(last.trim().slice(-900))) {
+              // The agent asked something or wants an OK: answer briefly, like a person would (at most twice).
+              const reply = ANSWERS[answered];
+              row.question = row.question || clip(last.slice(-400), 400);
+              row.questions.push({at: Math.round((Date.now() - started) / 1000), asked: clip(last.slice(-400), 400), answer: reply});
+              row.lastAnswered = last;
               await openThread(m, sid);
-              await send(m, ANSWER);
-              const s2 = await sent(ANSWER, sid);
+              await send(m, reply);
+              const s2 = await sent(reply, sid);
               row.runIds.push(s2.runId); row.answeredAt = Math.round((Date.now() - started) / 1000);
-              answered = true; idleSince = 0; continue;
+              answered += 1; idleSince = 0; continue;
             }
             // DeFleur renders asynchronously after the agent's turn ends: keep watching Files for the output,
             // but stop once the agent has been idle with no new video for the idle grace period.

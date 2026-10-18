@@ -77,8 +77,11 @@ Local checks (no VM): `python3 tools/qa/test_e2e_022_ai_flow.py`,
      exactly `edit <clip> from my Files with DeFleur`. `<clip>` is the file
      name, plus its folder only when the name is ambiguous. Every 20 s it records
      the session/run status and the count of new videos.
-     - If the agent goes idle with a question, it answers once:
-       `Trim the pauses and add captions, then save it to my Files.`
+     - If the agent goes idle with a question or asks for an OK (DeFleur asks
+       before cutting and rendering), it answers like an owner, at most twice:
+       `Yes, go ahead with those cuts and captions. Skip the motion graphic.
+       Render it and save it to my Files.`, then `Yes, go ahead and render it
+       to my Files.` A tool-level approval gate is never approved.
      - It stops when a new video exists and the agent is idle, or on
        approval-request (never approved), failure, the idle grace period with
        no output, or 75 min.
