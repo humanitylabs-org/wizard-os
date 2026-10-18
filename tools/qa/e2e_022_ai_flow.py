@@ -34,7 +34,7 @@ SOURCES = ('e2e_022_ai_flow.py', 'e2e_022_ai_guest.py', 'e2e_022_ai_browser.cjs'
 MODEL = 'claude-opus-5-5'
 PROVIDER = 'claude-subscription-directsdk-experimental'
 PREFLIGHT_REQUIRED = ('marketplace-ready', 'ai-accounts-status-connected', 'defleur-installed-pinned',
-                      'synthetic-source-clip', 'hermes-before', 'owner-default-model')
+                      'synthetic-source-clip', 'hermes-before', 'owner-default-model', 'agent-sees-apps')
 SECRET_KEY = re.compile(r'(password|passwd|secret|token|cookie|authori[sz]ation|api[-_]?key|credential|bearer|'
                         r'private[-_]?key|oauth|^env$|^headers?$|^dotenv$)', re.I)
 SECRET_VALUE = re.compile(r'(sk-ant-[A-Za-z0-9_-]{8,}|sk-[A-Za-z0-9_-]{20,}|Bearer\s+\S{8,}|gh[pousr]_[A-Za-z0-9]{20,}|'
@@ -117,6 +117,17 @@ def model_ok(row):
     return bool(row) and row.get('model') in (MODEL, MODEL + '[1m]') and row.get('provider') == PROVIDER
 
 
+def session_ok(row, final_stages):
+    """Session API model plus Hermes' own state.db billing provider for that session id."""
+    if not row or row.get('model') not in (MODEL, MODEL + '[1m]'):
+        return False
+    if row.get('provider'):
+        return row.get('provider') == PROVIDER
+    db = (((final_stages.get('model-readback') or {}).get('result') or {}).get('state_db') or {})
+    rec = (db.get('sessions') or {}).get(row.get('id')) if isinstance(db, dict) else None
+    return bool(rec) and rec.get('billing_provider') == PROVIDER and rec.get('model') in (MODEL, MODEL + '[1m]')
+
+
 def verdicts(pre, browser, final, files):
     """Pure: step verdicts from the three guest/browser receipts (unit tested)."""
     pre_s, fin_s = stage_map(pre), stage_map(final)
@@ -128,13 +139,13 @@ def verdicts(pre, browser, final, files):
     images = (pre_s.get('image-digests-readback') or {}).get('result') or {}
     out['0-image-digests'] = {'pass': bool(images.get('hermes_digest_match')) and not images.get('missing'),
                               'hermes_digest_match': images.get('hermes_digest_match'), 'missing': images.get('missing')}
-    out['1-chat'] = {'pass': chat.get('status') == 'pass' and model_ok(chat.get('session')) and model_ok(chat.get('runBody')),
+    out['1-chat'] = {'pass': chat.get('status') == 'pass' and session_ok(chat.get('session'), fin_s) and model_ok(chat.get('runBody')),
                      'model_selection': (chat.get('modelSelection') or {}).get('method'),
                      'session_model': pick(chat.get('session'), ('model', 'provider')),
                      'run_body_model': pick(chat.get('runBody'), ('model', 'provider', 'require_model_lock')),
                      'reply_is_exactly_ready': chat.get('replyIsExactlyReady'), 'reason': chat.get('reason')}
     media = (fin_s.get('defleur-output-video') or {})
-    out['2-defleur'] = {'pass': df.get('status') == 'pass' and media.get('status') == 'pass' and model_ok(df.get('session')),
+    out['2-defleur'] = {'pass': df.get('status') == 'pass' and media.get('status') == 'pass' and session_ok(df.get('session'), fin_s),
                         'outcome': df.get('outcome'), 'waited_seconds': df.get('waitedSeconds'),
                         'asked_question': bool(df.get('question')), 'model_selection': (df.get('modelSelection') or {}).get('method'),
                         'session_model': pick(df.get('session'), ('model', 'provider')),

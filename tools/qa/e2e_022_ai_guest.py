@@ -280,6 +280,11 @@ def account_status(payload):
 
 # ---------------------------------------------------------------- guest facts
 
+def owner_wam(x, *args, timeout=600):
+    """Run WAM the way an owner's shell does (umask 022), not under this runner's private umask."""
+    return run(['sh', '-c', 'umask 022; exec "$0" "$@"', str(x.home / '.wizard-os/bin/wam'), *args], timeout=timeout)
+
+
 def containers():
     ids = run(['sudo', '-n', 'docker', 'ps', '-aq']).split()
     rows = []
@@ -438,7 +443,7 @@ def preflight(x):
         action = 'already-installed-at-pinned-digest'
         if not (pinned and len(running) == 1 and digest_ok):
             action = 'wam-install'
-            run([x.home / '.wizard-os/bin/wam', 'install', APP_ID], timeout=2400)
+            owner_wam(x, 'install', APP_ID, timeout=2400)
         row = x.registry()[APP_ID]
         require(row['version'] == VERSION and row['commit'] == APP_SHA, 'DeFleur source/version drift')
         require(row['repo'] == 'humanitylabs-org/defleur-video', 'unexpected DeFleur publisher')
@@ -556,6 +561,64 @@ def preflight(x):
                 'Hermes default model did not read back as the owner route')
         return {'changed': True, 'before': cur, 'after': after, 'method': 'hermes config set (app CLI, owner step)'}
     REPORT['owner_default_model'] = stage('owner-default-model', owner_default_model)
+
+    def agent_sees_apps():
+        # The Agent Service (another uid in its container) must be able to read the shared apps.json,
+        # or the agent sees no installed apps at all. An earlier runner installed DeFleur under umask
+        # 077, which left that share 0600; regenerate it with the owner's own `wam apps`.
+        shared = x.c.runtipi_root / 'app-data/wizard-os/apps.json'
+        mode_before = run(['sudo', '-n', 'stat', '-c', '%a', shared]).strip()
+        action = 'none'
+        if not (int(mode_before, 8) & 0o004):
+            owner_wam(x, 'apps', '--json', timeout=600)
+            action = 'regenerated-with-owner-umask'
+        mode_after = run(['sudo', '-n', 'stat', '-c', '%a', shared]).strip()
+        service = [r['name'] for r in containers() if 'wizard-agent-service' in r['name'] and r['status'] == 'running']
+        require(len(service) == 1, 'Agent Service container not running')
+        p = subprocess.run(['sudo', '-n', 'docker', 'exec', service[0], 'cat', '/wizard-os/apps.json'],
+                           capture_output=True, text=True, timeout=60)
+        require(p.returncode == 0, 'Agent Service cannot read the shared apps.json: ' + p.stderr[-200:])
+        ids = [a.get('id') for a in json.loads(p.stdout).get('apps', [])]
+        require(APP_ID in ids, 'DeFleur missing from the apps.json the Agent Service reads')
+        defleur = next(a for a in json.loads(p.stdout)['apps'] if a.get('id') == APP_ID)
+        internal = (defleur.get('mcp') or {}).get('internal') or (defleur.get('mcp') or {}).get('url')
+        # Recorded, not asserted: can the Agent Service open DeFleur's MCP endpoint?
+        reach_js = ("fetch(process.argv[1],{method:'POST',headers:{'content-type':'application/json',"
+                    "accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,"
+                    "method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:"
+                    "{name:'e2e',version:'0'}}}),signal:AbortSignal.timeout(20000)}).then(r=>console.log(r.status))"
+                    ".catch(e=>console.log('ERR '+(e.cause?.code||e.message)))")
+        reach = None
+        if internal:
+            q = subprocess.run(['sudo', '-n', 'docker', 'exec', service[0], 'node', '-e', reach_js, internal],
+                               capture_output=True, text=True, timeout=60)
+            reach = (q.stdout or q.stderr).strip()[:120]
+        # Hermes' MCP servers (names and urls only, never headers).
+        src = """
+import json, sys, yaml
+c = yaml.safe_load(open(sys.argv[1])) or {}
+print(json.dumps({k: (v or {}).get('url') for k, v in (c.get('mcp_servers') or {}).items()}))
+"""
+        try:
+            hermes_mcp = sudo_py(src, str(x.hermes / 'config.yaml'))
+        except (CheckError, ValueError):
+            hermes_mcp = 'unreadable'
+        # Wait for the bridge to publish DeFleur's job pointer skill.
+        deadline, jobs = time.monotonic() + 240, []
+        while time.monotonic() < deadline:
+            q = subprocess.run(['sudo', '-n', 'docker', 'exec', service[0], 'sh', '-c',
+                                'ls -1 "${WIZARD_OS_HOME:-/state/wizard-os}/skills" 2>/dev/null'],
+                               capture_output=True, text=True, timeout=60)
+            jobs = [l for l in q.stdout.split() if l.startswith('wizard-job-')]
+            if any(j in jobs for j in ('wizard-job-video-editing', 'wizard-job-short-form-video')):
+                break
+            time.sleep(10)
+        require(any(j in jobs for j in ('wizard-job-video-editing', 'wizard-job-short-form-video')),
+                'bridge never published a DeFleur job pointer skill')
+        return {'shared_mode_before': mode_before, 'shared_mode_after': mode_after, 'action': action,
+                'service_app_ids': ids, 'defleur_mcp': internal, 'service_to_defleur_mcp': reach,
+                'hermes_mcp_servers': hermes_mcp, 'bridge_jobs': jobs}
+    REPORT['agent_sees_apps'] = stage('agent-sees-apps', agent_sees_apps)
 
     shell = x.registry().get('wizard-ux', {})
     shell_url = (shell.get('view') or {}).get('url') or ''

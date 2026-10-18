@@ -166,6 +166,9 @@ function guestProbe(cmd) {
     return (j.data || j.messages || j.items || []).map(m => ({role: m.role, text: text(m.content)}));
   };
   const modelOk = o => !!o && MODEL_ALIASES.has(o.model) && o.provider === PROVIDER;
+  // The session API names the model but not the provider; the provider is proven by the locked
+  // run body and, on the host, by Hermes' own state.db billing_provider for the same session.
+  const sessionModelOk = o => !!o && MODEL_ALIASES.has(o.model) && (!o.provider || o.provider === PROVIDER);
 
   async function newChat(b) {
     const fab = b.page.locator('[data-chfab]:visible');
@@ -352,7 +355,7 @@ function guestProbe(cmd) {
         check(reply, `no assistant reply (status ${row.lastStatus || 'unknown'})`);
         row.reply = clip(reply, 200);
         row.replyIsExactlyReady = reply.trim().replace(/[.!]$/, '') === 'READY';
-        check(modelOk(row.session), `service recorded ${row.session?.model}/${row.session?.provider}`);
+        check(sessionModelOk(row.session), `service recorded ${row.session?.model}/${row.session?.provider}`);
         row.openedVia = await openThread(m, chatSid);
         await m.page.locator('.msg.a .bub:visible').filter({hasText: 'READY'}).first().waitFor({state: 'visible', timeout: 30000});
         row.screenshots.push(await shot(m.page, 'mobile-chat-ready-reply'));
@@ -441,7 +444,7 @@ function guestProbe(cmd) {
         row.openedVia = await openThread(m, sid);
         row.screenshots.push(await shot(m.page, 'mobile-defleur-thread'));
         await backFromThread(m, row, 'defleur-thread');
-        check(modelOk(row.session), `service recorded ${row.session?.model}/${row.session?.provider}`);
+        check(sessionModelOk(row.session), `service recorded ${row.session?.model}/${row.session?.provider}`);
         check(outcome === 'output-appeared', `DeFleur run ended: ${outcome}`);
       });
       report.sessions = report.stages.map(s => s.sessionId).filter(Boolean);

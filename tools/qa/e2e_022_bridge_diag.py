@@ -30,7 +30,12 @@ def one(part):
     m = [n for n in names if part in n]
     return m[0] if m else None
 engine, service = one('hermes-agent-engine'), one('agent-service')
-home = '/home/%s/runtipi/app-data/wizardapps/hermes-agent/data' % getpass.getuser()
+home = None
+if engine:
+    _info = json.loads(docker('inspect', engine)[1])[0]
+    home = next((m['Source'] for m in _info['Mounts'] if m['Destination'] == '/opt/data'), None)
+home = home or '/home/%s/runtipi/app-data/wizardapps/hermes-agent/data' % getpass.getuser()
+out['hermes_home'] = home
 # Hermes config: only mcp_servers name/url/command and skills.external_dirs.
 code, cfg_py, err = sh(['sudo', '-n', 'python3', '-c', """
 import json, sys, yaml
@@ -50,7 +55,11 @@ if service:
     out['service_env'] = {k: ('[set]' if SECRET.search(k) else v[:200]) for k, v in env.items() if k.startswith(('WIZARD_', 'HERMES_'))}
     out['service_mounts'] = [{'src': m['Source'], 'dst': m['Destination'], 'rw': m['RW']} for m in info['Mounts']]
     apps_path = env.get('WIZARD_APPS_JSON_PATH') or ''
-    code, txt, err = docker('exec', service, 'sh', '-c', 'cat "${WIZARD_APPS_JSON_PATH:-${WIZARD_OS_HOME:-$HOME/.wizard-os}/apps.json}" 2>&1 || echo MISSING')
+    host_apps = next((m['Source'] for m in info['Mounts'] if m['Destination'] == '/wizard-os'), None)
+    out['service_user'] = docker('exec', service, 'id')[1].strip()
+    out['apps_json_stat'] = sh(['sudo', '-n', 'stat', '-c', '%a %U:%G %u:%g %y %n', host_apps + '/apps.json', host_apps])[1].strip() if host_apps else None
+    out['apps_dir_listing'] = sh(['sudo', '-n', 'ls', '-la', host_apps])[1][-1500:] if host_apps else None
+    code, txt, err = sh(['sudo', '-n', 'cat', host_apps + '/apps.json']) if host_apps else (1, '', 'no mount')
     try:
         reg = json.loads(txt)
         out['service_apps'] = [{'id': a.get('id'), 'status': a.get('status'), 'provides': a.get('provides'),
