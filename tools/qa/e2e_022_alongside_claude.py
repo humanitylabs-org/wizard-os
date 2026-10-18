@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 import urllib.request
 
 VM = 'alongside-022-amd64'
@@ -256,15 +257,22 @@ def signin_page(home, stop=False):
     claude_dir.mkdir(mode=0o700, exist_ok=True)
     require(claude_dir.is_dir() and claude_dir.stat().st_uid == os.getuid(), 'Claude directory is not owner-owned')
     claude_dir.chmod(0o700)
-    engines = run([*docker, 'ps', '--format', '{{.Names}}']).stdout.splitlines()
-    engines = [n for n in engines if 'wizard-ai-accounts' in n and 'engine' in n]
-    require(len(engines) == 1, 'AI Accounts engine is not uniquely running')
+    engines = []
+    for _ in range(60):   # Runtipi restarts apps after the guest boots; give it up to 10 minutes
+        engines = [n for n in run([*docker, 'ps', '--format', '{{.Names}}']).stdout.splitlines()
+                   if 'wizard-ai-accounts' in n and 'engine' in n]
+        if len(engines) == 1:
+            break
+        time.sleep(10)
+    require(len(engines) == 1, 'AI Accounts engine is not uniquely running (%d found)' % len(engines))
     image = run([*docker, 'inspect', '--format', '{{.Image}}', engines[0]]).stdout.strip()
     ds = json.loads(run([*docker, 'image', 'inspect', '--format', '{{json .RepoDigests}}', image]).stdout)
     require(ds and all('@sha256:' in d for d in ds), 'AI Accounts local image has no RepoDigest')
     require(run([*docker, 'image', 'inspect', '--format', '{{.Architecture}}', image]).stdout.strip() == 'amd64', 'AI Accounts architecture drift')
     argv = container_argv(docker, home, os.getuid(), os.getgid(), image)
-    run(argv)
+    started = run(argv, check=False)
+    # docker's own error text carries no secrets (only fixed AI_ACCOUNTS_* settings are passed).
+    require(started.returncode == 0, 'one-shot docker run failed: ' + re.sub(r'\s+', ' ', started.stderr)[-300:])
     # Only selected non-secret inspect fields; never Config.Env.
     raw = run([*docker, 'inspect', '--format', '{{json .State.Running}}\t{{json .Image}}\t{{json .Config.User}}\t{{json .HostConfig.PortBindings}}\t{{json .Mounts}}\t{{json .HostConfig.ReadonlyRootfs}}', NAME]).stdout
     running, observed, user, ports, mounts, readonly = [json.loads(v) for v in raw.strip().split('\t')]
@@ -301,8 +309,14 @@ def dispatch(root, command, stop=False):
     argv = ['/opt/homebrew/bin/limactl', 'shell', '--workdir=/', VM, '--', 'python3', '-', command]
     if stop:
         argv.append('--stop')
-    out = run(argv, env=env, data=Path(__file__).read_text(), timeout=2400)
-    return json.loads(out.stdout)
+    out = run(argv, env=env, data=Path(__file__).read_text(), timeout=2400, check=False)
+    # The guest prints one allowlisted JSON line, also on failure: surface its reason instead of hiding it.
+    try:
+        result = json.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        result = {'error': 'guest %s produced no JSON (exit %d)' % (command, out.returncode)}
+    require(out.returncode == 0 and 'error' not in result, 'guest %s: %s' % (command, result.get('error')))
+    return result
 
 
 def main(argv=None):
