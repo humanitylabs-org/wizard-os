@@ -13,6 +13,7 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | `agent` | `hermes-agent` | yes | Any MCP-speaking agent later |
 | `files` | `wizard-files` (Wizard Files on Runtipi `media/`) | yes | Approved replacement; active on the owner's box. New-box default rollout remains pending; see [adoption decision](WIZARD_FILES_DECISION.md). |
 | `ai-connection` | one app per provider: `claude`, `chatgpt` (#61) | no | Many may be filled at once; each owns one provider sign-in ([AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md)). Replaces `ai-accounts` / `wizard-ai-accounts` |
+| `connection-router` | `wizard-connection-router` (proposed, #65) | no | Connects apps to the models, services and agents their `wizard.md` requires; holds no provider credentials ([CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md)) |
 | `transcription` | `transcriber` today; Wizard STT as its front later (below) | no | OpenAI-compatible `/v1/audio/transcriptions` |
 | `browser` | `browser` (headless Chromium) | no | |
 | `secrets` | `secret-drop` | no | One-time credential handoff |

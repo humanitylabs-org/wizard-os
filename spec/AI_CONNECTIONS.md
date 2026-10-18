@@ -57,6 +57,10 @@ Rules:
 
 Unchanged for Claude: the Claude app keeps the shared volume name `wizard-ai-accounts-claude` mounted at `/claude`, so Hermes Agent (Wizard build) and existing sign-ins carry over with no reconnect. ChatGPT stays Hermes' own device-code login driven from the ChatGPT app (Codex refresh tokens are single-use, so no shared token file).
 
+## Running models for apps (proposed, #65)
+
+Connection apps report status today and run nothing for apps. [CONNECTION_ROUTER.md](CONNECTION_ROUTER.md) proposes an additive `wizard.ai-connection/2`: `/api/connection` lists the provider's models with their tier (`fast`, `standard`, `frontier`), and `POST /api/infer` runs one isolated call that only the Connection Router may make.
+
 ## Migration from AI Accounts
 
 1. Install `Claude` (and `ChatGPT` if used). Claude reuses the existing sign-in volume, so it shows Connected immediately.

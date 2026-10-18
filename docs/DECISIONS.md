@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 18 Oct 2026 — James: Connection Router ([spec/CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 65 | **Connection Router.** One system component, separate from the Agent Service, connects apps to the AI models, outside services and agents they need. Apps declare needs in `wizard.md` (`requires.models` per feature: tier `fast`/`standard`/`frontier`, `tested_on` model, `swap: ask\|never`, abilities, private data; `requires.services` slots with a recommended provider) and call only the router. Provider apps (#61) publish a tier map and an isolated inference route. At install the owner connects the recommended provider or approves a named swap ("results may differ"); that approval is the #63 override, recorded in a routing table. Nothing switches at run time without the owner's tap; every answer names its model. Builds on PR #6 grants and PR #49 private-data routing. | Direction approved by James; fields and APIs proposed; Miguel to confirm provider-app changes |
+
 ## 18 Oct 2026 — James: one Chats for every agent ([spec/AGENTS.md](../spec/AGENTS.md) section 8)
 
 | # | Decision | Status |
