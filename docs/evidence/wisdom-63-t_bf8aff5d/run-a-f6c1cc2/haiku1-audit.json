@@ -1,0 +1,23 @@
+{
+ "run": "haiku",
+ "helper_invocations": [
+  {
+   "tool": "write_file",
+   "cmd": "{\"path\": \"$RUN/rerun/work-haiku/fetch_toolkit.py\", \"content\": \"# wisdom-toolkit-bootstrap-v1\\nimport base64, hashlib, io, json, os, stat, zipfile\\nfrom pathlib import Path\\nfrom urllib.parse import urlsplit\\nfrom urllib.request import Request, build_opener, HTTPRedirectHandler\\nMAX = 1024 * 1024\\nALLOW = {'LICENSE', 'authoring_contract.py', 'authoring_admission.py'"
+  },
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku/toolkit && python3 tools/author_chapter.py --chapter \"qa-empty-hub\" --brief \"$RUN/rerun/work-haiku/chapter-brief.txt\" --sources \"$RUN/rerun/work-haiku/source-packet.json\" --output \"$RUN/rerun/work-haiku/qa-empty-hub.md\" --receipt \"/home/telos/"
+  }
+ ],
+ "file_writing_calls": [
+  {
+   "tool": "write_file",
+   "arg": "{\"path\": \"$RUN/rerun/work-haiku/fetch_toolkit.py\", \"content\": \"# wisdom-toolkit-bootstrap-v1\\nimport base64, hashlib, io, json, os, stat, zipfile\\nfrom pathlib import Path\\nfrom urllib.parse import urlsplit\\nfrom urllib.request import Request, build_opener, HTTPRedir"
+  },
+  {
+   "tool": "write_file",
+   "arg": "{\"path\": \"$RUN/rerun/work-haiku/chapter-brief.txt\", \"content\": \"Chapter ID: qa-empty-hub\\nTheme: Laozi on emptiness and usefulness\\nTitle: \\\"The Empty Hub\\\"\\nAudience: Modern reader seeking practical wisdom\\nArgument: Usefulness lives not in the made thing itself, bu"
+  }
+ ]
+}

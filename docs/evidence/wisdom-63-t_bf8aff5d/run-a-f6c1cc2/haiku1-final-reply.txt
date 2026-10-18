@@ -1,0 +1,15 @@
+Perfect. The chapter has been authored successfully with a valid receipt. Here are the deliverables:
+
+**Chapter Markdown:**
+$RUN/rerun/work-haiku/qa-empty-hub.md
+
+**Receipt JSON:**
+$RUN/rerun/work-haiku/qa-empty-hub.receipt.json
+
+**Model recorded in modelUsage:**
+claude-opus-5-5 (provider: anthropic, firstParty route)
+
+The chapter is a 887-word compression of Laozi's Tao Te Ching chapter 11 on emptiness and usefulness, structured per the wisdom.compression.v1 format with epigraph, compression statement, four bold-led movements, practical modern application, a carry-forward question, and sourced citations. All quotations are verified against the supplied Legge translation. The receipt records the pinned author contract, workflow/prompt digests, actual modelUsage (claude-opus-5-5), and mechanical checks—the helper required 3 attempts to pass all format/quotation/compression rules.
+
+session_id: 20261018_010512_75593c
+EXIT=0

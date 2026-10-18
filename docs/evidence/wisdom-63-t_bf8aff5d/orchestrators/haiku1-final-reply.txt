@@ -1,0 +1,12 @@
+Perfect. The chapter has been successfully authored. Here are the results:
+
+**Chapter Markdown:** `$RUN/rerun/work-haiku/qa-empty-hub.md`
+
+**Receipt JSON:** `$RUN/rerun/work-haiku/qa-empty-hub.receipt.json`
+
+**Model ID recorded in modelUsage:** `claude-opus-5-5`
+
+The chapter "Laozi — The Empty Hub" (724 words) was authored using the pinned `claude-opus-5-5` model via the Wisdom authoring contract. It required 3 attempts, with 2 rejections corrected by the helper on the same model call. The chapter compresses chapter 11 of the Tao Te Ching (Legge translation, 1891) around the core argument: usefulness lives in emptiness—the hollow of a cup, the space within walls, the axle hole in a wheel. All quotations match the supplied source text verbatim.
+
+session_id: 20261018_011316_4965ff
+EXIT=0

@@ -1,0 +1,6 @@
+2026-10-18T01:12:16Z
+wizard-os checker 4ed46c7 (staged copy) on candidate 6ec97801e72d9d30f7dabc8101c26711faffba82
+COMPATIBLE
+WOS-CHECK-EXIT=0
+ERROR: test_collection_home_model (test_collection_home.CollectionHome.test_collection_home_model)
+    result = subprocess.run([os.environ.get('NODE', 'node'), 'qa/home_model.cjs'],
