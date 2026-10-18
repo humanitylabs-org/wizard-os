@@ -34,7 +34,7 @@ HERMES_IMAGE_DIGEST = 'sha256:ac89f5f9fa16eda6c7aba3de3ba7235da3d867914e3ae2dcf1
 MODEL = 'claude-opus-5-5'
 PROVIDER = 'claude-subscription-directsdk-experimental'
 # WAM PR #56 commit carrying `wam agent-link` (fresh-mode gateway link, the 0.2.2 fresh-box gap).
-AGENT_LINK_WAM = '039da2bd66b0596a79b9f1e83049dd0102553c06'
+AGENT_LINK_WAM = '07a901c155cdf4356bb80d8dfa237613800d614f'
 ACCOUNTS_PORT = 8795  # AI Accounts guest-loopback port; status API only, page never opened
 CLIP_NAME = 'release-acceptance-source.mp4'
 SPEECH = 'This is a release acceptance test. Please trim the pauses and add captions.'
