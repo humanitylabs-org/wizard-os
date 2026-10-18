@@ -151,7 +151,16 @@ function guestProbe(cmd) {
     return {...pick(s, ['id', 'status', 'model', 'provider', 'message_count', 'wizard_model_lock_updated_at', 'source']),
       attention: s.wizard_attention || null};
   };
-  const runInfo = async (page, rid) => pick(await api(page, `/wizard/hermes/v1/runs/${encodeURIComponent(rid)}`), ['id', 'run_id', 'status', 'model', 'provider', 'session_id']);
+  const runInfo = async (page, rid) => {
+    const r = await api(page, `/wizard/hermes/v1/runs/${encodeURIComponent(rid)}`);
+    const out = pick(r, ['id', 'run_id', 'status', 'model', 'provider', 'session_id', 'last_event']);
+    // A failed run's own error text (provider/auth hints, never credentials) explains a dead turn.
+    if (['failed', 'interrupted', 'cancelled'].includes(r.status)) {
+      out.error = r.error ? pick(r.error, ['type', 'message']) : null;
+      out.output = clip(typeof r.output === 'string' ? r.output : '', 400);
+    }
+    return out;
+  };
   const messages = async (page, sid) => {
     const j = await api(page, `/wizard/hermes/api/sessions/${encodeURIComponent(sid)}/messages?order=oldest&limit=500&offset=0&include_compacted=true&view=wizard`);
     return (j.data || j.messages || j.items || []).map(m => ({role: m.role, text: text(m.content)}));

@@ -34,7 +34,7 @@ SOURCES = ('e2e_022_ai_flow.py', 'e2e_022_ai_guest.py', 'e2e_022_ai_browser.cjs'
 MODEL = 'claude-opus-5-5'
 PROVIDER = 'claude-subscription-directsdk-experimental'
 PREFLIGHT_REQUIRED = ('marketplace-ready', 'ai-accounts-status-connected', 'defleur-installed-pinned',
-                      'synthetic-source-clip', 'hermes-before')
+                      'synthetic-source-clip', 'hermes-before', 'owner-default-model')
 SECRET_KEY = re.compile(r'(password|passwd|secret|token|cookie|authori[sz]ation|api[-_]?key|credential|bearer|'
                         r'private[-_]?key|oauth|^env$|^headers?$|^dotenv$)', re.I)
 SECRET_VALUE = re.compile(r'(sk-ant-[A-Za-z0-9_-]{8,}|sk-[A-Za-z0-9_-]{20,}|Bearer\s+\S{8,}|gh[pousr]_[A-Za-z0-9]{20,}|'

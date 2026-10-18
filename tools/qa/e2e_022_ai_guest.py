@@ -31,6 +31,8 @@ APP_SHA = '76c544a75515f41d49317a625fdf40e63d0b8176'
 IMAGE_DIGEST = 'sha256:d837622c977e1d868bfbb331f5f61fc3040d2ee89b0218e4f1f73a84aa6b4b57'
 VERSION = '0.7.0-testing'
 HERMES_IMAGE_DIGEST = 'sha256:ac89f5f9fa16eda6c7aba3de3ba7235da3d867914e3ae2dcf13135ee078fd3b0'
+MODEL = 'claude-opus-5-5'
+PROVIDER = 'claude-subscription-directsdk-experimental'
 ACCOUNTS_PORT = 8795  # AI Accounts guest-loopback port; status API only, page never opened
 CLIP_NAME = 'release-acceptance-source.mp4'
 SPEECH = 'This is a release acceptance test. Please trim the pauses and add captions.'
@@ -532,6 +534,28 @@ def preflight(x):
                                         'dotenv_file': sudo_exists(x.hermes / '.env'),
                                         'auth_json_file': sudo_exists(x.hermes / 'auth.json')}}
     stage('hermes-before', before)
+
+    def owner_default_model():
+        # Stock Hermes v2026.9.24 resolves its global default provider before honouring a
+        # per-request model lock, so a fresh box with no default fails every chat ("not connected
+        # to any AI provider"). Set exactly the owner's required route through the Hermes app's own
+        # CLI, as the owner would with `hermes model`; no credentials are touched or copied.
+        want = {'provider': PROVIDER, 'default': MODEL}
+        cur = x.config_model()
+        if cur.get('provider') == want['provider'] and cur.get('default') in (MODEL, MODEL + '[1m]'):
+            return {'changed': False, 'before': cur, 'after': cur}
+        engine = [r['name'] for r in containers() if 'hermes-agent-engine' in r['name'] and r['status'] == 'running']
+        require(len(engine) == 1, 'running Hermes engine container not found')
+        for key, value in (('model.provider', want['provider']), ('model.default', want['default'])):
+            p = subprocess.run(['sudo', '-n', 'docker', 'exec', '-u', '1000:1000', engine[0], 'hermes', 'config', 'set', key, value],
+                               stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180)
+            REPORT['commands'].append({'argv': ['docker', 'exec', 'hermes', 'config', 'set', key, value], 'exit_code': p.returncode})
+            require(p.returncode == 0, 'hermes config set %s failed: %s' % (key, (p.stderr or p.stdout)[-300:]))
+        after = x.config_model()
+        require(after.get('provider') == want['provider'] and after.get('default') == want['default'],
+                'Hermes default model did not read back as the owner route')
+        return {'changed': True, 'before': cur, 'after': after, 'method': 'hermes config set (app CLI, owner step)'}
+    REPORT['owner_default_model'] = stage('owner-default-model', owner_default_model)
 
     shell = x.registry().get('wizard-ux', {})
     shell_url = (shell.get('view') or {}).get('url') or ''
