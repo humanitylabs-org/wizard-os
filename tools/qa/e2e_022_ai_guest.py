@@ -33,6 +33,8 @@ VERSION = '0.7.0-testing'
 HERMES_IMAGE_DIGEST = 'sha256:ac89f5f9fa16eda6c7aba3de3ba7235da3d867914e3ae2dcf13135ee078fd3b0'
 MODEL = 'claude-opus-5-5'
 PROVIDER = 'claude-subscription-directsdk-experimental'
+# WAM PR #56 commit carrying `wam agent-link` (fresh-mode gateway link, the 0.2.2 fresh-box gap).
+AGENT_LINK_WAM = '039da2bd66b0596a79b9f1e83049dd0102553c06'
 ACCOUNTS_PORT = 8795  # AI Accounts guest-loopback port; status API only, page never opened
 CLIP_NAME = 'release-acceptance-source.mp4'
 SPEECH = 'This is a release acceptance test. Please trim the pauses and add captions.'
@@ -619,6 +621,26 @@ print(json.dumps({k: (v or {}).get('url') for k, v in (c.get('mcp_servers') or {
                 'service_app_ids': ids, 'defleur_mcp': internal, 'service_to_defleur_mcp': reach,
                 'hermes_mcp_servers': hermes_mcp, 'bridge_jobs': jobs}
     REPORT['agent_sees_apps'] = stage('agent-sees-apps', agent_sees_apps)
+
+    def agent_link():
+        # Fresh mode shipped without connecting the hermes-agent app to the gateway (no mcp_servers.wizard,
+        # no pointer skills). Apply the PR #56 fix from its exact public commit, as the owner (umask 022).
+        src = x.work / ('wam-' + AGENT_LINK_WAM[:12])
+        if not (src / 'wam/agent_link.py').is_file():
+            src.mkdir(parents=True, exist_ok=True)
+            tar = x.work / 'wam.tar.gz'
+            run(['curl', '-fsSL', '-o', tar, 'https://codeload.github.com/humanitylabs-org/wizard-app-manager/tar.gz/' + AGENT_LINK_WAM], timeout=300)
+            run(['tar', '-xzf', tar, '-C', src, '--strip-components=1'], timeout=120)
+        p = subprocess.run(['sh', '-c', 'umask 022; cd "$0" && exec python3 -m wam agent-link', str(src)],
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=2400)
+        REPORT['commands'].append({'argv': ['python3', '-m', 'wam', 'agent-link'], 'exit_code': p.returncode})
+        # agent-link never prints the token; its stderr is a plain reason.
+        require('{' in p.stdout, 'agent-link failed (exit %s): %s' % (p.returncode, (p.stderr or p.stdout)[-500:]))
+        rec = json.loads(p.stdout[p.stdout.index('{'):])
+        require(rec.get('linked') is True, 'agent-link did not verify the gateway: %s' % json.dumps(rec)[:400])
+        require('wizard-job-video-editing' in (rec.get('skills_visible') or []), 'Hermes cannot see the DeFleur pointer skill')
+        return {'wam_commit': AGENT_LINK_WAM, **rec}
+    REPORT['agent_link'] = stage('agent-link', agent_link)
 
     shell = x.registry().get('wizard-ux', {})
     shell_url = (shell.get('view') or {}).get('url') or ''
