@@ -280,8 +280,8 @@ def main():
         videos = c.runtipi_root / 'media/Videos'
         # Do not let the private evidence umask create an unreadable root-owned
         # Videos parent on a fresh guest. Preserve an existing owner's directory.
-        if not videos.exists():
-            run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), videos])
+        if not videos.exists():   # as the Files app makes it (uid 1000, 0775), so DeFleur can add Videos/Edited
+            run(['sudo', '-n', 'install', '-d', '-m', '775', '-o', '1000', '-g', '1000', videos])
         target = videos / run_id
         require(not target.exists(), 'synthetic target already exists')
         run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), target])

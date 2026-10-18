@@ -501,11 +501,11 @@ def preflight(x):
             if needed:
                 run(['sudo', '-n', 'apt-get', 'update', '-qq'], timeout=300)
                 run(['sudo', '-n', 'env', 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', '-qq', *needed], timeout=600)
-            if not videos.exists():
-                run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), videos])
+            if not videos.exists():   # as the Files app makes it: uid 1000, 0775 (apps share it)
+                run(['sudo', '-n', 'install', '-d', '-m', '775', '-o', '1000', '-g', '1000', videos])
             target = videos / x.run_id
             require(not target.exists(), 'synthetic target already exists')
-            run(['sudo', '-n', 'install', '-d', '-m', '755', '-o', str(os.getuid()), '-g', str(os.getgid()), target])
+            run(['sudo', '-n', 'install', '-d', '-m', '775', '-o', str(os.getuid()), '-g', str(os.getgid()), target])
             wav = x.work / 'synthetic-speech.wav'
             run(['espeak-ng', '-s', '165', '-w', wav, SPEECH])
             with wave.open(str(wav)) as w:
@@ -641,6 +641,34 @@ print(json.dumps({k: (v or {}).get('url') for k, v in (c.get('mcp_servers') or {
         require('wizard-job-video-editing' in (rec.get('skills_visible') or []), 'Hermes cannot see the DeFleur pointer skill')
         return {'wam_commit': AGENT_LINK_WAM, **rec}
     REPORT['agent_link'] = stage('agent-link', agent_link)
+
+    def files_writable():
+        # DeFleur (uid 1000) saves to Files -> Videos -> Edited. The Files app creates Videos and Videos/Edited as
+        # uid 1000 0775 on its first start, but only when missing. Earlier runs of this runner created Videos itself
+        # as the guest login user 0755, so Files could not add Edited and DeFleur could not save (run heavy_b9a6b951).
+        # Hand only runner-made folders back to the Files layout; anything Files or the owner made is left alone.
+        media = x.media
+        def st(p):
+            out = run(['sudo', '-n', 'stat', '-c', '%u:%g %a %F', p]) if run(['sudo', '-n', 'sh', '-c', '[ -e "$0" ] && echo y || echo n', p]).strip() == 'y' else 'missing'
+            return out.strip()
+        before = {str(p.relative_to(media.parent)): st(p) for p in (media, media / 'Videos', media / 'Videos/Edited')}
+        repaired = []
+        videos = media / 'Videos'
+        if before['media/Videos'].startswith('%d:' % os.getuid()) and os.getuid() != 1000 and 'directory' in before['media/Videos']:
+            run(['sudo', '-n', 'chown', '1000:1000', videos]); run(['sudo', '-n', 'chmod', '0775', videos])
+            repaired.append('Videos')
+        if before['media/Videos/Edited'] == 'missing':
+            run(['sudo', '-n', 'install', '-d', '-m', '775', '-o', '1000', '-g', '1000', videos / 'Edited'])
+            repaired.append('Videos/Edited')
+        after = {str(p.relative_to(media.parent)): st(p) for p in (media, videos, videos / 'Edited')}
+        df = [r['name'] for r in containers() if r['status'] == 'running' and 'defleur' in r['name']]
+        require(len(df) == 1, 'DeFleur not uniquely running')
+        p = subprocess.run(['sudo', '-n', 'docker', 'exec', '-u', '1000:1000', df[0], 'sh', '-c',
+                            'test -w /media/Videos/Edited && test -x /media/Videos/Edited && echo writable'],
+                           capture_output=True, text=True, timeout=60)
+        require(p.stdout.strip() == 'writable', 'DeFleur (uid 1000) cannot write Files -> Videos -> Edited: %s' % json.dumps(after))
+        return {'before': before, 'repaired_runner_made': repaired, 'after': after, 'defleur_can_write_edited': True}
+    REPORT['files_writable'] = stage('files-writable', files_writable)
 
     shell = x.registry().get('wizard-ux', {})
     shell_url = (shell.get('view') or {}).get('url') or ''
