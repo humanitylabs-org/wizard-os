@@ -1,0 +1,18 @@
+The chapter was written by the pinned model through the skill's route, and the helper accepted it on the third attempt. Nothing was imported into the app.
+
+    Chapter Markdown: $RUN/work-opus/run-qa-empty-hub/out3/qa-empty-hub.md
+    Receipt JSON:     $RUN/work-opus/run-qa-empty-hub/out3/qa-empty-hub.receipt.json
+    modelUsage model: claude-opus-5-5 (canonicalModel claude-opus-5-5, provider firstParty, nothing else in modelUsage)
+
+- **Route:** I fetched the toolkit with the skill's bootstrap script from http://127.0.0.1:19230, and all its digest checks passed. The chapter came from the installed Claude CLI (2.1.280) through `tools/author_chapter.py`.
+- **Accepted chapter:** 759 words, 3 quotations checked against the source text, 1 source (the Gutenberg URL). The receipt is local evidence from the CLI run, not a signed attestation from the provider.
+- **First two attempts:** both reached the same pinned model but failed the helper's checks, so they don't count as editions:
+  - Attempt 1 (`out/`): the opening quote section had two quotations plus an attribution line; the check expects exactly one.
+  - Attempt 2 (`out2/`): it quoted "is fashioned," with the comma inside the quote marks, so the text didn't match the source exactly.
+- **What I changed:** only the brief, adding format notes (`chapter-brief-2.txt`, `chapter-brief-3.txt`). I didn't loosen any checks or edit the model's prose. The raw output of both failed attempts is kept next to their receipt paths.
+- **Content check:** I read it once. It quotes only Legge's chapter 11, argues the brief's point, takes on the strongest objection, and marks its own readings of Legge as interpretation. Citations are all [1]. This was a quick read, not a full editorial review.
+
+One conflict: the skill says "No live/paid model runs in QA," but you asked for a real authored chapter with a receipt, so I ran the model. The three runs cost about $0.15 in total.
+
+session_id: 20261018_004224_e186e6
+EXIT=0

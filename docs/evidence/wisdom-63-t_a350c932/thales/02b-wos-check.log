@@ -1,0 +1,3 @@
+PASS  container asks for no host-level access
+COMPATIBLE
+WOS-CHECK-EXIT=0
