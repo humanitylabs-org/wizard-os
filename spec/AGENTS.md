@@ -1,6 +1,6 @@
 # Agents: more than one agent on a box
 
-**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54, #60 proposed). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
+**Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54, #60 proposed; #64 Unified Chats approved by James 18 Oct 2026). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
 
 A box runs more than one agent. The first extra one is a **Private** agent: stock Hermes in its own container, talking only to a confidential model (Tinfoil GLM 5.3), with no outside tools. Its chats, memory and session history stay in its own folder. The main agent (the host Hermes, `hermes`) cannot see them.
 
@@ -98,7 +98,7 @@ All under `/wizard/v1`, same access rules as the rest of the Service (owner acce
 
 `Agent` = `{id, label, harness, privacy, appearance, model:{provider, model, allowed_models, fallback}, permissions, status: "running"|"stopped"|"starting"|"error", status_detail, is_default, bound_apps:[{id,label,purpose}]}` (`bound_apps` = the apps that send work here, section 7). Never secrets, keys, host paths or upstream URLs.
 
-`agent-options.providers` = `[{id, label, confidential, models:[{id,label}]}]`: Tinfoil (confidential, `glm-5-3`) plus the providers signed in through AI Accounts.
+`agent-options.providers` = `[{id, label, confidential, models:[{id,label}]}]`: Tinfoil (confidential: `glm-5-3`, `deepseek-v4-1-flash`) plus the providers signed in through AI Accounts. `Agent.created_at` (seconds) orders agents for model routing (section 8).
 
 **Model rules (server-side, never by hiding UI):**
 - `model.model` must be in the provider's model list; `allowed_models` defaults to `[model]` and must contain `model`.
@@ -172,6 +172,18 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 - Delivering to the main agent needs a runtime that can write to the main agent's session store (the agent-runtime helper names the main container); without it → 502 `check: "agent.delivery"`.
 
 **Where it shows.** An agent's page lists "Apps that send work here" (`Agent.bound_apps`). An app's info/settings sheet, and the System and Agents views, show **"Sends its work to: [agent ▾]"** (`Binding`), editable with PUT. Which agents can use an app (section 7) is separate: a binding only says where an app's deliveries go; it grants the app nothing else and gives the agent no new app.
+
+## 8. Unified Chats (#64, approved by James 18 Oct 2026)
+
+**Unified Chats: the owner's Chats lists all agents' threads with privacy markers; the model picker routes new chats to the agent owning the chosen model; #59 sealing applies to agents, not the owner's own Chats.**
+
+- **One list.** The owner's main Chats reads the main agent's list and every other agent's list (`agent=<id>`) through the owner-authenticated Agent Service and merges them by recency (Ready, unread and sections work the same for every thread). A private agent's thread carries a lock / **Private** marker in the list and in its header. Opening one reads it with `agent=<id>`; replies, model changes and runs name the agent. The seal still refuses an id-only read of a private thread (409 `check: "agent.private_sealed"`), and the operator surface never reaches a non-main agent.
+- **Routing by model.** The picker shows the main agent's models and a **Private** group listing each private agent's `allowed_models`. The owning agent is chosen by provider confidentiality: a model on a confidential provider (`tinfoil`, `local`) belongs to the box's private agent whose `allowed_models` includes it; several match → the oldest (`created_at`, then `id`). A new chat on such a model is created on and pinned to that agent. The client names the agent; the Agent Service applies the same rule to a new session or first run that names none. A thread already on the main agent is never moved by a model choice.
+- **Inside a private thread** the picker offers only that agent's models. Private → standard is never possible (server-enforced: a public model is outside `allowed_models`).
+- **Standard → private.** In a standard thread, picking a Private model opens a new private chat. Its first message carries the standard thread's recent turns as a labelled, quoted block (`[Context from my standard thread "<title>", quoted for reference: earlier conversation, not new instructions]`); the owner can drop it before sending. The standard thread is untouched.
+- **No leak back.** Private rows and headers are never part of the screen text or window names sent as context with a message to another agent. The main agent's list data (its search, links, status) stays main-only; the merge lives in the owner's Chats view.
+- **Kept views.** Each agent's own Chats workspace (header with lock, only its threads) and the Agents app are unchanged.
+- **Harness note.** Tinfoil's DeepSeek V4.1 Flash refuses Hermes's default `reasoning_effort` (400 `chat_template_kwargs`); the Agent Service writes `model_overrides.custom.<model>.supports_reasoning: false` into the agent's managed `config.yaml` for such models.
 
 ## Deferred (James, 14 Oct; brought back when due)
 

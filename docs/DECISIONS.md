@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 18 Oct 2026 — James: one Chats for every agent ([spec/AGENTS.md](../spec/AGENTS.md) section 8)
+
+| # | Decision | Status |
+|---|---|---|
+| 64 | **Unified Chats.** The owner's Chats lists all agents' threads with privacy markers; the model picker routes new chats to the agent owning the chosen model; #59 sealing applies to agents, not the owner's own Chats. A private agent's models appear in the picker as a **Private** group (lock); a new chat on one is created on and pinned to that private agent, and inside a private thread only its own models are offered. Picking a Private model inside a standard thread starts a new private chat that carries that conversation as labelled, quoted context; the standard thread is untouched, and nothing ever moves private → standard. The merge happens only in the owner-authenticated Agent Service list/read path, so the main agent's state, session search, memory and tools gain no private content. The per-agent Chats workspace and the Agents app stay as they are. James, 18 Oct: "the chat list is a unified chat list, kind of like a unified inbox. But also, we can keep the screen for separate agents." | **Approved by James 18 Oct 2026** |
+
 ## 16 Oct 2026 — James: app-owned model and workflow consistency ([spec/APP_WORKFLOWS.md](../spec/APP_WORKFLOWS.md))
 
 | # | Decision | Status |
