@@ -63,7 +63,8 @@ if service:
     try:
         reg = json.loads(txt)
         out['service_apps'] = [{'id': a.get('id'), 'status': a.get('status'), 'provides': a.get('provides'),
-                                'mcp': {k: (a.get('mcp') or {}).get(k) for k in ('url', 'internal')}} for a in reg.get('apps', [])]
+                                'mcp': {k: (a.get('mcp') or {}).get(k) for k in ('url', 'internal')},
+                                'view': a.get('view')} for a in reg.get('apps', [])]
     except Exception:
         out['service_apps'] = {'path': apps_path, 'raw_head': txt[:300], 'err': err[-200:]}
     reach = {}
@@ -75,6 +76,14 @@ if service:
                     "fetch(process.argv[1],{method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'diag',version:'0'}}}),signal:AbortSignal.timeout(15000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+(e.cause?.code||e.message)))", u, timeout=60)
                 reach['%s:%s' % (a['id'], k)] = (so or se).strip()[:120]
     out['service_mcp_reach'] = reach
+    # What the shell's launcher gets: the Agent Service's own app list (ids, urls only).
+    code, so, se = docker('exec', service, 'node', '-e',
+        "fetch('http://127.0.0.1:8787/wizard/v1/apps',{signal:AbortSignal.timeout(15000)}).then(async r=>console.log(JSON.stringify({status:r.status,apps:((await r.json()).apps||[]).map(a=>({id:a.id,url:a.url,source:a.source}))}))).catch(e=>console.log(JSON.stringify({error:e.cause?.code||e.message})))", timeout=60)
+    try:
+        out['launcher_apps'] = json.loads(so.strip().splitlines()[-1])
+    except Exception:
+        out['launcher_apps'] = {'raw': (so + se)[-400:]}
+    out['routes_json'] = sh(['sudo', '-n', 'sh', '-c', 'for f in "$0"/routes.json "$0"/launcher.json; do [ -e "$f" ] && echo "$f present" || echo "$f missing"; done', host_apps])[1].strip() if host_apps else None
     code, logs, lerr = docker('logs', '--tail', '2000', service)
     out['service_bridge_log'] = [l[:300] for l in (logs + lerr).splitlines() if 'agent-bridge' in l or 'apps.json' in l][-40:]
 # What the Hermes engine container itself can see.

@@ -461,13 +461,37 @@ function guestProbe(cmd) {
         const rel = cfg.relPath; check(rel && !rel.includes('..'), 'no output path');
         const parts = rel.split('/');
         const b = await boot('mobile', '?open=files');
+        // The Files app's own URL, from the same installed-apps list the shell uses (never guessed).
+        row.filesApp = await b.page.evaluate(async () => {
+          try {
+            if (window.WizConfig?.ready) await window.WizConfig.ready;
+            const ep = window.WizConfig?.endpoint('apps');
+            const j = ep ? await (await fetch(ep, {credentials: 'same-origin', cache: 'no-store'})).json() : {};
+            const a = (j.apps || []).find(x => x && x.id === 'files');
+            if (!a) return {present: false, endpoint: !!ep};
+            const u = new URL(a.url || '/', location.href);
+            return {present: true, hasUrl: !!a.url, sameOrigin: u.origin === location.origin, path: u.pathname};
+          } catch (e) { return {error: e.constructor.name}; }
+        });
+        const want = row.filesApp?.sameOrigin && row.filesApp.path && row.filesApp.path !== '/' ? row.filesApp.path.replace(/\/?$/, '/') : null;
+        const isFiles = p => (want && (p + '/').startsWith(want)) || /\/files(?:\/|$)/.test(p);
         let frame;
-        for (let n = 0; n < 40 && !frame; n++) {
+        for (let n = 0; n < 90 && !frame; n++) {
           for (const f of b.page.frames().slice(1)) {
             const el = await f.frameElement().catch(() => null);
-            if (el && await el.isVisible() && /\/files(?:\/|$)/.test(safePath(f.url()))) { frame = f; break; }
+            if (el && await el.isVisible().catch(() => false) && isFiles(safePath(f.url()))) { frame = f; break; }
           }
           if (!frame) await delay(500);
+        }
+        if (!frame) {
+          row.frames = [];
+          for (const f of b.page.frames().slice(1)) {
+            const el = await f.frameElement().catch(() => null);
+            row.frames.push({path: safePath(f.url()), visible: !!el && await el.isVisible().catch(() => false)});
+          }
+          row.deeplinkLog = await b.page.evaluate(() => (window.__deeplinkLog || []).slice(-10)).catch(() => null);
+          row.shellPath = safePath(b.page.url());
+          row.screenshots.push(await shot(b.page, 'mobile-files-unavailable'));
         }
         check(frame, 'Files hosted view unavailable');
         let parentPath = await frame.evaluate(() => location.pathname);
