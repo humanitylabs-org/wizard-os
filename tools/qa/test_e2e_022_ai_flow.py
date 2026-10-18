@@ -178,5 +178,59 @@ class HostTests(unittest.TestCase):
         self.assertFalse(any(x['pass'] for x in v.values()), v)
 
 
+class AlongsideClaudeTests(unittest.TestCase):
+    def test_one_shot_argv_has_only_owner_mount_and_local_pinned_image(self):
+        c = load('e2e_022_alongside_claude')
+        image = 'sha256:' + 'a' * 64
+        expected = ['sudo', '-n', 'docker', 'run', '-d', '--rm', '--pull=never', '--user', '501:20',
+                    '--read-only', '--tmpfs', '/tmp', '--label', c.LABEL,
+                    '-e', 'AI_ACCOUNTS_CLAUDE_DIR=/claude', '-e', 'AI_ACCOUNTS_BIND=0.0.0.0',
+                    '-e', 'AI_ACCOUNTS_PORT=8795', '-v', '/home/owner/.claude:/claude',
+                    '-p', '127.0.0.1:8797:8795', '--name', c.NAME, image]
+        self.assertEqual(c.container_argv(['sudo', '-n', 'docker'], Path('/home/owner'), 501, 20, image), expected)
+        with self.assertRaises(c.CheckError):
+            c.container_argv(['docker'], Path('/home/owner'), 501, 20, 'latest')
+        for forbidden in ('auth.json', '.credentials', 'WIZARD_MCP_TOKEN', 'API_KEY', '--privileged', '--env-file'):
+            self.assertNotIn(forbidden, ' '.join(expected))
+
+    def test_status_is_allowlisted_and_masks_domain(self):
+        c = load('e2e_022_alongside_claude')
+        result = c.status_payload({'loggedIn': True, 'authMethod': 'claude.ai', 'subscriptionType': 'max',
+                                   'email': 'private@company.example', 'accessToken': 'DO-NOT-EMIT'})
+        self.assertEqual(result, {'logged_in': True, 'plan': 'Claude Max', 'email_domain': 'c***.example'})
+        self.assertNotIn('private', json.dumps(result))
+        self.assertFalse(c.status_payload({'loggedIn': True, 'authMethod': 'api_key'})['logged_in'])
+
+    def test_guest_port_option_and_security_logic_unchanged(self):
+        import ast
+        import hashlib
+        w = load('e2e_022_signin_window')
+        base = ['hold', '--root', '/Volumes/ThalesMedia/wizard-os/e2e-022',
+                '--vm', 'alongside-022-amd64', '--playwright', '/installed/playwright']
+        self.assertEqual(w.parser().parse_args(base).guest_port, 8795)
+        self.assertEqual(w.parser().parse_args(base + ['--guest-port', '8797']).guest_port, 8797)
+        # Audited os-runner original: AST fingerprints exclude whitespace only.
+        expected = {
+            'Relay': '4eb300c11ece3f1858af352309862d8f40ef397c33638aa4733ddf060692b540',
+            'serve_handler_ours': '09f7837434edebf7f8ac9a543fe55b671ebe272b9bb1cca5771dac56aa78fb06',
+            'without_port': 'ec845c351d3e2a2941d1af860b31e3e1ca6f2d75c8056ecde7f57d3a6896e9f7',
+            'remove_own_handler': 'f7b09beb562e078cddcf204bf91fbfaa80af434b2c15e095adb02c15e83356a6',
+            'claude_status': 'c5ff7be2611638bfb0e810b52b0a329e7c418c67fb373c9d0b6c79b525f6b48c',
+        }
+        tree = ast.parse((HERE / 'e2e_022_signin_window.py').read_text())
+        found = {n.name: hashlib.sha256(ast.dump(n, include_attributes=False).encode()).hexdigest()
+                 for n in tree.body if isinstance(n, (ast.ClassDef, ast.FunctionDef)) and n.name in expected}
+        self.assertEqual(found, expected)
+
+    def test_no_command_prints_credentials(self):
+        import ast
+        for name in ('e2e_022_alongside_claude.py', 'e2e_022_signin_window.py', 'e2e_022_ai_guest.py'):
+            text = (HERE / name).read_text()
+            for n in ast.walk(ast.parse(text)):
+                if isinstance(n, ast.Constant) and isinstance(n.value, str):
+                    self.assertNotRegex(n.value, r'(?:cat|print|read_text|read_bytes).*?(?:\.credentials|auth\.json|mcp-token|WIZARD_MCP_TOKEN)')
+            self.assertNotIn("'serve', 'reset'", text)
+
+
 if __name__ == '__main__':
     unittest.main()
