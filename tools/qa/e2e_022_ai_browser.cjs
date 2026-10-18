@@ -394,7 +394,14 @@ function guestProbe(cmd) {
           const sizes = JSON.stringify(vids || {});
           stableFor = sizes === lastSizes ? stableFor + 1 : 0; lastSizes = sizes;
           if (idle && vids && Object.keys(vids).length && stableFor >= 1) { outcome = 'output-appeared'; break; }
-          if (idle && ['failed', 'interrupted', 'cancelled'].includes(info.status)) { outcome = 'run-' + info.status; break; }
+          const dead = ['failed', 'interrupted', 'cancelled'];
+          if (idle && (dead.includes(info.status) || dead.includes(run?.status))) {
+            // A failed run with no reply is final: no answer to give, nothing for DeFleur to render.
+            const msgs = await messages(m.page, sid).catch(() => []);
+            if (!msgs.some(x => x.role === 'assistant' && x.text.trim()) || dead.includes(info.status)) {
+              outcome = 'run-' + (dead.includes(run?.status) ? run.status : info.status); break;
+            }
+          }
           if (idle && vids && !Object.keys(vids).length) {
             const msgs = await messages(m.page, sid).catch(() => []);
             const a = msgs.filter(x => x.role === 'assistant' && x.text.trim());
