@@ -1,7 +1,7 @@
 # Appearance: shell, skin, app
 
 **Status: layering locked (James, 12 Oct 2026). Appearance v1 tokens and transport: approved by James, implemented in the isolated preview; Miguel to confirm the `wizard.md` field.**
-Preview: `https://app-styling.staging.wizard001.com/wizard-os-home/` (tailnet, read-only). Decisions #50–#53.
+The original read-only preview used the retired custom domain. For a new review, select an isolated tailnet preview origin via `QA_ORIGIN` and open `/wizard-os-home/`. Decisions #50–#53.
 
 Every app you open should feel like part of one operating system, and changing the skin should re-dress every app at once, without flattening what makes each app itself.
 
