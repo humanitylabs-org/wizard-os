@@ -32,7 +32,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 - [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
   - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
-  - Agent Search system app: Hermes + Pi readers, per-agent index, MCP tools, grant checks, read log.
+  - Agent History system app (#66): hourly copy from each agent, sealed monthly files, conversation export, `live_days` trimming after a verified copy, `sessions_search` with `deep`; then the Pi reader, grant checks and read log. v0 runs on James's box first (Archimedes).
   - Agent-data grants in `wizard-grants.json` and on the Apps screen.
   - Wizard scheduler: jobs API, UX list, Hermes cron import for alongside mode, blueprint templates.
 - [ ] **Approval policy across agents**: which actions need the owner's yes, enforced in Wizard rather than per agent. Unowned.

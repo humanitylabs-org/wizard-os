@@ -57,7 +57,7 @@ agents/<id>/
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
 - `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here in the MVP; when app-to-app grants land they are mirrored as `wizard-grants.json` grants `{from: "agent:<id>", to: <app>}` so `wam connect` narrows to them.
-- `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
+- `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent History enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
 
@@ -123,10 +123,10 @@ Apps that produce work for an agent also show **"Sends its work to: [agent]"** (
 
 ## 6. Private agents are sealed (#59)
 
-- No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent Search does not index private agents for other readers.
+- No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent History never serves a private agent to other readers.
 - Sharing goes outward only, as a copy: the owner asks the private agent to share something; it shows the exact item and its destination (another agent's thread, or Files); it publishes only after the owner approves that item. The destination receives a copy; it never gets a way back in. Each publish is logged (item, destination, time, no content in the log).
 - Moving to a new harness works the same way: the private agent publishes what the owner approves into the new agent.
-- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent Search enforce it.
+- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent History enforce it.
 
 ## 7. App → agent binding (#60, proposed)
 
@@ -192,4 +192,4 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 
 ## Not in this spec
 
-Agent Search and cross-agent grants (#45, #46), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.
+Agent History and cross-agent grants (#45, #46, #66), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.
