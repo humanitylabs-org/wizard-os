@@ -10,7 +10,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 ## Connection Router (Archimedes; DECISIONS #65, [CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
 
-- [ ] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider.
+- [x] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider. Done: `wizard-app-store` `images/wizard-connection-router` (server.py serves `/v1/needs`, `/v1/models/<feature>/run`, report-only grants; `tests/fake_provider.py`), published as Router 0.1.3 (wizard-app-store #12, #13).
 - [ ] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT through a raw-inference route in the `wizard-os` Hermes plugin (no second login).
 - [ ] **Shell**: install sheet (connect the recommended provider or approve a swap) and per-app "Models and connections".
 - [ ] **Wisdom first adopter**: ask = standard, lookup = fast, author = frontier `swap: never`; its helper service retires.
@@ -25,7 +25,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [ ] **Pointer skills** (Archimedes, part of #40). One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
 - [x] **`spec/AGENT_SERVICE_API.md`** (Archimedes, 12 Oct; [#22](https://github.com/humanitylabs-org/wizard-os/pull/22)). v1 written from shipped behaviour (wizard-agent-service `main` `f772b83`, wizard-ux `daily` `8866124`): 46 served routes plus the 4 proposed PR #7 routes and 1 gap, with discrepancies D1–D5. Evidence: `tools/check_api_contract.py --ux` maps all 63 UX requests (web + Android) onto documented routes, 0 problems; `tools/tests/test_api_contract.py` 12/12 with negative controls; `tools/api_contract_probe.mjs` 75/75 cases against an isolated service, 46/46 served routes exercised, 11 negative controls (undocumented, proposed and gap paths answer 404).
 - [ ] **Install alongside an existing Hermes** (#41; Archimedes): `os.sh` detect + alongside mode, `wizard link / unlink / doctor`, tested on a fresh VM with stock Hermes preinstalled.
-- [ ] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together.
+- [x] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together. Done: `releases/0.3.7.json` … `0.3.12.json` plus `releases/stable` on `main` (stable = 0.3.12, PR #76).
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
 - [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
