@@ -1,6 +1,6 @@
 # Phone setup: use Wizard on your phone
 
-**Status: build approved by James (14 Oct 2026); contract below is the MVP. Decisions #55–#57.**
+**Status: build approved by James (14 Oct 2026); contract below is the MVP. Decisions #67–#69.**
 
 A new owner uses Wizard on the computer it runs on. When they want it on their phone, they open **Setup** and tap
 **Use Wizard on your phone**. Nothing about private networking happens before that tap.
@@ -19,9 +19,19 @@ owner learns that Wizard is an operating system with apps, not a chat window.
    Tailscale's one-click link for that. The step completes when the box is online with its name, e.g.
    `wizard.tail1234.ts.net`.
 2. **Get Tailscale on your phone.** QR code to `https://tailscale.com/download`; sign in with the same account.
-3. **Open Wizard on your phone.** QR code to the box's own `https://<machine>.<tailnet>.ts.net/`. The step completes
+3. **Open Wizard on your phone.** QR code containing `wizard://connect?origin=<percent-encoded HTTPS box origin>` (see below), plus a copyable HTTPS address for browser access. The step completes
    when Wizard sees the phone. The phone is signed in as the owner automatically; anyone else on that tailnet is
    refused.
+
+## Connection QR payload
+
+The connection QR encodes `wizard://connect?origin=<percent-encoded HTTPS box origin>`, e.g.
+`wizard://connect?origin=https%3A%2F%2Fbox.example.ts.net`. The origin must use HTTPS, have no credentials,
+path (except `/`), query or fragment. Parse the query once with normal URL query parsing; reject malformed
+values and non-HTTPS schemes. Android Connect also accepts a plain HTTPS box URL under the same validation
+for manual entry and legacy QR codes. Neither format authenticates the caller: the enrolled owner check still applies.
+The displayed/copied browser URL remains HTTPS. Tailscale download and sign-in links are separate HTTPS QR roles,
+never a `wizard://connect` payload. Generate all QR pixels locally; never use a remote QR service.
 
 ## Rules
 
