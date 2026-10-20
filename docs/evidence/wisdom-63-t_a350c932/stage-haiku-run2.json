@@ -1,0 +1,51 @@
+{
+ "zip": "qa63-haiku-run2-injected.zip",
+ "zip_sha256": "e0864dbd9ff59c6654c0204838ed87ee863dc5578fe82ca143caa9cade92198a",
+ "http": 400,
+ "response": {
+  "error": "Authoring receipt rejected: qa-empty-hub workflow is None, installed workflow requires 'wisdom.collection-authoring'. No output admitted. Re-author the chapter with the pinned Wisdom workflow (anthropic / claude-opus-5-5) and export again."
+ },
+ "library_changed": false,
+ "readback": [
+  {
+   "id": "qa63-wellformed-forgery2",
+   "status": "removed",
+   "sha256": "29017f897d83290928d866d02c09f9e6c74e10ee1f9b7d05b11347e2e13d7486",
+   "authoring": {
+    "status": "pinned",
+    "workflow": "wisdom.collection-authoring",
+    "workflow_version": 1,
+    "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+    "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+    "requested_model": "anthropic/claude-opus-5-5",
+    "observed_model": "claude-opus-5-5",
+    "observed_provider": "firstParty",
+    "override": null,
+    "receipts_sha256": "a67da53bae45126ebd140bfc415a88495f55f1ac78c07cae2acbf32d17668465",
+    "chapters_verified": 1,
+    "chapters_unverified": [],
+    "evidence_kind": "local runner receipts, not cryptographic provider attestation"
+   }
+  },
+  {
+   "id": "qa63-opus-orchestrator",
+   "status": "removed",
+   "sha256": "3967eeb3b6ee8d811bbd50514b8ab108846087477451c3821bdaff70d0a50e82",
+   "authoring": {
+    "status": "pinned",
+    "workflow": "wisdom.collection-authoring",
+    "workflow_version": 1,
+    "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+    "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+    "requested_model": "anthropic/claude-opus-5-5",
+    "observed_model": "claude-opus-5-5",
+    "observed_provider": "firstParty",
+    "override": null,
+    "receipts_sha256": "34a11164601d392e63512b4627d0146e3530045d388569dbf63007608ea3957a",
+    "chapters_verified": 1,
+    "chapters_unverified": [],
+    "evidence_kind": "local runner receipts, not cryptographic provider attestation"
+   }
+  }
+ ]
+}

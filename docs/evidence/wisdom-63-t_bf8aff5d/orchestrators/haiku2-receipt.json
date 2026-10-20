@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "workflow": "wisdom.collection-authoring",
+  "workflow_version": 1,
+  "format": "wisdom.compression.v1",
+  "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+  "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+  "brief_sha256": "90fb910515db350ae7a95dc4e754d40932abec3580b01ff9cfdbabba8bbb5e7f",
+  "sources_sha256": "0a8e814bee9f3908d55949cb7a81fc3b1f567b6cba561b9fff9298532fb8d368",
+  "input_sha256": "d1b7a1d1153c6ec11c4a44ed6746e7b1576976f759e3afad1c75c7506201f5da",
+  "cli_result_sha256": "1595ed5607d06e5558a2681bc098ea266179803887749a0f15b8d3dc3a970db5",
+  "output_sha256": "7dfdf0d79f29881a9220e31a771724285aceb34a8b42dcf9ea3612354195c9ff",
+  "output_tokens_sha256": "58f8a7ca3e1f33fc2bbb776915d020b2dccc0a1c81a5e6e575b667ae279df0df",
+  "chapter_id": "qa-empty-hub",
+  "provider": "anthropic",
+  "model": "claude-opus-5-5",
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 1906,
+      "cacheReadInputTokens": 1258,
+      "cacheCreationInputTokens": 2749,
+      "webSearchRequests": 0,
+      "costUSD": 0.0603716,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 229,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "checks": {
+    "words": 875,
+    "quotations_checked": 13,
+    "source_count": 1
+  },
+  "attempt": 2,
+  "rejected_attempts": 1,
+  "evidence_kind": "local CLI provenance, not cryptographic provider attestation or source-truth proof"
+}

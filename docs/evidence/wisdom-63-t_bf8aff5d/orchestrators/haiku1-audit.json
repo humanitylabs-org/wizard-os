@@ -1,0 +1,15 @@
+{
+ "run": "haiku",
+ "helper_invocations": [
+  {
+   "tool": "terminal",
+   "cmd": "cd $RUN/rerun/work-haiku/toolkit && python3 tools/author_chapter.py \\\n  --chapter \"qa-empty-hub\" \\\n  --brief \"$RUN/rerun/work-haiku/brief.txt\" \\\n  --sources \"$RUN/rerun/work-haiku/source-packet.json\" \\\n  --output \"$RUN/rerun/work-haiku/qa-empty-hub.md\" \\\n  --receipt \""
+  }
+ ],
+ "file_writing_calls": [
+  {
+   "tool": "write_file",
+   "arg": "{\"path\": \"$RUN/rerun/work-haiku/brief.txt\", \"content\": \"Laozi on emptiness and usefulness: \\\"The Empty Hub\\\"\\n\\nChapter ID: qa-empty-hub\\nAudience: Modern reader encountering Tao Te Ching for the first time\\nArgument: The most useful part of a made thing is its empty"
+  }
+ ]
+}

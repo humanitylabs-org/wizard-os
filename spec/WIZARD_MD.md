@@ -15,7 +15,7 @@ Every app is its own repo, including the ones Humanity Labs makes: there are no 
 ## Changes from v0.1
 
 1. `provides:` — capability slots the app fills (`video-editing`, `files`, `transcription` …). This is how the agent picks between several apps for the same job (James: "for shorts I want the DeFleur pipeline, for long-form podcasts this pipeline") and how system core apps become swappable ("these are alternatives to fit into those slots").
-2. `recommends:` — the agent/model the app is tuned for. The shipped skill runs the check first and warns, then proceeds ("intended to be used with Opus 5.5 and Hermes … results may vary, do you want to proceed?").
+2. `recommends:` — the agent/model the app is tuned for. For an AI process, its declared model is binding: load the app's shipped workflow, select that model explicitly, and stop on a mismatch unless the owner explicitly approves the named override. The chat or host default never silently substitutes. Every installation receives the same versioned prompt/model contract. See [APP_WORKFLOWS.md](APP_WORKFLOWS.md) (James, 16 Oct). Proposed: `requires:` declares each AI feature's tier, tested model and whether it may swap, plus outside services, so the Connection Router can match them to the owner's providers ([CONNECTION_ROUTER.md](CONNECTION_ROUTER.md), #65).
 3. `system: true` is a role, not a separate format: system core apps are ordinary Wizard apps that the OS installs by default, hides from the launcher and tells the agent about. Any of them can be replaced by another app that `provides` the same slot.
 4. Pointer-skill rule (below): the Agent Service, not the app, owns the generic "when asked to do X, use app Y" skill.
 5. The topic alone never makes an app compatible.
@@ -57,8 +57,10 @@ view:                       # required for view; optional for others
   path: /                   # opened by Wizard UX at /apps/<id>/
   port: 8080
 
+receives_voice_input: true  # optional boolean: app owns voice requests and feedback
+
 provides: [video-editing, short-form-video]   # capability slots (optional, recommended)
-recommends:                 # optional; the skill checks this first and warns
+recommends:                 # optional for non-AI apps; declared AI model is binding
   agent: hermes
   model: claude-opus-5-5
 
@@ -66,12 +68,19 @@ system: false               # true = installed with Wizard OS, hidden from the
                             # launcher, known to the agent, replaceable by any
                             # app that provides the same slot
 
+agent_binding:              # optional; the app sends work (recaps, reports) to an
+  required: true            # agent the owner picks; default = the main agent
+  purpose: Where your recaps go   # (spec/AGENTS.md section 7)
 uses: [transcriber, browser, files]   # other app ids or slots it calls
 needs: []                   # device capabilities: mic, system-audio, camera,
                             # notifications, files, credentials:<provider>
 health: /healthz
 ---
 ```
+
+## Receives voice input
+
+Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
 ## Rules the checker enforces
 
@@ -82,6 +91,7 @@ health: /healthz
 5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
 7. Every `needs` entry is from the known capability list.
+8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
 10. `publisher`, if present, is a valid `npub1…`.
@@ -91,6 +101,7 @@ health: /healthz
 
 ## Skills: shipped skill + pointer skill
 
+- AI-generating apps ship the versioned model/prompt/process and verification contract described in [APP_WORKFLOWS.md](APP_WORKFLOWS.md). The skill loads it before generation or delegation; a mismatch requires explicit owner approval before execution. Owner-local skills and earlier conversations cannot be the only copy.
 - The app ships its own full skill (`skill:`). The agent never writes that skill from scratch. Miguel's demo showed the failure mode: without a shipped skill, Hermes wrote its own "video editing" skill from the MCP.
 - The Agent Service keeps one small **pointer skill per slot** (e.g. `video-editing`): "for shorts use `defleur-video`; for long-form use `<other>`; ask if unsure". It holds routing and the owner's preferences, never the app's instructions. It is regenerated from `apps.json` on every install/update/remove, and the owner's stated preferences are kept.
 

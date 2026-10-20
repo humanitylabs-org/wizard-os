@@ -23,7 +23,7 @@ Progressive disclosure from start to finish. Nothing about an individual app goe
 - **One pointer skill per job** (`provides`), generated into `~/.wizard-os/skills/wizard-job-<job>/` on every `apps.json` change (by the Agent Service, and by the Hermes plugin so they stay current when the service is down). For example: "short-form video → DeFleur Video. Load the `defleur-video` skill, then call its tools." The pointer holds routing only, never the app's workflow (WIZARD_MD "shipped skill + pointer skill").
 - **Each app's shipped skill** is written by the App Manager into `~/.wizard-os/skills/<id>/` (wizard-app-manager#10, merged 11 Oct).
 - **Hermes reads that folder as an extra skills dir** (`skills.external_dirs`, stock config). Its normal skills index then lists each pointer by name and description, the same way it lists the owner's own skills. A request for "a short from this clip" matches `wizard-job-short-form-video` the way any skill matches. The agent loads the full app skill only when it uses the app.
-- **The owner's own learned skills.** Hermes may still save skills about how the owner likes a job done ("James wants 3 motion beats"). The rule stays pointer-not-copy: those skills point to the app skill, and Wizard's generated pointers are never edited by the agent.
+- **The owner's own learned skills.** Hermes may still save skills about how the owner likes a job done ("James wants 3 motion beats"). The rule stays pointer-not-copy: those skills point to the app skill, and Wizard's generated pointers are never edited by the agent. For AI generation, load the app's model/workflow contract before calling or delegating; a pointer must not describe that skill as optional for routine generation. The current chat model never overrides the app's pin ([APP_WORKFLOWS.md](APP_WORKFLOWS.md)).
 
 ### 2. Calling: one `wizard` MCP gateway, with app tools loaded on demand
 
@@ -60,6 +60,7 @@ A release can't ship unless this passes on a fresh box:
 - Eight plain requests that name the job, not the app or MCP ("make a short from the clip in my Files", "transcribe this recording", "what apps do I have?" …). Run each on a **flash-tier model** (GLM 5.3 Flash; DeepSeek Flash where a route exists) and on the default model.
 - Pass = the agent loads the matching pointer or app skill and its first app call is the right `<app>__<tool>` in at least 7 of 8, with zero file-system searches for app details, on both models.
 - Also report tokens per session: the box with every default app installed must stay within 10% of the box with none.
+- For AI-generating apps, verify the shipped skill and its prompt references are actually discoverable and that different default orchestrator models dispatch the same pinned process model. Unavailable or mismatched models fail without substitution; owner overrides are explicit and scoped. A successful tool call alone does not satisfy the model-contract gate.
 - Lives in `wizard-os/tools/tests/agent_bridge_gate.py`, against a real Hermes, a real Agent Service and a real installed app.
 
 **Measured 11 Oct** on a fresh Lima VM on Thales (stock `os.sh`, stock Hermes install, Hello Wizard, Transcriber, Browser, Secret Drop, AI Accounts), with no job map in the kernel:

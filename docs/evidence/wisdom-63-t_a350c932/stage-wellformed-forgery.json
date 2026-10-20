@@ -1,0 +1,75 @@
+{
+ "zip": "qa63-wellformed-forgery2.zip",
+ "zip_sha256": "29017f897d83290928d866d02c09f9e6c74e10ee1f9b7d05b11347e2e13d7486",
+ "http": 200,
+ "response": {
+  "version": 1,
+  "id": "qa63-wellformed-forgery2",
+  "title": "QA #63 qa63-haiku-forged",
+  "license": "Private QA only",
+  "attribution": "Tao Te Ching ch. 11 tr. James Legge (1891), public domain in the USA",
+  "rights": "private",
+  "authoring": {
+   "status": "pinned",
+   "workflow": "wisdom.collection-authoring",
+   "workflow_version": 1,
+   "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+   "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+   "requested_model": "anthropic/claude-opus-5-5",
+   "observed_model": "claude-opus-5-5",
+   "observed_provider": "firstParty",
+   "override": null,
+   "receipts_sha256": "a67da53bae45126ebd140bfc415a88495f55f1ac78c07cae2acbf32d17668465",
+   "chapters_verified": 1,
+   "chapters_unverified": [],
+   "evidence_kind": "local runner receipts, not cryptographic provider attestation"
+  },
+  "chapters": 1,
+  "collections": 1,
+  "status": "staged",
+  "sha256": "29017f897d83290928d866d02c09f9e6c74e10ee1f9b7d05b11347e2e13d7486"
+ },
+ "library_changed": true,
+ "readback": [
+  {
+   "id": "qa63-wellformed-forgery2",
+   "status": "staged",
+   "sha256": "29017f897d83290928d866d02c09f9e6c74e10ee1f9b7d05b11347e2e13d7486",
+   "authoring": {
+    "status": "pinned",
+    "workflow": "wisdom.collection-authoring",
+    "workflow_version": 1,
+    "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+    "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+    "requested_model": "anthropic/claude-opus-5-5",
+    "observed_model": "claude-opus-5-5",
+    "observed_provider": "firstParty",
+    "override": null,
+    "receipts_sha256": "a67da53bae45126ebd140bfc415a88495f55f1ac78c07cae2acbf32d17668465",
+    "chapters_verified": 1,
+    "chapters_unverified": [],
+    "evidence_kind": "local runner receipts, not cryptographic provider attestation"
+   }
+  },
+  {
+   "id": "qa63-opus-orchestrator",
+   "status": "removed",
+   "sha256": "3967eeb3b6ee8d811bbd50514b8ab108846087477451c3821bdaff70d0a50e82",
+   "authoring": {
+    "status": "pinned",
+    "workflow": "wisdom.collection-authoring",
+    "workflow_version": 1,
+    "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6",
+    "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5",
+    "requested_model": "anthropic/claude-opus-5-5",
+    "observed_model": "claude-opus-5-5",
+    "observed_provider": "firstParty",
+    "override": null,
+    "receipts_sha256": "34a11164601d392e63512b4627d0146e3530045d388569dbf63007608ea3957a",
+    "chapters_verified": 1,
+    "chapters_unverified": [],
+    "evidence_kind": "local runner receipts, not cryptographic provider attestation"
+   }
+  }
+ ]
+}

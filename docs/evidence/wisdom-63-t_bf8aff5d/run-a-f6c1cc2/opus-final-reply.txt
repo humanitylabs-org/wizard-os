@@ -1,0 +1,14 @@
+The chapter is written. On the second run, the app's own authoring helper finished successfully and wrote both the chapter and its receipt.
+
+  Chapter Markdown: $RUN/rerun/work-opus/run-qa-empty-hub/qa-empty-hub.v2.md
+  Receipt JSON:     $RUN/rerun/work-opus/run-qa-empty-hub/receipts2/qa-empty-hub.receipt.json
+  modelUsage model: claude-opus-5-5 (provider firstParty, and no other model appears)
+
+- **Result:** 801 words, 8 quotations checked against the Legge text, 1 source. The first draft in this run failed a check, the helper sent it back to the same model, and the second draft passed. The rejected draft is kept in receipts2/rejected/.
+- **First run failed:** I gave the helper a receipt folder that didn't exist yet. A draft failed the checks, and the helper then crashed trying to save that rejected draft into the missing folder. It exited with code 2 and wrote no chapter or receipt. As the skill directs, I re-ran it once with new output and receipt paths and created the folder first. The helper could create that folder itself.
+- **Nothing was imported** into the app. I didn't write or edit any chapter text or receipt myself.
+- **Live model calls:** The skill says "No live/paid model runs in QA," but a real receipt needs a real model call. I followed your explicit request, so this run made two live Claude calls. The accepted one cost about $0.06, and the cost of the rejected first-run draft isn't in this receipt.
+- **Still to check:** I haven't reviewed the chapter's content or its quotations myself. The receipt is the app's local record of what happened, not a cryptographically signed proof of which model wrote the text.
+
+session_id: 20261018_010512_783890
+EXIT=0

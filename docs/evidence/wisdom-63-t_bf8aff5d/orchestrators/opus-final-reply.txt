@@ -1,0 +1,14 @@
+The chapter was written through the pinned route, and the helper exited 0 with a receipt.
+
+    Chapter Markdown: $RUN/rerun/work-opus/run1/out/qa-empty-hub.md
+    Receipt JSON:     $RUN/rerun/work-opus/run1/receipts/qa-empty-hub.receipt.json
+    modelUsage model: claude-opus-5-5 (provider firstParty; the only entry, so no other model is mixed in)
+
+- I got the toolkit from the app with the skill's own bootstrap code, which checked every digest. I read all three authoring guides, then ran tools/author_chapter.py with a fresh brief and a copy of the source packet. The chapter's SHA-256 matches the output_sha256 in the receipt.
+- The helper's checks found 792 words and 11 quotations, all matching the Legge text verbatim, from 1 source.
+- The first draft failed a mechanical check, so the helper asked the same model again and accepted the second draft. The rejected draft is kept, unedited, in run1/receipts/rejected/.
+- Nothing was imported into the app.
+- I didn't do a separate human review of the prose; the guides list that as a step to do before export.
+
+session_id: 20261018_011316_440bb4
+EXIT=0

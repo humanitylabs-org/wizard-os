@@ -2,6 +2,14 @@
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
+## App-owned model consistency (16 Oct, approved; #63)
+
+Every installation uses each app's packaged AI model/workflow unless its owner explicitly approves a scoped override. Archimedes owns the [shared contract](../spec/APP_WORKFLOWS.md) and Wisdom's first implementation repair. Done when the package contains its actual prompt/model, changed orchestrator defaults preserve that route, missing/mismatched models stop, and the requested rewrite preserves reading history. The builder documentation mirror remains subject to App Manager owner review; other apps need their own execution evidence.
+
+## Receives voice input (15 Oct, approved; #62)
+
+Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
+
 ## Now: days 0–3 (week of 9 Oct)
 
 - ✅ **Agent Service cutover** (Jan's repo is live). Telos runs `wizard-agent-service` @ `fc0d022` since 9 Oct 09:45 UTC; `/wizard/health` answers 200.
@@ -40,7 +48,7 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 - ⏳ **Meeting Recorder and Reader become wizard.md apps.** Owner: Archimedes.
 - ⏳ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes, with James approving the style.
 - ⏳ **Credentials test**: two harnesses sharing one ChatGPT OAuth token on one box. Result → `docs/CREDENTIALS.md` + the break-glass kit. Owners: Miguel + Oscar, write-up Archimedes.
-- ⏳ **First release file**: which version of each repo goes together. Owner: Jan.
+- ✅ **First release file**: which version of each repo goes together. Owner: Jan. Done: `releases/<version>.json` on `main` (0.3.7 to 0.3.12) with `releases/stable`.
 
 ## Weeks 3–4: shell customization
 

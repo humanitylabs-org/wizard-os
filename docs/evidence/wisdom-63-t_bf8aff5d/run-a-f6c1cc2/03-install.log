@@ -1,0 +1,68 @@
+2026-10-18T01:03:42Z
+retention container: sha256:0a47fb05d5ce8eb4c5d990a479069cde44a774eeea96ad934023f89048350311
+drwxr-xr-x 12 wizard wizard 4096 Oct 18 07:39 /home/wizard/runtipi/repos/wizardapps/apps
+== wam uninstall wisdom (previous candidate 38ae796622ac057031b6878a257ed18e86371185)
+    "wizard-agent-service",
+    "wizard-claude",
+    "wizard-ux"
+  ]
+}
+WAM-UNINSTALL-EXIT=0
+wisdom-image-retain Created
+wisdom: installing from private repo humanitylabs-org/wisdom (only boxes with access can do this)
+{
+  "id": "wisdom",
+  "urn": "wisdom:wizardapps",
+  "status": "running",
+  "commit": "f6c1cc2235d5",
+  "from": "humanitylabs-org/wisdom",
+  "open": "http://127.0.0.1:9230/",
+  "mcp": "http://127.0.0.1:9230/mcp",
+  "installed": [
+    "browser",
+    "files",
+    "hermes-agent",
+    "notifications",
+    "secret-drop",
+    "transcriber",
+    "wisdom",
+    "wizard-agent-service",
+    "wizard-claude",
+    "wizard-ux"
+  ],
+  "private": true
+}
+
+real	0m5.261s
+user	0m0.362s
+sys	0m0.098s
+WAM-INSTALL-EXIT=0
+f6c1cc2235d542ffa55ccb921cbd57f818434383
+
+{"repo": "humanitylabs-org/wisdom", "git": "https://github.com/humanitylabs-org/wisdom", "private": true}
+
+SKILL.md
+config.json
+docker-compose.yml
+metadata
+wizard.md
+apps.json wisdom: {"status": "running", "version": "0.3.0-private.6", "commit": "f6c1cc2235d542ffa55ccb921cbd57f818434383", "view": {"url": "http://127.0.0.1:9230/"}, "api": null, "mcp": {"url": "http://127.0.0.1:9230/mcp", "internal": "http://wisdom:9200/mcp", "transport": "streamable-http"}, "skill": "skills/wisdom/SKILL.md", "provides": ["collection-reading", "collection-import"], "recommends": null}
+/home/wizard/.wizard-os/skills/wisdom/:
+total 24
+drwxrwxr-x  2 wizard wizard  4096 Oct 18 08:04 .
+drwxrwxr-x 11 wizard wizard  4096 Oct 18 08:04 ..
+-rw-rw-r--  1 wizard wizard 12518 Oct 18 08:03 SKILL.md
+
+/home/wizard/runtipi/app-data/wizard-os/skills/wisdom/:
+total 24
+drwxrwxr-x  2 wizard wizard  4096 Oct 18 08:04 .
+drwxrwxr-x 11 wizard wizard  4096 Oct 18 08:04 ..
+-rw-rw-r--  1 wizard wizard 12518 Oct 18 08:03 SKILL.md
+00cd52c8f81407bac6994fe4be424a38f462ed4e3a5ef73b29f5ac17ec0f5364  /home/wizard/.wizard-os/skills/wisdom/SKILL.md
+00cd52c8f81407bac6994fe4be424a38f462ed4e3a5ef73b29f5ac17ec0f5364  /home/wizard/wisdom/skill/SKILL.md
+wisdom_wizardapps-wisdom-1 ghcr.io/humanitylabs-org/wisdom:0.3.0-private.6 Up 2 seconds (health: starting) 127.0.0.1:9230->9200/tcp
+running image sha256:0a47fb05d5ce8eb4c5d990a479069cde44a774eeea96ad934023f89048350311 built sha256:0a47fb05d5ce8eb4c5d990a479069cde44a774eeea96ad934023f89048350311
+Uid:	1000	1000	1000	1000
+CapEff:	0000000000000000
+readonly=true capdrop=[ALL]
+2026-10-18T01:04:00Z

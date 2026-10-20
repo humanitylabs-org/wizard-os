@@ -2,6 +2,29 @@
 
 Components still to build. Pick one up: put your name on it in a PR, and close it with evidence. Ordered roughly by when it's needed.
 
+**Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
+
+## Receives voice input (15 Oct, approved; #62)
+
+Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
+
+## Private model providers (Archimedes; DECISIONS #66, [PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))
+
+- [x] **Spec** (Archimedes, 20 Oct).
+- [ ] **In-seal client, `tinfoil` profile** (Archimedes): Tinfoil SDK sidecar that encrypts inside the private agent's seal; relay capture shows no plaintext.
+- [ ] **Agent Service** (Archimedes): provider = installed app id, internal networks, per-agent client tokens, provider list on the Agents page.
+- [ ] **Relay mode in wizard-tinfoil** (Miguel): forward ciphertext, sole key holder, client tokens, declared egress only.
+- [ ] **Local model provider app** (Archimedes).
+- [ ] **Move the owner's box** (Archimedes): retire the per-agent proxy sidecar, its key copy and the `tinfoil-operator` chat route.
+
+## Connection Router (Archimedes; DECISIONS #65, [CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
+
+- [x] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider. Done: `wizard-app-store` `images/wizard-connection-router` (server.py serves `/v1/needs`, `/v1/models/<feature>/run`, report-only grants; `tests/fake_provider.py`), published as Router 0.1.3 (wizard-app-store #12, #13).
+- [ ] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT through a raw-inference route in the `wizard-os` Hermes plugin (no second login).
+- [ ] **Shell**: install sheet (connect the recommended provider or approve a swap) and per-app "Models and connections".
+- [ ] **Wisdom first adopter**: ask = standard, lookup = fast, author = frontier `swap: never`; its helper service retires.
+- [ ] **Acceptance on Thales**: Claude only, ChatGPT only, both, neither.
+
 ## Agent Service (Archimedes; DECISIONS #30, #42)
 
 - [x] **Runs on stock Hermes** (Archimedes, 9 Oct): capability-aware runs, helper follow-through without a Hermes patch, settings/bootstrap/apps endpoints, orb router, serves Wizard UX. James's daily driver since 9 Oct; `main` = `2634564`, CI green.
@@ -11,7 +34,7 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Pointer skills** (Archimedes, part of #40). One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
 - [x] **`spec/AGENT_SERVICE_API.md`** (Archimedes, 12 Oct; [#22](https://github.com/humanitylabs-org/wizard-os/pull/22)). v1 written from shipped behaviour (wizard-agent-service `main` `f772b83`, wizard-ux `daily` `8866124`): 46 served routes plus the 4 proposed PR #7 routes and 1 gap, with discrepancies D1–D5. Evidence: `tools/check_api_contract.py --ux` maps all 63 UX requests (web + Android) onto documented routes, 0 problems; `tools/tests/test_api_contract.py` 12/12 with negative controls; `tools/api_contract_probe.mjs` 75/75 cases against an isolated service, 46/46 served routes exercised, 11 negative controls (undocumented, proposed and gap paths answer 404).
 - [ ] **Install alongside an existing Hermes** (#41; Archimedes): `os.sh` detect + alongside mode, `wizard link / unlink / doctor`, tested on a fresh VM with stock Hermes preinstalled.
-- [ ] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together.
+- [x] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together. Done: `releases/0.3.7.json` … `0.3.12.json` plus `releases/stable` on `main` (stable = 0.3.12, PR #76).
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
 - [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
@@ -40,9 +63,9 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 - [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
-- [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code.
+- [ ] **App-to-app permissions spec** (Miguel + Jan): agent→app grants first, then `uses:` grants; per-grant credential; shown at install. Spec before networking code. James 14 Oct: install-time per-agent app choice (#58) and sealed private agents (#59) approved; app-runs-agent warning and isolation-for-stable deferred until due (spec/AGENTS.md).
 - [ ] Dependency install UX: "you already have a transcriber" vs "install the recommended one". Today `uses:` installs missing dependencies silently.
-- [ ] Install-time checks: `recommends.model` warning and architecture mismatch messages for the UX.
+- [ ] Install-time model checks and architecture mismatch messages: preserve the app's binding model/workflow contract, show missing-route requirements, and require an explicit owner override before substituting a model ([APP_WORKFLOWS.md](../spec/APP_WORKFLOWS.md), decision #63). A warning alone does not authorize execution.
 - [ ] Uninstall keeps data. Verify Runtipi's behaviour and add an explicit `--delete-data`.
 - [x] **Nostr catalog source behind a flag** (Archimedes, 9 Oct): `wam/nostr.py`, signature-verified NIP-34 discovery, publisher rule, GitHub/Nostr de-dupe, `commit` recorded per catalog row. Off unless `WAM_NOSTR=1`. Tested against four live relays.
 - [ ] **Pinned updates** (needed by stage 2): `wam update <id>` shows the commit diff, re-runs the checker, installs only after owner approval. Today a refresh moves to the latest commit.
@@ -78,14 +101,15 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 
 ## Apps (anyone)
 
+- [x] **App-owned model consistency (#63):** Wisdom is the first repair lane: package its established Opus authoring contract, enforce the effective model and preserve prior editions on rewrite. Verify the clean-install and different-orchestrator cases; record per-app implementation evidence rather than treating the new specification as universal enforcement. Archimedes owns Wisdom and the shared contract; the builder mirror is subject to App Manager owner review. Done for Wisdom, 18 Oct, [PR #10](https://github.com/humanitylabs-org/wisdom/pull/10) at `6ec9780` on a clean Thales VM. The helper now re-asks Opus itself when a draft fails, and the skill forbids hand-built receipts. One Opus-default and two Haiku-default agents each ran the helper once, wrote no prose or receipts themselves, and all three results were admitted as `pinned`. Receipts whose prose the runner would reject on shape are now refused. One limit stays open: a receipt copied from a real one over correctly shaped prose is still admitted as `pinned`. Signed receipts are an owner decision (A/B/C in the evidence), and PR #10 is awaiting merge. ([evidence](evidence/wisdom-63-t_bf8aff5d.md), [first run](evidence/wisdom-63-t_a350c932.md))
 - [ ] **Context bridge** app: read Claude Code / Codex sessions and project folders; import ChatGPT and Claude exports; MCP tools `search_past_work`, `load_project_context` ([MAC.md](MAC.md#picking-up-where-claude-or-chatgpt-left-off)).
 - [ ] **Meeting Recorder** as a wizard.md app (Archimedes).
-- [ ] **Reader** as a wizard.md app (Archimedes).
+- [x] **Reader** as a wizard.md app (Archimedes). Private repo `humanitylabs-org/reader`, package in [reader PR #1](https://github.com/humanitylabs-org/reader/pull/1) (merging it publishes the image). Fresh-VM acceptance at `7146f45` with the stock one-line install: both checkers COMPATIBLE, `wam install` of the private repo, save and read a markdown item inside Wizard UX, Back stays in the app, stock Hermes adds and finds items through the wizard gateway, uninstall keeps the library (it lives in `media/Reader`), reinstall brings it back ([QA.md](https://github.com/humanitylabs-org/reader/blob/feature/wizard-app-package/QA.md)). Still open elsewhere: index listing (index repo is read-only for this account; patch on the Reader task), the launcher tile on `wam` main (loopback view URLs are dropped until the `/apps/<id>/` route lands), and two fresh-box App Manager issues the run worked around (store folder owned by root; Runtipi deletes a locally built image on install).
 
 ## Shared (Archimedes unless noted)
 
-- [ ] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components.
-- [ ] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?"
+- [x] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components. Appearance v1, five skins, `tokens.json` → `tokens.css` with a drift check; demo sits on the same glass as Chats; Wisdom and a fresh generated app re-dress live in all five skins, window and full screen, on Thales (308 real-shell + 43 browser checks). [evidence](evidence/style-tokens-t_24e03d53.md). Staged in #36, awaiting James's style review.
+- [x] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?" Pointer in `system-skills/wizard-app-builder/`; WAM's builder takes `style/` as a hash-locked copy (wizard-app-manager#32, `wam new` app imports it byte-identically and passes the checker). [evidence](evidence/style-tokens-t_24e03d53.md). Awaiting Oscar's review.
 - [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
 - [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.

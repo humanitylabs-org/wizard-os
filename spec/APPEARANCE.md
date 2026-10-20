@@ -1,7 +1,7 @@
 # Appearance: shell, skin, app
 
 **Status: layering locked (James, 12 Oct 2026). Appearance v1 tokens and transport: approved by James, implemented in the isolated preview; Miguel to confirm the `wizard.md` field.**
-Preview: `https://app-styling.staging.wizard001.com/wizard-os-home/` (tailnet, read-only). Decisions #50–#53.
+The original read-only preview used the retired custom domain. For a new review, select an isolated tailnet preview origin via `QA_ORIGIN` and open `/wizard-os-home/`. Decisions #50–#53.
 
 Every app you open should feel like part of one operating system, and changing the skin should re-dress every app at once, without flattening what makes each app itself.
 
@@ -69,6 +69,10 @@ Apps that don't adopt the client still open in themed window chrome; the shell n
 - The skin choice is owner configuration in `theme.json`, reapplied on every connect; apps never store it.
 - App Back closes its own overlay or nested view first and reports handled / at-root; the shell then leaves fullscreen or changes desk; a single Back never exits Wizard.
 - Pin the appearance version. Older hosts or no host: the app runs on its standalone defaults.
+
+## Shared assets
+
+The extracted Appearance v1 dependency lives in [`style/`](../style/README.md): `tokens.json` → generated `tokens.css`, the same-origin appearance client, pre-paint boot marker, plain CSS primitives and an executable demo. Colour roles are the approved v1 message; static type/layout/motion defaults remain CSS-only and do not extend its transport or approve a manifest field. WAM carries a generated, hash-locked snapshot for offline app builds, with this folder as the authoritative source.
 
 ## Next
 

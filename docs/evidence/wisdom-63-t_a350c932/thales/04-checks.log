@@ -1,0 +1,98 @@
+2026-10-18T00:40:52Z
+== 1. installed package manifest (Runtipi store copy written by wam install)
+recommends:
+  model: claude-opus-5-5
+version: 0.3.0-private.5
+38ae796622ac057031b6878a257ed18e86371185
+
+== 2. GET /api/authoring/contract on the installed app
+HTTP-EXIT=0
+{"id": "wisdom.collection-authoring", "version": 1, "provider": "anthropic", "model": "claude-opus-5-5", "cli_provider": "firstParty", "fallback": false, "workflow_sha256": "c79e40c8ecc98a636a8b05e67e15cfd40be136a6fbdd56807db2da5ceeffb8f6", "prompt_sha256": "633f07aa6959500f7dada8759669926d4b4cf0dc5d814660f8e3e9640cf230e5", "contract_sha256": "030f10f2a3d024698063184682986afd7e18bfd34111b547973982b5f656c43c"}
+toolkit wisdom-author-toolkit-v1 3a9c80a921b6b3c5da74bc6269704ad91289625f16479e7a0840875b5a49e053 100151 12 files
+CONTRACT_PIN_OK
+== MCP wisdom_authoring_contract (same pin over the app's /mcp)
+mcp tools: 15 ['wisdom_authoring_contract', 'wisdom_authoring_toolkit']
+mcp contract: anthropic claude-opus-5-5 False 030f10f2a3d024698063184682986afd7e18bfd34111b547973982b5f656c43c
+== 3. agent skill discovery (the box's stock container Hermes)
+hermes image ghcr.io/humanitylabs-org/hermes-agent:v2026.9.24-wizard2@sha256:ac89f5f9fa16eda6c7aba3de3ba7235da3d867914e3ae2dcf13135ee078fd3b0
+-- before: stock wam main install
+skill_view(wisdom): success=False name=None path=None chars=0
+skill_view content sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+pinned text present: False
+-- SETUP (labelled): stock wam main copies app skills to ~/.wizard-os/skills and runtipi/app-data/wizard-os/skills, but the
+   stock hermes-agent container mounts neither. Sync the installed SKILL.md byte-for-byte into Hermes' native skills dir.
+503997613b343eec0a48b55e96d450b537386aceaf0a694aa4847227b8fb6b61  /home/wizard/.wizard-os/skills/wisdom/SKILL.md
+503997613b343eec0a48b55e96d450b537386aceaf0a694aa4847227b8fb6b61  /home/wizard/runtipi/app-data/wizardapps/hermes-agent/data/skills/wizard-apps/wisdom/SKILL.md
+-- after
+skill_view(wisdom): success=True name=wisdom path=wizard-apps/wisdom/SKILL.md chars=11690
+skill_view content sha256 503997613b343eec0a48b55e96d450b537386aceaf0a694aa4847227b8fb6b61
+pinned text present: True
+│ wisdom                  │ wizard-apps          │ local   │ local   │ enabled │
+== 4. toolkit bootstrap: the literal code block from the installed skill
+extracted fetch_toolkit.py 4194 bytes
+{"toolkit_dir": "/home/wizard/w63/toolkit", "contract_sha256": "030f10f2a3d024698063184682986afd7e18bfd34111b547973982b5f656c43c", "toolkit_sha256": "3a9c80a921b6b3c5da74bc6269704ad91289625f16479e7a0840875b5a49e053", "files": ["LICENSE", "authoring/prompt.md", "authoring/workflow.json", "authoring_admission.py", "authoring_contract.py", "collection_revision.py", "docs/authoring/PINNED-WORKFLOW.md", "docs/authoring/README.md", "docs/authoring/SHARED-THINKERS.md", "library.py", "tools/author_chapter.py", "tools/author_collection.py"]}
+BOOTSTRAP-EXIT=0
+.:
+LICENSE
+authoring
+authoring_admission.py
+authoring_contract.py
+collection_revision.py
+docs
+installed-contract.json
+library.py
+tools
+
+./authoring:
+prompt.md
+workflow.json
+
+./docs:
+authoring
+
+./docs/authoring:
+PINNED-WORKFLOW.md
+README.md
+SHARED-THINKERS.md
+
+./tools:
+author_chapter.py
+author_collection.py
+usage: author_chapter.py [-h] --brief BRIEF --sources SOURCES --output OUTPUT
+                         --receipt RECEIPT --chapter CHAPTER
+
+Owner-side execution helper; publishing remains the app's ordinary API/MCP.
+
+options:
+  -h, --help         show this help message and exit
+  --brief BRIEF
+  --sources SOURCES
+  --output OUTPUT
+  --receipt RECEIPT
+  --chapter CHAPTER
+AUTHOR-CHAPTER-HELP-EXIT=0
+usage: author_collection.py [-h]
+                            {export,install,revision-preview,revision-apply}
+                            ...
+
+Owner-side, new-collection-only bridge. Never modifies the reader or donor.
+Uses the existing version-1 library importer as the final document validator.
+No authoring jobs, provider calls, revisions, deletions or automatic
+activation.
+
+positional arguments:
+  {export,install,revision-preview,revision-apply}
+    export              Export exactly one new collection
+    install             Stage by default; enabling requires explicit --enable
+    revision-preview    Stage exact existing-collection revision; does not
+                        apply
+    revision-apply      Explicitly apply a saved exact preview
+
+options:
+  -h, --help            show this help message and exit
+AUTHOR-COLLECTION-HELP-EXIT=0
+== 5. no Claude CLI on the clean box: the helper must refuse, with no output
+Claude CLI is unavailable; no alternative author is permitted
+NO-CLI-EXIT=2
+ls: cannot access '/home/wizard/w63/out*': No such file or directory
+2026-10-18T00:40:54Z

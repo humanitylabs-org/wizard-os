@@ -68,6 +68,7 @@ python3 -m venv .venv && .venv/bin/pip install skia-pathops fonttools resvg-py
 | `topics` | `eye` | A watching eye cut into a sphere: a question about the world that keeps looking. | `#0ED8BB` (178°) |
 | `wizard-signal` | `signal` | A disc with signal radiating from one point: your feed, not noise. | `#0AD3E3` (205°) |
 | `files` | `files` | A folder with the Wizard door cut into its base: your stuff lives in the Wizard’s house. | `#56C8FE` (232°) |
+| `reader` | `reader` | A page with a bookmark ribbon cut down from its top edge: where you left off. | `#68BCFF` (244°) |
 | `wizard-search` | `search` | A lens with a spark in it: search that answers. | `#81B7FF` (256°) |
 | `projects` | `projects` | A board with three lanes hanging from the top, each at a different stage. | `#A0AEFE` (276°) |
 | `wizard` | `chats` | A speech bubble with the hat cut out of it: you talking to your Wizard. | `#C1AAFF` (296°) |
