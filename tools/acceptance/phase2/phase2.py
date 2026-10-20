@@ -41,7 +41,7 @@ def browser(label, required=True):
     return run('browser-' + label, ['node', str(here / 'browser.cjs'), str(root / 'browser'), label], 180, required)
 
 def wait_ux(name, limit=600):
-    script = f'for i in $(seq 1 {limit // 5}); do c=$(curl -s -o /dev/null -w "%{{http_code}}" http://127.0.0.1:18796/); echo "$i $c"; [ "$c" = 200 ] && exit 0; sleep 5; done; exit 1'
+    script = f'for i in $(seq 1 {limit // 5}); do c=$(curl -sL -o /dev/null -w "%{{http_code}}" http://127.0.0.1:18796/); echo "$i $c"; [ "$c" = 200 ] && exit 0; sleep 5; done; exit 1'
     return run(name, ['bash', '-lc', script], limit + 30)
 
 try:
