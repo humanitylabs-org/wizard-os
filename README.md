@@ -4,6 +4,15 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 
 **Agents:** read [`AGENTS.md`](AGENTS.md) first.
 
+## Emergency recovery
+
+- [Repair a broken Wizard box with an independent Claude Code or Codex login](docs/REPAIR.md).
+- [Credentials, keys, ownership and re-login/rotation map](CREDENTIALS.md).
+- [Ready-to-paste repair prompt](docs/repair/PROMPT.md) and [repair-agent guardrails](docs/repair/AGENTS.md).
+- [Source/command audit and acceptance limits](docs/REPAIR-SOURCE-AUDIT.md).
+
+Keep a copy outside Wizard alongside the owner's independent SSH/console access and off-box backup recovery instructions.
+
 ## Repos and owners
 
 | Repo | Owner | What |
