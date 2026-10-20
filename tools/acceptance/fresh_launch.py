@@ -5,6 +5,7 @@ Usage: fresh_launch.py EVIDENCE_ROOT LIMA_HOME VM_NAME [RELEASE]
 No home mounts, no host credentials, no model substitution. The VM is retained.
 """
 import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,13 +13,15 @@ import subprocess
 import sys
 import traceback
 
-root, lima, vm = sys.argv[1:4]
+root_arg, lima, vm = sys.argv[1:4]
 release = sys.argv[4] if len(sys.argv) > 4 else '0.3.17'
 assert vm.startswith('l4-'), 'refuse non-lane VM'
-root = Path(root)
+root = Path(root_arg)
 root.mkdir(parents=True, exist_ok=True)
-os.environ.update(LIMA_HOME=lima, PATH='/opt/homebrew/bin:/usr/local/bin:' + os.environ['PATH'], TMPDIR='/Volumes/ThalesMedia/tmp')
-receipt = {'vm': vm, 'LIMA_HOME': lima, 'release_requested': release, 'started': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'steps': []}
+cache = root / 'cache'
+cache.mkdir(exist_ok=True)
+os.environ.update(LIMA_HOME=lima, PATH='/opt/homebrew/bin:/usr/local/bin:' + os.environ['PATH'], TMPDIR=str(cache))
+receipt = {'vm': vm, 'LIMA_HOME': lima, 'release_requested': release, 'runner_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'started': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'steps': []}
 
 def save():
     (root / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
@@ -45,14 +48,24 @@ try:
     run('host-preflight', ['bash', '-lc', 'df -h / /Volumes/ThalesMedia; vm_stat; sysctl hw.memsize'])
     if Path(lima, vm).exists():
         raise RuntimeError('refuse to overwrite existing VM; inspect receipt before retry')
+    # Download on the work volume, not macOS Library/Caches/lima.
+    image = cache / 'ubuntu-24.04-arm64.img'
+    run('ubuntu-download', ['curl', '-fL', '--retry', '2', '-o', str(image),
+        'https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubuntu-24.04-server-cloudimg-arm64.img'], 900)
+    with image.open('rb') as image_file:
+        image_hash = hashlib.file_digest(image_file, 'sha256').hexdigest()
+    receipt['base_image_sha256'] = image_hash
+    save()
+    if image_hash != 'cafa1a965b591b7c4184b484ffd8e625981a79d48f9b4ae8a4adf7b4c5ade927':
+        raise RuntimeError('Ubuntu image checksum mismatch')
     config = root / 'vm.yaml'
-    config.write_text('''vmType: vz
+    config.write_text(f'''vmType: vz
 arch: aarch64
 cpus: 4
 memory: 6GiB
 disk: 40GiB
 images:
-- location: https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubuntu-24.04-server-cloudimg-arm64.img
+- location: {image}
   arch: aarch64
   digest: sha256:cafa1a965b591b7c4184b484ffd8e625981a79d48f9b4ae8a4adf7b4c5ade927
 mounts: []
