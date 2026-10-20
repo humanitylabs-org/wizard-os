@@ -169,7 +169,7 @@ Run against a private agent created through the Agent Service on the fresh Runti
 5. Stopping the provider makes the agent fail visibly with no fallback; restoring it permits a successful answer.
 6. The codeword appears in no provider log or app-data file.
 
-All six passed for Tinfoil on the Thales test box after integration repairs. The local provider was rejected before agent creation, so its checks remain blocked, not passed. This is test-rig evidence, not a published image or production rollout.
+All six passed on the Thales test box for both providers: Tinfoil (with a real key) and the local model (Qwen2.5-0.5B, provisioned offline, sealed with no internet). For the local provider, check 1 is replaced by proof that the request never leaves the box, and check 4 has no cloud key to contain, so it checks relay-token hygiene instead. This is test-rig evidence, not a published image or production rollout. Before release: install/update must run runtime reconciliation automatically, and images must be published and pinned.
 
 ## Migration on an existing box
 
