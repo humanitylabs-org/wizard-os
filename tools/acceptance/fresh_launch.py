@@ -50,8 +50,15 @@ try:
         raise RuntimeError('refuse to overwrite existing VM; inspect receipt before retry')
     # Download on the work volume, not macOS Library/Caches/lima.
     image = cache / 'ubuntu-24.04-arm64.img'
-    run('ubuntu-download', ['curl', '-fL', '--retry', '2', '-o', str(image),
-        'https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubuntu-24.04-server-cloudimg-arm64.img'], 900)
+    url = 'https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubuntu-24.04-server-cloudimg-arm64.img'
+    # Reuse a byte-identical image already on this host (Lima's download cache) before
+    # downloading; the sha256 check below still gates whatever we use.
+    seed = os.environ.get('L4_UBUNTU_IMAGE_SEED', '')
+    if not image.exists() and seed and Path(seed).is_file():
+        run('ubuntu-seed-copy', ['cp', seed, str(image)], 300)
+    if not image.exists():
+        run('ubuntu-download', ['curl', '-fL', '--retry', '3', '--speed-limit', '100000', '--speed-time', '60',
+            '-o', str(image), url], 2700)
     with image.open('rb') as image_file:
         image_hash = hashlib.file_digest(image_file, 'sha256').hexdigest()
     receipt['base_image_sha256'] = image_hash
