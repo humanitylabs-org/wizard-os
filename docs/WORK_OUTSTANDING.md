@@ -8,6 +8,15 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
 
+## Private model providers (Archimedes; DECISIONS #66, [PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))
+
+- [x] **Spec** (Archimedes, 20 Oct).
+- [ ] **In-seal client, `tinfoil` profile** (Archimedes): Tinfoil SDK sidecar that encrypts inside the private agent's seal; relay capture shows no plaintext.
+- [ ] **Agent Service** (Archimedes): provider = installed app id, internal networks, per-agent client tokens, provider list on the Agents page.
+- [ ] **Relay mode in wizard-tinfoil** (Miguel): forward ciphertext, sole key holder, client tokens, declared egress only.
+- [ ] **Local model provider app** (Archimedes).
+- [ ] **Move the owner's box** (Archimedes): retire the per-agent proxy sidecar, its key copy and the `tinfoil-operator` chat route.
+
 ## Connection Router (Archimedes; DECISIONS #65, [CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
 
 - [x] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider. Done: `wizard-app-store` `images/wizard-connection-router` (server.py serves `/v1/needs`, `/v1/models/<feature>/run`, report-only grants; `tests/fake_provider.py`), published as Router 0.1.3 (wizard-app-store #12, #13).

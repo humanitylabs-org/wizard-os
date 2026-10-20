@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 20 Oct 2026 — James: Private model providers ([spec/PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 66 | **Private agents use any private provider.** A private agent is bound to a connection app that declares `private-inference` (Tinfoil first, a local model next, others later), never to a hardcoded provider. Encryption for an attested provider happens inside the private agent's seal, so the provider app relays ciphertext it cannot read and is the only holder of the provider key. Private-agent networks are Docker `internal`; only the provider app reaches outside, to its declared hosts. James and Archimedes own the Private agent; each provider app's author owns that app (Miguel: wizard-tinfoil). Designed for the target box where the main agent runs in its own container. | Approved by James (direction); details proposed |
+
 ## 18 Oct 2026 — James: Connection Router ([spec/CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
 
 | # | Decision | Status |

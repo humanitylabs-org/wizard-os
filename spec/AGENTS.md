@@ -77,7 +77,7 @@ A preset sets the starting values; the owner adjusts any field afterwards. `pres
 - Image: stock Hermes, the Runtipi package shape of `wizard-app-store/apps/hermes-agent` (`ghcr.io/humanitylabs-org/hermes-agent`), installed as Runtipi app `agent-<id>` through the App Manager's install path (local candidate package, same container-safety check, `apps.json` write).
 - `home/` bind-mounted at `/opt/data`. The Agent Service seeds `home/config.yaml` and `home/.env` before first start (the image never overwrites them) and rewrites the managed keys on permission changes.
 - API server on, with its own key (`API_SERVER_KEY` = `runtime.key`), listening on the app network and on `127.0.0.1:<port>`.
-- Confidential model: a **Tinfoil attestation proxy sidecar** (`ghcr.io/tinfoilsh/tinfoil-proxy`) in the same compose; Hermes uses `http://tinfoil-proxy:3301/v1` as a custom provider. The provider key sits only in the agent's own `home/.env`.
+- Confidential model: **being replaced** by provider apps and an in-seal client, see [PRIVATE_PROVIDERS.md](PRIVATE_PROVIDERS.md) (#66). Current build: a **Tinfoil attestation proxy sidecar** (`ghcr.io/tinfoilsh/tinfoil-proxy`) in the same compose; Hermes uses `http://tinfoil-proxy:3301/v1` as a custom provider. The provider key sits only in the agent's own `home/.env`.
 - The Agent Service never gets the Docker socket. It asks the runtime driver (App Manager endpoint or a host helper) to install/start/stop `agent-<id>`.
 
 ## 3. Agent Service API
