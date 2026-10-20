@@ -48,7 +48,7 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 - ⏳ **Meeting Recorder and Reader become wizard.md apps.** Owner: Archimedes.
 - ⏳ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes, with James approving the style.
 - ⏳ **Credentials test**: two harnesses sharing one ChatGPT OAuth token on one box. Result → `docs/CREDENTIALS.md` + the break-glass kit. Owners: Miguel + Oscar, write-up Archimedes.
-- ⏳ **First release file**: which version of each repo goes together. Owner: Jan.
+- ✅ **First release file**: which version of each repo goes together. Owner: Jan. Done: `releases/<version>.json` on `main` (0.3.7 to 0.3.12) with `releases/stable`.
 
 ## Weeks 3–4: shell customization
 
