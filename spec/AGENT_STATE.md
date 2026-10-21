@@ -1,6 +1,6 @@
 # Agent state: what each agent learns, and who can read it
 
-**Status: proposed (James, 11 Oct 2026; DECISIONS #43–#49; section 3 amended by #66, 18 Oct). #43 (one folder per agent) and #48 (agent adapter) approved 14 Oct; the MVP contract is [AGENTS.md](AGENTS.md).** Builds on the agent bridge (#40, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) in PR #12) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md) in PR #6).
+**Status: proposed (James, 11 Oct 2026; DECISIONS #43–#49; section 3 amended by #77, 18 and 21 Oct). #43 (one folder per agent) and #48 (agent adapter) approved 14 Oct; the MVP contract is [AGENTS.md](AGENTS.md).** Builds on the agent bridge (#40, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) in PR #12) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md) in PR #6).
 
 Hermes is the agent today. A box will often run more than one agent: a frontier Hermes for building, a lean private agent on a Tinfoil model, a Pi or Claude Code agent someone is trying out. Each agent learns as it works. It writes skills, keeps memories, and builds up session history.
 
@@ -65,19 +65,25 @@ When and how often agents should look up another agent's skills is left to usage
 
 ## 3. Agent History: every agent's permanent record, and the only reader across agents
 
-**Agent History** (`wizard-agent-history`, slot `agent-history`, `system: true`) is a headless system app with two jobs. Renamed from Agent Search (James, 18 Oct, #66: "clear rather than clever"); "archive" already means a closed thread in Chats, so it is not used for this app.
+**Agent History** (`wizard-agent-history`, slot `agent-history`, `system: true`) is a headless system app with two jobs. Renamed from Agent Search (James, 18 Oct, #77: "clear rather than clever"); "archive" already means a closed thread in Chats, so it is not used for this app.
 
-1. **Keep.** It holds a permanent copy of every agent's full history, so each agent can keep only a short working window in its own store.
+1. **Keep.** It holds a permanent copy of every agent's full history, so each agent's own store stays bounded.
+
+**The promise to the owner: your history is never lost, and your Wizard never fills itself up.** Without a rule, an agent's store grows without limit (on James's box, about 11 GB a month). Backups and restores slow down, search gets slower and cluttered with machine output, big-store maintenance gets riskier, and eventually the disk fills. The harness's own fix, a timed prune, deletes history. History is how a Wizard box avoids both outcomes.
 2. **Look up.** It is the only thing that reads one agent's state on behalf of another, and only under grants.
 
 ### 3.1 Keeping
 
-- **Copies each agent's sessions into its own store, about hourly.** A small reader per harness reads the agent's store read-only and adds only what changed since the last pass. First readers: `hermes-state-db` (sessions), Hermes skills folder, `hermes-holographic` (facts), `pi-jsonl` (sessions), Pi skills folder.
+- **Copies each agent's sessions into its own store, daily, after the box backup.** Hourly is not needed until something reads History often; the backup already bounds the loss window. A small reader per harness reads the agent's store read-only and adds only what changed since the last pass. First readers: `hermes-state-db` (sessions), Hermes skills folder, `hermes-holographic` (facts), `pi-jsonl` (sessions), Pi skills folder.
 - **Keeps everything readable:** the owner's messages, replies, reasoning, tool calls and tool output. A year of an agent's work, including how it reasoned and which tools it used, is the record an owner would use to tune or train an agent on their own workflows. Provider-encrypted reasoning (opaque blobs only the provider can decrypt) is left out; it stays in the box backup.
-- **Monthly files per agent:** `~/.wizard-os/agent-history/<agent>/<YYYY-MM>.db`, each with its own search index. A month is **sealed** once it is past and fully copied; sealed months never change, so the box backup uploads each one once. `storage_path` (owner setting) can put them on a second disk.
+- **Monthly files per agent:** `~/.wizard-os/agent-history/<agent>/<YYYY-MM>.db`, each with its own search index. A month is **sealed** once it is past and fully copied; sealed months never change, so the box backup uploads each one once. A row the agent writes later with an old date, or a newer version of a sealed row, goes into the current month; the sealed copy stays as the earlier version. `storage_path` (owner setting) can put them on a second disk.
 - **Conversation export:** `~/.wizard-os/agent-history/<agent>/conversation.jsonl`, the owner's messages and the agent's final replies only, all time. It is small, and it is what moves to a new box, seeds an imported agent, or feeds training.
-- **Retention is one owner setting for every agent:** `live_days`, default 30 ("keep 30 days in the agent, everything in History"). Open threads stay live whatever their age.
-- **Trimming the agent's store** happens only for rows History has copied and verified (row count and content hash per session), only past `live_days`, and never for an open thread's active messages. It runs in the box maintenance window with that agent stopped, through the harness's own **trimmer**: for Hermes, ended sessions past the window, plus the inactive copies that context compaction leaves inside long-running threads (most of the bulk). The trimmer writes a new store and swaps it in atomically; the previous store is kept until the next box backup verifies. Without a verified copy nothing is trimmed, and the harness's built-in auto-prune stays off on a Wizard box.
+- **What leaves the agent's store, and when.** One owner setting for every agent, `live_days`, default 30.
+  - **Machine sessions** (scheduled jobs, helper agents, recovery and maintenance runs) leave the agent's store once they are older than `live_days`. History first **releases** each session: it checks every row against its own copy and records that it keeps the session. The harness's own prune command then removes exactly those sessions, at a quiet moment in the maintenance window, and History's next copy must report no deletions. A helper session is released only when no owner thread still links to it.
+  - **The owner's conversations stay in the agent's store at every age** until Chats reads old threads from History (section 3.2). Then they follow the same rule, so the store stops growing for good.
+  - **Nothing leaves without a verified History copy.** The harness's built-in timed auto-prune stays off on a Wizard box, because it deletes.
+  - **No store rewrites.** History does not rebuild an agent's store to strip old tool output or reasoning from threads that are still visible. Measured on James's box, that saved about a quarter of the file once, needed the agent stopped every time, and changed how old replies display. The bulk is the harness's own compaction leftovers, which belong upstream.
+- **Disk forecast.** History reports the agent store's growth and the days of disk left, and alerts the owner when that forecast drops below four months.
 - **Private agents:** History keeps a private agent's record for that agent and its owner. It never serves it to another agent (#59), and never sends it off the box except inside the encrypted box backup.
 
 ### 3.2 Looking up
@@ -149,4 +155,4 @@ Weak, cheap or private models do well on short jobs and poorly on long multi-ste
 3. B adapts one of A's skills into its own skills folder with `adapted_from`, and A's skill is unchanged.
 4. A schedule created in the Wizard UX runs on the agent it names and posts to its thread; `hermes cron list` on that box is empty.
 5. The Wizard thread list shows both agents' threads, with no direct `state.db` read left in the Agent Service.
-6. Agent History holds every Hermes session older than `live_days`; the Hermes store holds only the live window and open threads; a search for something said three months ago returns it through `sessions_search`; and restoring the box backup brings back both.
+6. Agent History holds every Hermes session; machine sessions older than `live_days` are gone from the Hermes store with History's next copy reporting no deletions; every owner conversation still opens in Chats; a search for something said three months ago returns it through `sessions_search`; and restoring the box backup brings back both.

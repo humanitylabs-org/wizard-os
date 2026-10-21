@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: Agent History keeps every agent's record ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md) section 3)
+
+| # | Decision | Status |
+|---|---|---|
+| 77 | **Agent History** (`wizard-agent-history`, slot `agent-history`) replaces Agent Search (#45) and adds a second job: it keeps the permanent copy of every agent's full history (messages, reasoning, tool calls and output; provider-encrypted reasoning excluded) in sealed monthly files per agent, plus a conversation-only export, copied daily after the box backup. The promise: **your history is never lost, and your Wizard never fills itself up.** Machine sessions (scheduled jobs, helpers) leave the agent's store after `live_days` (owner setting, default 30), only after History has released them row by row, through the harness's own prune. The owner's conversations stay in the agent's store until Chats reads old threads from History. No store rewrites; harness auto-prune stays off. Search covers the conversation by default and reasoning and tool output with `deep`. Private agents stay sealed (#59). Named for clarity: "archive" already means a closed thread in Chats. James, 18 Oct: "let's be clear rather than clever." | **Approved by James (18 Oct; storage rule 21 Oct)**; Jan and Miguel to confirm |
+
 ## 21 Oct 2026 — James: app-to-app permissions ([spec/PERMISSIONS.md](../spec/PERMISSIONS.md))
 
 | # | Decision | Status |
