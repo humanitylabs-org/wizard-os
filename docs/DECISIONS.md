@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: app-to-app permissions ([spec/PERMISSIONS.md](../spec/PERMISSIONS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 76 | **An app calls another app only along an owner-approved grant.** A grant is consumer app → provider (an app id or a slot), proposed ticked on the install sheet from the app's `uses:` and its Router needs, revocable later, stored by the App Manager in `wizard-grants.json`. Enforced by a per-grant key checked by the provider (`X-Wizard-Grant`) and, behind `WIZARD_APP_ISOLATION`, per-app Docker networks. Covers app → app only: agents reach apps through the gateway under the owner's per-agent ticks (#58), private agents stay sealed (#59), and the v0.1 draft's "every agent gets every app" default is dropped. Mechanism from Miguel's draft (PR #6); answers the #32 "spec before networking code" term. | **Approved by James (21 Oct)** |
+
 ## 21 Oct 2026 — James: release channels ([releases/README.md](../releases/README.md#channels-latest-and-stable))
 
 | # | Decision | Status |

@@ -56,7 +56,7 @@ agents/<id>/
 - `model.allowed_models`: the only models a run in this agent's threads may use. `fallback: false` means the harness has no fallback provider.
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
-- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here in the MVP; when app-to-app grants land they are mirrored as `wizard-grants.json` grants `{from: "agent:<id>", to: <app>}` so `wam connect` narrows to them.
+- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
 - `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
