@@ -74,22 +74,26 @@ network. Use this topology (or an equivalently proven sealed implementation):
 | --- | --- | --- |
 | `agent-<id>-sandbox` | internal, no host bridge IP (`inhibit_ipv4=true`) | Hermes, its in-seal client, its scoped system edge |
 | `agent-<id>-uplink` | normal | that agent's scoped system edge only |
-| `wizard-relay-<app>` | internal, IPv4 /24 from `10.252.0.0/16`, no host bridge IP | linked in-seal clients and that provider app |
+| `wzpr-<agent-hash>` | internal, IPv4 /24 per agent from `10.252.0.0/16`, no host bridge IP | exactly that agent's in-seal client and its selected provider app |
 | `wizard-egress-<app>` | internal, IPv4 /24 from `10.253.0.0/16`, no host bridge IP | that provider app and its runtime-owned system edge |
 | system-edge uplink | normal | provider's system edge only, never the provider process |
 
 Hermes has no Internet route. It reaches its own client and the Wizard gateway
 through its scoped edge; the Agent Service reaches Hermes through that edge's
-host-loopback API relay. The client may initiate only to its selected provider
-relay endpoint, and only Hermes may initiate to that client's API. Enforce these
-flows with stateful FORWARD/INPUT policy before starting the containers: shared
-bridge membership alone does not isolate peers. Require rootful Docker's verified
-firewall hooks and bridge-netfilter support, or an equivalently proven enforcement
-path. Internal bridges must have no host IP; internal:true alone does not deny
-container-to-host access.
+host-loopback API relay. Each private agent gets its own relay bridge, never a
+shared provider/client bridge. The client API binds only its sandbox address;
+provider management binds only its egress address, exposing only the relay listener
+on relay interfaces. Token mint/revoke remains box-only, unreachable from relay
+networks even with spoofed Host/Origin headers. All capabilities are dropped.
 
-A provider process is attached only to its internal relay and internal egress
-networks, apart from an explicitly checked local model-server sibling network
+No bridge-netfilter module, bridge sysctl or private-client host FORWARD firewall
+is required. Owners never type sudo or load modules. The existing agent-firewall
+host-INPUT policy is unchanged and does not depend on br_netfilter. Internal
+bridges have no host IP; internal:true alone is insufficient. Prove routed
+inter-bridge isolation and address-bound listeners on the no-module test rig.
+
+A provider process is attached only to its per-agent internal relay networks and its internal egress
+network, apart from an explicitly checked local model-server sibling network
 (see [Local providers](#local-providers)). Remove every ordinary app-network
 interface; deny direct IPv4/IPv6,
 arbitrary TCP/UDP, host destinations and external DNS. Drop all capabilities,
@@ -116,13 +120,15 @@ Provision local model files separately. A remote owner-machine model route needs
 its own explicitly governed private-boundary contract, never an implicit empty-
 egress exception.
 
-Only linked clients and their selected provider join a relay network. Hermes,
-unrelated providers and ordinary apps never join it. Other clients/provider
-peers must not be able to initiate requests to an in-seal client's unauthenticated
-API; the stateful client policy remains mandatory.
+Each relay network has exactly one linked client and its selected provider.
+The provider joins one relay network per linked private agent; Hermes, other
+clients, unrelated providers and ordinary apps never join it. The client API is
+not listening on the relay interface, so even the provider cannot initiate a
+plaintext API request. Different agents cannot reach one another's client/Hermes.
 
 The runtime creates and reconciles provider networks/system edges when linking
-and at startup. Stop the provider before replacing policy or removing interfaces;
+and at startup. Remove orphaned per-agent networks and disconnect/remove the
+corresponding attachment on unlink/revoke; retain other agents' attachments. Stop the provider before replacing policy or removing interfaces;
 validate network ownership and container settings, apply proxy/guards, verify exact
 membership, then start. A failed or unsupported setup stays stopped visibly, never
 falls back. Providers and private clients must not auto-restart before their
