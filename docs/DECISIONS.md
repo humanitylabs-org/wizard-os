@@ -6,7 +6,14 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 79 | Private agents may explicitly receive revocable, read-only standard-chat and memory retrieval, never a reverse grant. Owner Chats searches private message content in its own store, syncs agent-qualified unread receipts server-side, and deletes private threads through their own runtime. | Approved by James 21 Oct 2026 |
+| 81 | Private agents may explicitly receive revocable, read-only standard-chat and memory retrieval, never a reverse grant. Owner Chats searches private message content in its own store, syncs agent-qualified unread receipts server-side, and deletes private threads through their own runtime. | Approved by James 21 Oct 2026 |
+
+## 21 Oct 2026 — James: logins that move with the box ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md#agents-using-a-connection))
+
+| # | Decision | Status |
+|---|---|---|
+| 79 | Each connection app owns and alone renews its login; agents never sign in themselves. ChatGPT serves a box-only model gateway that Hermes' native Codex provider uses with a local key. Claude, whose terms allow only its own client, exports its login folder as an owner-granted share that Hermes mounts. Replaces "ChatGPT stays Hermes' own login" and the fixed `wizard-ai-accounts-claude` volume. | Approved by James, 21 Oct 2026 |
+| 80 | App state lives under `${APP_DATA_DIR}`. The App Manager rewrites named volumes to app-data bind mounts and copies old contents once; fixed-name volumes are refused; cross-app folders use `shares`/`mounts` with a `share` grant. | Approved by James, 21 Oct 2026 |
 
 ## 21 Oct 2026 — James: connectors on demand
 
