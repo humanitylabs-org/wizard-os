@@ -43,4 +43,5 @@ The one list of installed Wizard apps.
 - `mcp.url` is reachable from the host; `mcp.internal` is reachable from containers on Runtipi's network. The Agent Service uses whichever matches where the agent runs.
 - `agent_binding` is copied unchanged from `wizard.md` when the app declares one; absent otherwise. The Agent Service reads it to offer the app's "Sends its work to" picker ([AGENTS.md](AGENTS.md) section 7). The chosen agent is not stored here; it lives in the Agent Service's `app-bindings.json`.
 - `skill` is a local path to the app's full skill. The Agent Service builds its own short pointer skills from `provides`.
+- `grants` (top level, optional) mirrors the App Manager's app-to-app grants from `wizard-grants.json`, same objects, never keys ([PERMISSIONS.md](PERMISSIONS.md)). Display only; enforcement uses each app's own grants file.
 - Writes are atomic (temp file + rename). Readers may watch the file.
