@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: private agent round 2 ([spec/AGENTS.md §9](../spec/AGENTS.md#9-private-retrieval-search-and-read-state-approved-by-james-21-oct-2026))
+
+| # | Decision | Status |
+|---|---|---|
+| 81 | Private agents may explicitly receive revocable, read-only standard-chat and memory retrieval, never a reverse grant. Owner Chats searches private message content in its own store, syncs agent-qualified unread receipts server-side, and deletes private threads through their own runtime. | Approved by James 21 Oct 2026 |
+
 ## 21 Oct 2026 — James: logins that move with the box ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md#agents-using-a-connection))
 
 | # | Decision | Status |

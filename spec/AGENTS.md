@@ -185,6 +185,15 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 - **Kept views.** Each agent's own Chats workspace (header with lock, only its threads) and the Agents app are unchanged.
 - **Harness note.** Tinfoil's DeepSeek V4.1 Flash refuses Hermes's default `reasoning_effort` (400 `chat_template_kwargs`); the Agent Service writes `model_overrides.custom.<model>.supports_reasoning: false` into the agent's managed `config.yaml` for such models.
 
+## 9. Private retrieval, search and read state (Approved by James 21 Oct 2026)
+
+- `permissions.read_standard_chats` is an explicit boolean, off by default and valid only for `privacy: private`. The Agents app shows a separate revocable switch. It grants read-only retrieval of the main standard agent's history, not a shared writable database or a grant back into the private agent.
+- The Agent Service exposes `standard_chats_search(query, limit, include_hidden?)`, `standard_chat_read(session_id, offset?, limit?)` and `standard_memory_read(name)` through `/wizard/standard-chats/mcp`. Only the private agent's own network-bound gateway token with this permission may call it; owner sessions and standard-agent tokens are refused. The managed stock-Hermes MCP configuration uses that token. Permission revocation takes effect on every call. Queries use read-only SQLite/FTS, return bounded results, and omit internal/cron/subagent noise; hidden chats require explicit search opt-in (for hidden acceptance probes). Memory is limited to MEMORY.md and USER.md.
+- Private content search remains in the private agent's own store. Owner-authenticated Chats searches name `agent=<id>` explicitly, show the lock, and open with the same agent. No private index, excerpts or messages are copied into the standard agent. Returning from a result preserves the results/list and the shell stays open.
+- Read receipts are owner-only server-side state, qualified by agent and session, shared by phone and desktop. They contain activity timestamps and counts, never transcript text or transcript-derived hashes (private fingerprints use a constant sentinel); private marks remain invisible to other agents. Old device-local receipts migrate without overriding newer server marks.
+- Owner-only private-thread deletion names the agent explicitly and deletes through its Hermes API. The same route is unavailable to agent/operator callers; absent threads return 404. Hidden test chats may be cleaned up by exact id without reading their content.
+- Sealing (#59), unified Chats/picker routing (#64), the Agents app and separate Private workspace remain unchanged. A deployment may ship compatible UX first; unavailable backend capabilities must not be advertised as working.
+
 ## Deferred (James, 14 Oct; brought back when due)
 
 - Whether apps that can run an agent get their own unticked warning line at install. Due before apps from other publishers are installable.
