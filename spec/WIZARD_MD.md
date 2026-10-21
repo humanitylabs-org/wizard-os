@@ -45,6 +45,7 @@ runtime:                    # how the App Manager installs it (Runtipi today)
   kind: runtipi
   config: runtipi/config.json
   compose: runtipi/docker-compose.yml
+  package: source           # source | build | image (see "Packaging"); recommended
 
 mcp:                        # required for agent, service, external; optional for view
   path: /mcp
@@ -82,6 +83,18 @@ health: /healthz
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
+## Packaging: source, build or image
+
+An app says how its containers come to exist with `runtime.package`. Nobody should have to build images for two kinds of CPU to publish a small app, and an owner should be able to read what their box runs. Source is the canonical artifact; a prebuilt image is a cache.
+
+1. **`source` (the default for new apps).** No custom image. Every service uses an official, digest-pinned, multi-arch image (`python:3.12-alpine@sha256:…`) and runs the app's own code, which the App Manager mounts read-only from the pinned commit at `${APP_SOURCE_DIR}` (the whole repo, without `.git`). Mount a subfolder with `${APP_SOURCE_DIR}/app:/app:ro`. Dependencies are vendored in the repo or there are none. Works on Intel and Apple Silicon with nothing to build.
+2. **`build`.** The repo has a Dockerfile and the box builds it from the pinned commit. `build.context` is a path relative to the repo root and `dockerfile` is relative to the context, as in Compose; the App Manager points them at its pinned copy and names the result `wizard-local/<app>-<service>:<commit12>`. Every `FROM` is digest-pinned, every `pip install` uses `--require-hashes` (or `-r` a file whose lines carry `--hash=`), and nothing compiles or bundles: no `npm run build`, `cargo`, `go build`, `make` or `gcc`. Distro packages (`apk add`, `apt-get install`) from the pinned base are allowed.
+3. **`image`.** A prebuilt multi-arch image (linux/amd64 + linux/arm64), required for anything heavy or compiled (ffmpeg builds, speech models, Rust, JS bundles). Publish it with the shared workflow (`humanitylabs-org/wizard-app-index/.github/workflows/app-image.yml`), which builds both architectures from the commit and tags `sha-<commit>`. The compose names it by digest.
+
+For every package type, every `image:` in the compose (after `${VAR:-default}` resolves to its default) is pinned by digest, and no image uses `latest` or a bare version tag. On install the App Manager uses the published image when the type is `image`, builds locally when it is `build`, and mounts the source when it is `source` or `build`.
+
+Apps without `runtime.package` still install as before. New apps declare it; the checker applies the packaging rules whenever it is present.
+
 ## Rules the checker enforces
 
 1. Front matter parses and `wizard` is a known spec version (0.1, 0.2).
@@ -98,6 +111,7 @@ Optional `receives_voice_input: true` opts a declared app view into shell-delive
 11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
 12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
 13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
+14. Packaging (when `runtime.package` is present): it is `source`, `build` or `image`; every compose image is digest-pinned; `source` has no `build:` and mounts `${APP_SOURCE_DIR}` read-only; `build` has a `build:` whose context stays inside the repo and a Dockerfile with digest-pinned `FROM`s, hash-locked `pip install`s and no compile or bundle steps; `image` has no `build:`.
 
 ## Skills: shipped skill + pointer skill
 

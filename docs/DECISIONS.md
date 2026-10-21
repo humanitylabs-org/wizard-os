@@ -6,7 +6,13 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 77 | Connectors install on demand from one Recommended-next list in Setup; large images pre-download in the background; ChatGPT/Claude stay preinstalled. | Approved by James, 21 Oct 2026 |
+| 78 | Connectors install on demand from one Recommended-next list in Setup; large images pre-download in the background; ChatGPT/Claude stay preinstalled. | Approved by James, 21 Oct 2026 |
+
+## 21 Oct 2026 — James: app packaging ([spec/WIZARD_MD.md](../spec/WIZARD_MD.md#packaging-source-build-or-image))
+
+| # | Decision | Status |
+|---|---|---|
+| 77 | **Apps run from source by default.** `runtime.package` is `source` (official multi-arch base image + the pinned commit mounted read-only; nothing to build), `build` (the box builds a hash-locked, compile-free Dockerfile from the pinned commit) or `image` (prebuilt multi-arch image from the shared workflow, for heavy or compiled apps). Every image is digest-pinned. Reviewed with Claude Fable over two rounds; transcript in agent context. | Approved by James, 21 Oct; Jan and Miguel to confirm |
 
 ## 21 Oct 2026 — James: app-to-app permissions ([spec/PERMISSIONS.md](../spec/PERMISSIONS.md))
 
@@ -122,7 +128,7 @@ Deferred by James (14 Oct), brought back when due: whether apps that can run an 
 | 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent Search, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
 | 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
 | 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James); **amended by #59** for private agents |
-| 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Proposed (James) |
+| 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Approved (James, 21 Oct) |
 | 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | **Approved (James, 14 Oct)** |
 | 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent Search uses the same method across agents. | Proposed (James) |
 

@@ -51,7 +51,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
   - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
   - Agent Search system app: Hermes + Pi readers, per-agent index, MCP tools, grant checks, read log.
   - Agent-data grants in `wizard-grants.json` and on the Apps screen.
-  - Wizard scheduler: jobs API, UX list, Hermes cron import for alongside mode, blueprint templates.
+  - Wizard scheduler (Archimedes, 🔨; #47 approved 21 Oct): jobs API, UX list, Hermes cron import for alongside mode, blueprint templates. First slice: Agent Service jobs + results posted into their thread by run id (replaces host `cron_to_chats.py`), high-frequency watchdogs move to Supervisor health checks + Notifications.
 - [ ] **Approval policy across agents**: which actions need the owner's yes, enforced in Wizard rather than per agent. Unowned.
 - [ ] **Lean-agent bake-off** (once a containerised box exists): 20 real tasks, four setups (Hermes + frontier model, Hermes + flash model, slim Hermes profile + flash model, Pi + flash model), scored on pass rate, cost, time and tool calls. Runs in fresh containers on Thales with stub app MCPs.
 
