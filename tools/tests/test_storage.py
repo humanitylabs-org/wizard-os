@@ -15,7 +15,7 @@ def test_portable_named_volumes_and_shares():
     assert not checker.storage_problems({'shares':[{'id':'login','path':'claude'}],
         'mounts':[{'app':'provider','share':'login','path':'/claude'}]}, {'volumes':{'state':None}})
 
-@pytest.mark.parametrize('p', ['../outside','/absolute','a/../b','a//b','a\\b','$HOME','a:b',''])
+@pytest.mark.parametrize('p', ['../outside','/absolute','a/../b','a//b','a\\b','$HOME','a:b','a,b','a\nb',''])
 def test_unsafe_share_paths(p):
     assert checker.storage_problems({'shares':[{'id':'login','path':p}]},{})
 

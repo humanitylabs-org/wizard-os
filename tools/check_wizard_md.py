@@ -175,7 +175,8 @@ def storage_problems(manifest: dict, compose: dict) -> list[str]:
     def relative(p):
         return (isinstance(p, str) and bool(p) and not p.startswith('/')
                 and not any(x in ('', '.', '..') for x in p.split('/'))
-                and not any(x in p for x in ('\\', '$', ':', '\x00')))
+                and not any(x in p for x in ('\\', '$', ':', ','))
+                and not any(ord(c) < 32 or ord(c) == 127 for c in p))
     def absolute(p):
         return isinstance(p, str) and p.startswith('/') and p != '/' and relative(p[1:])
     bad = []
