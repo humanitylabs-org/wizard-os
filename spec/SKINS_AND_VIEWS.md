@@ -1,6 +1,6 @@
 # Skins, palettes and swappable views
 
-**Status: approved by James (21 Oct 2026, after a skins discussion with Miguel); Miguel to confirm the Chats slot and the My skin folder (#67–#70). How a Chats view is hosted is still open (§3). Slice 1 is in build.** Extends [APPEARANCE.md](APPEARANCE.md) and [SHELL.md](SHELL.md). Folds in the unmerged views proposal (`proposal/app-standard-views-layout`, `spec/VIEWS.md`) and the planned overlay folder (SHELL.md layer 4).
+**Status: approved by James (21 Oct 2026, after a skins discussion with Miguel), #70–#73. Chats views run in-document (§3, option B). Slice 1 is live.** Extends [APPEARANCE.md](APPEARANCE.md) and [SHELL.md](SHELL.md). Folds in the unmerged views proposal (`proposal/app-standard-views-layout`, `spec/VIEWS.md`) and the planned overlay folder (SHELL.md layer 4).
 
 ## The problem
 
@@ -54,14 +54,14 @@ Skins/My skin/
 - Order after Chats: Home (launcher and clock desk), then anything else that fails the SHELL.md test ("does every other screen depend on it?").
 - **Settings stays in the shell.** It holds the privileged confirmations (installs, connections, agent permissions). Skins can restyle it; views cannot replace it.
 
-### How a Chats view runs (open question, decided in slice 3)
+### How a Chats view runs (decided: B for Chats and Home)
 
 Chats is wired deeply into the orb, voice, desks, the outbox and Back. Two ways to host it:
 
 - **A. Iframe app,** like every other view. Strongest isolation, uses Appearance v1 as is. It needs a Chats bridge for what the shell owns: voice target, open-thread-on-desk, Back steps, Ready badges and the outbox.
 - **B. In-document module,** loaded like `skin.js` but owning a screen region, with the same banned-API lint. Feels exactly like today and is cheaper to extract. It is weaker isolation, so it is only allowed for apps the owner installed into the `chats` slot.
 
-Recommendation: B for Chats and Home (first-party feel, owner-chosen code), A for everything else. Decide before slice 3 starts.
+Decision: B for Chats and Home (first-party feel, owner-chosen code), A for everything else.
 
 ## 4. Skins can recommend views, never replace them
 
@@ -90,7 +90,7 @@ Unchanged from the views proposal and already built in the App Manager (`wam vie
 | # | What the owner gets | Owner | Repo | Done when |
 |---|---|---|---|---|
 | 1 | Settings shows skins with their colours underneath | Archimedes | `wizard-ux` | The picker shows Wizard and Mizel as two skins. Switching skins restores the last palette. Saved choices load unchanged. Live on James's Wizard |
-| 2 | My skin folder with optional `skin.js` | Archimedes + Miguel (he wrote My skin) | `wizard-ux`, `wizard-agent-service` | An agent adds a gesture through `Skins/My skin/skin.js`. A broken script switches off and names the file |
-| 3 | Chats as a swappable view in a `chats` slot | Archimedes (extraction), Miguel (first fork) | `wizard-ux`, `wizard-app-manager` | Two Chats are installed. Each opens on its own desk on the same threads. The slot choice decides which one the dock opens |
+| 2 | My skin folder with optional `skin.js` | Archimedes | `wizard-ux`, `wizard-agent-service` | An agent adds a gesture through `Skins/My skin/skin.js`. A broken script switches off and names the file |
+| 3 | Chats as a swappable view in a `chats` slot | Archimedes (extraction); Miguel forks it whenever he likes | `wizard-ux`, `wizard-app-manager` | Two Chats are installed. Each opens on its own desk on the same threads. The slot choice decides which one the dock opens |
 | 4 | Skins recommend views | Archimedes | `wizard-ux` | Picking Mizel offers Mizel Chats. Declining leaves the slot unchanged |
 | 5 | The shell opens owner-customised app screens | Archimedes | `wizard-ux`, `wizard-agent-service` | A `wam views` own version opens from the launcher. Revert brings the original back |
