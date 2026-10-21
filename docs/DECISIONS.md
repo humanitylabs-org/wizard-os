@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: connectors on demand
+
+| # | Decision | Status |
+|---|---|---|
+| 78 | Connectors install on demand from one Recommended-next list in Setup; large images pre-download in the background; ChatGPT/Claude stay preinstalled. | Approved by James, 21 Oct 2026 |
+
 ## 21 Oct 2026 — James: app packaging ([spec/WIZARD_MD.md](../spec/WIZARD_MD.md#packaging-source-build-or-image))
 
 | # | Decision | Status |
