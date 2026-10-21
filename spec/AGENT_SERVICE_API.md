@@ -50,6 +50,7 @@ GET             /wizard/v1/setup/phone                            stable       -
 POST            /wizard/v1/setup/phone/start                       stable       -   -
 POST            /wizard/v1/setup/phone/reset                       stable       -   -
 GET             /wizard/v1/apps                                   stable       ux  -
+GET,HEAD        /wizard/v1/chats-views/{id}/{hash}.js               stable       -   -
 POST            /wizard/v1/route                                  stable       ux  -
 GET             /wizard/voice/status                              stable       ux  -
 POST            /wizard/voice/transcribe                          stable       ux  -
@@ -131,6 +132,21 @@ The launcher list: installed apps from the App Manager's `apps.json` (the shell 
   {"id":"hello-wizard","name":"Hello Wizard","url":"/hello-wizard/","status":"running","system":false,"source":"apps.json"},
   {"id":"notes","name":"Notes","url":"https://notes.example.com/","source":"launcher.json"}]}
 ```
+
+Installed apps additionally expose their safe `provides` list. Valid owner-installed
+Chats providers expose the versioned `chats_view` descriptor (module URL, SHA-256,
+bytes, pinned commit), and the response includes `slots.chats` and the Chats parking
+row. The built-in fallback is `wizard-chats`. See [SKINS_AND_VIEWS.md §3](SKINS_AND_VIEWS.md#3-swappable-views-chats-first)
+for exact manifest/registry shapes, owner default selection and trust boundaries.
+Launcher links never supply in-document code.
+
+### `GET|HEAD /wizard/v1/chats-views/:id/:hash.js`
+Owner-gated, read-only JavaScript from the installed package's sealed share. The URL
+must exactly match that app's admitted descriptor, including its SHA-256. Every read
+checks confinement, byte limit, recorded size/hash and banned-API lint. `200` serves
+JavaScript with `nosniff`, `no-store` and `X-Wizard-Sha256`; `403` is the existing
+owner access gate, `404` means uninstalled/unadmitted/unknown URL, `409` means package
+integrity failed, and other methods return `405`. No API proxy or redirect.
 
 ### `POST /wizard/v1/route`
 Sorts one orb utterance into a phone command, an agent request or a view action, using the configured fast model (not the agent). Body ≤ 8 KB: `{"text":"…","force":"command"|"","view":{"name":"…","kind":"…"},"apps":["Notes"]}`. `200 {"cmd":{"route":"agent","summary":"water the plants"},"ms":12,"model":"<router model>"}`; `cmd.route` is always `command`, `agent` or `view`. Errors: `404 router_not_configured`, `400 invalid_request` (bad JSON or empty text), `502 router_unavailable`.
