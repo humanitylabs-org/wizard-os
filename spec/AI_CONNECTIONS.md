@@ -1,6 +1,6 @@
 # AI connections: one app per provider
 
-Status: **Decided (Miguel, 15 Oct 2026)**, decision #61. Replaces the single "AI Accounts" app (`wizard-ai-accounts`) as the way a Wizard signs in to AI providers.
+Status: **Decided (Miguel, 15 Oct 2026)**, decision #61. Agent use of logins changed by James, 21 Oct 2026, #79. Replaces the single "AI Accounts" app (`wizard-ai-accounts`) as the way a Wizard signs in to AI providers.
 
 ## The rule
 
@@ -45,7 +45,9 @@ GET /api/connection        read-only, never returns a token
 The `limits[]` and `paid` shapes are exactly the provider rows `GET /wizard/ai-usage` already returns (wizard-agent-service `server/ai-usage.mjs`), so the shell needs no change.
 
 Rules:
-- The app reads its own login only to call its provider. No route serves, copies or logs a token, and no other app mounts the login.
+- The app reads its own login only to call its provider. No route serves, copies or logs a token. No other app mounts the login, with one exception: a provider whose terms allow only its official client (Claude) may export its login folder as an owner-granted **share** so that client can run inside the agent ([below](#agents-using-a-connection)).
+- The login lives in the app's own app-data folder (`${APP_DATA_DIR}`), never a Docker named volume, so an App Manager backup or a box move carries it and nobody signs in again.
+- The app is the only process that renews its login. Renewed tokens rotate, so after a box move the old box must stay stopped.
 - `/api/connection` answers within 10 s and caches provider reads for 60 s. A provider outage returns the last good `usage` for at most 30 min with `error.code: unreachable`, then `usage: null`.
 - Box-only: the same refusal rules as other owner-data routes (requests carrying `tailscale-user-login`, `x-forwarded-for`, `forwarded`, `x-real-ip` or `cf-*` are refused), because the port is also on the tailnet.
 
@@ -55,7 +57,11 @@ Rules:
 
 ## Agents using a connection
 
-Unchanged for Claude: the Claude app keeps the shared volume name `wizard-ai-accounts-claude` mounted at `/claude`, so Hermes Agent (Wizard build) and existing sign-ins carry over with no reconnect. ChatGPT stays Hermes' own device-code login driven from the ChatGPT app (Codex refresh tokens are single-use, so no shared token file).
+Decided by James, 21 Oct 2026 (#79). Each connection app owns its login; agents use it through the app and never sign in themselves.
+
+**ChatGPT: model gateway.** The ChatGPT app does the device-code sign-in, stores the login in its app-data and is the only refresher. It serves a box-only gateway at `http://wizard-chatgpt:8801/v1` (`/responses`, `/responses/compact`, `/models`, and the usage routes), which injects the real token and account headers. Callers authenticate with a per-install local key the app generates; that key is not a ChatGPT credential. On Connect the app registers itself with Hermes through the dashboard API: Hermes' native `openai-codex` provider with `HERMES_CODEX_BASE_URL` set to the gateway and the local key as a manual credential-pool entry (no refresh token), plus a named custom endpoint as fallback. It never changes Hermes' default model. The native provider keeps Codex web search, the usage display and server-side compaction, which a plain custom endpoint loses. Disconnect removes the login, the pool row and the endpoint. Proven 21 Oct 2026 on a live sign-in: reply, tool call, streaming, app-owned renewal, a stopped-copy move without re-login, and Disconnect, with Hermes connecting only to the gateway.
+
+**Claude: shared login folder.** Anthropic allows a subscription login to be used only by its own Claude Code client, so a token gateway is not allowed for Claude. Hermes uses Claude through Nous's Claude Subscription DirectSDK plugin, which runs the official Claude Code CLI against a config folder. The Claude app keeps that folder in its app-data and declares it as a share (`shares: [{id: claude-login, path: claude}]`). Hermes Agent declares `mounts: [{app: wizard-claude, share: claude-login, path: /claude}]`; once the owner grants it, the App Manager bind-mounts the folder into Hermes ([WIZARD_MD.md](WIZARD_MD.md#shared-folders), [PERMISSIONS.md](PERMISSIONS.md#share-grants)). Both sides run the official CLI, which renews under its own cross-process lock (`.oauth_refresh.lock` in the folder: re-read under the lock, then compare-and-swap), so two copies never break each other's login. Keep the Claude CLI in both images on compatible versions. The old fixed volume `wizard-ai-accounts-claude` is copied into the Claude app's folder once on upgrade and then left unused.
 
 ## Running models for apps (proposed, #65)
 
@@ -63,6 +69,7 @@ Connection apps report status today and run nothing for apps. [CONNECTION_ROUTER
 
 ## Migration from AI Accounts
 
-1. Install `Claude` (and `ChatGPT` if used). Claude reuses the existing sign-in volume, so it shows Connected immediately.
-2. Uninstall AI Accounts. The volume survives because the Claude app still uses it.
-3. AI Accounts stays in the store marked deprecated until both replacements are published, then is hidden.
+1. Install `Claude` (and `ChatGPT` if used). On first start the App Manager copies the old `wizard-ai-accounts-claude` volume into the Claude app's folder, so it shows Connected immediately.
+2. Uninstall AI Accounts. The old volume is no longer used; delete it after the Claude app reports Connected.
+3. A box that signed in to ChatGPT inside Hermes keeps working until the owner presses Connect in the ChatGPT app; registration refuses to run while Hermes still holds its own Codex login, and the page says to remove it first.
+4. AI Accounts stays in the store marked deprecated until both replacements are published, then is hidden.
