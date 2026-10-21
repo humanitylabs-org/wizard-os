@@ -64,6 +64,95 @@ Chats is wired deeply into the orb, voice, desks, the outbox and Back. Two ways 
 
 Decision: B for Chats and Home (first-party feel, owner-chosen code), A for everything else.
 
+### Chats package and registry contract (`wizard.chats-view/1`)
+
+A Chats provider is an ordinary installed Wizard app, with these additional fields
+in `wizard.md` (the module path is relative to the pinned package source):
+
+```yaml
+id: mizel-chats
+provides: [chats]
+chats_view:
+  contract: wizard.chats-view/1
+  module: web/chats.js
+```
+
+Both fields are required together. `chats_view` has exactly `contract` and
+`module`; it cannot declare an external URL, hash, default choice or Settings
+replacement. `wizard-chats` is reserved for the shell's built-in Chats during
+extraction. A package exports one default object with `contract`, matching `id`,
+`name` and `mount(element, host)`; mount returns `update` and `unmount` hooks.
+The host contract lives in `wizard-ux/docs/CHATS-VIEW.md`. Modules use the host's
+Agent Service access to the same sessions, never their own conversation store.
+
+WAM validates on both private-source and public-index install/update paths. The
+module must be a regular, non-symlink, UTF-8 `.js` file inside that pinned source,
+at most **128 KiB**. It is self-contained: no imports or secondary executable
+files. Admission rejects the skin-package banned APIs (raw listeners, timers,
+animation frames, network, storage, HTML injection, history, shell globals,
+`eval`/`Function`, cookie access and dynamic/static imports). This deliberately
+conservative token lint also scans comments and strings; it is a review guardrail,
+**not a sandbox or proof against hostile JavaScript**. Installation is the owner's
+trust decision for shell-origin code.
+
+At install WAM records the module's SHA-256, byte count and fetched 40-hex source
+commit in `.wizard-chats-view.json`. Registry refresh never re-seals modified
+installed bytes. Only sealed modules, not repository trees, are copied into the
+read-only Wizard share. `apps.json` preserves `provides` and projects:
+
+```json
+{
+  "id": "mizel-chats",
+  "provides": ["chats"],
+  "chats_view": {
+    "contract": "wizard.chats-view/1",
+    "module": "/wizard/v1/chats-views/mizel-chats/<sha256>.js",
+    "sha256": "<64 lowercase hex characters>",
+    "bytes": 1024,
+    "commit": "<40 lowercase hex characters>"
+  }
+}
+```
+
+`GET /wizard/v1/apps` adds `source: "apps.json"` and sets this provider's `url`
+to `/wizard/v1/chats-views/mizel-chats/`, so the module is under its own same-origin
+non-root app prefix, as required by shell admission. The ordinary app screen stays
+in `view.url`; this does not turn an iframe screen or launcher link into shell code.
+Only valid descriptors from installed apps are projected. The API includes:
+
+```json
+{
+  "slots": { "chats": {
+    "default": "wizard-chats",
+    "candidates": ["wizard-chats", "mizel-chats"]
+  } },
+  "parking": [{ "slot": "chats", "active": "wizard-chats" }]
+}
+```
+
+`chats` is additive/multi-provider, with the built-in fallback always available;
+installing a second provider **does not** select it. Settings can read
+`GET /wizard-os-home/store-install/_slots/chats` and, after the owner's explicit
+confirmation, send `POST` there with JSON `{"default":"mizel-chats"}`. This uses
+the existing privileged WAM Settings/Store listener: root-owned Serve peer,
+verified tailnet owner, configured shell Origin, `X-Wizard-Store: 1` and JSON.
+There is no slot-write method on the Agent Service, app bridge or Chats host API;
+ordinary Settings PUTs cannot select a provider. Like the existing installation
+confirmations, this relies on trusted shell-origin code: same-origin hostile code
+is not isolated by headers or lint. Apps must not issue these owner mutations.
+
+The module GET/HEAD route uses the existing Agent Service owner access gate,
+serves only the installed provider's exact hash URL, rejects symlinks and traversal,
+and checks size, SHA-256 and lint on every response. No redirects, external URLs,
+imports, directory listing or source files are served. Responses are JavaScript,
+`nosniff`, same-origin resource policy and `no-store`; changed bytes fail closed.
+
+Uninstall removes the provider and shared module. Old module URLs are refused
+even before physical cleanup once the registry no longer lists the app. A removed
+or malformed default resolves to `wizard-chats`; valid owner choices survive
+registry refresh. Several installed providers remain available side by side.
+
+
 ## 4. Skins can recommend views, never replace them
 
 A skin's entry may list views it was designed with (`recommends: [mizel-chats]`). Picking the skin offers "This skin was made with Mizel Chats. Install it?" Saying yes installs the app and fills the slot. Each piece stays separately swappable: Mizel skin with James's Chats, or James's skin with Mizel Chats.
