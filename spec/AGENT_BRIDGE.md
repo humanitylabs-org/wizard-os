@@ -30,7 +30,7 @@ Progressive disclosure from start to finish. Nothing about an individual app goe
 - **One MCP endpoint in the Agent Service**, `/wizard/mcp` (streamable HTTP, box-only, token), proxies every running app's tools as `<app>__<tool>`. Each description starts with the app and its job. It adds one meta tool, `wizard_apps` (installed apps, jobs, status).
 - **The agent's config gets one entry** (`mcp_servers.wizard`), written once at install. It never changes per app. Installs and uninstalls send `tools/list_changed`; Hermes re-fetches between turns, so there's no restart.
 - **No tool bloat.** Hermes defers MCP tools behind its stock Tool Search bridge (`tools.tool_search`, on by default). The model sees `tool_search` / `tool_describe` / `tool_call` plus a short catalog line per server, never every app's full schema. Stock Hermes has no per-tool eager list (only `defer`), so `wizard_apps` is reached like any app tool: the kernel names it and the model calls it through `tool_call`. The gate passed that way (below). A box with 30 apps adds roughly the same per-session cost as a box with 3.
-- **One door to guard.** App-permission grants (agent → app, PERMISSIONS.md) are enforced here later, and every app call is logged here.
+- **One door to guard.** Each agent's app ticks (#58) are enforced here, and every app call is logged here. The gateway also holds a per-app key so providers know the call came through it ([PERMISSIONS.md](PERMISSIONS.md)).
 - Harnesses without deferral get the gateway's `wizard_apps` + `wizard_call` pair (two tools, constant size) instead of the full list.
 
 ### 3. Orientation: a fixed Wizard OS kernel, with no per-app list
