@@ -29,6 +29,30 @@ fresh-box acceptance: fresh bootstrap still takes catalog defaults and reports
 image drift; strict mode rejects drift. Catalog commits and manifests are not
 changed by an OS release JSON.
 
+## Hermes pin (from 0.3.22)
+
+Every snapshot from 0.3.22 on names the one upstream Hermes release it runs
+([docs/HERMES_STABLE.md](../docs/HERMES_STABLE.md), DECISIONS #74):
+
+```json
+"hermes": {
+  "tag": "v2026.9.24",
+  "commit": "f97608f178d1ffeca59860195ab7da295f7c8e5f",
+  "image": {"ref": "docker.io/nousresearch/hermes-agent:v2026.9.24",
+            "digest": "sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7"},
+  "test_record": "none: carried over from 0.3.21, pinned before Wizard stable existed",
+  "rollback": null
+}
+```
+
+`tag` is a final upstream tag (never an `rc.*` build or the floating `stable`/`latest`
+labels). `image` is `null` only for a source-only release, which the container
+`hermes-agent` default cannot use. `test_record` is `docs/acceptance/hermes-<tag>.md`
+from the Thales test run. `rollback` names the previous pin (`tag` + `commit`). Online,
+the checker resolves the tag's commit upstream, finds the digest on Docker Hub, and
+reads the `hermes-agent` app's `image/Dockerfile` at its pinned commit to prove it builds
+`FROM nousresearch/hermes-agent:<tag>@<digest>`.
+
 ## Provenance check
 
 ```sh
