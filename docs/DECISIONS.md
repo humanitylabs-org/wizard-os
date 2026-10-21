@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: app packaging ([spec/WIZARD_MD.md](../spec/WIZARD_MD.md#packaging-source-build-or-image))
+
+| # | Decision | Status |
+|---|---|---|
+| 76 | **Apps run from source by default.** `runtime.package` is `source` (official multi-arch base image + the pinned commit mounted read-only; nothing to build), `build` (the box builds a hash-locked, compile-free Dockerfile from the pinned commit) or `image` (prebuilt multi-arch image from the shared workflow, for heavy or compiled apps). Every image is digest-pinned. Reviewed with Claude Fable over two rounds; transcript in agent context. | Approved by James, 21 Oct; Jan and Miguel to confirm |
+
 ## 21 Oct 2026 — James: release channels ([releases/README.md](../releases/README.md#channels-latest-and-stable))
 
 | # | Decision | Status |
