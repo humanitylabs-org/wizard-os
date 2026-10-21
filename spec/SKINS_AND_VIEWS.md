@@ -42,6 +42,7 @@ Skins/My skin/
 ```
 
 - Same guards as skin packages: `skin.js` loads as its own module, three errors a minute unloads it with a note naming the file, `?myskin=off` skips the layer for one load.
+- **The owner switches each version of `skin.js` on.** Skin package scripts ship reviewed in the shell image; `Skins/My skin/skin.js` is a file the agent can write at any time, and it runs inside the shell page next to Settings' confirmations. So the shell runs it only after the owner taps **Turn on** in Settings › Look for that exact file (its SHA-256). Any edit turns it off until the owner turns the new version on. `skin.css` needs no approval: CSS can't act.
 - This replaces `~/.wizard-os/shell/overlay/` (SHELL.md layer 4). Nothing else is built for it.
 
 ## 3. Swappable views (Chats first)
