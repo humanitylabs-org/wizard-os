@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: Wizard stable Hermes ([docs/HERMES_STABLE.md](HERMES_STABLE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 74 | **Wizard ships a tested upstream Hermes, never a fork.** Each install snapshot pins one upstream Hermes release (tag, commit, image digest, test record, rollback release). A release becomes Wizard stable after seven days public, a passing Thales test run and two to three days on Archimedes. Patches are temporary, each with an upstream PR; features we don't want are turned off in settings. Fork only if upstream's direction becomes unworkable. | Approved by James (direction), 21 Oct; details proposed |
+
 ## 21 Oct 2026 — James: Skins, palettes and swappable views ([spec/SKINS_AND_VIEWS.md](../spec/SKINS_AND_VIEWS.md))
 
 | # | Decision | Status |
