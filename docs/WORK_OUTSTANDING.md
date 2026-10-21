@@ -8,6 +8,14 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
 
+## Wizard stable Hermes (Archimedes; DECISIONS #74, [HERMES_STABLE.md](HERMES_STABLE.md))
+
+- [ ] **Pin in the snapshot**: `hermes` block in `releases/<version>.json`, validated by `tools/check_release.py`; 0.3.21 back-filled with the September image.
+- [ ] **Candidate test on Thales**: fresh VM per tag, record in `docs/acceptance/hermes-<tag>.md`.
+- [ ] **Weekly candidate post**: the Sunday release gate names the candidate and its blocker.
+- [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback.
+- [ ] **Fresh installs off `v2026.9.24`**: `hermes-agent` app moves to the first passing candidate with an image (review: app repo owner).
+
 ## Private model providers (Archimedes; DECISIONS #66, [PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))
 
 - [x] **Spec** (Archimedes, 20 Oct).
