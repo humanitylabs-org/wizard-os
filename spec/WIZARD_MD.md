@@ -73,11 +73,26 @@ agent_binding:              # optional; the app sends work (recaps, reports) to 
   required: true            # agent the owner picks; default = the main agent
   purpose: Where your recaps go   # (spec/AGENTS.md section 7)
 uses: [transcriber, browser, files]   # other app ids or slots it calls
+shares:                     # optional: folders in this app's app-data that other
+  - id: claude-login        # apps may mount once the owner grants it
+    path: claude            # relative to ${APP_DATA_DIR}/data
+mounts:                     # optional: another app's share this app needs
+  - app: wizard-claude
+    share: claude-login
+    path: /claude           # where it appears inside this app's main service
 needs: []                   # device capabilities: mic, system-audio, camera,
                             # notifications, files, credentials:<provider>
 health: /healthz
 ---
 ```
+
+## State storage
+
+Everything an app must keep lives under `${APP_DATA_DIR}`, so the App Manager's backup and a box move carry it. Docker named volumes are not backed up. The App Manager therefore rewrites each top-level named volume in an app's compose to a bind mount at `${APP_DATA_DIR}/volumes/<name>`; on the first start after the rewrite it copies the old volume's contents there once (ownership and modes kept) and leaves the old volume in place for the owner to delete. A volume with a fixed `name:` is refused by the checker (rule 15); apps that need to give another app a folder use `shares`.
+
+## Shared folders
+
+A share is the one way two apps see the same files. The provider lists it under `shares` (a folder relative to its `${APP_DATA_DIR}/data`); the consumer lists it under `mounts`. Installing the consumer proposes a `share` grant on the install sheet ([PERMISSIONS.md](PERMISSIONS.md#share-grants)). While the grant exists the App Manager bind-mounts the folder into the consumer's main service at `path`; revoking it removes the mount on the next restart. The files stay in the provider's app-data, so the provider's backup holds them and uninstalling the consumer never deletes them. Use a share only when an official client must run on both sides (Claude's login); everything else goes through the provider's API.
 
 ## Receives voice input
 
@@ -112,6 +127,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
 13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
 14. Packaging (when `runtime.package` is present): it is `source`, `build` or `image`; every compose image is digest-pinned; `source` has no `build:` and mounts `${APP_SOURCE_DIR}` read-only; `build` has a `build:` whose context stays inside the repo and a Dockerfile with digest-pinned `FROM`s, hash-locked `pip install`s and no compile or bundle steps; `image` has no `build:`.
+15. Storage: no top-level volume sets `name:`; every `shares[].path` is relative and stays inside the app-data folder; every `mounts[]` names an app id, a share id and an absolute container path.
 
 ## Skills: shipped skill + pointer skill
 
