@@ -9,7 +9,12 @@ A new owner uses Wizard on the computer it runs on. When they want it on their p
 
 A built-in system app beside Chats (`id: setup`). It opens by itself the first time Wizard opens and is reachable
 from the launcher afterwards. Its home is a short checklist. MVP item: **Use Wizard on your phone**. Later items
-(AI accounts, first app, voice, backups) join the same list. Onboarding lives here rather than in a chat, so a new
+(voice, backups) join the same list. One **Recommended next** section lists optional connector apps such as
+Cloudflare and Connected accounts (#77). One tap installs the indexed release through Store/WAM and opens its
+sign-in; a missing reviewed release stays visibly unavailable. These connectors are not default-installed.
+After the first successful `/wizard/v1/setup/seen`, Setup requests pull-only background image caching through
+WAM's owner-only Store listener. Images alone create no Apps tiles, containers or sign-ins. ChatGPT and Claude
+remain installed because they hold the agent's own sign-in. Onboarding lives here rather than in a chat, so a new
 owner learns that Wizard is an operating system with apps, not a chat window.
 
 ## Use Wizard on your phone (three steps)
