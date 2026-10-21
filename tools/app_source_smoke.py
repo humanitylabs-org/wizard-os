@@ -3,6 +3,8 @@
 
 Usage: app_source_smoke.py <repo-dir> [--keep]
 
+Arm64 on Thales: DOCKER_CONTEXT=colima SMOKE_ROOT=$HOME/.cache/wizard-smoke (Colima only shares $HOME).
+
 Copies the tracked files of <repo-dir> (no .git) to a scratch APP_SOURCE_DIR, resolves the Runtipi
 variables (APP_SOURCE_DIR, APP_DATA_DIR, ROOT_FOLDER_HOST, APP_PORT), drops x-runtipi, applies the
 App Manager's build rewrite for `package: build`, starts the app with docker compose, waits for the
@@ -29,9 +31,8 @@ for f in filter(None, files):
     if p.is_file() or p.is_symlink():
         (src / f.decode()).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(p, src / f.decode(), follow_symlinks=False)
-data = root / "app-data"
-media = root / "root" / "media"
-data.mkdir(); media.mkdir(parents=True)
+data = root / "app-data"  # left for dockerd to create, so it is root-owned as on a real box
+(root / "root").mkdir()
 port = random.randint(20000, 40000)
 env = {"APP_SOURCE_DIR": str(src), "APP_DATA_DIR": str(data), "ROOT_FOLDER_HOST": str(root / "root"),
        "APP_PORT": str(port), "APP_ID": f"{app}-smoke", "APP_NAME": app, "APP_DOMAIN": "localhost",
@@ -81,6 +82,8 @@ try:
 finally:
     if not keep:
         subprocess.run(dc + ["down", "-v", "--rmi", "local"], env={**os.environ, **env}, capture_output=True)
+        # root-owned bind sources: remove them from inside a container
+        subprocess.run(["docker", "run", "--rm", "-v", f"{root}:/r", "alpine:3.20", "sh", "-c", "rm -rf /r/app-data /r/root"], capture_output=True)
         shutil.rmtree(root, ignore_errors=True)
 print("SMOKE", "PASS" if ok else "FAIL", app, arch)
 sys.exit(0 if ok else 1)
