@@ -75,6 +75,42 @@ A green checker establishes source/image identity, **not** a working fresh insta
 production activation, a native build, or catalog availability. `DRIFT` lines are
 not suppressed when the live catalog differs or cannot be reached.
 
+## Channels: latest and stable
+
+DECISIONS #75 (James, 21 Oct 2026). Two pointers, both mirrored to
+`wizard-app-manager/releases` beside the release JSONs:
+
+- `releases/latest` names every release as soon as it is cut. Boxes whose owner ran
+  `wam updates --channel latest` (or installs with `WIZARD_CHANNEL=latest`) follow it.
+- `releases/stable` names the newest **promoted** release. Fresh installs, every box on
+  the default channel, and every Automatic update take only this.
+
+A release is promoted when it has been on latest for 72 hours and an upgrade from an
+older release onto it passed on a test box (Thales). The promotion record
+`releases/promotions/<version>.json` carries that evidence:
+
+```json
+{"version": "0.3.26", "latest_since": "2026-10-21T12:00:00Z", "promoted_at": "2026-10-24T12:30:00Z",
+ "upgrade_test": {"from": "0.3.25", "to": "0.3.26", "passed": true,
+                  "evidence": "docs/acceptance/update-0.3.26.md"}}
+```
+
+The flow:
+
+```sh
+python3 tools/promote_stable.py cut 0.3.26          # after the release JSON passes check_release.py
+# ... 72h on latest; upgrade 0.3.25 -> 0.3.26 on a Thales test box ...
+python3 tools/promote_stable.py promote 0.3.26 --from 0.3.25 --evidence <run log or report>
+python3 tools/promote_stable.py check               # also run by the tests, here and in the mirror
+```
+
+`promote` refuses a short soak, a missing or failed upgrade test, and evidence-free
+records. The App Manager's updater applies the same gate: Automatic skips a stable
+pointer that has no valid record (Update by hand still works). A fix release that
+cannot wait needs the same test, plus James's explicit approval to shorten the soak
+by passing an earlier `--latest-since`; never edit a record by hand. 0.3.25, stable
+when the channels split, carries a `grandfathered` record; no later release can.
+
 ## Publication is a separate gate
 
 `get.sh` defaults to the anonymous raw GitHub URL for `releases/stable`, followed
@@ -90,5 +126,5 @@ selects that local artifact. It does not bypass image validation or fix absent
 images. Run the installer only on the intended fresh/alongside target, not on a
 live machine just to check the manifest.
 
-Advance `stable` only when the complete new JSON has passed provenance and
-installer-contract checks. Never insert a placeholder digest to unblock a merge.
+Advance `latest` only when the complete new JSON has passed provenance and
+installer-contract checks, and `stable` only through `tools/promote_stable.py promote`. Never insert a placeholder digest to unblock a merge.

@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: release channels ([releases/README.md](../releases/README.md#channels-latest-and-stable))
+
+| # | Decision | Status |
+|---|---|---|
+| 75 | **Two release channels.** Every cut release goes to `releases/latest` (testers opt in). `releases/stable` (fresh installs, the default channel and every Automatic update) moves only after the release has been on latest for 72 hours and an upgrade from an older release passed on Thales, recorded in `releases/promotions/<version>.json` by `tools/promote_stable.py`. Boxes refuse to auto-install a stable release without a valid record. 0.3.25 is grandfathered as the first stable. | Approved by James, 21 Oct |
+
 ## 21 Oct 2026 — James: Wizard stable Hermes ([docs/HERMES_STABLE.md](HERMES_STABLE.md))
 
 | # | Decision | Status |
