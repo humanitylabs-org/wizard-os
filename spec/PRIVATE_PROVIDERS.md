@@ -1,6 +1,6 @@
 # Private model providers
 
-Status: **Direction approved by James (20 Oct 2026); Tinfoil path built and proven on the test rig; local provisioning decision recorded, implementation pending**, DECISIONS #66. Extends [AGENTS.md](AGENTS.md) §2, §6 and §8 and [AI_CONNECTIONS.md](AI_CONNECTIONS.md). Written for the target Wizard OS box, where every agent, the main one included, runs in its own container.
+Status: **Direction approved by James (20 Oct 2026); Tinfoil path built and proven on the test rig. Local models are a future design only (James, 21 Oct 2026): nothing ships or is maintained for them until someone needs one**, DECISIONS #66. Extends [AGENTS.md](AGENTS.md) §2, §6 and §8 and [AI_CONNECTIONS.md](AI_CONNECTIONS.md). Written for the target Wizard OS box, where every agent, the main one included, runs in its own container.
 
 ## The rule
 
@@ -130,18 +130,18 @@ required policy is re-established. Install/update must use an internal bootstrap
 and run reconciliation before exposure; restoring shared app networking is a
 security defect.
 
-## Local models
+## Local models (future design, not shipped)
+
+James, 21 Oct 2026: Wizard OS ships Tinfoil as its private provider. Nobody uses a local model today, so no local provider app is released, installed or maintained. This section records how one should work if someone builds it later. A prototype passed the six checks on the test box on 20 Oct (`humanitylabs-org/wizard-local-model` PR #1, parked as a draft); it is reference material, not a supported app.
 
 ### Local providers
 
-Decision owner: **Archimedes, 20 Oct 2026**. A sealed `kind: local` provider never has internet, including for model downloads. `egress: []` means no internet, not merely no cloud inference.
+Design recorded by Archimedes, 20 Oct 2026. A sealed `kind: local` provider never has internet, including for model downloads. `egress: []` means no internet, not merely no cloud inference.
 
 - Fetch weights in a separate one-shot provisioning step, using the pinned URL and SHA-256 declared in `wizard.md` under `private_inference.model_artifacts`. Verify the bytes before admitting them to the weights volume; mount that volume read-only into the sealed provider. Provisioning never gives the provider a temporary internet route.
 - The provider app and model server both run inside the seal. Prefer one container; if a separate model-server container is needed, use a provider-owned internal sibling network with no host bridge IP or outside route. It is an explicitly checked part of the seal, not a shared app network.
 - The runtime refuses to link a private agent until the declared weights are present and verified. Missing or mismatched weights leave the provider unavailable.
 - Remote owner-machine (tailnet) local mode is deferred; empty egress does not authorize it.
-
-The current local-model candidate failed admission on the test rig. Its provisioning network and separate model-server network did not meet this boundary; local inference and the six acceptance checks are not yet proven.
 
 ## Owner experience
 
@@ -169,7 +169,7 @@ Run against a private agent created through the Agent Service on the fresh Runti
 5. Stopping the provider makes the agent fail visibly with no fallback; restoring it permits a successful answer.
 6. The codeword appears in no provider log or app-data file.
 
-All six passed on the Thales test box for both providers: Tinfoil (with a real key) and the local model (Qwen2.5-0.5B, provisioned offline, sealed with no internet). For the local provider, check 1 is replaced by proof that the request never leaves the box, and check 4 has no cloud key to contain, so it checks relay-token hygiene instead. This is test-rig evidence, not a published image or production rollout. Before release: install/update must run runtime reconciliation automatically, and images must be published and pinned.
+All six passed on the Thales test box for Tinfoil (with a real key). The parked local-model prototype also passed them (Qwen2.5-0.5B, provisioned offline, sealed with no internet; check 1 replaced by proof the request never leaves the box, check 4 by relay-token hygiene); that is reference evidence for the future design only. This is test-rig evidence, not a published image or production rollout. Before release: install/update must run runtime reconciliation automatically, and images must be published and pinned.
 
 ## Migration on an existing box
 
@@ -185,7 +185,7 @@ All six passed on the Thales test box for both providers: Tinfoil (with a real k
 | 2 | In-seal client, `tinfoil` profile | Archimedes | a streamed completion goes through a stand-in relay that holds the key; relay capture shows no codeword |
 | 3 | Agent Service: provider = app id, networks, tokens, Agents page provider list | Archimedes | fresh-box test on Thales: private agent on a stub provider app, sealed network checks pass |
 | 4 | Relay mode in the Tinfoil app | Miguel (wizard-tinfoil) | acceptance list above passes |
-| 5 | Local model provider app | Archimedes | private agent answers from a local model with its networks offline |
+| 5 | Local model provider app | — | **Deferred** (James, 21 Oct 2026). Prototype parked; build only when someone needs it |
 | 6 | Move the owner's box | Archimedes | private agent on the Tinfoil app; old sidecar and `tinfoil-operator` chat route gone |
 
 ## Open questions
