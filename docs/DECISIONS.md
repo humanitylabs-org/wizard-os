@@ -2,6 +2,15 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 21 Oct 2026 — James: Skins, palettes and swappable views ([spec/SKINS_AND_VIEWS.md](../spec/SKINS_AND_VIEWS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 70 | **Palettes live inside skins.** A skin is a look-and-feel package; a palette is one of its colour sets. Settings shows skins, then that skin's palettes. Today: Wizard (Nebula, Grove, Tide, Ember, Signal) and Mizel (Dark, Light, Landscapes). The saved choice stays the palette id; Appearance v1 adds `family`. | Approved by James |
+| 71 | **Chats becomes a swappable view in a `chats` slot.** Several Chats views can be installed and opened side by side on the same threads; the slot picks the default. Home follows. Settings stays in the shell. | Approved by James |
+| 72 | **Skins never replace views; they may recommend them.** Picking a skin can offer to install its recommended views, and each stays separately swappable. | Approved by James |
+| 73 | **My skin is the owner's overlay layer.** `Skins/My skin/` holds `skin.css` and an optional `skin.js` on the skin-package hook API, replacing the planned `~/.wizard-os/shell/overlay/` folder. | Approved by James |
+
 ## 14 Oct 2026 — James: phone setup and no private config ([spec/PHONE_SETUP.md](../spec/PHONE_SETUP.md))
 
 | # | Decision | Status |
