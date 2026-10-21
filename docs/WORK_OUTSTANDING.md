@@ -10,7 +10,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 ## Wizard stable Hermes (Archimedes; DECISIONS #74, [HERMES_STABLE.md](HERMES_STABLE.md))
 
-- [x] **Pin in the snapshot** (21 Oct): `hermes` block required from 0.3.22, validated by `tools/check_release.py` offline and online (upstream tag commit, Docker Hub digest, `hermes-agent` app's `FROM`).
+- [x] **Pin in the snapshot** (21 Oct): `hermes` block required from 0.3.23, validated by `tools/check_release.py` offline and online (upstream tag commit, Docker Hub digest, `hermes-agent` app's `FROM`).
 - [ ] **Candidate test on Thales**: fresh VM per tag, record in `docs/acceptance/hermes-<tag>.md`.
 - [ ] **Weekly candidate post**: the Sunday release gate names the candidate and its blocker.
 - [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback.

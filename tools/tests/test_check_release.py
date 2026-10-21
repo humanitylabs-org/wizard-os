@@ -68,9 +68,9 @@ SEPTEMBER_PIN = {
 
 
 class HermesPin(unittest.TestCase):
-    """DECISIONS #74 / docs/HERMES_STABLE.md: every snapshot from 0.3.22 names one upstream Hermes release."""
+    """DECISIONS #74 / docs/HERMES_STABLE.md: every snapshot from 0.3.23 names one upstream Hermes release."""
 
-    def check(self, hermes="unset", version="0.3.22"):
+    def check(self, hermes="unset", version="0.3.23"):
         rel = json.loads((ROOT / "releases" / "0.3.21.json").read_text())
         rel["version"] = version
         if hermes != "unset":
@@ -87,10 +87,10 @@ class HermesPin(unittest.TestCase):
         self.assertIn(words, p.stdout)
 
     def test_new_snapshot_without_a_pin_fails(self):
-        self.assertFails(self.check(), "hermes: required from 0.3.22")
+        self.assertFails(self.check(), "hermes: required from 0.3.23")
 
     def test_older_snapshots_stay_history(self):
-        self.assertEqual(self.check(version="0.3.21").returncode, 0)
+        self.assertEqual(self.check(version="0.3.22").returncode, 0)
 
     def test_carried_over_september_pin_passes(self):
         p = self.check(self.pin())
