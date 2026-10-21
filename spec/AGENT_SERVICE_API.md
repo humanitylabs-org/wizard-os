@@ -22,6 +22,19 @@ Handlers live in `server/service.mjs` (`createWizardServer`), the Hermes allowli
 - **Passthrough (`/wizard/hermes/...`):** the Hermes API (`/api/sessions...`, `/v1/runs...`) behind a fixed allowlist. The allowlist (paths, methods, query keys, limits) and the Wizard projections listed below are v1. The rest of each body is whatever Hermes returns and moves with Hermes, so front ends read it defensively (`run.run_id || run.id`, `p.data || p.messages || p.items`), as the UX already does. The agent adapter call set (spec/AGENT_BRIDGE.md, DECISIONS #48) is what a second harness must serve underneath.
 - **Discovery:** `GET /wizard/v1/bootstrap` returns `bootstrap: 1`, `api: "wizard-agent-service/1"`, `capabilities` and `endpoints`. Front ends take the apps, sessions, runs, transcribe, route and upload addresses from `endpoints` and switch features off from `capabilities`. A shell that cannot reach bootstrap falls back to the pre-bootstrap aliases (class `compat`).
 
+## Phone Setup (companion implementation: wizard-agent-service #24)
+
+The five `/wizard/v1/setup*` routes below are the [Phone Setup](PHONE_SETUP.md) contract.
+`GET /wizard/v1/setup` returns `first_run`; `POST /wizard/v1/setup/seen` consumes that first-run flag.
+`GET /wizard/v1/setup/phone` returns the current Tailscale/checklist state; `POST .../start` begins
+interactive sign-in and `POST .../reset` disconnects the box. Only the owner may use these routes;
+agent credentials never authorize Setup. Writes require a same-origin browser request. The box-local
+owner-proof ingress and the dedicated enrolled-owner Serve ingress are separate trust boundaries.
+Treat the routes as unavailable on an older service (404); deploy the companion implementation before
+enabling them. Detailed schemas and state transitions live in the service `docs/phone-setup.md`.
+The non-summary calls use a shared dynamic request helper in wizard-ux; the literal-source scanner
+currently sees only the summary URL, so those rows are not marked `ux` by that scanner.
+
 ## Route table
 
 Machine-readable: both checking tools parse this block. Columns: methods, path (`{x}` = one path segment), class, whether Wizard UX (web or Android) calls it (`ux`) or not (`-`), allowed query keys (`-` = none).
@@ -31,6 +44,11 @@ Classes: `stable` = Agent Service route, v1. `passthrough` = Hermes route behind
 ```routes
 # methods       path                                              class        ux  query
 GET             /wizard/v1/bootstrap                              stable       ux  -
+GET             /wizard/v1/setup                                  stable       ux  -
+POST            /wizard/v1/setup/seen                             stable       -   -
+GET             /wizard/v1/setup/phone                            stable       -   -
+POST            /wizard/v1/setup/phone/start                       stable       -   -
+POST            /wizard/v1/setup/phone/reset                       stable       -   -
 GET             /wizard/v1/apps                                   stable       ux  -
 POST            /wizard/v1/route                                  stable       ux  -
 GET             /wizard/voice/status                              stable       ux  -
