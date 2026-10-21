@@ -20,6 +20,14 @@ This repo is the shared map of Wizard OS: architecture, decisions, contracts (`s
    - If you touched `tools/check_wizard_md.py` or `spec/WIZARD_MD.md`, run the checker against a real app repo. Keep its rules identical to the copies in wizard-app-manager and wizard-app-index, and change all three together.
 7. Changing the team rules below? Edit them here first. Then copy the block, unchanged, into the `AGENTS.md` of every other Wizard OS repo in the same round of PRs.
 
+## Portable machine configuration
+
+Machine-specific paths and hosts come from env vars: `WIZARD_WORK_ROOT`,
+`WIZARD_BUILD_HOST`, `WIZARD_ORIGIN`, `QA_PLAYWRIGHT`, and `HERMES_HOME`
+(`WIZARD_HEAVY_ROOT` where the shared heavy lane is used). Never commit personal
+paths or tailnet hostnames; the tracked-file portable-paths guard in the normal
+test/CI command enforces this. Historical evidence/receipts are explicitly exempt.
+
 <!-- wizard-os-team-rules v2 (19 Oct 2026). Same text in every Wizard OS repo; the canonical copy is humanitylabs-org/wizard-os AGENTS.md. Change it there first, then copy the block to every repo in one round of PRs. -->
 ## Wizard OS team rules (identical in every repo)
 

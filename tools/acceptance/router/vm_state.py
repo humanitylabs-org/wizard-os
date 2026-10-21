@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(os.environ.get("ACCEPT_ROOT", "/Volumes/ThalesMedia/wizard-os/router-acceptance"))
+ROOT = Path(os.environ["ACCEPT_ROOT"])
 RUN = Path(os.environ["ACCEPT_RUN"])                       # this run's folder under ROOT/runs/<id>
 STAGE = ROOT / "stage"
 HERE = Path(__file__).resolve().parent

@@ -13,7 +13,7 @@
  * Apps that take the theme from the shell's own app-client.js are checked too; the receipt records which client ran. */
 'use strict';
 const fs = require('node:fs'), path = require('node:path');
-const pw = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const pw = require('../tools/acceptance/router/qa-playwright.cjs');
 const root = process.env.STYLE_ROOT || __dirname;
 const url = process.env.QA_URL; if (!url) throw new Error('Set QA_URL to the shell entry URL.');
 const shots = path.resolve(process.env.QA_SHOTS || 'style-qa-shots'); fs.mkdirSync(shots, { recursive: true });
