@@ -10,7 +10,11 @@ import subprocess
 import sys
 import time
 
-LOCK = "/Volumes/ThalesMedia/AndroidBuilds/worker.lock"
+work_root = os.environ.get("WIZARD_WORK_ROOT")
+if not work_root:
+    sys.exit("set WIZARD_WORK_ROOT to the shared worker work disk")
+LOCK = os.path.join(work_root, "AndroidBuilds", "worker.lock")
+os.makedirs(os.path.dirname(LOCK), exist_ok=True)
 here = os.path.dirname(os.path.abspath(__file__))
 run_id = os.environ.setdefault("RUN_ID", time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()))
 print(f"waiting for {LOCK} (run {run_id})", flush=True)

@@ -19,7 +19,7 @@ A Wizard can run on one box and work on others (a build Mac, a media drive, a ho
   "version": 1,
   "this": {"name": null, "role": null, "tailnet": ["gateway-node"]},
   "devices": [
-    {"id": "thales", "name": "Thales", "role": "Builds and media", "connect": {"type": "ssh", "host": "thales"}, "tailnet": []}
+    {"id": "build-worker", "name": "Build worker", "role": "Builds and media", "connect": {"type": "ssh", "host": "build-worker.example"}, "tailnet": []}
   ],
   "hide": []
 }

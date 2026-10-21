@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Connection Router acceptance on Thales: Claude only, ChatGPT only, both, neither (wizard-os WORK_OUTSTANDING).
-# Run from the staged harness under /Volumes/ThalesMedia/wizard-os/router-acceptance/harness/<sha>/ (stage.sh puts it
+# Run from the staged harness under $WIZARD_WORK_ROOT/wizard-os/router-acceptance/harness/<sha>/ (stage.sh puts it
 # there), through the wizard-heavy queue. Creates a fresh Lima VM, runs the four states, judges them, deletes the VM.
 # Evidence: $ROOT/runs/<run id>/ (RECEIPT.md, checks.json, evidence/<state>/*.json|png|log).
 set -uo pipefail
 export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-ROOT=/Volumes/ThalesMedia/wizard-os/router-acceptance
+: "${WIZARD_WORK_ROOT:?set WIZARD_WORK_ROOT to a work disk}"
+ROOT="$WIZARD_WORK_ROOT/wizard-os/router-acceptance"
 HERE=$(cd "$(dirname "$0")" && pwd)
 STAGE=$ROOT/stage
 RUN_ID=${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}
@@ -19,7 +20,7 @@ PROV=$STAGE/PROVENANCE.json
 ROUTER_IMAGE=$(python3 -c "import json;print(json.load(open('$PROV'))['router_image'])")
 WISDOM_COMMIT=$(python3 -c "import json;print(json.load(open('$PROV'))['wisdom_commit'])")
 UX=$STAGE/ux
-export PW=${PW:-/Volumes/ThalesMedia/wizard-manager/qa/node_modules/playwright}
+# QA_PLAYWRIGHT (or normal Node module resolution) selects the host browser module.
 echo "== run $RUN_ID on $(hostname) $(date -u +%FT%TZ); harness $(cat "$HERE/HARNESS_SHA" 2>/dev/null)"
 
 vm() { limactl shell --workdir / "$VM" sudo env ACCEPT_ROOT="$ROOT" ACCEPT_RUN="$RUN" ROUTER_IMAGE="$ROUTER_IMAGE" \
@@ -31,7 +32,9 @@ trap cleanup EXIT
 
 if lsof -nP -iTCP:$RPORT -sTCP:LISTEN >/dev/null 2>&1; then echo "port $RPORT already in use on the host"; exit 3; fi
 limactl delete -f "$VM" >/dev/null 2>&1 || true
-echo "== creating VM"; limactl create --name "$VM" --tty=false "$HERE/lima.yaml" && limactl start --tty=false "$VM" || exit 4
+# Lima does not expand environment variables in YAML: render a JSON-quoted scalar.
+python3 "$HERE/render_lima.py" "$ROOT" "$RUN/lima.yaml"
+echo "== creating VM"; limactl create --name "$VM" --tty=false "$RUN/lima.yaml" && limactl start --tty=false "$VM" || exit 4
 limactl shell "$VM" -- bash -lc 'cat /etc/os-release | head -2; uname -m; docker --version' | tee "$RUN/vm.txt"
 echo "== images"
 limactl shell --workdir / "$VM" sudo docker pull "$ROUTER_IMAGE" || exit 5

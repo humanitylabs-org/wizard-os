@@ -4,7 +4,7 @@
  * Requires: PLAYWRIGHT_PATH (or a resolvable `playwright`). Optional: QA_SHOTS (screenshot folder). */
 'use strict';
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
-const pw = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const pw = require('../tools/acceptance/router/qa-playwright.cjs');
 const root = process.env.STYLE_ROOT || __dirname;
 const shots = path.resolve(process.env.QA_SHOTS || 'style-browser-shots'); fs.mkdirSync(shots, { recursive: true });
 const tokens = JSON.parse(fs.readFileSync(path.join(root, 'tokens.json')));

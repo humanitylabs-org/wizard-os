@@ -3,7 +3,7 @@
 // (tools/store-data-origin.mjs → store-router-owner.mjs) and the Router in the VM. Catalog/installed/install calls are
 // fixtures; nothing reaches a real Wizard.
 //   node sheet.cjs <uxTree> <evidenceDir> <state> <phase> <routerPort> <appsJson> [apps=wisdom,router-fixture] [approve=app/feature]
-const pw = require(process.env.PW || 'playwright');
+const pw = require('./qa-playwright.cjs');
 const fs = require('fs'), path = require('path'), http = require('http'), net = require('net'), { spawn } = require('child_process');
 const [ux, out, state, phase, rport, appsJson, appList = 'wisdom,router-fixture', approve = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });

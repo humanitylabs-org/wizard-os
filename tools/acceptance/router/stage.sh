@@ -4,10 +4,13 @@
 #   stage.sh <wizard-os checkout> <wizard-app-store checkout> <wizard-ux checkout> <wisdom checkout> <wizard-agent-service checkout>
 set -euo pipefail
 WOS=$1 STORE=$2 UX=$3 WISDOM=$4 WAS=$5
-ROOT=/Volumes/ThalesMedia/wizard-os/router-acceptance
+: "${WIZARD_BUILD_HOST:?set WIZARD_BUILD_HOST to the SSH worker}"
+: "${WIZARD_WORK_ROOT:?set WIZARD_WORK_ROOT to the remote work disk}"
+ROOT="$WIZARD_WORK_ROOT/wizard-os/router-acceptance"
 ROUTER_IMAGE=${ROUTER_IMAGE:-ghcr.io/humanitylabs-org/wizard-connection-router@sha256:71e9721efc3904c76862b83613d6e88a1c5edff26432152f3727073fde417ecf}
 HSHA=$(git -C "$WOS" rev-parse HEAD)
 T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/stage/router-src/tests" "$T/stage/provider-models" "$T/stage/wisdom-src" "$T/stage/ux" "$T/harness/$HSHA"
 git -C "$STORE" show HEAD:images/wizard-connection-router/tests/fake_provider.py > "$T/stage/router-src/tests/fake_provider.py"
 git -C "$STORE" show HEAD:images/wizard-claude/models.json > "$T/stage/provider-models/claude-models.json"
@@ -26,8 +29,9 @@ json.dump({"router_image": "$ROUTER_IMAGE",
            "ux_commit": "$(git -C "$UX" rev-parse HEAD)",
            "harness_commit": "$HSHA"}, open(sys.argv[1], "w"), indent=1)
 EOF
-ssh thales "mkdir -p $ROOT/stage $ROOT/harness && rm -rf $ROOT/stage/wisdom-src $ROOT/stage/ux $ROOT/stage/router-src"
-rsync -a "$T/stage/" "thales:$ROOT/stage/"
-rsync -a "$T/harness/" "thales:$ROOT/harness/"
+printf -v REMOTE_ROOT '%q' "$ROOT"
+ssh "$WIZARD_BUILD_HOST" "mkdir -p $REMOTE_ROOT/stage $REMOTE_ROOT/harness && rm -rf $REMOTE_ROOT/stage/wisdom-src $REMOTE_ROOT/stage/ux $REMOTE_ROOT/stage/router-src"
+rsync -a -s "$T/stage/" "$WIZARD_BUILD_HOST:$ROOT/stage/"
+rsync -a -s "$T/harness/" "$WIZARD_BUILD_HOST:$ROOT/harness/"
 rm -rf "$T"
-echo "staged harness $HSHA → thales:$ROOT/harness/$HSHA"
+echo "staged harness $HSHA → $WIZARD_BUILD_HOST:$ROOT/harness/$HSHA"
