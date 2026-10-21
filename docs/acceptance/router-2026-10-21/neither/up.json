@@ -1,0 +1,16 @@
+{
+ "state": "neither",
+ "healthy": {
+  "router": true,
+  "wisdom": true
+ },
+ "image_ids": {
+  "router": "sha256:71e9721efc3904c76862b83613d6e88a1c5edff26432152f3727073fde417ecf",
+  "wisdom": "sha256:748f4db544330da0888a1fdd75bb29ea153ccdd6c4cb2655aa18f44efcc8c008"
+ },
+ "router_image": "ghcr.io/humanitylabs-org/wizard-connection-router@sha256:71e9721efc3904c76862b83613d6e88a1c5edff26432152f3727073fde417ecf",
+ "provider_endpoints": {
+  "wizard-claude": "http://127.0.0.1:33897",
+  "wizard-chatgpt": "http://127.0.0.1:35411"
+ }
+}

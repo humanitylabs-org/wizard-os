@@ -20,10 +20,10 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 ## Connection Router (Archimedes; DECISIONS #65, [CONNECTION_ROUTER.md](../spec/CONNECTION_ROUTER.md))
 
 - [x] **Router app**: needs from `apps.json`, routing table, `/v1/needs`, `/v1/models/<feature>/run`, grants in report-only mode. Tested with a fake provider. Done: `wizard-app-store` `images/wizard-connection-router` (server.py serves `/v1/needs`, `/v1/models/<feature>/run`, report-only grants; `tests/fake_provider.py`), published as Router 0.1.3 (wizard-app-store #12, #13).
-- [ ] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT through a raw-inference route in the `wizard-os` Hermes plugin (no second login).
+- [x] **Provider apps** (PRs to Miguel's repos): `wizard.ai-connection/2` model lists and `/api/infer` for Claude, then ChatGPT through a raw-inference route in the `wizard-os` Hermes plugin (no second login). Done: `wizard-app-store` `images/wizard-claude/server.py` (`wizard.ai-connection/2` status with `models.json`, `/api/infer`) and `images/wizard-chatgpt/server.py` + `inference.py` (`/api/infer` over the plugin's `/api/plugins/wizard-os/infer/chatgpt`, models from `/api/plugins/wizard-os/models/chatgpt`), released through wizard-app-store #11 and `c188760`.
 - [ ] **Shell**: install sheet (connect the recommended provider or approve a swap) and per-app "Models and connections".
 - [ ] **Wisdom first adopter**: ask = standard, lookup = fast, author = frontier `swap: never`; its helper service retires.
-- [ ] **Acceptance on Thales**: Claude only, ChatGPT only, both, neither.
+- [x] **Acceptance on Thales**: Claude only, ChatGPT only, both, neither. Done 21 Oct: 48/48 checks on a fresh Thales VM, plus a read-only check of the daily box; see [acceptance/router-2026-10-21.md](acceptance/router-2026-10-21.md). One wording fix: wisdom #34.
 
 ## Agent Service (Archimedes; DECISIONS #30, #42)
 
