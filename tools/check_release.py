@@ -29,6 +29,58 @@ SHA = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 VERSION = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+HERMES_TAG = re.compile(r"^v\d+\.\d+\.\d+$")          # a final upstream tag, never an rc build
+HERMES_IMAGE = re.compile(r"^docker\.io/nousresearch/hermes-agent:(v\d+\.\d+\.\d+)$")
+HERMES_UPSTREAM = "NousResearch/hermes-agent"
+HERMES_PIN_FROM = (0, 3, 22)   # DECISIONS #74: snapshots from 0.3.22 on name their Hermes; older files are history
+
+
+def _vtuple(v: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in re.match(r"^(\d+)\.(\d+)\.(\d+)", v).groups())
+
+
+def hermes_shape(rel: dict) -> list[str]:
+    """The `hermes` block (docs/HERMES_STABLE.md): the one upstream Hermes release this snapshot runs."""
+    h = rel.get("hermes")
+    version = str(rel.get("version", ""))
+    if h is None:
+        if VERSION.fullmatch(version) and _vtuple(version) >= HERMES_PIN_FROM:
+            return ["hermes: required from 0.3.22 on (tag, commit, image, test_record, rollback)"]
+        return []
+    if not isinstance(h, dict):
+        return ["hermes: expected an object"]
+    errs: list[str] = []
+    if not HERMES_TAG.fullmatch(str(h.get("tag", ""))):
+        errs.append(f"hermes: tag {h.get('tag')!r} is not a final upstream tag like v0.21.6")
+    if not SHA.fullmatch(str(h.get("commit", ""))):
+        errs.append(f"hermes: commit {h.get('commit')!r} is not a 40-char sha")
+    im = h.get("image")
+    if im is not None:
+        m = HERMES_IMAGE.fullmatch(str((im or {}).get("ref", ""))) if isinstance(im, dict) else None
+        if not m:
+            errs.append("hermes.image: ref must be docker.io/nousresearch/hermes-agent:<tag> (null = source-only)")
+        elif m.group(1) != h.get("tag"):
+            errs.append(f"hermes.image: ref tag {m.group(1)} differs from hermes.tag {h.get('tag')}")
+        if not isinstance(im, dict) or not DIGEST.fullmatch(str(im.get("digest", ""))):
+            errs.append("hermes.image: digest is not sha256:<64 hex>")
+    agent = (rel.get("default_apps") or {}).get("agent")
+    if im is None and isinstance(agent, dict) and agent.get("app") == "hermes-agent":
+        errs.append("hermes.image: fresh installs run the hermes-agent container, so the pin needs an image")
+    rec = h.get("test_record")
+    if not isinstance(rec, str) or not (rec.startswith("none: ") and len(rec) > 12 or
+                                       re.fullmatch(r"docs/acceptance/hermes-v[\w.-]+\.md", rec)):
+        errs.append("hermes.test_record: docs/acceptance/hermes-<tag>.md, or 'none: <why>' for a carried-over pin")
+    elif not rec.startswith("none: ") and not (Path(__file__).resolve().parents[1] / rec).is_file():
+        errs.append(f"hermes.test_record: {rec} does not exist")
+    rb = h.get("rollback", "missing")
+    if rb == "missing":
+        errs.append("hermes.rollback: required (the release to go back to, or null for the first pin)")
+    elif rb is not None and (not isinstance(rb, dict) or not HERMES_TAG.fullmatch(str(rb.get("tag", ""))) or
+                             not SHA.fullmatch(str(rb.get("commit", "")))):
+        errs.append("hermes.rollback: needs a final tag and a 40-char commit")
+    elif isinstance(rb, dict) and rb.get("tag") == h.get("tag"):
+        errs.append("hermes.rollback: must be a different release from hermes.tag")
+    return errs
 
 
 def shape(rel: dict) -> list[str]:
@@ -99,7 +151,7 @@ def shape(rel: dict) -> list[str]:
         d = defaults.get(slot)
         if not isinstance(d, dict) or d.get("app") != app:
             errs.append(f"default_apps.{slot}: must name {app}")
-    return errs
+    return errs + hermes_shape(rel)
 
 
 def on_branch(repo: str, sha: str, branch: str) -> tuple[bool, str]:
@@ -252,6 +304,77 @@ def digest_exists(ref: str, digest: str) -> tuple[bool, str]:
         return False, str(e)[:160]
 
 
+def upstream_tag_commit(tag: str) -> tuple[str | None, str]:
+    """Resolve an upstream tag to its commit, following annotated tags."""
+    r = subprocess.run(["gh", "api", f"repos/{HERMES_UPSTREAM}/git/ref/tags/{tag}", "-q", ".object.type+\" \"+.object.sha"],
+                       capture_output=True, text=True)
+    if r.returncode:
+        return None, ((r.stderr or "").strip().splitlines() or ["not found"])[-1][:160]
+    kind, sha = r.stdout.split()
+    if kind == "tag":
+        r = subprocess.run(["gh", "api", f"repos/{HERMES_UPSTREAM}/git/tags/{sha}", "-q", ".object.sha"],
+                           capture_output=True, text=True)
+        sha = r.stdout.strip() if r.returncode == 0 else ""
+    return (sha or None), ""
+
+
+def dockerhub_digest_exists(digest: str) -> tuple[bool, str]:
+    try:
+        tok = json.load(urllib.request.urlopen(
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:nousresearch/hermes-agent:pull",
+            timeout=20))["token"]
+        req = urllib.request.Request(f"https://registry-1.docker.io/v2/nousresearch/hermes-agent/manifests/{digest}",
+                                     method="HEAD", headers={"Authorization": f"Bearer {tok}", "Accept": ", ".join([
+                                         "application/vnd.oci.image.index.v1+json",
+                                         "application/vnd.docker.distribution.manifest.list.v2+json"])})
+        urllib.request.urlopen(req, timeout=20)
+        return True, ""
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}"
+    except (OSError, ValueError, KeyError) as e:
+        return False, str(e)[:160]
+
+
+def app_dockerfile(repo: str, commit: str) -> str | None:
+    r = subprocess.run(["gh", "api", f"repos/{repo}/contents/image/Dockerfile?ref={commit}", "-q", ".content"],
+                       capture_output=True, text=True)
+    if r.returncode:
+        return None
+    import base64
+    return base64.b64decode(r.stdout).decode(errors="replace")
+
+
+def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
+    """Tag -> commit upstream, image digest on Docker Hub, and the hermes-agent app really builds FROM that digest."""
+    h, ok, errs = rel.get("hermes"), [], []
+    if not h:
+        return ok, errs
+    for label, pin in (("hermes", h), ("hermes.rollback", h.get("rollback"))):
+        if not pin:
+            continue
+        sha, why = upstream_tag_commit(pin["tag"])
+        if sha == pin["commit"]:
+            ok.append(f"{label}: {HERMES_UPSTREAM} {pin['tag']} = {sha[:12]}")
+        else:
+            errs.append(f"{label}: {pin['tag']} is {(sha or '?')[:12]} upstream, release says {pin['commit'][:12]}"
+                        + (f" ({why})" if why else ""))
+    im = h.get("image")
+    if im:
+        found, why = dockerhub_digest_exists(im["digest"])
+        (ok if found else errs).append(f"hermes.image: {im['digest'][:19]}" + ("" if found else f" missing ({why})"))
+        agent = (rel.get("default_apps") or {}).get("agent") or {}
+        if agent.get("app") == "hermes-agent" and agent.get("repo") and agent.get("commit"):
+            df = app_dockerfile(agent["repo"], agent["commit"])
+            if df is None:
+                errs.append(f"hermes.image: can't read image/Dockerfile in {agent['repo']}@{agent['commit'][:12]}")
+            elif f"nousresearch/hermes-agent:{h['tag']}@{im['digest']}" in df:
+                ok.append(f"hermes.image: {agent['repo']}@{agent['commit'][:12]} builds FROM {h['tag']}@{im['digest'][:19]}")
+            else:
+                errs.append(f"hermes.image: {agent['repo']}@{agent['commit'][:12]} does not build FROM "
+                            f"nousresearch/hermes-agent:{h['tag']}@{im['digest'][:19]}…, so fresh installs run another Hermes")
+    return ok, errs
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("file", nargs="?")
@@ -328,6 +451,10 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     errs.append(f"image {name}: built from {im['built_from']}@{rev[:12]}, release pins "
                                 f"{src['commit'][:12]}")
+    if not errs and not a.offline:
+        h_ok, h_errs = hermes_online(rel)
+        ok_lines += h_ok
+        errs += h_errs
     warns = index_drift(rel.get("default_apps") or {}) if not errs and not a.offline else []
     for line in ok_lines:
         print(f"PASS  {line}")
