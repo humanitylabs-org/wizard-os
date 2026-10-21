@@ -86,7 +86,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 - [x] **Parking spots** (Miguel, 10 Oct): `wam slots`, `wam bootstrap` and the required-spot uninstall guard cover every slot, the shell included (`wam/defaults.json`). The shell spot's default fills in once the Wizard UX app is published.
 - [ ] **Theme / skin file** (`theme.json` over the style tokens): look changes on phone and desktop without a rebuild, survives updates. Apps follow through [Appearance v1](../spec/APPEARANCE.md) (#50–#53); preview proven on Wisdom, Music, Signal, Topics.
-- [ ] **Overlay folder**: user CSS/JS and per-view overrides loaded last; a broken overlay starts with it off and names the file.
+- [ ] **Skins, palettes and swappable views** ([spec/SKINS_AND_VIEWS.md](../spec/SKINS_AND_VIEWS.md), #67–#70): palettes grouped under skins (slice 1, in build); My skin folder with `skin.js` (replaces the overlay folder); Chats as a swappable `chats` view; skins recommend views; shell opens `wam views` own versions.
 - [ ] **Customize skill** so the owner's agent edits settings, layout, theme and overlay safely.
 - [ ] **Move the review screens out** (Day/Week/Month) into their own view apps; the shell keeps only what every screen relies on.
 - [ ] **App graph in the Apps screen** (from Miguel's Runtipi branch): interface → agent → system apps each one uses, with live status.
