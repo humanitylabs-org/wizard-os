@@ -19,6 +19,7 @@ Store install sheet, and Router/Wisdom logs. `check.py` judges the evidence agai
 Run (Telos stages, Thales executes through the wizard-heavy queue):
 
     tools/acceptance/router/stage.sh <wizard-os> <wizard-app-store> <wizard-ux> <wisdom> <wizard-agent-service>
-    # then on Thales: /Volumes/ThalesMedia/wizard-os/router-acceptance/harness/<sha>/run.sh
+    # then on Thales: submit harness/<sha>/run.sh to the wizard-heavy queue, or, when the queue cannot admit the
+    # caller (Kanban workers), run harness/<sha>/locked.py, which takes the same shared worker lock first.
 
 Evidence lands in `/Volumes/ThalesMedia/wizard-os/router-acceptance/runs/<run id>/` with a `RECEIPT.md`.
