@@ -52,6 +52,10 @@ POST            /wizard/v1/setup/phone/reset                       stable       
 GET             /wizard/v1/apps                                   stable       ux  -
 GET,HEAD        /wizard/v1/chats-views/{id}/{hash}.js               stable       -   -
 POST            /wizard/v1/route                                  stable       ux  -
+GET,POST        /wizard/v1/schedules                              proposed     -   -
+PATCH,DELETE    /wizard/v1/schedules/{id}                         proposed     -   -
+POST            /wizard/v1/schedules/{id}/run                     proposed     -   -
+POST            /wizard/v1/schedules/import-hermes                proposed     -   -
 GET             /wizard/voice/status                              stable       ux  -
 POST            /wizard/voice/transcribe                          stable       ux  -
 POST            /wizard/voice/recovery-receipt                    stable       -   -
@@ -224,6 +228,78 @@ Server-sent events. While queued: `event: run.queued`, then a comment every 15 s
 
 ### `POST /wizard/hermes/v1/runs/{id}/stop`
 No body. A queued run is cancelled locally: `202` with the queued shape and `status:"cancelled"`. An admitted run: Hermes's `202 {"accepted":true}`.
+
+## Schedules (decision #47; companion wizard-agent-service #81)
+
+These additive endpoints are `proposed` until the companion service PR lands;
+promote the four route-table rows to `stable` with that merge. Approval of the
+single-scheduler architecture does not itself enable a timer or migrate a live
+installation. This slice has no UX caller yet.
+
+All endpoints use the existing owner/service principal and configured Access
+checks; secondary-agent credentials cannot manage schedules. Bodies are JSON,
+limited to 128 KiB. Cross-site browser requests are rejected.
+
+| Endpoint | Contract |
+| --- | --- |
+| `GET /wizard/v1/schedules` | `200 {"schedules":[job,...]}` |
+| `POST /wizard/v1/schedules` | Create, `201 job` |
+| `PATCH /wizard/v1/schedules/{id}` | Edit, `200 job`; `enabled:false/true` pauses/resumes |
+| `DELETE /wizard/v1/schedules/{id}` | `200 {"deleted":true}` |
+| `POST /wizard/v1/schedules/{id}/run` | `202 occurrence`, durable request receipt, not completion proof |
+| `POST /wizard/v1/schedules/import-hermes` | `{ "dryRun": true/false }` → `200 {"dryRun":...,"results":[...]}` |
+
+Create/edit fields: `name`, `when`, `timezone`, `agent`, optional `model`,
+`prompt` and/or `skill`, optional `thread`, `enabled`. `when` has exactly one of
+`{"cron":"0 9 * * *"}` (five fields), `{"every":30}` (minutes, at least 1),
+or `{"once":"2026-10-22T09:00:00+07:00"}` (explicit offset/Z). Unknown fields
+are rejected. The service generates `id`, cursor/anchor and created/updated
+metadata. Defaults: enabled, `agent:main`, and the current owner
+`settings.clock.timezone` (Asia/Bangkok when unset). An explicit per-job timezone
+or `WIZARD_SCHEDULER_TIMEZONE` overrides that default. Existing jobs retain their
+stored timezone when the owner setting changes.
+
+`thread` names an existing session. If absent/null, first occurrence reserves a
+stable session ID and creates a thread titled with `name` (`Schedules · <name>`
+when a Project · Feature title was not supplied). Every later occurrence reuses
+that thread. Changing a bound job's agent requires an explicit thread choice.
+`main` maps to the main Hermes agent; other IDs use the ordinary agent router.
+
+An occurrence receipt contains `key`, `jobId`, `scheduledAt`, `agent`, `thread`,
+`createThread`, `title`, and the frozen ordinary-run `body`. The key is
+`schedule:<jobId>:<scheduledInstantISO>`. Claim and next-cursor advance are one
+durable transaction; ambiguous admission retries the same body/key through the
+ordinary chat admission path. The main-agent queue retains schedule receipts
+past its normal terminal-retention window. Other agents retain their ordinary
+runtime's idempotency contract. Downtime/forward jumps produce at most one
+catch-up per job; an unresolved pending admission is retried instead of claiming
+another catch-up. Backward jumps cannot rewind the cursor. One-shots disable
+at claim and cannot replay on pause/resume/restart. A paused job's explicit
+run-now still works. Editing does not rewrite already frozen outbox payloads;
+deleting cancels only unadmitted entries. There is no bounded seen-list.
+
+A final answer equal to, starting with, or ending with `[SILENT]` (ignoring a
+Wizard status trailer) produces no visible answer and advances no visible
+reply/unread clock. The synthetic schedule input is internal. History/preview
+and canonical session-truth projections suppress these without rewriting the
+Hermes transcript or marking the whole thread seen. Scheduled text streaming
+waits for terminal completion so a trailing sentinel cannot flash on screen;
+interactive chat streaming is unchanged.
+
+Import reads `<HERMES_HOME>/cron/jobs.json` **read-only** and always creates
+**paused** copies of supported cron/interval/once, name, prompt/skills and model
+fields. `dryRun` defaults true and changes neither store. Source job IDs are
+remembered durably, so repeat import returns `already imported` even after
+restart/deleting a copy. Script/no-agent rows return
+`not imported: script job`; unsupported rows are reported individually.
+Import never disables Hermes cron or silently activates migrated copies.
+
+`WIZARD_SCHEDULER=1` is required to start the loop; off by default. State is
+configurable with `WIZARD_SCHEDULER_STATE_PATH`, normally alongside the service
+run queue under the resolved Hermes home. Store and queue must be backed up
+together. Loop-off does not disable CRUD/import or explicit run-now. Installer
+cut-over, MCP tools, schedule templates and a schedules UI are separate slices.
+No live deployment is implied by this contract.
 
 ## Read state, attention and filing
 

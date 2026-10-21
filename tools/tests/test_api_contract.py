@@ -57,9 +57,14 @@ class ParseTests(unittest.TestCase):
         self.assertIn(("GET", "/wizard/v1/bootstrap"), keys)
         self.assertEqual(cac.bootstrap_endpoints(SPEC)["runs"], "/wizard/hermes/v1/runs")
 
-    def test_proposed_routes_are_pr7_only(self):
+    def test_proposed_routes_are_open_companion_prs_only(self):
         proposed = {r["path"] for r in cac.parse_routes(SPEC) if r["cls"] == "proposed"}
-        self.assertEqual(proposed, {"/wizard/v1/wizard-apps", "/wizard/v1/index/search", "/wizard/v1/index/tags", "/wizard/v1/index/apps/{owner}/{repo}"})
+        self.assertEqual(proposed, {
+            # App discovery companion #7 and scheduler companion #81.
+            "/wizard/v1/wizard-apps", "/wizard/v1/index/search", "/wizard/v1/index/tags", "/wizard/v1/index/apps/{owner}/{repo}",
+            "/wizard/v1/schedules", "/wizard/v1/schedules/{id}",
+            "/wizard/v1/schedules/{id}/run", "/wizard/v1/schedules/import-hermes",
+        })
 
     def test_normalise(self):
         self.assertEqual(cac.normalise("/wizard/files/${encodeURIComponent(id)}/content"), ("/wizard/files/{x}/content", []))
