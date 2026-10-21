@@ -32,7 +32,7 @@ VERSION = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 HERMES_TAG = re.compile(r"^v\d+\.\d+\.\d+$")          # a final upstream tag, never an rc build
 HERMES_IMAGE = re.compile(r"^docker\.io/nousresearch/hermes-agent:(v\d+\.\d+\.\d+)$")
 HERMES_UPSTREAM = "NousResearch/hermes-agent"
-HERMES_PIN_FROM = (0, 3, 22)   # DECISIONS #74: snapshots from 0.3.22 on name their Hermes; older files are history
+HERMES_PIN_FROM = (0, 3, 23)   # DECISIONS #74: snapshots from 0.3.23 on name their Hermes; older files are history
 
 
 def _vtuple(v: str) -> tuple[int, ...]:
@@ -45,7 +45,7 @@ def hermes_shape(rel: dict) -> list[str]:
     version = str(rel.get("version", ""))
     if h is None:
         if VERSION.fullmatch(version) and _vtuple(version) >= HERMES_PIN_FROM:
-            return ["hermes: required from 0.3.22 on (tag, commit, image, test_record, rollback)"]
+            return ["hermes: required from 0.3.23 on (tag, commit, image, test_record, rollback)"]
         return []
     if not isinstance(h, dict):
         return ["hermes: expected an object"]

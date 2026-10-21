@@ -29,9 +29,9 @@ fresh-box acceptance: fresh bootstrap still takes catalog defaults and reports
 image drift; strict mode rejects drift. Catalog commits and manifests are not
 changed by an OS release JSON.
 
-## Hermes pin (from 0.3.22)
+## Hermes pin (from 0.3.23)
 
-Every snapshot from 0.3.22 on names the one upstream Hermes release it runs
+Every snapshot from 0.3.23 on names the one upstream Hermes release it runs
 ([docs/HERMES_STABLE.md](../docs/HERMES_STABLE.md), DECISIONS #74):
 
 ```json
