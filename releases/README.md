@@ -5,6 +5,60 @@ catalog defaults. Its version names an install snapshot, not a shared UX, Servic
 Android, or Mac version. Existing release files are historical identities; create a
 new file rather than rewriting one.
 
+## Curator custody (DECISIONS #83)
+
+Builders retain their repositories and publisher identities. AI Wizards keeps
+**matching pinned bytes**, not a build service:
+
+* Source: public `humanitylabs-org/wizard-app-manager` lightweight tags
+  `refs/tags/curator/<owner>/<repo>/<40-hex-commit>`, pointing directly to that
+  exact Git commit (with its reachable objects). Tags are append-only: never move
+  or prune them when a default changes. These are custody refs, **not WAM releases**.
+  A public builder disappearing does not remove the org's ref or objects. Private
+  repositories are explicitly refused, rather than accidentally made public.
+* Images already at `ghcr.io/humanitylabs-org/*` are in org custody. Other
+  digest-pinned Compose images are copied, without rebuilding or changing their
+  multi-platform manifest, to
+  `ghcr.io/humanitylabs-org/wizard-default-mirrors:sha256-<64-hex>`.
+  Install fallback uses that ref **with the original `@sha256:…` appended**.
+  The package must be public; anonymous manifest retrieval is part of commissioning.
+* `default-mirrors.yml` runs every six hours and on dispatch, **main only**, on
+  the WAM repo-scoped Thales runner. It executes WAM's reviewed
+  `tools/mirror_defaults.py` against WAM's public release mirror and defaults.
+  The inventory is the union of `stable`/`latest` default commits and the current
+  indexed pinned publications for every default slot (including on-demand apps).
+  An unpublished on-demand recommendation has no commit to copy and is reported
+  explicitly; an unresolved ordinary default fails the job. Older copies remain.
+  All Compose services/sidecars are included. Source-sidecar code stays in Git.
+* Authentication: WAM's own job-scoped workflow token has contents/package-write
+  permission. No personal/org-wide token, deploy key, or new Actions secret is
+  needed. The dedicated WAM runner hook admits only this main-branch
+  scheduled/manual workflow, never pull requests or forks. Temporary registry
+  credentials are removed even after failure. This avoids the org's deliberate
+  deploy-key restriction rather than relaxing it.
+* Each job uploads `default-app-custody/mirrors.json` (30-day operational receipt).
+  Every pushed source ref and copied image digest is read back; a conflicting
+  existing ref/digest fails closed. Registry denial is not treated as absence.
+  Mirror failures fail the scheduled job rather than claiming full custody.
+
+WAM's Python installer and index-backed backend try the builder's exact commit
+first. Only a failed fetch permits the deterministic mirror ref, in a clean Git
+repository. `rev-parse HEAD` must equal the approved full SHA **before** manifest
+use or source/build packaging; a mismatching copy is deleted and rejected. No
+mirror HEAD, mutable tag, latest-version substitution, or changed approval is used.
+For digest-pinned non-org images, a present local copy or available origin wins;
+only an unavailable origin permits the matching org mirror. The generated
+Compose preserves the digest so Docker verifies the original bytes on pull.
+Unpinned legacy images are never silently substituted. This mechanism does not
+claim protection against GitHub/GHCR themselves being unavailable, nor mirror
+unpublished defaults or arbitrary dependency download services used by a build.
+
+Before promoting a newly changed default, dispatch this workflow and require its
+receipt to cover the new commit and image digests. The timer refreshes custody;
+it cannot recover a builder commit deleted before its first successful mirror.
+Source/image policy enforcement and the Cloudflare image's ownership move remain
+the separate image-policy work from #136.
+
 ## Split images
 
 New split snapshots need all three image keys:
