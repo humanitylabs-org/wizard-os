@@ -1,0 +1,294 @@
+{
+  "schema": 1,
+  "scope": "13 WAM default slots plus built-in Store/Setup/Settings and issue-discussed Wisdom/Calendar; not an owner-installed app census",
+  "status": "source-inspection-only; not enable-ready",
+  "defaults_source": {
+    "repository": "humanitylabs-org/wizard-app-manager",
+    "commit": "b51e7b42cd771515d8ae82b8189f8b7a89a5871c",
+    "path": "wam/defaults.json"
+  },
+  "default_slot_count": 13,
+  "entry_count": 18,
+  "allow_same_origin_exceptions": [],
+  "source_reviews": {
+    "chatgpt-connection": {
+      "repository": "oscarhenrycollins/chatgpt-connection",
+      "commit": "f72659fa7835422bbf025bfcdad8bdb888e055b3",
+      "source": "server.py:427-435",
+      "finding": "Origin present with netloc unequal to Host is rejected; null has an empty netloc.",
+      "classification": "rejects-null-write",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "claude-connection": {
+      "repository": "oscarhenrycollins/claude-connection",
+      "commit": "ae11571c090ae4d4740569ccd39480c1fb4dc68d",
+      "source": "server.py:409-417",
+      "finding": "Origin present with netloc unequal to Host is rejected; null has an empty netloc.",
+      "classification": "rejects-null-write",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "files": {
+      "repository": "oscarhenrycollins/files",
+      "commit": "8a4dd8ac5189d7d9d8af2bb8a2416936668e90df",
+      "source": "runtipi/docker-compose.yml:6,383",
+      "finding": "Embedded Python UI plus FileBrowser upstream. No explicit Origin/CORS admission found in source scan; upstream browser storage/auth and runtime CORS unproven.",
+      "classification": "unknown-not-admitted",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "browser": {
+      "repository": "oscarhenrycollins/browser",
+      "commit": "4c313284bc73e0af20b7faba7a2554bff1b63513",
+      "source": "runtipi/docker-compose.yml:6,364",
+      "finding": "Embedded Python UI plus headless-shell/CDP upstream. Origin/CORS/WebSocket behavior must be tested against pinned upstream.",
+      "classification": "unknown-not-admitted",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "notifications": {
+      "repository": "oscarhenrycollins/notifications",
+      "commit": "6988aff11ce4ca132253415acb22fe2acfa3adac",
+      "source": "mcp/tools.py; mcp/minimal_assets.py",
+      "finding": "No explicit Origin check found in first-party Python source scan. Absence of a match is not CORS or opaque-origin compatibility proof.",
+      "classification": "unknown-not-admitted",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "transcriber": {
+      "repository": "oscarhenrycollins/transcriber",
+      "commit": "b8d1170a3f97e1d6eed8abc874bdebdf7e9f21dc",
+      "source": "runtipi/docker-compose.yml:6,282",
+      "finding": "Embedded Python UI plus Speaches upstream. No explicit Origin check found; no opaque-origin browser read or recorder proof.",
+      "classification": "unknown-not-admitted",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "secret-drop": {
+      "repository": "oscarhenrycollins/secret-drop",
+      "commit": "690b277619847405cffc711917abafd85223f10b",
+      "source": "server.py:607-622,673-698",
+      "finding": "Strict same-origin Host comparison and Sec-Fetch-Site; tests explicitly reject null and OPTIONS submission.",
+      "classification": "rejects-null-write",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "wizard-cloudflare": {
+      "repository": "oscarhenrycollins/wizard-cloudflare",
+      "commit": "30bfabd34e9e0100f30d115080708140da0fcc8a",
+      "source": "app/server.py:911-914,961-983",
+      "finding": "Owner from Tailscale-User-Login membership in WIZARD_OWNER_LOGINS; sensitive reads require same-origin site; writes/bootstrap require trusted Origin. Separate listener not protected by this Service/WAM gate.",
+      "classification": "rejects-null-and-owner-network-authority-unfixed",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "wizard-connectors": {
+      "repository": "humanitylabs-org/wizard-connectors",
+      "commit": "78ced80c1710ef5ba1951ff239e72f3f181087e7",
+      "source": "app/server.py:53-65",
+      "finding": "Request Origin checked against configured ORIGINS and exact http/https Host origins. null is outside that set.",
+      "classification": "rejects-null",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "wisdom": {
+      "repository": "humanitylabs-org/wisdom",
+      "commit": "c80f54cdfde9ffa273dc5140dbcc704e4038574f",
+      "source": "server.py:280-290",
+      "finding": "Write permission requires configured WISDOM_ORIGINS or explicit loopback http origin. null does not match.",
+      "classification": "rejects-null-write",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    "wizard-calendar": {
+      "repository": "humanitylabs-org/wizard-calendar",
+      "commit": "291c32af10e78102755ecc03ebefe781724c1a42",
+      "source": "app/server.py:122-128",
+      "finding": "Nonempty Origin must be in configured ORIGINS; null rejected before request handling.",
+      "classification": "rejects-null",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    }
+  },
+  "entries": [
+    {
+      "kind": "default-slot",
+      "slot": "chats",
+      "app": null,
+      "install": "default",
+      "policy": {
+        "finding": "Built-in Chats is trusted shell code. Installed in-document Chats modules are privileged shell extensions, outside iframe isolation.",
+        "runtime_opaque_verified": false
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "shell",
+      "app": "wizard-ux",
+      "install": "default",
+      "policy": {
+        "repository": "humanitylabs-org/wizard-ux",
+        "commit": "d01e507c6fe16491c0222f524ebac43ecfb32a31",
+        "finding": "Trusted shell owner realm; flag-on navigation-only bootstrap. All app/link iframe renderers add sandbox without same-origin. COOP support must be proved across clients.",
+        "runtime_opaque_verified": false
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "agent-service",
+      "app": "wizard-agent-service",
+      "install": "default",
+      "policy": {
+        "repository": "humanitylabs-org/wizard-agent-service",
+        "commit": "18f5ad60e1a584ee29835494bc4571399f0bb0e0",
+        "finding": "API service, not an app iframe. Candidate possession gate independent of network owner proof.",
+        "runtime_opaque_verified": false
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "agent",
+      "app": "hermes-agent",
+      "install": "default",
+      "policy": {
+        "finding": "Agent API/server, not a browser iframe in the default slot; external exposure and bearer configuration unchanged.",
+        "runtime_opaque_verified": false
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "ai-connection",
+      "app": "wizard-chatgpt",
+      "install": "default",
+      "policy": {
+        "review": "chatgpt-connection"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "claude-subscription",
+      "app": "wizard-claude",
+      "install": "default",
+      "policy": {
+        "review": "claude-connection"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "files",
+      "app": "files",
+      "install": "default",
+      "policy": {
+        "review": "files"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "transcription",
+      "app": "transcriber",
+      "install": "default",
+      "policy": {
+        "review": "transcriber"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "browser",
+      "app": "browser",
+      "install": "default",
+      "policy": {
+        "review": "browser"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "secrets",
+      "app": "secret-drop",
+      "install": "default",
+      "policy": {
+        "review": "secret-drop"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "cloudflare-connection",
+      "app": "wizard-cloudflare",
+      "install": "on-demand",
+      "policy": {
+        "review": "wizard-cloudflare"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "connected-accounts",
+      "app": "wizard-connectors",
+      "install": "on-demand",
+      "policy": {
+        "review": "wizard-connectors"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "default-slot",
+      "slot": "notifications",
+      "app": "notifications",
+      "install": "default",
+      "policy": {
+        "review": "notifications"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "shell-builtin",
+      "app": "app-store",
+      "source": "wizard-ux/web/store/",
+      "finding": "Opaque direct fetch cannot call owner Store API. Real shell-owned approval flow not implemented.",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "shell-builtin",
+      "app": "setup",
+      "source": "wizard-ux/web/setup/",
+      "finding": "_recommended POST now gated in WAM; opaque Setup direct POST needs a scoped shell-owned integration.",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "shell-builtin",
+      "app": "settings",
+      "source": "wizard-ux/web/core/settings.js",
+      "finding": "Trusted shell document, not a sandboxed app page; fetch wrapper applies to owner API operations. Native/transport acceptance pending.",
+      "runtime_opaque_verified": false,
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "explicit-issue-addition",
+      "app": "wisdom",
+      "policy": {
+        "review": "wisdom"
+      },
+      "allow_same_origin_exception": false
+    },
+    {
+      "kind": "explicit-issue-addition",
+      "app": "wizard-calendar",
+      "policy": {
+        "review": "wizard-calendar"
+      },
+      "allow_same_origin_exception": false
+    }
+  ]
+}
