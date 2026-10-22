@@ -124,3 +124,42 @@ class HermesPin(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ServiceRoutes(unittest.TestCase):
+    """A release must not pair the shell with an Agent Service that lacks a stable route (0.3.32: /wizard/v1/setup 404)."""
+    SPEC = """```routes
+# methods  path                                  class     ux  query
+GET        /wizard/v1/bootstrap                  stable    ux  -
+GET        /wizard/v1/setup                      stable    ux  -
+POST       /wizard/session-failure/{id}/dismiss  stable    ux  -
+GET        /wizard/v1/wizard-apps                proposed  -   -
+GET        /wizard-os-home/api/route             compat    ux  -
+```"""
+
+    def setUp(self):
+        sys.path.insert(0, str(HERE.parent))
+        import check_release
+        self.cr = check_release
+
+    def test_old_service_without_setup_fails(self):
+        old = {"server/service.mjs": "if (url.pathname === '/wizard/v1/bootstrap') {}\n"
+                                     "const m = url.pathname.match(/^\\/wizard\\/session-failure\\/([^/]+)\\/dismiss$/)"}
+        self.assertEqual(self.cr.missing_service_routes(self.SPEC, old), ["GET /wizard/v1/setup"])
+
+    def test_service_with_every_stable_route_passes(self):
+        new = {"server/service.mjs": "'/wizard/v1/bootstrap' '/wizard/session-failure/'",
+               "server/phone-setup.mjs": "/** GET /wizard/v1/setup */"}
+        self.assertEqual(self.cr.missing_service_routes(self.SPEC, new), [])
+
+    def test_proposed_and_non_service_routes_are_not_required(self):
+        src = {"server/service.mjs": "/wizard/v1/bootstrap /wizard/v1/setup /wizard/session-failure/"}
+        self.assertEqual(self.cr.missing_service_routes(self.SPEC, src), [])
+
+    def test_real_spec_parses(self):
+        spec = (ROOT / "spec" / "AGENT_SERVICE_API.md").read_text(encoding="utf-8")
+        self.assertIn("GET /wizard/v1/setup", self.cr.missing_service_routes(spec, {"server/x.mjs": ""}))
+
+    def test_gate_starts_at_0_3_33(self):
+        rel = {"version": "0.3.32", "components": {"wizard-agent-service": {"repo": "x/y", "commit": "0" * 40}}}
+        self.assertEqual(self.cr.service_routes_online(rel, self.SPEC), ([], []))
