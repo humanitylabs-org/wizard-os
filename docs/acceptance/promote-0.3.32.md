@@ -28,7 +28,7 @@ The demo box is a wipeable Debian 13 VPS on the team tailnet (host `demo`). Its 
 
 ## Not re-done
 
-- **Fresh 0.3.25 → 0.3.32 in one step, and a fresh install of 0.3.32.** On 22 Oct, Tailscale SSH to the box asked for an interactive login check, and the public address has no port 22, so there was no shell to wipe or reinstall. The 21 Oct chain above is the upgrade evidence. Every hop used the shipped installer rerun or the Settings → Updates path that owners use.
+- **Fresh 0.3.25 → 0.3.32 in one step, and a fresh install of 0.3.32.** (Redone later on 22 Oct: see the last section.) Earlier on 22 Oct, Tailscale SSH to the box asked for an interactive login check, and the public address has no port 22, so there was no shell to wipe or reinstall. The 21 Oct chain above is the upgrade evidence. Every hop used the shipped installer rerun or the Settings → Updates path that owners use.
 
 ## Classification (fix vs feature, 0.3.25 → 0.3.32)
 
@@ -68,3 +68,27 @@ The demo box is a wipeable Debian 13 VPS on the team tailnet (host `demo`). Its 
 | New skins and skin tweaks (#203, #257, #259, #244, #246, #249, #252, #261, #264, #271, #274–#277, #280) | low | Scoped to skins. The default skin is unchanged. |
 
 Strictly read, #82 would give this release a 72h soak (until 24 Oct 16:39 UTC) because of these ride-alongs. It is promoted now on Miguel's explicit call: the demo tests pass, and stable's fresh-box Store is broken until it moves. The ride-alongs are listed in the record's `fast_track.notes`.
+
+## Redone on 22 Oct (03:20–05:05 UTC): one-step upgrade and fresh install
+
+The two tests above that couldn't run on 22 Oct were redone over the box's key-only tailnet SSH (port 2222). Before each install the box was wiped: Wizard OS, the `wizard` user and Docker were removed, and the OS, SSH and the Tailscale login were kept. Every install used the public `https://www.aiwizards.com/os.sh` as root (same bytes each time, sha256 `40719c75…b2db3`). Browser checks ran in headless system Chrome over Tailscale HTTPS against `:8796`. Screenshots are in the operator cache as `demo-retest-*.png` and were judged with vision.
+
+**A. Fresh 0.3.25, then one step to stable 0.3.32: PASS**
+
+| Check | Result |
+|---|---|
+| Fresh `WIZARD_RELEASE=0.3.25 bash -s start` | done, exit 0. Outcome `ok`. 25/25 release checks ok. Troubleshooter `ready`. No `updates.json`, and `wam updates` reports `mode: auto` with the nightly timer (the 0.3.25 default when the owner never chose). |
+| Owner upgrade path | 0.3.25 has no `store-install/_updates` route (404), so Settings → Updates can't drive the update. The owner path is the installer rerun with no `WIZARD_RELEASE` (stable). Its step read "Installing Wizard OS 0.3.32 (App Manager 66d06b4504b2)". |
+| After the upgrade | done, exit 0. Outcome `ok`. `release.json` reads 0.3.32 `pinned`, 25/25 ok. The `store-data` and `store-install` Serve routes are mounted. The troubleshooter, guardian, store-data and api units are active. |
+| Shell | 200 |
+| Troubleshooter | `/troubleshoot/` returns 200 with "All working", and the details sheet lists every check. `WizOpenApp('troubleshooter')` opens it as a hosted shell window. |
+| Store | Installed status is complete (no "incomplete"). Wisdom Get went `installing` → `installed`/`running` in about 7s and flipped to Open with no reload. Open renders `/wisdom/` ("Nothing on the shelves yet"). |
+| Automatic default | `updates.json` is still absent after the upgrade (the installer never writes it). On 0.3.32, `wam updates` now reads `mode: ask`, `chosen: false`, and `wizard-os-update.timer` is gone (WAM #138 removes the timer for owners who never chose). So a 0.3.25 box that never chose takes stable once, through its leftover nightly timer or a rerun, and from then on it asks. |
+
+**B. Fresh stable 0.3.32 (no `WIZARD_RELEASE`): FAIL on first-run Setup only, fixed in 0.3.33**
+
+- These pass: install outcome `ok`, 25/25 checks, shell 200, the Troubleshooter ("All working", shell window), and Store status complete. A Wisdom Get installs and Open renders it.
+- The Settings redesign (#272) renders without errors on desktop (two panes; Appearance, Chats & app screens, Voice & typing, Unsent & recovered, AI usage and About & updates each open their page) and on phone (short index with summaries).
+- **First-run Setup (wizard-ux #15) didn't open.** `GET /wizard/v1/setup` returned 404, the shell logged `first_run:null`, and opening Setup by hand showed "This Wizard doesn't have Setup yet. Update Wizard, then come back." Cause: 0.3.32 pins Agent Service `e7bfd6d`, unchanged since 0.3.17. That commit predates the Setup API (wizard-agent-service #24) and `/wizard/v1/ui-preferences` (#43), which the pinned shell calls.
+
+Fix and release are in [release-0.3.33.md](release-0.3.33.md). The rerun of Test B on a clean fresh 0.3.33 passes.
