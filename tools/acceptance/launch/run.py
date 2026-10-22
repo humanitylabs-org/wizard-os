@@ -77,7 +77,12 @@ def main():
     run = root / 'runs' / run_id
     run.mkdir(parents=True)
     retained = 'launch-real-use'
-    clean = 'launch-clean-' + run_id.lower()
+    # Lima's per-instance ssh.sock path must stay under macOS UNIX_PATH_MAX (104).
+    clean = 'lc-' + run_id.lower()
+    for name in (retained, clean):
+        sock = Path(os.environ['LIMA_HOME']) / name / 'ssh.sock.1234567890123456'
+        if len(str(sock)) >= 104:
+            p.error(f'Lima socket path too long for instance {name!r} ({len(str(sock))} chars); use a shorter --root')
     result = {'fixture': 'launch-audits-8-9', 'at': dt.datetime.now(dt.timezone.utc).isoformat(),
               'release': args.release, 'architecture': 'aarch64', 'passed': False, 'interventions': 0,
               'overlays': [], 'cases': [], 'step': 'start'}
