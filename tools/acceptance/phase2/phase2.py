@@ -77,6 +77,10 @@ def wait_update(name, limit):
 
 try:
     run('vm-status', ['limactl', 'list', vm])
+    if ' Running ' not in (root / 'vm-status.log').read_text():
+        # The kept lane VM can be left Stopped/Broken (host agent gone) between runs; bring it back first.
+        run('vm-recover-stop', ['limactl', 'stop', '-f', vm], 300, required=False)
+        run('vm-recover-start', ['limactl', 'start', '--tty=false', vm], 900)
     wait_ux('ux-up-before')
     browser('before')
     wam('app-install', f'install {APP}', 900)
