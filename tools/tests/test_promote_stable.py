@@ -79,6 +79,50 @@ class Flow(unittest.TestCase):
         p = run(self.d, "promote", "0.3.26", "--from", "0.3.25", "--evidence", "x", "--now", "2026-10-25T00:00:00Z")
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
 
+    def test_fast_track_promotes_a_verified_fix_the_same_day(self):
+        """DECISIONS #82: a fix-only release with a passed upgrade test skips the soak; the record says why."""
+        run(self.d, "cut", "0.3.26")
+        p = run(self.d, "promote", "0.3.26", "--from", "0.3.25", "--evidence", "https://example.test/run/1",
+                "--fast-track", "--classification", "fix", "--reason", "Store 404s on fresh boxes",
+                "--notes", "rides along: channel picker (low risk)",
+                "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn("fast-tracked fix", p.stdout)
+        self.assertEqual((self.d / "stable").read_text().strip(), "0.3.26")
+        rec = json.loads((self.d / "promotions" / "0.3.26.json").read_text())
+        self.assertEqual(rec["fast_track"], {"classification": "fix", "reason": "Store 404s on fresh boxes",
+                                             "notes": "rides along: channel picker (low risk)"})
+        self.assertEqual(run(self.d, "check").returncode, 0)
+
+    def test_fast_track_refuses_features_missing_reasons_and_missing_tests(self):
+        run(self.d, "cut", "0.3.26")
+        base = ["promote", "0.3.26", "--from", "0.3.25", "--evidence", "log",
+                "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z", "--fast-track"]
+        p = run(self.d, *base, "--classification", "feature", "--reason", "new thing")
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("features, data-format changes and big UX changes soak 72h", p.stdout)
+        p = run(self.d, *base, "--classification", "fix")
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("fast_track needs a reason", p.stdout)
+        p = run(self.d, *base)
+        self.assertEqual(p.returncode, 1)
+        p = run(self.d, *[a if a != "log" else " " for a in base], "--classification", "fix", "--reason", "r")
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("evidence", p.stdout)
+        self.assertEqual((self.d / "stable").read_text().strip(), "0.3.25")
+        self.assertFalse((self.d / "promotions" / "0.3.26.json").exists())
+
+    def test_without_fast_track_the_72h_default_still_holds(self):
+        run(self.d, "cut", "0.3.26")
+        p = run(self.d, "promote", "0.3.26", "--from", "0.3.25", "--evidence", "log", "--classification", "fix",
+                "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z")
+        self.assertEqual(p.returncode, 2)                      # classification alone never waives anything
+        p = run(self.d, "promote", "0.3.26", "--from", "0.3.25", "--evidence", "log",
+                "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z")
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("DECISIONS #82", p.stdout)
+        self.assertEqual((self.d / "stable").read_text().strip(), "0.3.25")
+
     def test_check_catches_an_unpromoted_stable_and_a_trailing_latest(self):
         (self.d / "stable").write_text("0.3.26\n")
         p = run(self.d, "check")
@@ -96,6 +140,12 @@ class Gate(unittest.TestCase):
         bad = {**self.GOOD, "upgrade_test": {**self.GOOD["upgrade_test"], "passed": False}}
         self.assertEqual(ps.promotion_problems(bad, "1.2.3"), ["no passed upgrade test"])
         self.assertTrue(ps.promotion_problems({"version": "0.3.26", "grandfathered": "x"}, "0.3.26"))
+        quick = {**self.GOOD, "promoted_at": "2026-10-21T15:00:00Z"}
+        self.assertTrue(any("soaked 4.0h" in x for x in ps.promotion_problems(quick, "1.2.3")))
+        fix = {**quick, "fast_track": {"classification": "fix", "reason": "r"}}
+        self.assertEqual(ps.promotion_problems(fix, "1.2.3"), [])
+        self.assertTrue(ps.promotion_problems({**fix, "upgrade_test": None}, "1.2.3"))      # still needs the test
+        self.assertTrue(ps.promotion_problems({**fix, "promoted_at": "2026-10-20T00:00:00Z"}, "1.2.3"))
 
     def test_identical_to_the_app_manager_gate(self):
         """The mirror's updater (wam/updates.py) must judge records exactly like this tool."""
@@ -106,13 +156,20 @@ class Gate(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("wam_updates", wam)
         up = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(up)
-        self.assertEqual((up.SOAK_HOURS, up.GRANDFATHERED_THROUGH), (ps.SOAK_HOURS, ps.GRANDFATHERED_THROUGH))
+        self.assertEqual((up.SOAK_HOURS, up.GRANDFATHERED_THROUGH, up.FAST_TRACK_CLASSES),
+                         (ps.SOAK_HOURS, ps.GRANDFATHERED_THROUGH, ps.FAST_TRACK_CLASSES))
         t = self.GOOD["upgrade_test"]
+        q = {**self.GOOD, "promoted_at": "2026-10-21T15:00:00Z"}
         cases = [self.GOOD, None, {}, {"version": "1.2.4"}, {"version": "1.2.3", "grandfathered": "x"},
                  {"version": "0.3.20", "grandfathered": "x"}, {**self.GOOD, "promoted_at": "2026-10-22T00:00:00Z"},
                  {**self.GOOD, "latest_since": "nope"}, {**self.GOOD, "upgrade_test": None},
                  {**self.GOOD, "upgrade_test": {**t, "from": "1.2.3"}}, {**self.GOOD, "upgrade_test": {**t, "from": "x"}},
-                 {**self.GOOD, "upgrade_test": {**t, "to": "9"}}, {**self.GOOD, "upgrade_test": {**t, "evidence": ""}}]
+                 {**self.GOOD, "upgrade_test": {**t, "to": "9"}}, {**self.GOOD, "upgrade_test": {**t, "evidence": ""}},
+                 {**q, "fast_track": {"classification": "fix", "reason": "r"}},
+                 {**q, "fast_track": {"classification": "feature", "reason": "r"}},
+                 {**q, "fast_track": {"classification": "fix", "reason": " "}}, {**q, "fast_track": "fix"},
+                 {**q, "fast_track": {"classification": "fix", "reason": "r"}, "upgrade_test": None},
+                 {**q, "promoted_at": "2026-10-20T00:00:00Z", "fast_track": {"classification": "fix", "reason": "r"}}]
         for rec in cases:
             for v in ("1.2.3", "0.3.20", "0.3.26"):
                 with self.subTest(rec=rec, v=v):

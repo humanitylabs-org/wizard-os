@@ -86,7 +86,8 @@ DECISIONS #75 (James, 21 Oct 2026). Two pointers, both mirrored to
   the default channel, and every Automatic update take only this.
 
 A release is promoted when it has been on latest for 72 hours and an upgrade from an
-older release onto it passed on a test box (Thales). The promotion record
+older release onto it passed on a test box (Thales, or the demo box). A fix release
+skips the 72 hours (DECISIONS #82, see "Fast track" below). The promotion record
 `releases/promotions/<version>.json` carries that evidence:
 
 ```json
@@ -106,10 +107,41 @@ python3 tools/promote_stable.py check               # also run by the tests, her
 
 `promote` refuses a short soak, a missing or failed upgrade test, and evidence-free
 records. The App Manager's updater applies the same gate: Automatic skips a stable
-pointer that has no valid record (Update by hand still works). A fix release that
-cannot wait needs the same test, plus James's explicit approval to shorten the soak
-by passing an earlier `--latest-since`; never edit a record by hand. 0.3.25, stable
-when the channels split, carries a `grandfathered` record; no later release can.
+pointer that has no valid record (Update by hand still works). Never edit a record by
+hand or fake `--latest-since`. 0.3.25, stable when the channels split, carries a
+`grandfathered` record; no later release can.
+
+### Fast track for verified fixes
+
+DECISIONS #82 (Miguel, 22 Oct 2026; amends #75). The soak exists to catch surprises in
+new behaviour. A fix is the opposite case: every extra day on latest leaves stable boxes
+broken. So:
+
+| Release contains | Soak | Needs |
+|---|---|---|
+| Fixes only (each with a regression test) | none | upgrade test from the current stable passed (+ fresh install when a box allows it), `--fast-track` |
+| Any feature, data-format change or big UX change | 72h on latest | upgrade test passed |
+
+```sh
+python3 tools/promote_stable.py promote 0.3.32 --from 0.3.25 \
+    --evidence docs/acceptance/promote-0.3.32.md \
+    --fast-track --classification fix --reason "stable 0.3.25 Store is broken on fresh boxes" \
+    --notes "ride-alongs: ... (risk: ...)"
+```
+
+The record gains `"fast_track": {"classification": "fix", "reason": ..., "notes": ...}`.
+`--classification feature` is refused, a missing reason is refused, and the upgrade
+test and its evidence are still required. When a fix release carries already-merged
+feature ride-alongs, list each one and its risk in `--notes` and say so on the
+rollout issue; promote only if the demo tests pass. Both gates
+(`tools/promote_stable.py`, `wam/updates.py`) accept exactly the same records
+(`test_identical_to_the_app_manager_gate`).
+
+**Rolling back a promotion:** point `releases/stable` back at the previous stable in
+both repos (it already has a valid record), mirror, done. Boxes that already took the
+new release stay on it; the next promoted release moves them on. To drop the policy
+itself, remove the `fast_track` branch from both gates (fast-tracked records then fail
+`check`, so move `stable` back first).
 
 ## Publication is a separate gate
 
