@@ -34,6 +34,12 @@ Evidence paths and final counts are posted on #133 rather than asserted before e
 
 See [BROWSER_BOUNDARY_ORIGINS.json](BROWSER_BOUNDARY_ORIGINS.json). Scope is the current **13 WAM default slots**, plus built-in Store/Setup/Settings and the explicitly discussed Wisdom/Calendar apps. Source commits are pinned. This is source inspection, **not a live installed-app census or opaque-origin compatibility certification**. Unknown installed apps must stay unadmitted until inventoried and runtime-tested. No app is approved for `allow-same-origin` on the shared shell origin.
 
+## Independent review disposition
+
+Claude was invoked with the Fable route for one design round and one code-review round. The first bounded code-review invocation timed out; its successful retry has a nonempty result, `is_error: false` and no permission denials. Its receipt reports Fable thinking and Opus output usage, so it is not evidence of sole-model Fable authorship. Raw receipts are retained with the QA evidence.
+
+The reviewer approved only a default-off draft and rejected enable. The concrete same-origin opener concern was reproduced with a negative control and addressed in supported Chromium by `noopener-allow-popups`; broader client support remains gated. Machine-principal exemptions now reject browser metadata. A static-proxy test verifies navigation metadata and COOP/CSP preservation while owner tokens, proof, cookies and tailnet identity are not forwarded. The review's suggestion that WAM has service/agent principal exemptions is not applicable: WAM has its own token gate, peer and owner checks. Nor can a top-level app simply inherit the shell's closure; the actual same-origin popup-reference attack is the one tested. Do not treat reviewer assertions as substitute source evidence.
+
 ## Enable gates — all still binding
 
 1. **Native interfaces:** Android `MainActivity` exposes `WizardOSNative` and `WizardOSDevice` with `addJavascriptInterface`, which reaches every frame regardless of the sandbox. Replace with main-frame-scoped message ports and prove an actual APK. Audit `MizelBridge` and Mac frame handling too. A sandbox or browser `nativeAbsent` result does not fix this.
