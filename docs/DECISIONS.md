@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 22 Oct 2026 — James: default-app custody by signed lists and mirrors ([#136](https://github.com/humanitylabs-org/wizard-os/issues/136))
+
+| # | Decision | Status |
+|---|---|---|
+| 83 | **Replaces the audit's "transfer default repos to the org" line (#136).** Builders keep their repos ("Chats by X"); a default is just the app currently recommended for a slot. (1) Miguel's rule: every app in `wam/defaults.json` or a release JSON pulls an image from `ghcr.io/humanitylabs-org/*` or a digest-pinned upstream image, never a personal registry; a CI check in wizard-os fails a release JSON that breaks it. (2) The defaults are a **curated list, not a gate**: "AI Wizards recommends" is a list signed by the AI Wizards Nostr identity (#38); anyone can publish apps or their own list, and owners choose which lists they follow. (3) **A curator mirrors what it recommends:** for each app on our list we keep a copy of the exact pinned commit (#77) and image digest; a fresh install falls back to that copy only when the builder's copy is gone. No build service, roughly ten apps' bytes. Sidecar code is covered by the mirrored commit, so it needs no org image. Why: custody means "the pinned bytes stay fetchable", not "the org hosts the code"; pinning makes any matching copy equal to the original, which fits the decentralised path (#21, #38). Differs from Miguel's proposal only in (3); he ruled mirrors out as complexity, but it is small and closes the failure the audit found (a deleted personal account breaking fresh installs). | Approved by James, 22 Oct; Miguel to confirm |
+
 ## 22 Oct 2026 — Miguel: verified fixes reach stable the same day ([releases/README.md](../releases/README.md#fast-track-for-verified-fixes))
 
 | # | Decision | Status |
