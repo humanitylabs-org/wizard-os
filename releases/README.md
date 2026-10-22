@@ -10,18 +10,23 @@ new file rather than rewriting one.
 Builders retain their repositories and publisher identities. AI Wizards keeps
 **matching pinned bytes**, not a build service:
 
-* Source: public `humanitylabs-org/wizard-app-manager` lightweight tags
-  `refs/tags/curator/<owner>/<repo>/<40-hex-commit>`, pointing directly to that
-  exact Git commit (with its reachable objects). Tags are append-only: never move
-  or prune them when a default changes. These are custody refs, **not WAM releases**.
-  A public builder disappearing does not remove the org's ref or objects. Private
-  repositories are explicitly refused, rather than accidentally made public.
+* Source: the public
+  [WAM `curator-source-mirrors` release](https://github.com/humanitylabs-org/wizard-app-manager/releases/tag/curator-source-mirrors),
+  with append-only `<owner>--<repo>--<40-hex-commit>.bundle` assets. A standalone
+  Git bundle contains the exact commit and its reachable objects, not an archive
+  merely claiming that SHA. Never delete or replace an asset when a default
+  changes. This prerelease is **not a WAM binary/latest release**. Private source
+  repositories are refused, rather than accidentally made public. Bundles avoid
+  pushing unrelated builders' workflow trees into the manager's Git history.
 * Images already at `ghcr.io/humanitylabs-org/*` are in org custody. Other
   digest-pinned Compose images are copied, without rebuilding or changing their
   multi-platform manifest, to
-  `ghcr.io/humanitylabs-org/wizard-default-mirrors:sha256-<64-hex>`.
+  `ghcr.io/humanitylabs-org/wizard-app-manager:curator-sha256-<64-hex>`.
+  These are custody tags, **not App Manager binaries/releases**: production WAM
+  `latest`/version tags are untouched. Reusing the existing public package avoids
+  a new private-by-default package or registry account/permission setup.
   Install fallback uses that ref **with the original `@sha256:…` appended**.
-  The package must be public; anonymous manifest retrieval is part of commissioning.
+  Anonymous manifest retrieval is part of commissioning.
 * `default-mirrors.yml` runs every six hours and on dispatch, **main only**, on
   the WAM repo-scoped Thales runner. It executes WAM's reviewed
   `tools/mirror_defaults.py` against WAM's public release mirror and defaults.
@@ -37,13 +42,13 @@ Builders retain their repositories and publisher identities. AI Wizards keeps
   credentials are removed even after failure. This avoids the org's deliberate
   deploy-key restriction rather than relaxing it.
 * Each job uploads `default-app-custody/mirrors.json` (30-day operational receipt).
-  Every pushed source ref and copied image digest is read back; a conflicting
+  Every published bundle and copied image digest is read back; a conflicting
   existing ref/digest fails closed. Registry denial is not treated as absence.
   Mirror failures fail the scheduled job rather than claiming full custody.
 
 WAM's Python installer and index-backed backend try the builder's exact commit
-first. Only a failed fetch permits the deterministic mirror ref, in a clean Git
-repository. `rev-parse HEAD` must equal the approved full SHA **before** manifest
+first. Only a failed fetch permits the deterministic public bundle URL, fetched
+into a clean Git repository. Downloads are streamed with a 256 MiB limit. `rev-parse HEAD` must equal the approved full SHA **before** manifest
 use or source/build packaging; a mismatching copy is deleted and rejected. No
 mirror HEAD, mutable tag, latest-version substitution, or changed approval is used.
 For digest-pinned non-org images, a present local copy or available origin wins;
