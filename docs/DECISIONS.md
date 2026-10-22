@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 22 Oct 2026 — Miguel: verified fixes reach stable the same day ([releases/README.md](../releases/README.md#fast-track-for-verified-fixes))
+
+| # | Decision | Status |
+|---|---|---|
+| 82 | **Amends #75: the 72h soak applies to features, data-format changes and big UX changes only.** A fix release (each fix with a regression test) that passes the demo-box upgrade test from the current stable, and a fresh install where a box allows it, goes to stable the same day: `tools/promote_stable.py promote <v> --fast-track --classification fix --reason ...`. The promotion record keeps a `fast_track` block (classification, reason, notes listing any ride-along changes and their risk), the same `upgrade_test` evidence is still required, and the App Manager gate (`wam/updates.py`) accepts exactly the same records. Everything else keeps the 72h default. Why: stable 0.3.25 had a broken Store on fresh boxes (Store routes 404, no Open, Wisdom can't install) while the fixes sat on latest for days. Revert: drop the `fast_track` branch in both gates and point `releases/stable` back. | Miguel, 22 Oct 2026; James to confirm |
+
 ## 21 Oct 2026 — James: private agent round 2 ([spec/AGENTS.md §9](../spec/AGENTS.md#9-private-retrieval-search-and-read-state-approved-by-james-21-oct-2026))
 
 | # | Decision | Status |
@@ -37,7 +43,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 75 | **Two release channels.** Every cut release goes to `releases/latest` (testers opt in). `releases/stable` (fresh installs, the default channel and every Automatic update) moves only after the release has been on latest for 72 hours and an upgrade from an older release passed on Thales, recorded in `releases/promotions/<version>.json` by `tools/promote_stable.py`. Boxes refuse to auto-install a stable release without a valid record. 0.3.25 is grandfathered as the first stable. | Approved by James, 21 Oct |
+| 75 | **Two release channels.** Every cut release goes to `releases/latest` (testers opt in). `releases/stable` (fresh installs, the default channel and every Automatic update) moves only after the release has been on latest for 72 hours and an upgrade from an older release passed on Thales (amended by #82: verified fixes skip the soak), recorded in `releases/promotions/<version>.json` by `tools/promote_stable.py`. Boxes refuse to auto-install a stable release without a valid record. 0.3.25 is grandfathered as the first stable. | Approved by James, 21 Oct |
 
 ## 21 Oct 2026 — James: Wizard stable Hermes ([docs/HERMES_STABLE.md](HERMES_STABLE.md))
 

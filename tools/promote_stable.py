@@ -4,12 +4,19 @@
     python3 tools/promote_stable.py cut 0.3.26                       # releases/latest -> 0.3.26 (testers get it)
     python3 tools/promote_stable.py promote 0.3.26 --from 0.3.25 \\
         --evidence https://github.com/humanitylabs-org/wizard-os/blob/main/docs/acceptance/update-0.3.26.md
+    python3 tools/promote_stable.py promote 0.3.33 --from 0.3.25 --evidence <upgrade-test link> \\
+        --fast-track --classification fix --reason "fixes only: Store 404s on fresh boxes"   # DECISIONS #82
     python3 tools/promote_stable.py check                            # the channel rules hold (tests run this)
 
 James, 21 Oct 2026: every release goes to `releases/latest` as soon as it is cut. `releases/stable` (what fresh
 installs and Automatic updates take) moves only when the release has been on latest for SOAK_HOURS and an upgrade
 from an older release onto it passed on a test box (Thales). `promote` writes releases/promotions/<version>.json
 with that evidence and then moves stable; it refuses when the soak or the test is missing.
+
+DECISIONS #82 (Miguel, 22 Oct 2026, amends #75): a release that only fixes things skips the soak with
+`--fast-track --classification fix --reason ...` once the same upgrade test passed (plus a fresh install where a
+box allows it). Features, data-format changes and big UX changes keep the 72h soak; `--classification feature`
+is refused. The record keeps the classification and reason, so the waiver is visible and auditable.
 
 The App Manager mirror (wizard-app-manager/releases) carries the same three things (latest, stable, promotions/)
 and its updater applies the same gate (wam/updates.py promotion_problems): Automatic never installs a stable
@@ -28,6 +35,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,40}")
 SOAK_HOURS = 72
+FAST_TRACK_CLASSES = ("fix",)        # DECISIONS #82: verified fixes skip the soak; nothing else does
 GRANDFATHERED_THROUGH = "0.3.25"   # stable when the channels split; every later promotion passes the full gate
 
 
@@ -55,8 +63,15 @@ def promotion_problems(rec, version: str) -> list[str]:
     since, at = _stamp(rec.get("latest_since")), _stamp(rec.get("promoted_at"))
     if since is None or at is None:
         out.append("latest_since and promoted_at must be ISO timestamps")
+    elif at < since:
+        out.append("promoted_at is before latest_since")
     elif at - since < SOAK_HOURS * 3600:
-        out.append(f"soaked {(at - since) / 3600:.1f}h on latest; stable needs {SOAK_HOURS}h")
+        ft = rec.get("fast_track")
+        if ft is None:
+            out.append(f"soaked {(at - since) / 3600:.1f}h on latest; stable needs {SOAK_HOURS}h "
+                       "(a verified fix may fast-track: DECISIONS #82)")
+        else:
+            out += fast_track_problems(ft)
     t = rec.get("upgrade_test")
     if not isinstance(t, dict) or t.get("passed") is not True:
         out.append("no passed upgrade test")
@@ -66,6 +81,20 @@ def promotion_problems(rec, version: str) -> list[str]:
             out.append("upgrade test must go from an older release to this one")
         if not str(t.get("evidence", "")).strip():
             out.append("upgrade test needs evidence (a run log or report link)")
+    return out
+
+
+def fast_track_problems(ft) -> list[str]:
+    """Why a `fast_track` block does not waive the soak ([] = it does). DECISIONS #82: only a release classified as
+    fixes, with the reason recorded, skips the soak; it still needs the passed upgrade test. Same as the other repo."""
+    if not isinstance(ft, dict):
+        return ["fast_track must be an object"]
+    out = []
+    if ft.get("classification") not in FAST_TRACK_CLASSES:
+        out.append(f"fast_track is only for {'/'.join(FAST_TRACK_CLASSES)} releases; features, data-format changes and "
+                   f"big UX changes soak {SOAK_HOURS}h")
+    if not str(ft.get("reason", "")).strip():
+        out.append("fast_track needs a reason")
     return out
 
 
@@ -140,6 +169,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--from", dest="frm", required=True, help="the older release the upgrade test started from")
     p.add_argument("--evidence", required=True, help="link or repo path to the passed upgrade-test run")
     p.add_argument("--latest-since", help="ISO time the release went to latest (default: from git history)")
+    p.add_argument("--fast-track", action="store_true",
+                   help="skip the soak for a fix-only release (DECISIONS #82); needs --classification fix and --reason")
+    p.add_argument("--classification", choices=("fix", "feature"),
+                   help="what the release changes: fix (may fast-track) or feature (always soaks)")
+    p.add_argument("--reason", help="why this fix cannot wait for the soak, and what was verified")
+    p.add_argument("--notes", help="optional: ride-along changes and their risk, kept in the record")
     p.add_argument("--now", help=argparse.SUPPRESS)
     sub.add_parser("check", help="the channel rules hold")
     a = ap.parse_args(argv)
@@ -175,6 +210,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     rec = {"version": v, "latest_since": since, "promoted_at": now,
            "upgrade_test": {"from": a.frm, "to": v, "passed": True, "evidence": a.evidence}}
+    if a.fast_track:
+        rec["fast_track"] = {"classification": a.classification or "", "reason": (a.reason or "").strip()}
+        if a.notes:
+            rec["fast_track"]["notes"] = a.notes.strip()
+    elif a.classification or a.reason or a.notes:
+        print("--classification/--reason/--notes only go with --fast-track", file=sys.stderr)
+        return 2
     problems = promotion_problems(rec, v)
     if problems:
         for x in problems:
@@ -185,7 +227,8 @@ def main(argv: list[str] | None = None) -> int:
     _write(rel / "stable", v + "\n")
     if _key(_read(rel / "latest") or "0.0.0") < _key(v):
         _write(rel / "latest", v + "\n")
-    print(f"stable -> {v} (soaked since {since}; upgrade {a.frm} -> {v} passed: {a.evidence}). Mirror releases/stable "
+    how = "fast-tracked fix (DECISIONS #82)" if a.fast_track else f"soaked since {since}"
+    print(f"stable -> {v} ({how}; upgrade {a.frm} -> {v} passed: {a.evidence}). Mirror releases/stable "
           f"and promotions/{v}.json to wizard-app-manager/releases.")
     return 0
 
