@@ -1,0 +1,16 @@
+{
+  "version": "Hermes Agent v0.21.5 (2026.9.24) \u00b7 upstream f97608f1",
+  "db_before": {
+    "integrity": "ok",
+    "sessions": 7,
+    "messages": 65,
+    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010545Z/evidence/state-before-rollback.db"
+  },
+  "db_after": {
+    "integrity": "ok",
+    "sessions": 7,
+    "messages": 65,
+    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010545Z/evidence/state-after-rollback.db"
+  },
+  "new_turn": "ECHO rb1"
+}

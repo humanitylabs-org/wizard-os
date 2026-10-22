@@ -1,0 +1,14 @@
+{
+  "before": {
+    "integrity": "ok",
+    "sessions": 6,
+    "messages": 61,
+    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010545Z/evidence/state-before-restart.db"
+  },
+  "after": {
+    "integrity": "ok",
+    "sessions": 6,
+    "messages": 61,
+    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010545Z/evidence/state-after-restart.db"
+  }
+}
