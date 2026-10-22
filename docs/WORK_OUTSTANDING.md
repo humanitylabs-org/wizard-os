@@ -68,7 +68,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [x] `wizard.md` for every app: each split into its own public repo with history, an MCP and a skill, and listed in the index (9 Oct).
 - [x] **Index** `wizard-app-index` live at apps.aiwizards.com, store page at aiwizards.com/wizard-apps (9 Oct).
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
-- [x] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28). Done in code (\`WAM_BIND\` default 127.0.0.1, bearer in \`~/.wizard-os/api-token\`); see [SECURITY_INVENTORY.md](SECURITY_INVENTORY.md).
+- [x] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28). Done in code (`WAM_BIND` default 127.0.0.1, bearer in `~/.wizard-os/api-token`); see [SECURITY_INVENTORY.md](SECURITY_INVENTORY.md).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
 - [x] **App-to-app permissions spec**: [spec/PERMISSIONS.md](../spec/PERMISSIONS.md) v0.2, approved by James 21 Oct (#76). App → app grants only; agents stay on #58 ticks and #59 seals.

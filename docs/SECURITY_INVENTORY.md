@@ -19,7 +19,7 @@ Last checked: 22 Oct 2026, on Miguel's box (`oscarvps`, App Manager install, 35 
 | files/files-engine-1 | - | env: FILES_PASSWORD | rw (/ ) | bridge |
 | messenger/messenger-1 | - | env: MESSENGER_API_TOKEN, WN_SECRET_STORE, WN_KEYCHAIN_SERVICE | - | bridge |
 | morning-report/morning-report-1 | - | env: GPG_KEY | ro (/Reports/morning-report ) | bridge |
-| notifications/notifications-1 | - | ~/.hermes/cache/screenshots→/home/oscar/.hermes/cache/screenshots ro<br>~/.hermes/sniper_reports→/home/oscar/.hermes/sniper_reports ro<br>~/.hermes/cache/images→/home/oscar/.hermes/cache/images ro<br>env: GPG_KEY | ro (/ ) | bridge |
+| notifications/notifications-1 | - | ~/.hermes/cache/screenshots→~/.hermes/cache/screenshots ro<br>~/.hermes/sniper_reports→~/.hermes/sniper_reports ro<br>~/.hermes/cache/images→~/.hermes/cache/images ro<br>env: GPG_KEY | ro (/ ) | bridge |
 | notifications/notifications-engine-1 | - | - | - | bridge |
 | runtipi | ro | env: REDIS_PASSWORD, POSTGRES_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET | rw (/ ) | bridge |
 | runtipi-db | - | env: POSTGRES_PASSWORD | - | bridge |
@@ -31,7 +31,7 @@ Last checked: 22 Oct 2026, on Miguel's box (`oscarvps`, App Manager install, 35 
 | transcriber/transcriber-1 | - | env: GPG_KEY | ro (/ ) | bridge |
 | transcriber/transcriber-engine-1 | - | - | - | bridge |
 | wisdom/wisdom-1 | - | env: GPG_KEY | rw (/Wisdom ) | bridge |
-| wizard-agent-service/wizard-agent-service-1 | - | ~/.hermes/cache/videos→/home/oscar/.hermes/cache/videos ro<br>~/.hermes/state.db→/hermes/state.db ro<br>~/.hermes/state.db-wal→/hermes/state.db-wal ro<br>~/.hermes/state.db-shm→/hermes/state.db-shm ro<br>~/.hermes/cache/audio→/home/oscar/.hermes/cache/audio ro<br>~/.hermes/cache/screenshots→/home/oscar/.hermes/cache/screenshots ro<br>~/.hermes/cache/images→/home/oscar/.hermes/cache/images ro<br>~/.wizard-os/hermes-view→/hermes ro<br>~/.hermes/cache/images→/hermes/cache/images ro<br>env: WIZARD_HERMES_API_KEY, WIZARD_MCP_TOKEN, WIZARD_ROUTER_KEY | rw (/ ) | host |
+| wizard-agent-service/wizard-agent-service-1 | - | ~/.hermes/cache/videos→~/.hermes/cache/videos ro<br>~/.hermes/state.db→/hermes/state.db ro<br>~/.hermes/state.db-wal→/hermes/state.db-wal ro<br>~/.hermes/state.db-shm→/hermes/state.db-shm ro<br>~/.hermes/cache/audio→~/.hermes/cache/audio ro<br>~/.hermes/cache/screenshots→~/.hermes/cache/screenshots ro<br>~/.hermes/cache/images→~/.hermes/cache/images ro<br>~/.wizard-os/hermes-view→/hermes ro<br>~/.hermes/cache/images→/hermes/cache/images ro<br>env: WIZARD_HERMES_API_KEY, WIZARD_MCP_TOKEN, WIZARD_ROUTER_KEY | rw (/ ) | host |
 | wizard-calendar/wizard-calendar-1 | - | env: GPG_KEY | - | bridge |
 | wizard-chatgpt/wizard-chatgpt-1 | - | env: UPSTREAM_PASSWORD, GPG_KEY | - | bridge |
 | wizard-chatgpt/wizard-chatgpt-engine-1 | - | env: WIZARD_CHATGPT_HERMES_PASSWORD, WIZARD_CHATGPT_PASSWORD, GPG_KEY | - | bridge |
