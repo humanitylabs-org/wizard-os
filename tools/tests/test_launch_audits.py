@@ -9,6 +9,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
+from types import SimpleNamespace
+from email.message import Message
+import urllib.error
 import zipfile
 import io
 
@@ -31,6 +35,62 @@ class HarnessTests(unittest.TestCase):
         start = dt.datetime(2026, 1, 1, 9, 15, tzinfo=dt.timezone.utc)
         return [{'at': (start + dt.timedelta(days=d)).isoformat(), 'release': '0.3.33',
                  'passed': True, 'interventions': 0, 'overlays': []} for d in range(4)]
+
+    def test_clean_candidate_is_independent_of_previous_release_upgrade(self):
+        events = []
+        ops = {name: Mock(side_effect=lambda *a, n=name: events.append((n, *a)))
+               for name in ('create', 'install', 'journey', 'delete')}
+        args = SimpleNamespace(release='0.3.33', previous_release='0.3.32')
+        evidence, result = Path('evidence'), {}
+        runner.disposable_cases(args, evidence, 'fixture', **ops, result=result)
+        self.assertEqual(events, [
+            ('create', 'fixture'),
+            ('install', 'fixture', evidence / 'clean-install', '0.3.33'),
+            ('journey', 'fixture', 'clean', evidence / 'clean-state.json', '0.3.33'),
+            ('delete', 'fixture'), ('create', 'fixture'),
+            ('install', 'fixture', evidence / 'upgrade-previous-install', '0.3.32'),
+            ('journey', 'fixture', 'upgrade-baseline', evidence / 'upgrade-state.json', '0.3.32'),
+            ('install', 'fixture', evidence / 'clean-upgrade', '0.3.33'),
+            ('journey', 'fixture', 'upgraded', evidence / 'upgrade-state.json', '0.3.33')])
+        self.assertEqual(result['step'], 'upgraded-candidate-journey')
+
+    def test_candidate_setup_failure_never_falls_back_to_previous_baseline(self):
+        create, install, delete = Mock(), Mock(), Mock()
+        failed = Mock(side_effect=RuntimeError('candidate Setup 404'))
+        result = {}
+        with self.assertRaises(RuntimeError):
+            runner.disposable_cases(SimpleNamespace(release='0.3.33', previous_release='0.3.32'),
+                                    Path('evidence'), 'fixture', create, install, failed, delete, result)
+        install.assert_called_once()
+        failed.assert_called_once()
+        delete.assert_not_called()  # caller's finally owns failure cleanup
+        self.assertEqual(result['step'], 'clean-candidate-journey')
+
+    def test_upgrade_baseline_cannot_claim_setup_or_contact_success(self):
+        registry = {'apps': [{'provides': ['shell'], 'view': {'local': 'http://127.0.0.1:8796/wizard-os-home/'}}]}
+        with patch.object(journey, 'request', return_value=b'<title>Wizard</title>') as request, \
+                patch.object(journey, 'run', side_effect=AssertionError('must not claim baseline contact')):
+            value = journey.first_contact(registry, Path('wizard'), 'upgrade-baseline')
+        self.assertIsNone(value['contact'])
+        self.assertIsNone(value['setup_route'])
+        self.assertEqual(value['first_contact'], 'not-evaluated-upgrade-baseline')
+        request.assert_called_once()
+
+    def test_every_candidate_journey_requires_valid_setup(self):
+        registry = {'apps': [{'provides': ['shell'], 'view': {'url': 'http://127.0.0.1:8796/wizard-os-home/'}}]}
+        contact = json.dumps({'ok': True, 'command': 'ssh -L 127.0.0.1:18795:127.0.0.1:8796'})
+        for case in ('clean', 'upgraded', 'retained'):
+            for setup in (urllib.error.HTTPError('fixture', 404, 'missing', Message(), io.BytesIO()), {}, [], {'first_run': 'true'}):
+                with self.subTest(case=case, setup=setup), \
+                        patch.object(journey, 'request', side_effect=[b'Wizard', setup]), \
+                        patch.object(journey, 'run', return_value=contact):
+                    with self.assertRaises((AssertionError, urllib.error.HTTPError)):
+                        journey.first_contact(registry, Path('wizard'), case)
+                if isinstance(setup, urllib.error.HTTPError):
+                    setup.close()
+            with patch.object(journey, 'request', side_effect=[b'Wizard', {'first_run': False}]), \
+                    patch.object(journey, 'run', return_value=contact):
+                self.assertEqual(journey.first_contact(registry, Path('wizard'), case)['first_contact'], 'passed')
 
     def test_soak_needs_four_successes_and_actual_elapsed_72h(self):
         rows = self.rows()

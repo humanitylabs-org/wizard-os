@@ -9,6 +9,8 @@ import subprocess
 
 REPO = 'humanitylabs-org/wizard-os'
 STEPS = {'start', 'clean-create', 'clean-public-install', 'clean-previous-journey', 'clean-upgrade',
+         'clean-candidate-journey', 'clean-delete', 'upgrade-create', 'upgrade-previous-install',
+         'upgrade-baseline-journey', 'upgraded-candidate-journey',
          'retained-create', 'retained-start', 'retained-intervention-check', 'retained-journey',
          'retained-reboot', 'complete'}
 

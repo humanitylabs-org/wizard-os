@@ -20,8 +20,11 @@ sign-ins are used. Frozen CLI probes do not modify the shipped profile. This is 
 proof that an unreleased CLI change is already in a released installer.
 
 - `launch-real-use`: persistent Ubuntu 24.04 ARM appliance; never automatically deleted.
-- `launch-clean-<run-id>`: disposable clean install, previous-release journey, public
-  upgrade to candidate, retained workflow readback; deleted after the run.
+- `launch-clean-<run-id>`: disposable **candidate** clean install and strict shell/Setup
+  first-contact journey; deleted, then recreated from empty disk for a separate
+  previous-release fixture baseline → public candidate upgrade → strict readback.
+  Only one disposable VM exists at a time. This adds a third public install, not
+  a third concurrent VM. Evidence paths are distinct and never overwritten.
 - `runs/<id>/private-run.log`: private installer/debug output; **never upload/comment**.
 - `runs/<id>/receipt.json`, `receipts.jsonl`: bounded receipts, SHA256-linked.
 - `persistent-state.json`: the last verified public fixture reading position.
@@ -41,6 +44,25 @@ closes it. It never turns off host-key checking. Loopback forwarding is on the
 operator host only; no LAN shell listener is created. The native command leaves NAT
 host/port overrides explicit. It is HTTP first-contact proof, **not browser rendering
 or two-skin screenshots**; those remain separate acceptance evidence.
+
+## First-contact release boundary (0.3.32 → 0.3.33)
+
+The frozen 0.3.32 `wizard-ux` nginx recipe already proxies `/wizard/...` to
+Agent Service; `view.local` is the correct same-origin owner front door. Its
+Agent Service pin `e7bfd6d`, however, predates `/wizard/v1/setup`. A shell 200 plus
+Setup 404 on that baseline is the documented release defect corrected by 0.3.33's
+`634fe96` pin, not an SSH target or API path error. Do not redirect contact to the
+headless Agent Service port (it does not serve the shell) or patch the old profile.
+
+The candidate clean install and every upgraded/retained candidate journey must
+pass both shell and Setup probes, including boolean `first_run`. `wizard contact`
+now fails explicitly when only HTML works. The older release is exercised only as
+`upgrade-baseline` for reading-state continuity: it still validates pins, shell,
+report, public reading and restore, but writes `contact: null`, `setup_route: null`
+and `first_contact: not-evaluated-upgrade-baseline`. That is not a first-contact
+pass. The upgraded candidate repeats the strict forward and Setup proof. Expected
+release identity is checked for every journey, and per-case forward/JSON evidence
+is retained separately. A candidate Setup 404 still fails the run.
 
 ## Daily schedule and reporting
 

@@ -52,6 +52,28 @@ def gate(rows):
                                 dt.datetime.fromisoformat(window[0]['at'].replace('Z', '+00:00'))).total_seconds() >= 72 * 3600
 
 
+def disposable_cases(args, evidence, vm, create, install, journey, delete, result):
+    """Prove the candidate from empty disk independently of upgrade continuity."""
+    result['step'] = 'clean-create'
+    create(vm)
+    result['step'] = 'clean-public-install'
+    install(vm, evidence / 'clean-install', args.release)
+    result['step'] = 'clean-candidate-journey'
+    journey(vm, 'clean', evidence / 'clean-state.json', args.release)
+    result['step'] = 'clean-delete'
+    delete(vm)
+    result['step'] = 'upgrade-create'
+    create(vm)
+    result['step'] = 'upgrade-previous-install'
+    install(vm, evidence / 'upgrade-previous-install', args.previous_release)
+    result['step'] = 'upgrade-baseline-journey'
+    journey(vm, 'upgrade-baseline', evidence / 'upgrade-state.json', args.previous_release)
+    result['step'] = 'clean-upgrade'
+    install(vm, evidence / 'clean-upgrade', args.release)
+    result['step'] = 'upgraded-candidate-journey'
+    journey(vm, 'upgraded', evidence / 'upgrade-state.json', args.release)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--root', required=True, type=Path)
@@ -104,24 +126,24 @@ def main():
     def install(name, state, release):
         shell(name, ['env', 'WIZARD_LAUNCH_FIXTURE=launch-audits-8-9', 'AUDIT_STATE=' + str(state),
                      'AUDIT_RELEASE=' + release, 'bash', str(HERE / 'bootstrap.sh')], 5400)
-    def journey(name, case, state):
-        contact_evidence = run / ('first-contact-' + name)
-        command(['python3', str(HERE / 'tunnel.py'), name, str(args.cli), str(contact_evidence)], log, 120)
-        output = run / (case + '.json')
+    def delete(name):
+        command(['limactl', 'stop', '-f', name], log)
+        command(['limactl', 'delete', '-f', name], log)
+    def journey(name, case, state, expected_release):
+        if case != 'upgrade-baseline':
+            contact_evidence = run / f'first-contact-{name}-{case}-{len(result["cases"])}'
+            command(['python3', str(HERE / 'tunnel.py'), name, str(args.cli), str(contact_evidence)], log, 120)
+        output = run / f'{case}-{len(result["cases"])}.json'
         # Wrapper creates a machine-only result file, while stderr stays in the private log.
         shell(name, ['env', 'WIZARD_LAUNCH_FIXTURE=launch-audits-8-9', 'python3', str(HERE / 'capture.py'),
                      str(output), str(HERE / 'journey.py'), '--state', str(state), '--case', case, '--cli', str(args.cli)])
-        result['cases'].append(json.loads(output.read_text()))
+        value = json.loads(output.read_text())
+        assert value['passed'] and value['release'] == expected_release, 'wrong journey release'
+        if case != 'upgrade-baseline':
+            assert value['contact'] is True and value['setup_route'] is True, 'candidate Setup not proven'
+        result['cases'].append(value)
     try:
-        result['step'] = 'clean-create'
-        create(clean)
-        result['step'] = 'clean-public-install'
-        install(clean, run / 'clean-install', args.previous_release)
-        result['step'] = 'clean-previous-journey'
-        journey(clean, 'clean', run / 'clean-state.json')
-        result['step'] = 'clean-upgrade'
-        install(clean, run / 'clean-upgrade', args.release)
-        journey(clean, 'clean', run / 'clean-state.json')
+        disposable_cases(args, run, clean, create, install, journey, delete, result)
         instance = root / 'lima' / retained
         state = root / 'persistent-state.json'
         if not instance.exists():
@@ -142,12 +164,12 @@ def main():
         if result['interventions']:
             raise RuntimeError('operator_intervention')
         result['step'] = 'retained-journey'
-        journey(retained, 'retained', state)
+        journey(retained, 'retained', state, args.release)
         assert result['cases'][-1]['release'] == args.release, 'retained candidate changed'
         result['step'] = 'retained-reboot'
         command(['limactl', 'stop', retained], log)
         command(['limactl', 'start', '--tty=false', retained], log)
-        journey(retained, 'retained', state)
+        journey(retained, 'retained', state, args.release)
         result['step'] = 'complete'
         result['passed'] = True
     except (Exception, KeyboardInterrupt):

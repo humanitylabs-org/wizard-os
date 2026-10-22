@@ -58,10 +58,28 @@ def bundle():
     return out.getvalue()
 
 
+def first_contact(registry, cli, case):
+    shell = next(a for a in registry['apps'] if 'shell' in (a.get('provides') or []))
+    local = shell['view'].get('local') or shell['view']['url']
+    assert b'wizard' in request(local).lower(), 'shell not readable'
+    # The older release only seeds upgrade continuity. It is not candidate
+    # first-contact evidence: 0.3.32's Agent Service predates Setup entirely.
+    if case == 'upgrade-baseline':
+        return {'contact': None, 'setup_route': None, 'first_contact': 'not-evaluated-upgrade-baseline'}
+    contact = json.loads(run('python3', str(cli), 'contact', '--json', '--ssh-host', '127.0.0.1'))
+    assert contact['ok'] and '127.0.0.1:18795:' in contact['command']
+    assert 'StrictHostKeyChecking=no' not in contact['command']
+    from urllib.parse import urlsplit
+    origin = 'http://127.0.0.1:' + str(urlsplit(local).port)
+    setup = request(origin + '/wizard/v1/setup')
+    assert isinstance(setup, dict) and type(setup.get('first_run')) is bool, 'Setup API unavailable'
+    return {'contact': True, 'setup_route': True, 'first_contact': 'passed'}
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--state', required=True, type=Path)
-    p.add_argument('--case', required=True, choices=['clean', 'retained'])
+    p.add_argument('--case', required=True, choices=['clean', 'retained', 'upgrade-baseline', 'upgraded'])
     p.add_argument('--cli', required=True, type=Path)
     args = p.parse_args()
     assert os.environ.get('WIZARD_LAUNCH_FIXTURE') == 'launch-audits-8-9', 'fixture guard'
@@ -73,16 +91,7 @@ def main():
     # Probe frozen code without modifying the shipped profile or installers.
     report = json.loads(run('python3', str(args.cli), 'report', '--json'))
     assert report['schema'] == 'wizard-report-v1'
-    contact = json.loads(run('python3', str(args.cli), 'contact', '--json', '--ssh-host', '127.0.0.1'))
-    assert contact['ok'] and '127.0.0.1:18795:' in contact['command']
-    assert 'StrictHostKeyChecking=no' not in contact['command']
-    shell = next(a for a in registry['apps'] if 'shell' in (a.get('provides') or []))
-    local = shell['view'].get('local') or shell['view']['url']
-    assert b'wizard' in request(local).lower(), 'shell not readable'
-    from urllib.parse import urlsplit
-    origin = 'http://127.0.0.1:' + str(urlsplit(local).port)
-    setup = request(origin + '/wizard/v1/setup')
-    assert isinstance(setup, dict), 'Setup API unavailable'
+    contact_result = first_contact(registry, args.cli, args.case)
     # No automatic repairs: missing catalog app/install or private content is a failing journey.
     if not any(a['id'] == 'wisdom' for a in registry['apps']):
         assert args.case == 'clean' or not args.state.exists(), 'installed app vanished'
@@ -142,7 +151,7 @@ def main():
     args.state.write_text(json.dumps({'progress': progress}))
     receipt = {'fixture': 'launch-audits-8-9', 'case': args.case, 'release': release['release'],
                'architecture': run('uname', '-m'), 'public_install': True, 'overlays': [],
-               'diagnostics': 'frozen-source-probe-not-installed-release', 'contact': True, 'setup_route': True,
+               'diagnostics': 'frozen-source-probe-not-installed-release', **contact_result,
                'public_reading_sha256': hashlib.sha256(BODY.encode()).hexdigest(),
                'retained_readback': old is not None, 'progress': progress, 'restore': True, 'passed': True}
     print(json.dumps(receipt))

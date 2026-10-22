@@ -8,6 +8,7 @@ import shlex
 import socket
 import subprocess
 import time
+import urllib.parse
 import urllib.request
 
 p = argparse.ArgumentParser()
@@ -50,8 +51,10 @@ with (a.evidence / 'private-ssh.log').open('w') as log:
             except OSError:
                 time.sleep(.25)
         assert ready, 'printed shell forward never became ready'
-        with opener.open('http://127.0.0.1:18795/wizard/v1/setup', timeout=5) as response:
-            assert isinstance(json.loads(response.read()), dict), 'forwarded Setup route failed'
+        setup_url = urllib.parse.urljoin(contact['url'], '/wizard/v1/setup')
+        with opener.open(setup_url, timeout=5) as response:
+            setup = json.loads(response.read())
+            assert response.status == 200 and isinstance(setup, dict) and type(setup.get('first_run')) is bool, 'forwarded Setup route failed'
         (a.evidence / 'first-contact.json').write_text(json.dumps({'passed': True,
              'transport': 'SSH-host-key-verified-loopback-forward', 'host_port_override': True,
              'shell_http': 200, 'setup_api': 200, 'tailnet_enrolled': False}) + '\n')
