@@ -6,13 +6,13 @@
     "integrity": "ok",
     "sessions": 1,
     "messages": 2,
-    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010058Z/evidence/state-before-update.db"
+    "copy": "$WIZARD_WORK_ROOT/wizard-os/hermes-stable/runs/20261022T010058Z/evidence/state-before-update.db"
   },
   "db_after": {
     "integrity": "ok",
     "sessions": 1,
     "messages": 2,
-    "copy": "/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010058Z/evidence/state-after-update.db"
+    "copy": "$WIZARD_WORK_ROOT/wizard-os/hermes-stable/runs/20261022T010058Z/evidence/state-after-update.db"
   },
   "seed_intact": true,
   "ok": true

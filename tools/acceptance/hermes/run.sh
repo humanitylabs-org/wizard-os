@@ -4,7 +4,8 @@
 #
 #   tools/acceptance/hermes/run.sh <candidate image@digest> <current pin image@digest>
 #
-# Env: WORK (default /Volumes/ThalesMedia/wizard-os/hermes-stable), WAS_IMAGE, UX_IMAGE, FAKE_IMAGE (all by
+# Env: WIZARD_WORK_ROOT (the work disk; required unless WORK is set), WORK (default
+# $WIZARD_WORK_ROOT/wizard-os/hermes-stable), WAS_IMAGE, UX_IMAGE, FAKE_IMAGE (all by
 # digest), KEEP_VM=1 to leave the VM running. Writes $WORK/runs/<UTC stamp>/{results.json,RECEIPT.md,evidence/}.
 # To wait for Thales' shared heavy-worker lock first: CANDIDATE=... FROM=... WIZARD_WORK_ROOT=... locked.py Images are fetched on the host and side-loaded,
 # digest-checked, because GHCR blob downloads fail inside the vz guest (TLS "bad record MAC").
@@ -13,7 +14,7 @@ export PATH=/opt/homebrew/bin:$PATH
 HERE=$(cd "$(dirname "$0")" && pwd)
 CANDIDATE=${1:-${CANDIDATE:?candidate image@sha256:...}}
 FROM=${2:-${FROM:?current pin image@sha256:...}}
-WORK=${WORK:-/Volumes/ThalesMedia/wizard-os/hermes-stable}
+WORK=${WORK:-${WIZARD_WORK_ROOT:?set WIZARD_WORK_ROOT to the work disk}/wizard-os/hermes-stable}
 WAS_IMAGE=${WAS_IMAGE:-ghcr.io/humanitylabs-org/wizard-agent-service@sha256:cb92d01c5656e89f8280e54f6972bc486de3d04f1e50203e00c8acf0d8bb0389}
 UX_IMAGE=${UX_IMAGE:-ghcr.io/humanitylabs-org/wizard-ux@sha256:c60920e7da9fadbc7d9c322c26df6068c9fa505eb30cf1cf6e9829268acfebec}
 FAKE_IMAGE=${FAKE_IMAGE:-python@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4}

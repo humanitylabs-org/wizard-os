@@ -4,7 +4,7 @@ Step 2 of [`docs/HERMES_STABLE.md`](../../../docs/HERMES_STABLE.md): before an u
 
 ```sh
 # on Thales, from a checkout of this folder
-WIZARD_WORK_ROOT=/Volumes/ThalesMedia python3 locked.py \
+WIZARD_WORK_ROOT=<Thales work disk> python3 locked.py \
   nousresearch/hermes-agent@sha256:<candidate digest> \
   nousresearch/hermes-agent@sha256:<digest pinned in releases/<stable>.json>
 ```
@@ -20,7 +20,7 @@ The first argument is the image under test. The second is the image the box star
    - the pinned Wizard Agent Service in front of it, the way a box runs it;
    - `fake_model.py`, a deterministic OpenAI-compatible model registered as a Hermes `custom` provider. Its replies are driven by markers in the prompt (`HS-ECHO`, `HS-DELEGATE`, `HS-FACT`, `HS-FILL`, `HS-RECALL`, `HS-MARKDOWN`, `HS-CRON`), so every Hermes code path runs for real with no account or paid inference.
 4. Creates a seed thread on the starting image, updates to the candidate, and runs the seven checks through the Agent Service routes the shell uses (`/wizard/hermes/api/sessions`, `/wizard/hermes/v1/runs`, the shell's message read with `include_compacted=true&view=wizard`).
-5. Writes `results.json`, `RECEIPT.md`, `run.log` and `evidence/` under `$WORK/runs/<UTC stamp>/` (default `WORK=/Volumes/ThalesMedia/wizard-os/hermes-stable`).
+5. Writes `results.json`, `RECEIPT.md`, `run.log` and `evidence/` under `$WORK/runs/<UTC stamp>/` (default `WORK=$WIZARD_WORK_ROOT/wizard-os/hermes-stable`).
 
 ## The checks
 

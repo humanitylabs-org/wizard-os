@@ -12,7 +12,7 @@ This is the baseline record for [`HERMES_STABLE.md`](../HERMES_STABLE.md) step 2
 | Reports itself as | `Hermes Agent v0.21.5 (2026.9.24) · upstream f97608f1` |
 | Date | 22 Oct 2026, 01:02–01:05 UTC |
 | Update / rollback | from and back to this same image (there is no older pin), so that check covers recreating the container over the same data |
-| Thales evidence | `/Volumes/ThalesMedia/wizard-os/hermes-stable/runs/20261022T010058Z/` |
+| Thales evidence | `$WIZARD_WORK_ROOT/wizard-os/hermes-stable/runs/20261022T010058Z/` |
 
 ## Checks
 
@@ -38,7 +38,7 @@ The compaction test thread has 46 rows in `state.db`, including all three early 
   - Agent Service: `ghcr.io/humanitylabs-org/wizard-agent-service@sha256:cb92d01c5656e89f8280e54f6972bc486de3d04f1e50203e00c8acf0d8bb0389` (source `e7bfd6d`). Every check talks to Hermes through it, on the routes the shell uses.
   - Markdown renderer: `web/core/chat-kit.js` copied out of `ghcr.io/humanitylabs-org/wizard-ux@sha256:c60920e7da9fadbc7d9c322c26df6068c9fa505eb30cf1cf6e9829268acfebec` (source `a79e28a`) and run in Node.
 - **Fake.** The model is `fake_model.py`, a deterministic OpenAI-compatible server registered as a Hermes `custom` provider (`python@sha256:1b668429…`). No account, key or paid inference was used.
-- **Harness.** wizard-os `tools/acceptance/hermes/` at `705f289`; the copy on Thales was byte-identical (sha256 of all seven files compared).
+- **Harness.** wizard-os `tools/acceptance/hermes/` at `705f289`; the copy on Thales was byte-identical (sha256 of all seven files compared). A later commit on this branch only makes `run.sh` take its work disk from `WIZARD_WORK_ROOT`.
 - **What the update and rollback cover.** They swap the container image over the same data directory and `config.yaml`, which is what the `hermes-agent` app does on a box. They do not exercise the alongside updater (`HERMES_STABLE.md` step 4).
 
-The copy in this PR is in [`hermes-v2026.9.24/`](hermes-v2026.9.24/): `RECEIPT.md`, `results.json`, `run.log` and the evidence files under 150 KB. Database copies and container logs stay on Thales.
+The copy in this PR is in [`hermes-v2026.9.24/`](hermes-v2026.9.24/): `RECEIPT.md`, `results.json`, `run.log` and the evidence files under 150 KB. Database copies and container logs stay on Thales. Machine paths in the copies are written as `$WIZARD_WORK_ROOT` (the Thales work disk) and `~`.
