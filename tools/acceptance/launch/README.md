@@ -8,7 +8,9 @@ Stage **pushed commits**, never a live owner checkout. Set `WIZARD_ACCEPT_ROOT` 
 private directory on the build machine's work volume. Keep all Lima images, caches,
 VMs, runs and state under it. `run.py` is a durable **heavy** worker entry, not a
 command to run inside a conversational terminal or a cron shell. Submit its argv
-and cwd using `wizard_heavy_submit`; receipt is the turn boundary.
+and cwd using `wizard_heavy_submit`; receipt is the turn boundary. Set the worker's
+`WIZARD_WORK_ROOT` to the mounted work volume; the runner rejects an unmounted root
+or an acceptance directory outside that volume.
 
 The runner accepts `--root`, `--release`, `--previous-release`, and `--cli` (the
 frozen WAM CLI source mounted into the guest). Both VM installs use the **public**

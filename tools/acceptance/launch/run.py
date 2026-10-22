@@ -60,8 +60,12 @@ def main():
     p.add_argument('--cli', required=True, type=Path)
     args = p.parse_args()
     root = args.root.resolve()
-    if not str(root).startswith('/Volumes/ThalesMedia/') or not args.cli.is_file():
-        p.error('work-volume root and staged CLI required')
+    work_value = os.environ.get('WIZARD_WORK_ROOT')
+    if not work_value:
+        p.error('WIZARD_WORK_ROOT must name the mounted work volume')
+    work = Path(work_value).resolve()
+    if not work.is_mount() or not root.is_relative_to(work) or root == work or not args.cli.is_file():
+        p.error('root must be below the mounted work volume; staged CLI required')
     import re
     if not all(re.fullmatch(r'\d+\.\d+\.\d+', v) for v in (args.release, args.previous_release)):
         p.error('numeric released versions required')
