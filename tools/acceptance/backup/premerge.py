@@ -131,6 +131,7 @@ try:
         report['baseline_before'] = [st.st_ino, st.st_size, st.st_mtime_ns]
         handles = subprocess.run(['lsof', '-Fpfatn', str(baseline.resolve())], capture_output=True, text=True)
         assert not handles.stdout.strip(), 'Saved baseline has open handles'
+        save()  # the proof driver reads this result.json; persist build/test verdicts first
         report['fresh_acceptance_attempt'] = run('fresh-acceptance', [py, R / 'rig/backup-proof.py'], timeout=10800)
         st = baseline.stat()
         report['baseline_after'] = [st.st_ino, st.st_size, st.st_mtime_ns]
