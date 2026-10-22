@@ -1,0 +1,73 @@
+name: Default app custody
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: default-app-custody
+  cancel-in-progress: false
+jobs:
+  mirror:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, wizard-os]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: humanitylabs-org/wizard-app-manager
+          ref: main
+          path: _curator
+          persist-credentials: false
+      - name: Isolated tools on the runner external disk
+        env:
+          UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/python
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+          GOPATH: ${{ runner.temp }}/go
+          GOCACHE: ${{ runner.temp }}/go-cache
+          GOBIN: ${{ runner.temp }}/tools
+        run: |
+          uv venv --python 3.11 "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" PyYAML
+          go install github.com/google/go-containerregistry/cmd/crane@v0.20.6
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/tools" >> "$GITHUB_PATH"
+      - name: Scoped source mirror deploy key
+        env:
+          MIRROR_SSH_KEY: ${{ secrets.DEFAULT_MIRROR_SSH_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, urllib.request
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          key = root / 'curator-key'
+          key.write_text(os.environ['MIRROR_SSH_KEY'])
+          key.chmod(0o600)
+          with urllib.request.urlopen('https://api.github.com/meta', timeout=30) as r:
+              keys = json.load(r)['ssh_keys']
+          (root / 'curator-known-hosts').write_text(''.join('github.com ' + k + '\n' for k in keys))
+          PY
+      - name: Copy exact commits and multi-platform image bytes; verify readbacks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USER: ${{ github.actor }}
+          DOCKER_CONFIG: ${{ runner.temp }}/curator-docker
+          SOURCE_MIRROR_PUSH_URL: git@github.com:humanitylabs-org/wizard-app-manager.git
+        run: |
+          export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/curator-key -o IdentitiesOnly=yes -o UserKnownHostsFile=$RUNNER_TEMP/curator-known-hosts -o StrictHostKeyChecking=yes"
+          printf '%s' "$GH_TOKEN" | crane auth login ghcr.io --username "$GH_USER" --password-stdin
+          python _curator/tools/mirror_defaults.py --root "$GITHUB_WORKSPACE" --work "$RUNNER_TEMP/curator-source" --report "$RUNNER_TEMP/mirrors.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: default-app-custody
+          path: ${{ runner.temp }}/mirrors.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary credentials and source cache
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/curator-key" "$RUNNER_TEMP/curator-known-hosts" "$RUNNER_TEMP/curator-docker" "$RUNNER_TEMP/curator-source"
