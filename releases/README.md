@@ -19,9 +19,12 @@ Builders retain their repositories and publisher identities. AI Wizards keeps
 * Images already at `ghcr.io/humanitylabs-org/*` are in org custody. Other
   digest-pinned Compose images are copied, without rebuilding or changing their
   multi-platform manifest, to
-  `ghcr.io/humanitylabs-org/wizard-default-mirrors:sha256-<64-hex>`.
+  `ghcr.io/humanitylabs-org/wizard-app-manager:curator-sha256-<64-hex>`.
+  These are custody tags, **not App Manager binaries/releases**: production WAM
+  `latest`/version tags are untouched. Reusing the existing public package avoids
+  a new private-by-default package or registry account/permission setup.
   Install fallback uses that ref **with the original `@sha256:…` appended**.
-  The package must be public; anonymous manifest retrieval is part of commissioning.
+  Anonymous manifest retrieval is part of commissioning.
 * `default-mirrors.yml` runs every six hours and on dispatch, **main only**, on
   the WAM repo-scoped Thales runner. It executes WAM's reviewed
   `tools/mirror_defaults.py` against WAM's public release mirror and defaults.
