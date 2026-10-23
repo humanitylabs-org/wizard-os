@@ -114,6 +114,16 @@ reads the `hermes-agent` app's `image/Dockerfile` at its pinned commit to prove 
 
 ## Provenance check
 
+For a newly tested Hermes pin, `hermes.commit` is the **source tag's commit** and
+`hermes.image.commit` is the **image's vouched-for source commit**. They must agree.
+The online checker verifies the image digest and both Linux architectures' full
+`org.opencontainers.image.revision` labels, with digest-verified manifest/config
+reads. Missing labels, a missing architecture, differing revisions, or an image
+built before its tag block promotion. Historical `none: carried over…` pins may
+omit `image.commit`; their online revision still has to equal the tag commit.
+The v0.21.6 container acceptance record covers `a28a5d03`, not source tag
+`818c13be`, so that digest must not be promoted as the tag's tested image.
+
 ```sh
 python3 tools/check_release.py releases/<version>.json --offline
 python3 tools/check_release.py releases/<version>.json
