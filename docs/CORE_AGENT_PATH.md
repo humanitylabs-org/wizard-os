@@ -2,6 +2,12 @@
 
 This is a reading map for [Launch v1 audit 1 (#132)](https://github.com/humanitylabs-org/wizard-os/issues/132), not another API contract or a claim that an install passed. It labels the existing [architecture](ARCHITECTURE.md) and links the checks an acceptance receipt must contain. Paths, methods, query keys and compatibility classes remain authoritative in [Agent Service API v1](../spec/AGENT_SERVICE_API.md).
 
+## The launch core is a checklist, not just a request/reply loop
+
+[Issue #132](https://github.com/humanitylabs-org/wizard-os/issues/132) defines the launch core as **items #87–#93 plus audits #133–#140**, on **fresh Linux and Mac app** profiles. [WORK_OUTSTANDING](WORK_OUTSTANDING.md#launch-v1-core-path-audit-132) lists each item. That full set is the weekly report's subject; the lower-level agent path below explains only one part of it.
+
+No scope freeze: new work continues behind a profile flag or as a non-default app until promoted with tests. Each PR declares any effect on frozen client fields (#137), box state (#134), updates (#135) and trust (#133). The daily architecture check-in reports merge risk; its weekly report names which core items moved and which stalled. Launch verification must prove each new feature is promoted with tests or off by default on tester boxes. This document supplies a template, not proof that a flag, check-in or weekly report is active.
+
 ## Core: from a person to an agent and back
 
 ```text
@@ -64,6 +70,9 @@ Owner boundary: positive and negative cases + receipt: NOT RUN
 Extensions required for this scope: names + individual result/receipt: NOT RUN
 New failures since previous receipt: UNKNOWN
 Remaining gates: exact criterion / next actor / next action: NOT REVIEWED
+Weekly core progress (#87–#93, #133–#140): moved / stalled / next actor per issue: NOT REVIEWED
+New-feature default audit: promoted + evidence | flag/non-default and tester state: NOT REVIEWED
+Merge risk this week (client fields/state/update/trust): NOT REVIEWED
 Disposition: keep open | propose close with linked evidence
 ```
 
