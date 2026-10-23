@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 23 Oct 2026 — James + Miguel: "agent apps", not "Wizard apps" (launch-prep call)
+
+| # | Decision | Status |
+|---|---|---|
+| 84 | **Owners never see "Wizard apps".** "Wizard" already names the box, the agent and the phone app. Screenless apps that agents use are **Agent apps**, and apps with a screen are plain **Apps**. Together with **Agents** and **Connections**, these are the four names the Store, the Apps sheet and an agent's page share ([ARCHITECTURE.md](ARCHITECTURE.md)). Copy only: `wizard.md`, package ids, APIs, `apps.json` fields (`permissions.wizard_apps`) and code identifiers keep their names, and so do proper names (Wizard App Store, Index, Manager). | Locked (James + Miguel) |
+
 ## 22 Oct 2026 — James: default-app custody by signed lists and mirrors ([#136](https://github.com/humanitylabs-org/wizard-os/issues/136))
 
 | # | Decision | Status |

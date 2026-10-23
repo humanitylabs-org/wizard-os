@@ -2,7 +2,7 @@
 
 ## The rule: slots are parking spots
 
-A **slot** is a job every Wizard needs done (a shell, an agent, files, transcription …). Think of it as a **parking spot**: the spot is part of Wizard OS, the app parked in it is not. Any app whose `wizard.md` says `provides: [<slot>]` can park there, and the owner can swap it at any time. A **system app** is just a normal Wizard app (`system: true`) that we publish as the **default** for a spot.
+A **slot** is a job every Wizard needs done (a shell, an agent, files, transcription …). Think of it as a **parking spot**: the spot is part of Wizard OS, the app parked in it is not. Any app whose `wizard.md` says `provides: [<slot>]` can park there, and the owner can swap it at any time. A **system app** is just a normal app (`system: true`) that we publish as the **default** for a spot.
 
 This holds for every spot, **including the shell**: Wizard UX is the default shell, not the only one. `hermes-frontend-3` or a community shell can fill the same spot.
 
