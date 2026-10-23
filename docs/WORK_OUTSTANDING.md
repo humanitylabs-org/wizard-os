@@ -4,6 +4,10 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 **Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
 
+## Account connectors and privacy routing (direction approved 15 Oct, mechanism proposed; #85)
+
+Archimedes owns the [contract](../spec/CONNECTORS.md) and [YouTube Music + simulated-chat MVP / release checklist](CONNECTORS_MVP.md). Next: slice B (pure admission function + fixtures) and slice A (real Music account seam and uncached playback). The Account Manager / Google broker seam is for Jan to confirm; App Manager descriptor/network enforcement for Miguel/Oscar. Real credential use and private-chat activation keep their release gates. Not on the v1 critical path.
+
 ## Receives voice input (15 Oct, approved; #62)
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
@@ -68,7 +72,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [x] `wizard.md` for every app: each split into its own public repo with history, an MCP and a skill, and listed in the index (9 Oct).
 - [x] **Index** `wizard-app-index` live at apps.aiwizards.com, store page at aiwizards.com/wizard-apps (9 Oct).
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
-- [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
+- [x] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28). Done in code (`WAM_BIND` default 127.0.0.1, bearer in `~/.wizard-os/api-token`); see [SECURITY_INVENTORY.md](SECURITY_INVENTORY.md).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
 - [x] **App-to-app permissions spec**: [spec/PERMISSIONS.md](../spec/PERMISSIONS.md) v0.2, approved by James 21 Oct (#76). App → app grants only; agents stay on #58 ticks and #59 seals.

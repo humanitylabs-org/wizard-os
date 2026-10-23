@@ -5,6 +5,65 @@ catalog defaults. Its version names an install snapshot, not a shared UX, Servic
 Android, or Mac version. Existing release files are historical identities; create a
 new file rather than rewriting one.
 
+## Curator custody (DECISIONS #83)
+
+Builders retain their repositories and publisher identities. AI Wizards keeps
+**matching pinned bytes**, not a build service:
+
+* Source: the public
+  [WAM `curator-source-mirrors` release](https://github.com/humanitylabs-org/wizard-app-manager/releases/tag/curator-source-mirrors),
+  with append-only `<owner>--<repo>--<40-hex-commit>.bundle` assets. A standalone
+  Git bundle contains the exact commit and its reachable objects, not an archive
+  merely claiming that SHA. Never delete or replace an asset when a default
+  changes. This prerelease is **not a WAM binary/latest release**. Private source
+  repositories are refused, rather than accidentally made public. Bundles avoid
+  pushing unrelated builders' workflow trees into the manager's Git history.
+* Images already at `ghcr.io/humanitylabs-org/*` are in org custody. Other
+  digest-pinned Compose images are copied, without rebuilding or changing their
+  multi-platform manifest, to
+  `ghcr.io/humanitylabs-org/wizard-app-manager:curator-sha256-<64-hex>`.
+  These are custody tags, **not App Manager binaries/releases**: production WAM
+  `latest`/version tags are untouched. Reusing the existing public package avoids
+  a new private-by-default package or registry account/permission setup.
+  Install fallback uses that ref **with the original `@sha256:…` appended**.
+  Anonymous manifest retrieval is part of commissioning.
+* `default-mirrors.yml` runs every six hours and on dispatch, **main only**, on
+  the WAM repo-scoped Thales runner. It executes WAM's reviewed
+  `tools/mirror_defaults.py` against WAM's public release mirror and defaults.
+  The inventory is the union of `stable`/`latest` default commits and the current
+  indexed pinned publications for every default slot (including on-demand apps).
+  An unpublished on-demand recommendation has no commit to copy and is reported
+  explicitly; an unresolved ordinary default fails the job. Older copies remain.
+  All Compose services/sidecars are included. Source-sidecar code stays in Git.
+* Authentication: WAM's own job-scoped workflow token has contents/package-write
+  permission. No personal/org-wide token, deploy key, or new Actions secret is
+  needed. The dedicated WAM runner hook admits only this main-branch
+  scheduled/manual workflow, never pull requests or forks. Temporary registry
+  credentials are removed even after failure. This avoids the org's deliberate
+  deploy-key restriction rather than relaxing it.
+* Each job uploads `default-app-custody/mirrors.json` (30-day operational receipt).
+  Every published bundle and copied image digest is read back; a conflicting
+  existing ref/digest fails closed. Registry denial is not treated as absence.
+  Mirror failures fail the scheduled job rather than claiming full custody.
+
+WAM's Python installer and index-backed backend try the builder's exact commit
+first. Only a failed fetch permits the deterministic public bundle URL, fetched
+into a clean Git repository. Downloads are streamed with a 256 MiB limit. `rev-parse HEAD` must equal the approved full SHA **before** manifest
+use or source/build packaging; a mismatching copy is deleted and rejected. No
+mirror HEAD, mutable tag, latest-version substitution, or changed approval is used.
+For digest-pinned non-org images, a present local copy or available origin wins;
+only an unavailable origin permits the matching org mirror. The generated
+Compose preserves the digest so Docker verifies the original bytes on pull.
+Unpinned legacy images are never silently substituted. This mechanism does not
+claim protection against GitHub/GHCR themselves being unavailable, nor mirror
+unpublished defaults or arbitrary dependency download services used by a build.
+
+Before promoting a newly changed default, dispatch this workflow and require its
+receipt to cover the new commit and image digests. The timer refreshes custody;
+it cannot recover a builder commit deleted before its first successful mirror.
+Source/image policy enforcement and the Cloudflare image's ownership move remain
+the separate image-policy work from #136.
+
 ## Split images
 
 New split snapshots need all three image keys:
@@ -86,7 +145,8 @@ DECISIONS #75 (James, 21 Oct 2026). Two pointers, both mirrored to
   the default channel, and every Automatic update take only this.
 
 A release is promoted when it has been on latest for 72 hours and an upgrade from an
-older release onto it passed on a test box (Thales). The promotion record
+older release onto it passed on a test box (Thales, or the demo box). A fix release
+skips the 72 hours (DECISIONS #82, see "Fast track" below). The promotion record
 `releases/promotions/<version>.json` carries that evidence:
 
 ```json
@@ -106,10 +166,41 @@ python3 tools/promote_stable.py check               # also run by the tests, her
 
 `promote` refuses a short soak, a missing or failed upgrade test, and evidence-free
 records. The App Manager's updater applies the same gate: Automatic skips a stable
-pointer that has no valid record (Update by hand still works). A fix release that
-cannot wait needs the same test, plus James's explicit approval to shorten the soak
-by passing an earlier `--latest-since`; never edit a record by hand. 0.3.25, stable
-when the channels split, carries a `grandfathered` record; no later release can.
+pointer that has no valid record (Update by hand still works). Never edit a record by
+hand or fake `--latest-since`. 0.3.25, stable when the channels split, carries a
+`grandfathered` record; no later release can.
+
+### Fast track for verified fixes
+
+DECISIONS #82 (Miguel, 22 Oct 2026; amends #75). The soak exists to catch surprises in
+new behaviour. A fix is the opposite case: every extra day on latest leaves stable boxes
+broken. So:
+
+| Release contains | Soak | Needs |
+|---|---|---|
+| Fixes only (each with a regression test) | none | upgrade test from the current stable passed (+ fresh install when a box allows it), `--fast-track` |
+| Any feature, data-format change or big UX change | 72h on latest | upgrade test passed |
+
+```sh
+python3 tools/promote_stable.py promote 0.3.32 --from 0.3.25 \
+    --evidence docs/acceptance/promote-0.3.32.md \
+    --fast-track --classification fix --reason "stable 0.3.25 Store is broken on fresh boxes" \
+    --notes "ride-alongs: ... (risk: ...)"
+```
+
+The record gains `"fast_track": {"classification": "fix", "reason": ..., "notes": ...}`.
+`--classification feature` is refused, a missing reason is refused, and the upgrade
+test and its evidence are still required. When a fix release carries already-merged
+feature ride-alongs, list each one and its risk in `--notes` and say so on the
+rollout issue; promote only if the demo tests pass. Both gates
+(`tools/promote_stable.py`, `wam/updates.py`) accept exactly the same records
+(`test_identical_to_the_app_manager_gate`).
+
+**Rolling back a promotion:** point `releases/stable` back at the previous stable in
+both repos (it already has a valid record), mirror, done. Boxes that already took the
+new release stay on it; the next promoted release moves them on. To drop the policy
+itself, remove the `fast_track` branch from both gates (fast-tracked records then fail
+`check`, so move `stable` back first).
 
 ## Publication is a separate gate
 

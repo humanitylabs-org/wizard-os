@@ -1,9 +1,9 @@
 ---
 name: wizard-app-builder
-description: Use when building a Wizard app with the shared style.
+description: Use when building an app for Wizard OS (a wizard.md package) with the shared style.
 version: 1.0.0
 ---
-# Build a Wizard app
+# Build an app for Wizard OS
 
 Use the installed `wizard-builder` system skill from [wizard-app-manager/system-skills/wizard-builder](https://github.com/humanitylabs-org/wizard-app-manager/tree/main/system-skills/wizard-builder) for the executable build, stage and check workflow.
 

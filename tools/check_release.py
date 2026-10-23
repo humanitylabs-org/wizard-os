@@ -33,6 +33,8 @@ HERMES_TAG = re.compile(r"^v\d+\.\d+\.\d+$")          # a final upstream tag, ne
 HERMES_IMAGE = re.compile(r"^docker\.io/nousresearch/hermes-agent:(v\d+\.\d+\.\d+)$")
 HERMES_UPSTREAM = "NousResearch/hermes-agent"
 HERMES_PIN_FROM = (0, 3, 23)   # DECISIONS #74: snapshots from 0.3.23 on name their Hermes; older files are history
+SERVICE_ROUTES_FROM = (0, 3, 33)   # snapshots from 0.3.33 on: the pinned Agent Service serves every stable spec route
+SPEC = Path(__file__).resolve().parents[1] / "spec" / "AGENT_SERVICE_API.md"
 
 
 def _vtuple(v: str) -> tuple[int, ...]:
@@ -276,6 +278,60 @@ def index_drift(defaults: dict) -> list[str]:
     return out
 
 
+def missing_service_routes(spec_text: str, sources: dict[str, str]) -> list[str]:
+    """Stable /wizard/ routes in the spec's ```routes block that no Agent Service server file mentions.
+
+    A release pairs one shell image with one Agent Service image. 0.3.32 shipped a shell that calls GET /wizard/v1/setup
+    with an Agent Service from before that route existed, so first-run Setup never opened on a fresh box. A route counts
+    as served when its literal prefix (up to the first {param}) appears in server/*.mjs, plain or regex-escaped."""
+    m = re.search(r"```routes\n(.*?)```", spec_text, re.S)
+    if not m:
+        return ["spec: no ```routes block"]
+    text = "\n".join(sources.values())
+    out = []
+    for raw in m.group(1).splitlines():
+        parts = raw.split()
+        if len(parts) < 4 or raw.lstrip().startswith("#") or parts[2] != "stable" or not parts[1].startswith("/wizard/"):
+            continue
+        pre = parts[1].split("{", 1)[0]
+        forms = {pre, pre.rstrip("/")}
+        forms |= {f.replace("/", "\\/") for f in forms}
+        if not any(f in text for f in forms if f):
+            out.append(f"{parts[0]} {parts[1]}")
+    return out
+
+
+def service_sources(repo: str, sha: str) -> tuple[dict[str, str] | None, str]:
+    """server/*.mjs of the pinned Agent Service commit (GitHub tarball through gh)."""
+    import io
+    import tarfile
+    r = subprocess.run(["gh", "api", f"repos/{repo}/tarball/{sha}"], capture_output=True)
+    if r.returncode != 0:
+        return None, ((r.stderr or b"").decode("utf-8", "replace").strip().splitlines() or ["tarball failed"])[-1][:160]
+    out = {}
+    with tarfile.open(fileobj=io.BytesIO(r.stdout)) as t:
+        for mem in t.getmembers():
+            rel = mem.name.split("/", 1)[-1]
+            if mem.isfile() and rel.startswith("server/") and rel.endswith(".mjs"):
+                out[rel] = t.extractfile(mem).read().decode("utf-8", "replace")
+    return (out, "") if out else (None, "no server/*.mjs in the tarball")
+
+
+def service_routes_online(rel: dict, spec_text: str) -> tuple[list[str], list[str]]:
+    version = str(rel.get("version", ""))
+    c = (rel.get("components") or {}).get("wizard-agent-service")
+    if not c or not VERSION.fullmatch(version) or _vtuple(version) < SERVICE_ROUTES_FROM:
+        return [], []
+    src, why = service_sources(c["repo"], c["commit"])
+    if src is None:
+        return [], [f"wizard-agent-service: can't read server sources at {c['commit'][:12]} ({why})"]
+    miss = missing_service_routes(spec_text, src)
+    if miss:
+        return [], [f"wizard-agent-service@{c['commit'][:12]} does not serve stable spec route(s) the shell may call: "
+                    + ", ".join(miss)]
+    return [f"wizard-agent-service@{c['commit'][:12]}: serves every stable /wizard/ route in spec/AGENT_SERVICE_API.md"], []
+
+
 def commit_exists(repo: str, sha: str) -> tuple[bool, str]:
     r = subprocess.run(["gh", "api", f"repos/{repo}/commits/{sha}", "-q", ".sha"], capture_output=True, text=True)
     if r.returncode == 0 and r.stdout.strip() == sha:
@@ -455,6 +511,12 @@ def main(argv: list[str] | None = None) -> int:
         h_ok, h_errs = hermes_online(rel)
         ok_lines += h_ok
         errs += h_errs
+        try:
+            s_ok, s_errs = service_routes_online(rel, SPEC.read_text(encoding="utf-8"))
+        except OSError as e:
+            s_ok, s_errs = [], [f"spec: can't read {SPEC.name} ({e})"]
+        ok_lines += s_ok
+        errs += s_errs
     warns = index_drift(rel.get("default_apps") or {}) if not errs and not a.offline else []
     for line in ok_lines:
         print(f"PASS  {line}")

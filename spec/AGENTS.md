@@ -11,8 +11,8 @@ A box runs more than one agent. The first extra one is a **Private** agent: stoc
 | **Agent** | One running agent instance with its own folder, chats, memory and skills. Its id is the instance (`private`), not the harness. |
 | **Harness** | The agent program: `hermes` today; Pi, Claude Code later. (Not "engine".) |
 | **Model provider** | Where the model runs: `tinfoil`, `local`, or an AI Accounts provider (`anthropic`, `openai-codex`, ...). A provider is **confidential** when the model runs locally or inside an attested enclave (Tinfoil). |
-| **Permissions** | What the agent may use. Set by a **preset**, then adjusted: outside tools, files, Wizard apps, agent apps, other agents. |
-| **Wizard app** | An installed Wizard app (has a window; may also have MCP tools). Listed in `apps.json`. |
+| **Permissions** | What the agent may use. Set by a **preset**, then adjusted: outside tools, files, apps, agent apps, other agents. |
+| **App** | An installed app with a window (may also have MCP tools). Listed in `apps.json`. Owners never see the old name "Wizard app" (#84). |
 | **Agent app** | A tool or connector only an agent uses (MCP server, connector, skill pack). No window. |
 | **Outside tools** | Harness toolsets that send content off the box: web, search, browser, x_search, image_gen, video_gen, tts, vision, video, delegation, connections, homeassistant, spotify. |
 
@@ -56,7 +56,7 @@ agents/<id>/
 - `model.allowed_models`: the only models a run in this agent's threads may use. `fallback: false` means the harness has no fallback provider.
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
-- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
+- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (apps with a window; the field keeps its old name) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
 - `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
@@ -184,6 +184,15 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 - **No leak back.** Private rows and headers are never part of the screen text or window names sent as context with a message to another agent. The main agent's list data (its search, links, status) stays main-only; the merge lives in the owner's Chats view.
 - **Kept views.** Each agent's own Chats workspace (header with lock, only its threads) and the Agents app are unchanged.
 - **Harness note.** Tinfoil's DeepSeek V4.1 Flash refuses Hermes's default `reasoning_effort` (400 `chat_template_kwargs`); the Agent Service writes `model_overrides.custom.<model>.supports_reasoning: false` into the agent's managed `config.yaml` for such models.
+
+## 9. Private retrieval, search and read state (Approved by James 21 Oct 2026)
+
+- `permissions.read_standard_chats` is an explicit boolean, off by default and valid only for `privacy: private`. The Agents app shows a separate revocable switch. It grants read-only retrieval of the main standard agent's history, not a shared writable database or a grant back into the private agent.
+- The Agent Service exposes `standard_chats_search(query, limit, include_hidden?)`, `standard_chat_read(session_id, offset?, limit?)` and `standard_memory_read(name)` through `/wizard/standard-chats/mcp`. Only the private agent's own agent-scoped gateway credential with this permission may call it; owner sessions and standard-agent tokens are refused. The managed stock-Hermes MCP configuration uses that token. A separately configured read-only transport (`WIZARD_STANDARD_CHATS_URL`) may be used without enabling the general app gateway; restricted agents stay on their isolated edge. Permission revocation takes effect on every call. Queries use read-only SQLite/FTS, return bounded results, and omit internal/cron/subagent noise; hidden chats require explicit search opt-in (for hidden acceptance probes). Memory is limited to MEMORY.md and USER.md.
+- Private content search remains in the private agent's own store. Owner-authenticated Chats searches name `agent=<id>` explicitly, show the lock, and open with the same agent. No private index, excerpts or messages are copied into the standard agent. Returning from a result preserves the results/list and the shell stays open.
+- Read receipts are owner-only server-side state, qualified by agent and session, shared by phone and desktop. They contain activity timestamps and counts, never transcript text or transcript-derived hashes (private fingerprints use a constant sentinel); private marks remain invisible to other agents. Old device-local receipts migrate without overriding newer server marks.
+- Owner-only private-thread deletion names the agent explicitly and deletes through its Hermes API. The same route is unavailable to agent/operator callers; absent threads return 404. Hidden test chats may be cleaned up by exact id without reading their content.
+- Sealing (#59), unified Chats/picker routing (#64), the Agents app and separate Private workspace remain unchanged. A deployment may ship compatible UX first; unavailable backend capabilities must not be advertised as working.
 
 ## Deferred (James, 14 Oct; brought back when due)
 

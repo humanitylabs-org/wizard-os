@@ -2,6 +2,48 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026, re-landed 23 Oct — James: account connectors and private-data routing ([spec/CONNECTORS.md](../spec/CONNECTORS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 85 | **Protected connectors with a Contains private data designation.** Real-account sessions stay behind isolated credential boundaries; agents receive scoped capabilities. Private payloads and their derivatives route to the owner's preferred eligible private provider (#66) before any ordinary model; public-only content may use the ordinary route; no private-to-public fallback. This is what #65's `private_data: true` enforces. MVP: real YouTube Music plus a simulated private-chat stream; a chat app is the first real private-content integration. Separate service connectors over one Google account/authorization broker, a tool-less summary lane and protected output rendering are proposed mechanisms. Connectors install on demand (#78). Originally drafted as #63 in [PR #49](https://github.com/humanitylabs-org/wizard-os/pull/49); that number is now the app-model rule. | **Direction approved by James (15 Oct); mechanism proposed. Jan to confirm the account-broker seam, Miguel/Oscar the App Manager seam. No live account authorization or implementation claimed.** |
+
+## 23 Oct 2026 — James + Miguel: "agent apps", not "Wizard apps" (launch-prep call)
+
+| # | Decision | Status |
+|---|---|---|
+| 84 | **Owners never see "Wizard apps".** "Wizard" already names the box, the agent and the phone app. Screenless apps that agents use are **Agent apps**, and apps with a screen are plain **Apps**. Together with **Agents** and **Connections**, these are the four names the Store, the Apps sheet and an agent's page share ([ARCHITECTURE.md](ARCHITECTURE.md)). Copy only: `wizard.md`, package ids, APIs, `apps.json` fields (`permissions.wizard_apps`) and code identifiers keep their names, and so do proper names (Wizard App Store, Index, Manager). | Locked (James + Miguel) |
+## 23 Oct 2026 — James: system maintenance is a core Wizard OS component ([spec/MAINTENANCE.md](../spec/MAINTENANCE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 91 | **One nightly maintenance run per box, owned by the App Manager (`wam maintain`), not by Hermes cron jobs or agent skills.** It covers OS security patches, backup scheduling and verification, the Wizard OS, Hermes and app updates, and Health history; the Troubleshooter guardian keeps repair, and the Supervisor may later judge exceptions. OS patches work on any Linux through that system's own package manager and security channel, as one backend per family. They never restart a service or reboot. Default is `check` (report only). `patch` and automatic restarts become defaults only after the restart gates in the spec pass on Thales. | Approved by James |
+
+## 22 Oct 2026 — James: default-app custody by signed lists and mirrors ([#136](https://github.com/humanitylabs-org/wizard-os/issues/136))
+
+| # | Decision | Status |
+|---|---|---|
+| 83 | **Replaces the audit's "transfer default repos to the org" line (#136).** Builders keep their repos ("Chats by X"); a default is just the app currently recommended for a slot. (1) Miguel's rule: every app in `wam/defaults.json` or a release JSON pulls an image from `ghcr.io/humanitylabs-org/*` or a digest-pinned upstream image, never a personal registry; a CI check in wizard-os fails a release JSON that breaks it. (2) The defaults are a **curated list, not a gate**: "AI Wizards recommends" is a list signed by the AI Wizards Nostr identity (#38); anyone can publish apps or their own list, and owners choose which lists they follow. (3) **A curator mirrors what it recommends:** for each app on our list we keep a copy of the exact pinned commit (#77) and image digest; a fresh install falls back to that copy only when the builder's copy is gone. No build service, roughly ten apps' bytes. Sidecar code is covered by the mirrored commit, so it needs no org image. Why: custody means "the pinned bytes stay fetchable", not "the org hosts the code"; pinning makes any matching copy equal to the original, which fits the decentralised path (#21, #38). Differs from Miguel's proposal only in (3); he ruled mirrors out as complexity, but it is small and closes the failure the audit found (a deleted personal account breaking fresh installs). | Approved by James, 22 Oct; Miguel to confirm |
+
+## 22 Oct 2026 — Miguel: verified fixes reach stable the same day ([releases/README.md](../releases/README.md#fast-track-for-verified-fixes))
+
+| # | Decision | Status |
+|---|---|---|
+| 82 | **Amends #75: the 72h soak applies to features, data-format changes and big UX changes only.** A fix release (each fix with a regression test) that passes the demo-box upgrade test from the current stable, and a fresh install where a box allows it, goes to stable the same day: `tools/promote_stable.py promote <v> --fast-track --classification fix --reason ...`. The promotion record keeps a `fast_track` block (classification, reason, notes listing any ride-along changes and their risk), the same `upgrade_test` evidence is still required, and the App Manager gate (`wam/updates.py`) accepts exactly the same records. Everything else keeps the 72h default. Why: stable 0.3.25 had a broken Store on fresh boxes (Store routes 404, no Open, Wisdom can't install) while the fixes sat on latest for days. Revert: drop the `fast_track` branch in both gates and point `releases/stable` back. | Miguel, 22 Oct 2026. **Approved by James (22 Oct)** for the current foundation phase, so major bug fixes ship fast. Once the foundation is stable, stable goes back to the strict 72h rule (#75) for every release. |
+
+## 21 Oct 2026 — James: private agent round 2 ([spec/AGENTS.md §9](../spec/AGENTS.md#9-private-retrieval-search-and-read-state-approved-by-james-21-oct-2026))
+
+| # | Decision | Status |
+|---|---|---|
+| 81 | Private agents may explicitly receive revocable, read-only standard-chat and memory retrieval, never a reverse grant. Owner Chats searches private message content in its own store, syncs agent-qualified unread receipts server-side, and deletes private threads through their own runtime. | Approved by James 21 Oct 2026 |
+
+## 21 Oct 2026 — James: logins that move with the box ([spec/AI_CONNECTIONS.md](../spec/AI_CONNECTIONS.md#agents-using-a-connection))
+
+| # | Decision | Status |
+|---|---|---|
+| 79 | Each connection app owns and alone renews its login; agents never sign in themselves. ChatGPT serves a box-only model gateway that Hermes' native Codex provider uses with a local key. Claude, whose terms allow only its own client, exports its login folder as an owner-granted share that Hermes mounts. Replaces "ChatGPT stays Hermes' own login" and the fixed `wizard-ai-accounts-claude` volume. | Approved by James, 21 Oct 2026 |
+| 80 | App state lives under `${APP_DATA_DIR}`. The App Manager rewrites named volumes to app-data bind mounts and copies old contents once; fixed-name volumes are refused; cross-app folders use `shares`/`mounts` with a `share` grant. | Approved by James, 21 Oct 2026 |
+
 ## 21 Oct 2026 — James: connectors on demand
 
 | # | Decision | Status |
@@ -24,7 +66,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 75 | **Two release channels.** Every cut release goes to `releases/latest` (testers opt in). `releases/stable` (fresh installs, the default channel and every Automatic update) moves only after the release has been on latest for 72 hours and an upgrade from an older release passed on Thales, recorded in `releases/promotions/<version>.json` by `tools/promote_stable.py`. Boxes refuse to auto-install a stable release without a valid record. 0.3.25 is grandfathered as the first stable. | Approved by James, 21 Oct |
+| 75 | **Two release channels.** Every cut release goes to `releases/latest` (testers opt in). `releases/stable` (fresh installs, the default channel and every Automatic update) moves only after the release has been on latest for 72 hours and an upgrade from an older release passed on Thales (amended by #82: verified fixes skip the soak), recorded in `releases/promotions/<version>.json` by `tools/promote_stable.py`. Boxes refuse to auto-install a stable release without a valid record. 0.3.25 is grandfathered as the first stable. | Approved by James, 21 Oct |
 
 ## 21 Oct 2026 — James: Wizard stable Hermes ([docs/HERMES_STABLE.md](HERMES_STABLE.md))
 
@@ -59,7 +101,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 65 | **Connection Router.** One system component, separate from the Agent Service, connects apps to the AI models, outside services and agents they need. Apps declare needs in `wizard.md` (`requires.models` per feature: tier `fast`/`standard`/`frontier`, `tested_on` model, `swap: ask\|never`, abilities, private data; `requires.services` slots with a recommended provider) and call only the router. Provider apps (#61) publish a tier map and an isolated inference route. At install the owner connects the recommended provider or approves a named swap ("results may differ"); that approval is the #63 override, recorded in a routing table. Nothing switches at run time without the owner's tap; every answer names its model. Builds on PR #6 grants and PR #49 private-data routing. | Direction approved by James; fields and APIs proposed; Miguel to confirm provider-app changes |
+| 65 | **Connection Router.** One system component, separate from the Agent Service, connects apps to the AI models, outside services and agents they need. Apps declare needs in `wizard.md` (`requires.models` per feature: tier `fast`/`standard`/`frontier`, `tested_on` model, `swap: ask\|never`, abilities, private data; `requires.services` slots with a recommended provider) and call only the router. Provider apps (#61) publish a tier map and an isolated inference route. At install the owner connects the recommended provider or approves a named swap ("results may differ"); that approval is the #63 override, recorded in a routing table. Nothing switches at run time without the owner's tap; every answer names its model. Builds on PR #6 grants and #85 private-data routing. | Direction approved by James; fields and APIs proposed; Miguel to confirm provider-app changes |
 
 ## 18 Oct 2026 — James: one Chats for every agent ([spec/AGENTS.md](../spec/AGENTS.md) section 8)
 
