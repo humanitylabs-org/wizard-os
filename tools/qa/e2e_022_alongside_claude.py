@@ -59,7 +59,10 @@ def run(argv, timeout=180, check=True, env=None, data=None):
     p = subprocess.run([str(x) for x in argv], input=data,
                        stdin=None if data is not None else subprocess.DEVNULL,
                        capture_output=True, text=True, timeout=timeout, env=env)
-    require(not check or p.returncode == 0, 'command failed; output suppressed')
+    # Name the failing step (program + subcommand words only, never values or output) so a
+    # failed setup says which command broke without leaking owner config.
+    step = ' '.join([Path(str(argv[0])).name] + [str(x) for x in argv[1:3] if re.fullmatch(r'[a-z][a-z-]*', str(x))])
+    require(not check or p.returncode == 0, 'command failed (%s, exit %d); output suppressed' % (step, p.returncode))
     return p
 
 
