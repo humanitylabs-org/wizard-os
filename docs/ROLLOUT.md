@@ -2,6 +2,9 @@
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
+
+> **Current focus (23 Oct 2026):** launch v1 and the post-launch tracks live in [TRACKS.md](TRACKS.md). The dated sections below are history.
+
 ## App-owned model consistency (16 Oct, approved; #63)
 
 Every installation uses each app's packaged AI model/workflow unless its owner explicitly approves a scoped override. Archimedes owns the [shared contract](../spec/APP_WORKFLOWS.md) and Wisdom's first implementation repair. Done when the package contains its actual prompt/model, changed orchestrator defaults preserve that route, missing/mismatched models stop, and the requested rewrite preserves reading history. The builder documentation mirror remains subject to App Manager owner review; other apps need their own execution evidence.
