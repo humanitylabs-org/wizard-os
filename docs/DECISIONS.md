@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Oct 2026, re-landed 23 Oct — James: account connectors and private-data routing ([spec/CONNECTORS.md](../spec/CONNECTORS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 85 | **Protected connectors with a Contains private data designation.** Real-account sessions stay behind isolated credential boundaries; agents receive scoped capabilities. Private payloads and their derivatives route to the owner's preferred eligible private provider (#66) before any ordinary model; public-only content may use the ordinary route; no private-to-public fallback. This is what #65's `private_data: true` enforces. MVP: real YouTube Music plus a simulated private-chat stream; a chat app is the first real private-content integration. Separate service connectors over one Google account/authorization broker, a tool-less summary lane and protected output rendering are proposed mechanisms. Connectors install on demand (#78). Originally drafted as #63 in [PR #49](https://github.com/humanitylabs-org/wizard-os/pull/49); that number is now the app-model rule. | **Direction approved by James (15 Oct); mechanism proposed. Jan to confirm the account-broker seam, Miguel/Oscar the App Manager seam. No live account authorization or implementation claimed.** |
+
 ## 23 Oct 2026 — James + Miguel: "agent apps", not "Wizard apps" (launch-prep call)
 
 | # | Decision | Status |
@@ -90,7 +96,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 65 | **Connection Router.** One system component, separate from the Agent Service, connects apps to the AI models, outside services and agents they need. Apps declare needs in `wizard.md` (`requires.models` per feature: tier `fast`/`standard`/`frontier`, `tested_on` model, `swap: ask\|never`, abilities, private data; `requires.services` slots with a recommended provider) and call only the router. Provider apps (#61) publish a tier map and an isolated inference route. At install the owner connects the recommended provider or approves a named swap ("results may differ"); that approval is the #63 override, recorded in a routing table. Nothing switches at run time without the owner's tap; every answer names its model. Builds on PR #6 grants and PR #49 private-data routing. | Direction approved by James; fields and APIs proposed; Miguel to confirm provider-app changes |
+| 65 | **Connection Router.** One system component, separate from the Agent Service, connects apps to the AI models, outside services and agents they need. Apps declare needs in `wizard.md` (`requires.models` per feature: tier `fast`/`standard`/`frontier`, `tested_on` model, `swap: ask\|never`, abilities, private data; `requires.services` slots with a recommended provider) and call only the router. Provider apps (#61) publish a tier map and an isolated inference route. At install the owner connects the recommended provider or approves a named swap ("results may differ"); that approval is the #63 override, recorded in a routing table. Nothing switches at run time without the owner's tap; every answer names its model. Builds on PR #6 grants and #85 private-data routing. | Direction approved by James; fields and APIs proposed; Miguel to confirm provider-app changes |
 
 ## 18 Oct 2026 — James: one Chats for every agent ([spec/AGENTS.md](../spec/AGENTS.md) section 8)
 
