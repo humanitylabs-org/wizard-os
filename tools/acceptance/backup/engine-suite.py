@@ -40,7 +40,7 @@ def main():
     manifest = json.loads((root / 'source-manifest.json').read_text())
     pin = manifest['pins']['mac-engine']
     run_id = uuid.uuid4().hex[:10]
-    name = 'l1-engine-suite-' + run_id
+    name = 'l1es-' + run_id[:6]  # lima socket path must stay under 104 chars
     evidence = root / 'evidence' / ('engine-suite-' + run_id)
     evidence.mkdir(parents=True)
     env = dict(os.environ, RIG_ROOT=str(root), LIMA_HOME=str(root / 'lima'),
