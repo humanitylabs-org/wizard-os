@@ -18,9 +18,9 @@ Handlers live in `server/service.mjs` (`createWizardServer`), the Hermes allowli
 ## What "v1" covers
 
 - **Versioned by this document (`stable`):** the routes the Agent Service implements itself. Paths, methods, request bodies, response fields and error codes are v1. Adding a field is allowed; removing or renaming one is breaking.
-- **Most v1 routes have no `/v1` in the path.** Only `bootstrap`, `apps`, `route` and `agent-context` do. The rest (`/wizard/files`, `/wizard/thread-seen`, `/wizard/attention`, ...) are v1 at their current paths and are not being moved.
+- **Most v1 routes have no `/v1` in the path.** Only `bootstrap`, `apps`, `route`, `uploads`, `shares` and `agent-context` do. The rest (`/wizard/files`, `/wizard/thread-seen`, `/wizard/attention`, ...) are v1 at their current paths and are not being moved.
 - **Passthrough (`/wizard/hermes/...`):** the Hermes API (`/api/sessions...`, `/v1/runs...`) behind a fixed allowlist. The allowlist (paths, methods, query keys, limits) and the Wizard projections listed below are v1. The rest of each body is whatever Hermes returns and moves with Hermes, so front ends read it defensively (`run.run_id || run.id`, `p.data || p.messages || p.items`), as the UX already does. The agent adapter call set (spec/AGENT_BRIDGE.md, DECISIONS #48) is what a second harness must serve underneath.
-- **Discovery:** `GET /wizard/v1/bootstrap` returns `bootstrap: 1`, `api: "wizard-agent-service/1"`, `capabilities` and `endpoints`. Front ends take the apps, sessions, runs, transcribe, route and upload addresses from `endpoints` and switch features off from `capabilities`. A shell that cannot reach bootstrap falls back to the pre-bootstrap aliases (class `compat`).
+- **Discovery:** `GET /wizard/v1/bootstrap` returns `bootstrap: 1`, `api: "wizard-agent-service/1"`, `capabilities` and `endpoints`. Front ends take the apps, sessions, runs, transcribe, route, upload, uploads and shares addresses from `endpoints` and switch features off from `capabilities`. A shell that cannot reach bootstrap falls back to the pre-bootstrap aliases (class `compat`).
 
 ## Phone Setup (companion implementation: wizard-agent-service #24)
 
@@ -62,6 +62,11 @@ GET             /wizard/files/{id}/content                        stable       u
 HEAD            /wizard/files/{id}/content                        stable       -   -
 POST            /wizard/files/upload                              stable       ux  -
 POST            /wizard/files/invite                              stable       -   -
+POST            /wizard/v1/uploads                                stable       -   -
+GET,PATCH       /wizard/v1/uploads/{id}                           stable       -   -
+POST            /wizard/v1/uploads/{id}/complete                  stable       -   -
+POST            /wizard/v1/shares                                 stable       -   -
+GET             /wizard/v1/shares/{id}                            stable       -   -
 GET             /wizard/attention                                 stable       ux  -
 POST            /wizard/attention/{id}/retry                      stable       ux  -
 POST            /wizard/attention/{id}/dismiss                    stable       ux  -
@@ -119,11 +124,12 @@ Settings, capabilities and endpoint addresses. It still answers when Hermes is d
    "clock":{"timezone":"Asia/Bangkok","day_starts_at":"04:00"},"voice":{"language":"en","vocabulary":["Runtipi"]},
    "fast_router":{"account":"","model":""},"network":{"base_url":"https://box.example.ts.net","aliases":[]}},
  "settings_source":"file",
- "capabilities":{"voice":true,"router":true,"files":true,"approvals":true,"steer":true,"joined_delegation":false,"markdown":false},
+ "capabilities":{"voice":true,"router":true,"files":true,"resumable_uploads":true,"approvals":true,"steer":true,"joined_delegation":false,"markdown":false},
  "endpoints":{"apps":"/wizard/v1/apps","sessions":"/wizard/hermes/api/sessions","runs":"/wizard/hermes/v1/runs",
-   "transcribe":"/wizard/voice/transcribe","route":"/wizard/v1/route","upload":"/wizard/files/upload"}}
+   "transcribe":"/wizard/voice/transcribe","route":"/wizard/v1/route","upload":"/wizard/files/upload",
+   "uploads":"/wizard/v1/uploads","shares":"/wizard/v1/shares"}}
 ```
-`fast_router` shows only `account` and `model`, never the endpoint or key. `network.base_url` is for links that leave Wizard; in-app links stay relative. An endpoint is `""` when its capability is off.
+`fast_router` shows only `account` and `model`, never the endpoint or key. `resumable_uploads` (with `endpoints.uploads` and `endpoints.shares`) is present when the service can store files and its upload state is writable; a client that does not see it uses `POST /wizard/files/upload`. `network.base_url` is for links that leave Wizard; in-app links stay relative. An endpoint is `""` when its capability is off.
 
 ### `GET /wizard/v1/apps`
 The launcher list: installed apps from the App Manager's `apps.json` (the shell itself left out) plus the owner's links from `launcher.json`. Only what a tile needs leaves the box: no MCP address, health URL, repo or skill path.
@@ -165,9 +171,28 @@ Proof that a retained Android voice note was admitted (body ≤ 2 KB). `200 {"re
 ## Files and attachments
 
 ### `POST /wizard/files/upload`
-Raw bytes with `Content-Type: application/octet-stream`, `X-Wizard-Filename` and `X-Wizard-Mime`; ≤ 64 MB. `201 {"file":{"id":"wf_…","name":"notes.txt","mime":"text/plain","bytes":11,"kind":"file","created_at":"…",…}}`. `415 bytes_required` for any other content type. On a Wizard OS box (`WIZARD_MEDIA_ROOT`) the file lands in the owner's Files root under `Inbox/<date>/` and never overwrites; on James's box it goes through Wizard Inbox. The response never carries the on-disk path.
+Compat route for clients without `resumable_uploads`; new clients use [`/wizard/v1/uploads`](#resumable-uploads-wizardv1uploads). Raw bytes with `Content-Type: application/octet-stream`, `X-Wizard-Filename` and `X-Wizard-Mime`; ≤ 64 MB, read whole into memory. `201 {"file":{"id":"wf_…","name":"notes.txt","mime":"text/plain","bytes":11,"kind":"file","created_at":"…",…}}`. `415 bytes_required` for any other content type. On a Wizard OS box (`WIZARD_MEDIA_ROOT`) the file lands in the owner's Files root under `Inbox/<date>/` and never overwrites; on James's box it goes through Wizard Inbox. The response never carries the on-disk path.
 
 To attach files to a message, pass `"wizard_file_ids":["wf_…"]` (≤ 8, unique) in a run or steer body. The service resolves them to trusted paths for the agent and strips the field.
+
+### Resumable uploads (`/wizard/v1/uploads`)
+One upload path for every file a client sends: chat attachments and shares. Bytes are streamed to disk (never held whole in memory), fsynced per chunk, and resumable from the last durable byte after a dropped connection, an app kill or a reboot. There is no per-file cap except real disk space: a file is refused only when it would not fit in free space minus a reserve (`WIZARD_UPLOAD_RESERVE_BYTES`, default 5 GiB; bytes still owed to open uploads count as used). A box may set `WIZARD_UPLOAD_MAX_BYTES` (default `0` = disk-bound only). File names and contents are never logged.
+
+- `POST /wizard/v1/uploads` JSON `{"client_upload_id":"…","filename":"clip.mp4","mime":"video/mp4","bytes":123456789,"sha256":"…"?}` → `201 {"upload_id":"up_<32 hex>","offset":0,"bytes":123456789,"chunk_bytes":8388608,"status":"uploading"}`. `client_upload_id` is the client's own id (`[A-Za-z0-9._:-]{1,128}`): the same id returns the existing upload with its current `offset` (and `"status":"complete","file":{…}` once finished; header `Idempotency-Replayed: true`); the same id with a different `bytes`/`sha256` is `409 client_upload_id_conflict`. Errors: `507 {"error":"insufficient_storage"}` when the file would not fit or exceeds the box cap; `413 {"error":"file_too_large"}` when James's Wizard Inbox refuses the size (its own boundary, 2 GiB today); `400 invalid_request` with `field`.
+- `GET /wizard/v1/uploads/{id}` → `200 {"upload_id","offset","bytes","chunk_bytes","status":"uploading"|"complete"|"failed","file"?,"error"?}`; also header `Upload-Offset`. `failed` carries `error` (`sha256_mismatch`, `expired`).
+- `PATCH /wizard/v1/uploads/{id}` raw bytes, `Content-Type: application/offset+octet-stream`, `Upload-Offset: <n>`. Appends at `n`, fsyncs, `204` with `Upload-Offset: <new>`. A chunk is ≤ 64 MiB (`413 body_too_large`) and may not run past `bytes` (`413 chunk_too_large`); suggested size is `chunk_bytes` (8 MiB). `n` ≠ the server offset → `409 {"error":"offset_mismatch","offset":<server offset>}` (also in `Upload-Offset`): continue from that offset. If a connection drops mid-chunk, the bytes that reached disk are kept; `GET` (or the 409) says where to resume. A newer PATCH for the same upload ends an older one still in flight. `410` once the upload has failed or expired; `415 bytes_required` for another content type; `400` for a missing or malformed `Upload-Offset`.
+- `POST /wizard/v1/uploads/{id}/complete` (empty JSON body) verifies the size and, when given, the sha256, then stores the file → `200 {"file":{…}}`, the same shape `/wizard/files/upload` returns, so `file.id` is a `wizard_file_id` for runs and steers. Idempotent: a repeat returns the same file. `409 {"error":"upload_incomplete","offset":n}` before the last byte; `422 {"error":"sha256_mismatch"}` fails the upload (and its share) and keeps nothing.
+- Storage: Wizard Files, as for `/wizard/files/upload`. On a Wizard OS box chunks stage in `<media root>/.wizard-uploads/` (same filesystem) and the finished file is moved into `Inbox/<date>/<name>` without being read into memory. On James's box the Wizard Inbox drop service owns the bytes: with `sha256` declared, chunks stream straight through to a drop upload; without it they stage locally and are pushed to the drop service at completion.
+- Incomplete uploads expire 7 days after their last chunk; their bytes are removed.
+
+### Shares (`/wizard/v1/shares`)
+Files shared into Wizard from another app (Android share sheet; later Mac and iOS), delivered server-side as one message.
+
+- `POST /wizard/v1/shares` JSON `{"client_share_id":"…","agent":"hermes"?,"thread":"<session id>"?,"note":"…"?,"files":[{"filename","mime","bytes","sha256"?},…]}` (1 to 8 files, note ≤ 8000 chars) → `201 {"share_id":"sh_<32 hex>","agent":"hermes","thread_id":"wizard_<ms>_<12 hex>","status":"uploading","uploads":[{"upload_id","offset","bytes","chunk_bytes","status"},…]}`, uploads in `files` order. Idempotent on `client_share_id` (same files → the same share, its current offsets and status, `Idempotency-Replayed: true`; different files → `409 client_share_id_conflict`). `agent` omitted → the default agent (`hermes`, the main agent, on a box without an agents registry). An unknown or stopped agent → `409 {"error":"agent_unavailable","agent":"…"}`, never another agent. `thread` omitted → a new thread whose id is returned now and which is created at delivery, titled with the first file name until the agent retitles it (the title is not a user lock). A `thread` the agent does not have → `404 {"error":"thread_not_found"}`. `507 insufficient_storage` when the files together would not fit.
+- Each upload is sent with `PATCH /wizard/v1/uploads/{id}` and finished with `…/complete`, exactly as above.
+- When the last upload completes, the service delivers once: it creates the new thread if needed and admits one run in `thread_id`, with every file attached (`wizard_file_ids`) and the note as the user's text (empty note → `Shared 1 file` / `Shared N files`), on the target agent, through the same path as a client send (`Idempotency-Key: share-<share_id>`). Concurrent or replayed completes, a replayed create and a restart mid-delivery never post twice; a transient Hermes failure is retried with backoff.
+- `GET /wizard/v1/shares/{id}` → `200 {"share_id","agent","thread_id","status":"uploading"|"delivering"|"delivered"|"failed","run_id"?,"error"?,"uploads":[…]}`. `failed` carries `error` (`sha256_mismatch`, `expired`, `delivery_rejected_<status>`); a failed share delivers nothing.
+- Privacy: a share to a `private`-class agent (agents registry present, spec/AGENTS.md) is stored in that agent's own `home/inbox/<date>/` and never in `media/` or the main Wizard Files index, and is delivered only to that agent. Notifications are the client's: "N files → <agent label>", never file names.
 
 ### `GET /wizard/files`
 `200 {"files":[<file>,…]}`, newest first, ≤ 100.
@@ -282,6 +307,7 @@ Found while documenting. Each is today's behaviour, recorded rather than changed
 - **D3. App Manager views are not shipped.** wizard-agent-service PR #7 (draft, staged only) adds `GET /wizard/v1/wizard-apps` and a read-only App Index proxy `GET /wizard/v1/index/{search,tags,apps/<owner>/<repo>}` for the My Apps, App Store and Resources views. They are class `proposed`: not on `main`, not deployed, not part of v1. They move to `stable` in the PR that merges them, together with this file.
 - **D4. Helm and Wizard Inbox routes.** `filings`, `attention/{id}/retry|dismiss`, `files/invite` and `voice/recovery-receipt` only work on James's box (Helm, Wizard Inbox). On a Wizard OS box they return errors or empty lists. They stay in v1 so the daily shell keeps working; a Wizard OS front end must treat them as optional.
 - **D5. `/wizard/` is still the legacy page.** The Wizard UX entry point is `/wizard-os-home/`, while thread links (`chatUrl`, notifications) point at `/wizard/?session=…`.
+- **D6. Share delivery uses the model the thread already has.** A share has no model picker, so its run carries no `model`/`provider`: a new thread runs on the agent's default model and an existing thread keeps its own. A client send carries the picker's route with `require_model_lock`.
 
 ## Verifying the contract
 
