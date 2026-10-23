@@ -83,6 +83,7 @@ try:
         run('vm-recover-start', ['limactl', 'start', '--tty=false', vm], 900)
     wait_ux('ux-up-before')
     browser('before')
+    wait_wam('apps-before-install')  # App Manager answers 404 for a while after any boot
     wam('app-install', f'install {APP}', 900)
     wam('apps-after-install', 'apps')
     out = (root / 'apps-after-install.log').read_text()
