@@ -82,8 +82,8 @@ Addressable (`d` = slug), so republishing replaces the previous version on relay
     ["published_at", "1760000000"], ["version", "3"], ["base", "nebula"], ["ux", "1"],
     ["file", "skin.css", "<sha256>", "text/css", "41203"],
     ["file", "preview.webp", "<sha256>", "image/webp", "38811"],
-    ["server", "https://store.wizard001.com/blossom"],
-    ["a", "30117:<parent hex>:nebula-warm", "wss://store.wizard001.com/relay", "fork"], ["p", "<parent hex>"],
+    ["server", "https://blossom.aiwizards.com"],
+    ["a", "30117:<parent hex>:nebula-warm", "wss://relay.aiwizards.com", "fork"], ["p", "<parent hex>"],
     ["alt", "Wizard OS skin: Nebula Remix"]
   ],
   "content": "{\"schema\":1}",
@@ -107,9 +107,9 @@ Store order: featured (in set order), then by `updated_at` descending. Each card
 
 ## Relays and Blossom
 
-- **REUSE/EXTEND, not NEW:** our relay and Blossom are the existing Wizard Store service (`zapstore-pilot`), extended for skins. It keeps the app catalog publisher-only and opens kinds 0, 5 (own events), 1984, 30004 (`d = wizard-skins-*`) and 30117 (`t = wizard-skin`) to any signer, with per-key caps.
-- Default relays: `wss://store.wizard001.com/relay` (ours, the archive), `wss://nos.lol`, `wss://relay.damus.io`. Config: `WIZARD_SKINS_RELAYS`. `relay.aiwizards.com` / `blossom.aiwizards.com` may later point at the same service.
-- Blossom: `https://store.wizard001.com/blossom` (ours). Accepts `text/css`, `image/webp`, `application/json` up to 1 MB per blob from any signer, 60 uploads per key per hour. BUD-01 GET/HEAD, BUD-02 PUT `/upload` with a kind 24242 auth event.
+- **REUSE/EXTEND, not NEW:** `relay.aiwizards.com` and `blossom.aiwizards.com` are served by the existing Wizard Store relay service, extended for skins. It keeps the app catalog publisher-only and opens kinds 0, 5 (own events), 1984, 30004 (`d = wizard-skins-*`) and 30117 (`t = wizard-skin`) to any signer, with per-key caps.
+- Default relays: `wss://relay.aiwizards.com` (ours, the archive), `wss://nos.lol`, `wss://relay.damus.io`. Config: `WIZARD_SKINS_RELAYS`.
+- Blossom: `https://blossom.aiwizards.com` (ours). Accepts `text/css`, `image/webp`, `application/json` up to 1 MB per blob from any signer, 60 uploads per key per hour. BUD-01 GET/HEAD, BUD-02 PUT `/upload` with a kind 24242 auth event.
 - The box uploads with its own **upload key** (generated on first use, stored in Agent Service state, never shown). Integrity comes from the hashes in the owner-signed listing, not from the uploader.
 - Every blob fetched is hashed before it is cached or served. A mismatch drops the listing.
 
