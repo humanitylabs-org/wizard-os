@@ -37,6 +37,7 @@ The one list of installed Wizard apps.
 ```
 
 **Rules:**
+- Optional `voice_names` is copied unchanged from `wizard.md`: at most 8 nonblank strings, each at most 40 Unicode characters without control characters. These are spoken names that open the app, matched case- and spacing-insensitively. Absence/`[]` means display-name matching only; readers of older registries continue to work.
 - `view` is `null` for apps without a screen (MCP-only services such as DeFleur and hello-wizard live in the agent, not the launcher). For apps with a screen it is `{"url": "/apps/<id>/", "route": "/apps/<id>/", "upstream": "http://<host>:<port><path>"}`. `url` is what the Agent Service's `GET /wizard/v1/apps` hands the Wizard UX launcher; `upstream` is where the host proxies that route.
 - Readers ignore unknown fields. Adding a field is not a version bump; removing or renaming one is.
 - `status` is Runtipi's status (`running`, `stopped`, `installing`, …). Apps that are installed but missing from the compiled store still appear, with only their id, urn and status.
