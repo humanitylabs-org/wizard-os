@@ -52,17 +52,36 @@ export PATH="$HOME/.local/bin:$PATH"
 health_url() { python3 - "$1" <<'PY'
 import json, sys
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 d = json.loads((Path.home() / ".wizard-os/apps.json").read_text())
 rows = d.get("apps", d) if isinstance(d, dict) else d
 rows = rows.values() if isinstance(rows, dict) else rows
 for a in rows:
-    if isinstance(a, dict) and a.get("id") == sys.argv[1] and str(a.get("health") or "").startswith("http"):
-        print(a["health"]); break
+    if not isinstance(a, dict) or a.get("id") != sys.argv[1]:
+        continue
+    url = a.get("health")
+    if not url and a["id"] == "files":
+        # 0.3.32 Files has no manifest health field. Its MCP front proxies
+        # /files/health to File Browser (not /health, and GET /mcp is 405).
+        # Use the box-only published port, not view.url (may be relative/tailnet).
+        u = urlsplit((a.get("mcp") or {}).get("url") or "")
+        if u.scheme in ("http", "https") and u.netloc:
+            url = urlunsplit((u.scheme, u.netloc, "/files/health", "", ""))
+    if isinstance(url, str) and urlsplit(url).scheme in ("http", "https"):
+        print(url)
+        sys.exit(0)
+raise SystemExit("no health URL for " + sys.argv[1])
 PY
 }
 running() { [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = true ]; }
 healthy() { u="$(health_url "$1")"; [ -n "$u" ] && curl -fsS -m 5 -o /dev/null "$u"; }
-wait_healthy() { for _ in $(seq 1 "${2:-60}"); do healthy "$1" && return 0; sleep 3; done; return 1; }
+wait_healthy() {
+  u="$(health_url "$1")" || return 1
+  printf 'health probe %s: %s\n' "$1" "$u"
+  for _ in $(seq 1 "${2:-60}"); do healthy "$1" && return 0; sleep 3; done
+  printf 'health probe failed: %s\n' "$u" >&2
+  return 1
+}
 install_state() { bash -c "$1" 2>/dev/null | sed -n 's/^Wizard OS install: //p' | head -1; }
 '''
 
@@ -216,7 +235,7 @@ printf '%s\\n' "$out"; tail -n 40 /root/.wizard-os/install.log 2>/dev/null
                              "docker ps -a --format '{{.Names}} {{.Status}}'; " + DOCTOR + " || true", 300)
             self.guest_owner("baseline-healthy", f"running {SHELL_C} && running {AGENT_C} && running {HERMES_C} "
                              "&& wait_healthy wizard-ux 20 && wait_healthy wizard-agent-service 20 "
-                             "&& wait_healthy files 20", 300, False)
+                             "&& wait_healthy files 20", 300)
 
             # C. Shell won't load / "Wizard needs attention"
             self.drill("C-shell-down", "docs/REPAIR_KIT.md#c-shell-wont-load--wizard-needs-attention",
