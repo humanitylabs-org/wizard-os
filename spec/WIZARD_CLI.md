@@ -109,7 +109,8 @@ It also refuses, again with exit 10, when the checkout has local changes or when
 3. **Install.** It fetches the tag, checks that the tag still resolves to the pinned commit, and checks out that commit (on the same branch, or detached). It then installs that commit's dependencies with `uv pip install -e .[all]`, falling back to `pip`. It does not use `uv sync`, because that removes packages the owner added. Finally it runs Hermes's own `hermes_cli.post_update --scope home` maintenance and an import smoke test.
 4. **Restart and check.** It removes the drain marker and runs `hermes gateway restart`, which is Hermes's own drain-aware restart. The stable checks then require all of the following:
    - the checkout is the exact commit and carries the tag;
-   - `hermes --version` runs;
+   - `hermes --version` runs and prints no setup warning (a settings formatting error, "install out of sync", "source-update completion failed");
+   - `config.yaml` parses with Hermes's own YAML. Hermes may keep running on its last good settings when the file is broken, so a gateway that answers is not proof that the owner's settings still apply;
    - `/health` answers, with the version that `hermes --version` names;
    - a chat round trip through the API server succeeds (`--no-chat` skips this);
    - `state.db` passes its integrity check and has at least as many sessions and messages as before, including five recent sessions sampled by id;

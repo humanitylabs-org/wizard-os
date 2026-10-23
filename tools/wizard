@@ -1708,6 +1708,16 @@ def stable_checks(home: Path, inst: dict, pin: dict, url: str, key: str, before:
         {"head": head, "tags": tags, "want": expect_commit, "want_tag": expect_tag})
     vline = _hermes_version_line(home)
     row("hermes command runs", vline.lower().startswith("hermes"), vline)
+    # A Hermes that cannot read its settings may still start on "last good settings" (v0.21.6 does), so every other
+    # check can pass while the owner's config is ignored. Parse it with Hermes's own YAML and read its warnings.
+    cfg = _run([inst["python"], "-c", "import sys, yaml; d = yaml.safe_load(open(sys.argv[1], encoding='utf-8')); "
+                "sys.exit(0 if isinstance(d, dict) else 3)", home / "config.yaml"], env=_hermes_env_full(home),
+               timeout=120, check=False)
+    row("settings file parses", cfg.returncode == 0, (cfg.stderr or "").strip().splitlines()[-1:] or "ok")
+    warn = _run([hermes_bin(), "--version"], env=_hermes_env_full(home), timeout=120, check=False)
+    bad = [ln.strip() for ln in (warn.stderr or "").splitlines()
+           if re.search(r"formatting error|out of sync|completion failed|last good settings", ln, re.I)]
+    row("hermes reports no setup problems", not bad, bad[:3] or "none")
     if gateway_expected:
         h = _health(url)
         same = bool(h.get("version")) and str(h.get("version")) in vline
