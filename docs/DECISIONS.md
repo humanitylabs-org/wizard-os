@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 23 Oct 2026 — James: system maintenance is a core Wizard OS component ([spec/MAINTENANCE.md](../spec/MAINTENANCE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 84 | **One nightly maintenance run per box, owned by the App Manager (`wam maintain`), not by Hermes cron jobs or agent skills.** It covers OS security patches, backup scheduling and verification, the Wizard OS, Hermes and app updates, and Health history; the Troubleshooter guardian keeps repair, and the Supervisor may later judge exceptions. OS patches work on any Linux through that system's own package manager and security channel, as one backend per family. They never restart a service or reboot. Default is `check` (report only). `patch` and automatic restarts become defaults only after the restart gates in the spec pass on Thales. | Approved by James |
+
 ## 22 Oct 2026 — James: default-app custody by signed lists and mirrors ([#136](https://github.com/humanitylabs-org/wizard-os/issues/136))
 
 | # | Decision | Status |
