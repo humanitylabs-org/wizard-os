@@ -48,7 +48,7 @@ Wizard UX is the **shell**: a system app filling the `shell` slot, always exactl
 - an MCP endpoint
 - a skill telling the agent when and how to use it
 
-Apps come in four types: view, service, agent and external. An app can declare:
+Apps come in four types: view, service, agent and external. Owners see them under four names, the same in the Store, the Apps sheet and an agent's page: **Apps** (view: has a screen), **Agent apps** (service: no screen, used by agents), **Agents** and **Connections** (external). Never say "Wizard apps" to an owner: "wizard" already names the box, the agent and the phone app (#84). An app can declare:
 - what it **provides**, as capability slots like `transcription` or `video-editing`
 - what it **uses**, meaning other apps it depends on
 - what it **needs**, meaning device permissions
