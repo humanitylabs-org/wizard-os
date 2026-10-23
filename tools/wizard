@@ -1244,6 +1244,752 @@ def run_gate_request(home: Path, ns) -> dict:
     return {"prompt": prompt, "expected": want, "first": first, "calls": calls[:8], "pass": first == want}
 
 
+# ------------------------------------------------------------------ hermes status / hermes update --stable
+#
+# docs/HERMES_STABLE.md step 4 (DECISIONS #74). An alongside box runs the owner's own source-installed Hermes. This
+# moves it to the exact Hermes release Wizard stable pins (the `hermes` block of the release file named by
+# releases/stable), never to `main` and never through plain `hermes update`. Order: read the pin, check the install
+# (git checkout, clean, the tag still resolves to the pinned commit, no downgrade), wait for a quiet moment with the
+# gateway draining, back up the Hermes home, move the checkout and its venv to the pinned commit, restart the gateway,
+# run the stable checks. Any failure after the first change puts the previous commit, its dependencies and every
+# changed file back, restarts and re-checks. Everything lands in a 0600 receipt under $WIZARD_OS_HOME/hermes-update/.
+
+RELEASE_BASE = "https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases"
+UPDATE_DIR = "hermes-update"
+NOT_FINAL_TAG = re.compile(r"(^|[.-])(rc|canary|abandoned|alpha|beta|dev)([.\d-]|$)|\+|^(stable|latest|main|nightly)$",
+                           re.I)
+SHA40 = re.compile(r"^[0-9a-f]{40}$")
+BACKUP_FILES = ("config.yaml", ".env", "auth.json", "SOUL.md", "cron/jobs.json")
+BACKUP_DIRS = ("skills", "memories")
+CHECK_PROMPT = "This is an automatic Wizard OS check after a Hermes update. Reply with the single word: READY"
+EXIT.update({"update_refused": 10, "update_by_hand": 10, "not_quiet": 11, "update_rolled_back": 12,
+             "rollback_failed": 13})
+
+
+def _now() -> str:
+    import time as _t
+    return _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime())
+
+
+def _read_source(src: str, timeout: float) -> str:
+    if re.match(r"^https?://", src):
+        req = urllib.request.Request(src, headers={"Cache-Control": "no-cache", "User-Agent": f"wizard/{VERSION}"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            raise Fail("unreachable", f"{src} answered HTTP {e.code}") from None
+        except (urllib.error.URLError, OSError) as e:
+            raise Fail("unreachable", f"could not read {src}: {_why(e)}") from None
+    try:
+        return Path(src).expanduser().read_text(encoding="utf-8")
+    except OSError as e:
+        raise Fail("usage", f"could not read {src}: {_why(e)}") from None
+
+
+def stable_pin(ns) -> dict:
+    """The Hermes pin of the release this command follows: --release <version|file|URL>, else releases/stable."""
+    base = (os.environ.get("WIZARD_RELEASE_BASE") or RELEASE_BASE).rstrip("/")
+    src = ns.release
+    if not src:
+        version = _read_source(f"{base}/stable", ns.timeout).strip()
+        if not re.fullmatch(r"[0-9A-Za-z.\-]+", version or ""):
+            raise Fail("protocol_error", f"{base}/stable does not name a release")
+        src = f"{base}/{version}.json"
+    elif not (re.match(r"^https?://", src) or src.endswith(".json") or Path(src).expanduser().exists()):
+        src = f"{base}/{src}.json"
+    try:
+        doc = json.loads(_read_source(src, ns.timeout))
+    except json.JSONDecodeError:
+        raise Fail("protocol_error", f"{src} is not JSON") from None
+    h = doc.get("hermes") if isinstance(doc, dict) else None
+    if not isinstance(h, dict):
+        raise Fail("update_refused", f"release {doc.get('version') if isinstance(doc, dict) else '?'} ({src}) pins no "
+                   "Hermes (`hermes` block missing; required from 0.3.23)")
+    tag, commit = str(h.get("tag") or ""), str(h.get("commit") or "")
+    if not tag or NOT_FINAL_TAG.search(tag.lstrip("v")) or NOT_FINAL_TAG.search(tag):
+        raise Fail("update_refused", f"the pinned Hermes tag {tag!r} is not a final release tag")
+    if not SHA40.fullmatch(commit):
+        raise Fail("update_refused", f"the pinned Hermes commit {commit!r} is not a full 40-character commit")
+    image = h.get("image") if isinstance(h.get("image"), dict) else {}
+    return {"release": doc.get("version"), "source": src, "tag": tag, "commit": commit,
+            "image_digest": image.get("digest"), "test_record": h.get("test_record"), "rollback": h.get("rollback")}
+
+
+def _run(args: list, cwd=None, env=None, timeout: int = 900, check: bool = True):
+    import subprocess
+    p = subprocess.run([str(a) for a in args], cwd=str(cwd) if cwd else None, env=env, capture_output=True, text=True,
+                       timeout=timeout, stdin=subprocess.DEVNULL)
+    if check and p.returncode != 0:
+        tail = "\n".join((p.stderr or p.stdout or "").strip().splitlines()[-4:])
+        raise RuntimeError(f"`{' '.join(str(a) for a in args[:4])}` exited {p.returncode}: {tail}")
+    return p
+
+
+def _git(repo: Path, *args: str, check: bool = True, timeout: int = 300) -> str:
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"}
+    return (_run(["git", "-C", repo, *args], env=env, timeout=timeout, check=check).stdout or "").strip()
+
+
+def hermes_install(home: Path) -> dict:
+    """Where this Hermes's code and venv live. Only installer-style git checkouts with a venv are updated here."""
+    exe = Path(hermes_bin())
+    real = exe.resolve()
+    venv = real.parent.parent if (real.parent.parent / "pyvenv.cfg").is_file() else None
+    cands = [os.environ.get("WIZARD_HERMES_REPO"), venv.parent if venv else None, home / "hermes-agent"]
+    repo = next((Path(c) for c in cands if c and (Path(c) / ".git").exists() and (Path(c) / "pyproject.toml").is_file()),
+                None)
+    if repo is None:
+        raise Fail("update_by_hand", f"this Hermes ({exe}) is not a git checkout that Wizard OS can move; update it by "
+                   "hand to the Wizard stable tag (`wizard hermes status` names it)")
+    if venv is None and (repo / "venv" / "pyvenv.cfg").is_file():
+        venv = repo / "venv"
+    if venv is None:
+        raise Fail("update_by_hand", f"no venv found for the Hermes checkout at {repo} (a managed runtime); update it "
+                   "by hand to the Wizard stable tag")
+    stamp = repo / "install-stamp.json"
+    if stamp.is_file():
+        try:
+            mech = json.loads(stamp.read_text(encoding="utf-8")).get("updateMechanism")
+        except (OSError, ValueError):
+            mech = "unreadable"
+        if mech not in (None, "self"):
+            raise Fail("update_by_hand", f"{stamp} says updates belong to {mech!r}, not this checkout; left it alone")
+    import shutil
+    uv = os.environ.get("WIZARD_UV") or shutil.which("uv") or next(
+        (str(p) for p in (Path.home() / ".local/bin/uv", home / "bin/uv", Path.home() / ".cargo/bin/uv") if p.is_file()),
+        None)
+    return {"hermes": str(exe), "repo": repo, "venv": venv, "python": venv / "bin" / "python", "uv": uv}
+
+
+def _hermes_env_full(home: Path) -> dict:
+    env = {k: v for k, v in os.environ.items() if k not in ("VIRTUAL_ENV", "PYTHONHOME", "PYTHONPATH")}
+    env.update(HERMES_HOME=str(home), NO_COLOR="1")
+    return env
+
+
+def _hermes_version_line(home: Path) -> str:
+    try:
+        p = _run([hermes_bin(), "--version"], env=_hermes_env_full(home), timeout=120, check=False)
+    except Exception as e:  # noqa: BLE001
+        return f"error: {_why(e)}"
+    lines = (p.stdout or p.stderr or "").strip().splitlines()
+    return lines[0].strip() if lines else f"exit {p.returncode}"
+
+
+def _api(home: Path, ns) -> tuple[str, str]:
+    names = env_names(home / ".env")
+    if ns.gateway_url:
+        url = ns.gateway_url.rstrip("/")
+    else:
+        host = names.get("API_SERVER_HOST") or os.environ.get("API_SERVER_HOST") or "127.0.0.1"
+        host = "127.0.0.1" if host in ("0.0.0.0", "::", "") else host
+        url = f"http://{host}:{names.get('API_SERVER_PORT') or os.environ.get('API_SERVER_PORT') or 8642}"
+    return url, names.get("API_SERVER_KEY") or ""
+
+
+def _health(url: str) -> dict:
+    try:
+        code, body = _http_json(f"{url}/health", timeout=5)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": _why(e)[:200]}
+    ok = code == 200 and isinstance(body, dict) and body.get("status") == "ok"
+    return {"ok": ok, "status": code, "version": body.get("version") if isinstance(body, dict) else None}
+
+
+def _ro_db(path: Path):
+    import sqlite3
+    return sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+
+
+def history_stats(home: Path, sample: list | None = None) -> dict:
+    db = home / "state.db"
+    if not db.is_file():
+        return {"present": False}
+    try:
+        c = _ro_db(db)
+        try:
+            out = {"present": True, "integrity": c.execute("PRAGMA quick_check").fetchone()[0],
+                   "sessions": c.execute("SELECT count(*) FROM sessions").fetchone()[0],
+                   "messages": c.execute("SELECT count(*) FROM messages").fetchone()[0]}
+            if sample is None:
+                out["sample"] = [r[0] for r in c.execute("SELECT id FROM sessions ORDER BY started_at DESC LIMIT 5")]
+            else:
+                q = ",".join("?" * len(sample)) or "''"
+                found = {r[0] for r in c.execute(f"SELECT id FROM sessions WHERE id IN ({q})", sample)}
+                out["sample_missing"] = [s for s in sample if s not in found]
+            return out
+        finally:
+            c.close()
+    except Exception as e:  # noqa: BLE001
+        return {"present": True, "error": _why(e)[:300]}
+
+
+def cron_jobs(home: Path) -> dict:
+    p = home / "cron" / "jobs.json"
+    if not p.is_file():
+        return {"present": False, "ids": []}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return {"present": True, "error": _why(e)[:200], "ids": []}
+    jobs = data.get("jobs") if isinstance(data, dict) else data
+    jobs = [j for j in (jobs or []) if isinstance(j, dict)]
+    return {"present": True, "ids": sorted(str(j.get("id")) for j in jobs), "jobs": jobs}
+
+
+def busy_reasons(home: Path, due_within: int = 120) -> list[str]:
+    """Work that an update would interrupt, from Hermes's own state files. Unreadable optional stores are skipped."""
+    import time as _t
+    from datetime import datetime, timezone
+    reasons: list[str] = []
+    try:
+        st = json.loads((home / "gateway_state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        st = {}
+    pid = st.get("pid") if isinstance(st, dict) else None
+    alive = False
+    if pid:
+        try:
+            os.kill(int(pid), 0)
+            alive = True
+        except (OSError, ValueError):
+            pass
+    if alive:
+        for w in st.get("active_work") or []:
+            ident = w.get("session") or w.get("job_id") or w.get("kind") if isinstance(w, dict) else w
+            reasons.append(f"gateway is working on {ident}")
+        agents = st.get("active_agents")
+        n = agents if isinstance(agents, int) else len(agents) if isinstance(agents, (list, dict)) else 0
+        if n and not st.get("active_work"):
+            reasons.append(f"{n} agent run(s) active in the gateway")
+    st_db = home / "state.db"
+    if st_db.is_file():
+        try:
+            c = _ro_db(st_db)
+            n = c.execute("SELECT count(*) FROM async_delegations WHERE state IN ('pending','running')").fetchone()[0]
+            c.close()
+            if n:
+                reasons.append(f"{n} background delegation(s) running")
+        except Exception:  # noqa: BLE001 - table absent on older Hermes
+            pass
+    ex = home / "cron" / "executions.db"
+    if ex.is_file():
+        try:
+            c = _ro_db(ex)
+            for (jid,) in c.execute("SELECT job_id FROM executions WHERE status IN ('claimed','running') "
+                                    "AND finished_at IS NULL"):
+                reasons.append(f"cron job {jid} is running")
+            c.close()
+        except Exception:  # noqa: BLE001 - older/newer schema: the jobs.json due check still applies
+            pass
+    now = _t.time()
+    for j in cron_jobs(home).get("jobs") or []:
+        if j.get("enabled") is False or j.get("state") in ("paused", "completed"):
+            continue
+        nxt = j.get("next_run_at")
+        try:
+            t = datetime.fromisoformat(str(nxt).replace("Z", "+00:00"))
+            t = t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if -60 <= t.timestamp() - now <= due_within:
+            reasons.append(f"cron job {j.get('id')} fires at {nxt}")
+    kb = home / "kanban.db"
+    if kb.is_file():
+        try:
+            c = _ro_db(kb)
+            n = c.execute("SELECT count(*) FROM tasks WHERE status='running'").fetchone()[0]
+            c.close()
+            if n:
+                reasons.append(f"{n} kanban task(s) running")
+        except Exception:  # noqa: BLE001
+            pass
+    return reasons
+
+
+def _epoch() -> str:   # the same instantiation epoch Hermes stamps on its drain marker (gateway/drain_control.py)
+    boot = start = ""
+    try:
+        boot = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    try:
+        start = Path("/proc/1/stat").read_text(encoding="utf-8").rsplit(")", 1)[1].split()[19]
+    except (OSError, IndexError):
+        pass
+    return f"{boot}:{start}" if (boot or start) else ""
+
+
+def _drain(home: Path, on: bool) -> None:
+    p = home / ".drain_request.json"
+    if on:
+        payload = {"action": "drain", "requested_at": _now().replace("Z", "+00:00"), "principal": "wizard-hermes-update",
+                   "epoch": _epoch(), "suppress_notification": True}
+        tmp = p.with_name(p.name + ".wizard-tmp")
+        tmp.write_text(json.dumps(payload), encoding="utf-8")
+        os.replace(tmp, p)
+    else:
+        try:
+            if json.loads(p.read_text(encoding="utf-8")).get("principal") == "wizard-hermes-update":
+                p.unlink()
+        except (OSError, ValueError):
+            pass
+
+
+def _tree_sha(path: Path) -> str | None:
+    import hashlib
+    if not path.exists():
+        return None
+    if path.is_file():
+        return sha256_file(path)
+    h = hashlib.sha256()
+    for f in sorted(p for p in path.rglob("*") if p.is_file() and not p.is_symlink()):
+        h.update(str(f.relative_to(path)).encode() + b"\0" + (sha256_file(f) or "").encode() + b"\n")
+    return h.hexdigest()
+
+
+def backup_home(home: Path, bdir: Path) -> dict:
+    """Online-backup every SQLite DB at the top of the home and in cron/, copy config, secrets, cron, skills, memories."""
+    import shutil
+    import sqlite3
+    bdir.mkdir(parents=True, mode=0o700)
+    items: dict = {}
+    for db in sorted(list(home.glob("*.db")) + list((home / "cron").glob("*.db"))):
+        rel = str(db.relative_to(home))
+        dst = bdir / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        src = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=30)
+        out = sqlite3.connect(str(dst))
+        try:
+            src.backup(out)
+        finally:
+            out.close()
+            src.close()
+        chk = _ro_db(dst)
+        ok = chk.execute("PRAGMA quick_check").fetchone()[0]
+        chk.close()
+        if ok != "ok":
+            raise RuntimeError(f"backup copy of {rel} fails its integrity check ({ok})")
+        items[rel] = {"kind": "sqlite", "sha256": sha256_file(db)}
+    for rel in BACKUP_FILES:
+        src = home / rel
+        if src.is_file():
+            dst = bdir / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            items[rel] = {"kind": "file", "sha256": sha256_file(src)}
+        else:
+            items[rel] = {"kind": "file", "absent": True}
+    for rel in BACKUP_DIRS:
+        src = home / rel
+        if src.is_dir():
+            shutil.copytree(src, bdir / rel, symlinks=True)
+            items[rel] = {"kind": "dir", "sha256": _tree_sha(src)}
+        else:
+            items[rel] = {"kind": "dir", "absent": True}
+    for p in [bdir, *bdir.rglob("*")]:
+        try:
+            os.chmod(p, 0o700 if p.is_dir() else 0o600)
+        except OSError:
+            pass
+    return items
+
+
+def restore_home(home: Path, bdir: Path, items: dict, before_hist: dict) -> dict:
+    """Put back every backed-up file or folder whose content changed. state.db is kept when it is intact and lost
+    nothing (so nothing written since the backup is thrown away), and restored from the backup otherwise."""
+    import shutil
+    done: dict = {}
+    for rel, it in items.items():
+        cur = home / rel
+        if it["kind"] == "sqlite":
+            if rel == "state.db":
+                now = history_stats(home, before_hist.get("sample") or [])
+                lost = (now.get("integrity") != "ok" or now.get("sessions", 0) < before_hist.get("sessions", 0)
+                        or now.get("messages", 0) < before_hist.get("messages", 0) or now.get("sample_missing"))
+                if not lost:
+                    done[rel] = "kept (intact, nothing lost)"
+                    continue
+            elif _tree_sha(cur) == it["sha256"]:
+                continue
+            for side in ("-wal", "-shm"):
+                Path(str(cur) + side).unlink(missing_ok=True)
+            shutil.copy2(bdir / rel, cur)
+            done[rel] = "restored from backup"
+        elif it.get("absent"):
+            if cur.exists():
+                done[rel] = "left in place (did not exist before; not deleted)"
+        elif _tree_sha(cur) != it["sha256"]:
+            if it["kind"] == "dir":
+                if cur.exists():
+                    shutil.rmtree(cur)
+                shutil.copytree(bdir / rel, cur, symlinks=True)
+            else:
+                cur.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(bdir / rel, cur)
+            done[rel] = "restored from backup"
+    return done
+
+
+def install_deps(inst: dict, rec_log: list) -> str:
+    """Bring the venv to the checked-out commit's dependencies without removing anything the owner added: an
+    editable `uv pip install -e .[all]` (what Telos's overnight updater does), else plain pip. `uv sync` is not used
+    because it deletes packages the lock file does not name."""
+    repo, py = inst["repo"], inst["python"]
+    env = {k: v for k, v in os.environ.items() if k not in ("VIRTUAL_ENV", "PYTHONPATH")}
+    tries = []
+    if inst["uv"]:
+        tries.append(("uv pip install -e .[all]", [inst["uv"], "pip", "install", "-q", "--python", py, "-e", ".[all]"]))
+    tries.append(("pip install -e .[all]", [py, "-m", "pip", "install", "-q", "-e", ".[all]"]))
+    errors = []
+    for name, args in tries:
+        p = _run(args, cwd=repo, env=env, timeout=1800, check=False)
+        if p.returncode == 0:
+            rec_log.append(f"{_now()} deps: {name} ok")
+            return name
+        errors.append(f"{name}: {(p.stderr or p.stdout or '').strip().splitlines()[-1:]}")
+        rec_log.append(f"{_now()} deps: {name} failed, trying the next way")
+    raise RuntimeError("dependencies did not install: " + "; ".join(errors)[-600:])
+
+
+def _wait_health(url: str, seconds: int, want_change_from: int | None = None) -> dict:
+    import time as _t
+    t0 = _t.time()
+    last = {}
+    while _t.time() - t0 < seconds:
+        last = _health(url)
+        if last.get("ok"):
+            last["after_s"] = round(_t.time() - t0)
+            return last
+        _t.sleep(3)
+    last["after_s"] = round(_t.time() - t0)
+    return last
+
+
+def restart_gateway(home: Path, url: str, seconds: int) -> dict:
+    p = run_hermes(home, "gateway", "restart", check=False, timeout=max(300, seconds))
+    h = _wait_health(url, seconds)
+    return {"restart_exit": p.returncode, "restart_tail": (p.stderr or p.stdout or "").strip()[-300:], **h}
+
+
+def chat_check(url: str, key: str, timeout: float) -> dict:
+    if not key:
+        return {"ok": False, "detail": "no API_SERVER_KEY in the Hermes .env, so the API server is off"}
+    body = {"model": "hermes-agent", "messages": [{"role": "user", "content": CHECK_PROMPT}], "stream": False}
+    req = urllib.request.Request(f"{url}/v1/chat/completions", data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=timeout) as r:
+            code, out = r.status, json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "status": e.code, "detail": f"HTTP {e.code}"}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "detail": _why(e)[:300]}
+    text = ""
+    if isinstance(out, dict):
+        try:
+            text = str(out["choices"][0]["message"]["content"] or "")
+        except (KeyError, IndexError, TypeError):
+            text = ""
+    return {"ok": code == 200 and bool(text.strip()), "status": code, "reply": text.strip()[:120]}
+
+
+def stable_checks(home: Path, inst: dict, pin: dict, url: str, key: str, before: dict, ns, gateway_expected: bool,
+                  expect_commit: str, expect_tag: str | None) -> list:
+    rows: list = []
+
+    def row(name: str, ok: bool, detail) -> None:
+        rows.append({"check": name, "ok": bool(ok), "detail": detail})
+
+    head = _git(inst["repo"], "rev-parse", "HEAD", check=False)
+    tags = _git(inst["repo"], "tag", "--points-at", "HEAD", check=False).split()
+    row("code is the exact commit", head == expect_commit and (expect_tag is None or expect_tag in tags),
+        {"head": head, "tags": tags, "want": expect_commit, "want_tag": expect_tag})
+    vline = _hermes_version_line(home)
+    row("hermes command runs", vline.lower().startswith("hermes"), vline)
+    if gateway_expected:
+        h = _health(url)
+        same = bool(h.get("version")) and str(h.get("version")) in vline
+        row("gateway up on this code", h.get("ok") and same, h)
+        if ns.no_chat:
+            rows.append({"check": "chat round trip", "ok": True, "skipped": True, "detail": "--no-chat"})
+        else:
+            c = chat_check(url, key, max(ns.timeout, 180))
+            row("chat round trip", c["ok"], c)
+    hist = history_stats(home, before["history"].get("sample") or [])
+    bh = before["history"]
+    row("session history readable", (not bh.get("present")) or (
+        hist.get("integrity") == "ok" and hist.get("sessions", -1) >= bh.get("sessions", 0)
+        and hist.get("messages", -1) >= bh.get("messages", 0) and not hist.get("sample_missing")),
+        {k: hist.get(k) for k in ("integrity", "sessions", "messages", "sample_missing", "error")} | {
+            "before": {k: bh.get(k) for k in ("sessions", "messages")}})
+    cj = cron_jobs(home)
+    lst = run_hermes(home, "cron", "list", check=False, timeout=120)
+    row("cron list intact", set(before["cron"]["ids"]) <= set(cj["ids"]) and lst.returncode == 0,
+        {"jobs_before": before["cron"]["ids"], "jobs_now": cj["ids"], "hermes_cron_list_exit": lst.returncode})
+    return rows
+
+
+def _fault(point: str) -> None:
+    """Test hook (acceptance only): WIZARD_HERMES_UPDATE_FAULT=break-config | fail:<step>."""
+    f = os.environ.get("WIZARD_HERMES_UPDATE_FAULT", "")
+    if f == f"fail:{point}":
+        raise RuntimeError(f"injected failure at {point} (WIZARD_HERMES_UPDATE_FAULT)")
+
+
+def _save_receipt(path: Path, rec: dict) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(rec, f, indent=2, default=str)
+    os.replace(tmp, path)
+
+
+def _current(home: Path, inst: dict, url: str) -> dict:
+    repo = inst["repo"]
+    return {"head": _git(repo, "rev-parse", "HEAD"), "branch": _git(repo, "symbolic-ref", "-q", "--short", "HEAD",
+                                                                    check=False) or None,
+            "tags": _git(repo, "tag", "--points-at", "HEAD", check=False).split(),
+            "shallow": _git(repo, "rev-parse", "--is-shallow-repository", check=False) == "true",
+            "version": _hermes_version_line(home), "gateway": _health(url)}
+
+
+def cmd_hermes_status(ns) -> dict:
+    home = hermes_home_path(ns.hermes_home)
+    pin = stable_pin(ns)
+    url, _ = _api(home, ns)
+    out = {"ok": True, "hermes_home": str(home), "stable": pin}
+    try:
+        inst = hermes_install(home)
+        cur = _current(home, inst, url)
+        out.update(current=cur, repo=str(inst["repo"]), matches_stable=cur["head"] == pin["commit"])
+    except Fail as e:
+        out.update(current={"version": _hermes_version_line(home), "gateway": _health(url)}, matches_stable=None,
+                   note=e.message)
+    out["next"] = ("" if out["matches_stable"] or out["matches_stable"] is None else
+                   f"wizard hermes update --stable   (moves this Hermes to {pin['tag']}; backup and rollback included)")
+    return out
+
+
+def cmd_hermes_update(ns) -> dict:
+    import time as _t
+    if not ns.stable:
+        raise Fail("usage", "say which release to move to: wizard hermes update --stable")
+    home = hermes_home_path(ns.hermes_home)
+    if not (home / "config.yaml").is_file():
+        raise Fail("usage", f"no Hermes config at {home / 'config.yaml'}")
+    pin = stable_pin(ns)
+    inst = hermes_install(home)
+    repo = inst["repo"]
+    url, key = _api(home, ns)
+    cur = _current(home, inst, url)
+    plan = {"hermes_home": str(home), "repo": str(repo), "venv": str(inst["venv"]), "stable": pin,
+            "current": cur, "gateway_url": url}
+    if cur["head"] == pin["commit"]:
+        return {"ok": True, "already_stable": True, **plan, "message": f"this Hermes already runs {pin['tag']}"}
+    dirty = [ln for ln in _git(repo, "status", "--porcelain", "--untracked-files=no").splitlines() if ln.strip()]
+    if dirty:
+        raise Fail("update_refused", f"the Hermes checkout at {repo} has local changes; left it alone", dirty=dirty[:10])
+    remote = _git(repo, "ls-remote", "origin", f"refs/tags/{pin['tag']}", f"refs/tags/{pin['tag']}^{{}}", timeout=120)
+    refs = dict(reversed(ln.split("\t", 1)) for ln in remote.splitlines() if "\t" in ln)
+    upstream = refs.get(f"refs/tags/{pin['tag']}^{{}}") or refs.get(f"refs/tags/{pin['tag']}")
+    if upstream != pin["commit"]:
+        raise Fail("update_refused", f"upstream tag {pin['tag']} points at {upstream or 'nothing'}, not the pinned "
+                   f"{pin['commit']}; refusing to install either", upstream=upstream)
+    have = _run(["git", "-C", repo, "cat-file", "-e", f"{pin['commit']}^{{commit}}"], check=False).returncode == 0
+    order = None
+    if have:
+        order = "newer" if _run(["git", "-C", repo, "merge-base", "--is-ancestor", cur["head"], pin["commit"]],
+                                check=False).returncode == 0 else "not newer"
+    steps = ["wait for a quiet moment (no gateway run, no cron job running or due, no kanban task), gateway draining",
+             f"back up {home}: every SQLite DB (online backup), config.yaml, .env, auth.json, SOUL.md, cron/, skills/, "
+             "memories/",
+             f"fetch tag {pin['tag']} and move {repo} from {cur['head'][:10]} to {pin['commit'][:10]}",
+             "install that commit's dependencies into the venv (uv sync --locked --extra all, as the installer does)",
+             "restart the gateway (hermes gateway restart) and run the stable checks: exact commit, gateway up on the "
+             "new code, a chat round trip, session history readable, cron jobs intact",
+             f"on any failure: back to {cur['head'][:10]}, its dependencies and every changed file, restart, re-check"]
+    if ns.dry_run:
+        return {"ok": True, "dry_run": True, **plan, "order": order or "checked after the tag is fetched",
+                "busy_now": busy_reasons(home), "plan": steps, "changed": "nothing"}
+
+    osh = os_home()
+    stamp = _t.strftime("%Y%m%dT%H%M%SZ", _t.gmtime())
+    rdir = osh / UPDATE_DIR / stamp
+    rdir.mkdir(parents=True, mode=0o700)
+    os.chmod(osh / UPDATE_DIR, 0o700)
+    rp = rdir / "receipt.json"
+    rec = {"kind": "wizard-hermes-update", "cli": VERSION, "started_at": _now(), "status": "started", **plan,
+           "events": []}
+
+    def log(msg: str) -> None:
+        rec["events"].append(f"{_now()} {msg}")
+        _save_receipt(rp, rec)
+        if not ns.json:
+            print(f"  {msg}", file=sys.stderr)
+
+    log(f"plan: {cur['version']} ({cur['head'][:10]}) -> {pin['tag']} ({pin['commit'][:10]}), release {pin['release']}")
+    _git(repo, "fetch", "--no-tags", "origin", f"+refs/tags/{pin['tag']}:refs/tags/{pin['tag']}", timeout=900)
+    if _git(repo, "rev-parse", f"{pin['tag']}^{{commit}}") != pin["commit"]:
+        rec["status"] = "refused"
+        log("the fetched tag does not resolve to the pinned commit; nothing changed")
+        raise Fail("update_refused", "the fetched tag does not resolve to the pinned commit; nothing changed",
+                   receipt=str(rp))
+    if _run(["git", "-C", repo, "merge-base", "--is-ancestor", cur["head"], pin["commit"]], check=False).returncode:
+        older = True
+        if cur["shallow"]:   # a shallow installer clone can't prove ancestry; fall back to commit dates
+            d_cur = int(_git(repo, "log", "-1", "--format=%ct", cur["head"]) or 0)
+            d_new = int(_git(repo, "log", "-1", "--format=%ct", pin["commit"]) or 0)
+            older = d_new < d_cur
+            rec["order_proof"] = f"commit dates (shallow checkout): current {d_cur}, pinned {d_new}"
+        if older:
+            rec["status"] = "refused"
+            log(f"refused: {pin['tag']} is not newer than the running commit {cur['head'][:10]}; nothing changed")
+            raise Fail("update_refused", f"{pin['tag']} is not newer than what this Hermes runs ({cur['head'][:10]}); "
+                       "Wizard OS never moves a Hermes backwards", receipt=str(rp))
+    else:
+        rec["order_proof"] = "ancestry: the running commit is an ancestor of the pinned one"
+
+    gateway_was_up = bool(cur["gateway"].get("ok"))
+    before = {"history": history_stats(home), "cron": cron_jobs(home)}
+    before["cron"].pop("jobs", None)
+    rec["before"] = before
+    # 1. quiet moment, then hold it with Hermes's own drain marker
+    t0, last = _t.time(), 0.0
+    while True:
+        reasons = busy_reasons(home)
+        if not reasons:
+            if gateway_was_up:
+                _drain(home, True)
+                _t.sleep(6)
+                reasons = busy_reasons(home)
+                if reasons:
+                    _drain(home, False)
+            if not reasons:
+                break
+        if _t.time() - t0 >= ns.quiet_timeout:
+            _drain(home, False)
+            rec.update(status="not_quiet", busy=reasons)
+            log(f"no quiet moment within {ns.quiet_timeout} s ({'; '.join(reasons)[:300]}); nothing changed")
+            raise Fail("not_quiet", f"Hermes stayed busy for {ns.quiet_timeout} s ({'; '.join(reasons)[:200]}); "
+                       "nothing changed. Run it again later, or pass --quiet-timeout", busy=reasons, receipt=str(rp))
+        if _t.time() - last > 60:
+            log("waiting for a quiet moment: " + "; ".join(reasons)[:300])
+            last = _t.time()
+        _t.sleep(10)
+    log(f"quiet after {round(_t.time() - t0)} s" + ("; gateway draining" if gateway_was_up else "; gateway not running"))
+    try:
+        # 2. backup
+        items = backup_home(home, rdir / "backup")
+        rec["backup"] = {"path": str(rdir / "backup"), "items": items}
+        log(f"backup: {len(items)} items in {rdir / 'backup'}")
+        _fault("after-backup")
+    except BaseException as e:  # noqa: BLE001
+        _drain(home, False)
+        rec.update(status="backup_failed", error=_why(e)[:500], finished_at=_now())
+        log("backup failed; nothing changed")
+        raise Fail("update_refused", f"backup failed ({_why(e)}); nothing changed", receipt=str(rp)) from None
+
+    def swap_to(commit: str, label: str) -> None:
+        if cur["branch"]:
+            _git(repo, "checkout", "-q", "-f", "-B", cur["branch"], commit)
+        else:
+            _git(repo, "checkout", "-q", "-f", "--detach", commit)
+        log(f"code: {label} {commit[:10]}" + (f" (branch {cur['branch']})" if cur["branch"] else " (detached)"))
+        rec.setdefault("deps", []).append(install_deps(inst, rec["events"]))
+        _save_receipt(rp, rec)
+        if (repo / "hermes_cli" / "post_update.py").is_file():
+            p = _run([inst["python"], "-m", "hermes_cli.post_update", "--scope", "home"], cwd=repo,
+                     env=_hermes_env_full(home), timeout=900, check=False)
+            log(f"hermes post-update maintenance exit {p.returncode}")
+        _run([inst["python"], "-c", "import hermes_cli.main, gateway.run"], cwd="/", env=_hermes_env_full(home),
+             timeout=300)
+        log("import smoke ok")
+
+    failure = None
+    try:
+        rec["status"] = "updating"
+        swap_to(pin["commit"], f"moved to {pin['tag']}")
+        _fault("after-swap")
+        if os.environ.get("WIZARD_HERMES_UPDATE_FAULT") == "break-config":
+            with open(home / "config.yaml", "a", encoding="utf-8") as f:
+                f.write("\n: wizard-update-fault: [unclosed\n")
+            log("FAULT INJECTED: config.yaml made unreadable (acceptance test)")
+        _drain(home, False)
+        if gateway_was_up:
+            r = restart_gateway(home, url, ns.health_timeout)
+            rec["restart"] = r
+            log(f"gateway restart: exit {r['restart_exit']}, /health {'ok ' + str(r.get('version')) if r.get('ok') else 'not ok'}")
+            if not r.get("ok"):
+                raise RuntimeError(f"the gateway did not come back on {pin['tag']} within {ns.health_timeout} s")
+        checks = stable_checks(home, inst, pin, url, key, before, ns, gateway_was_up, pin["commit"], pin["tag"])
+        rec["checks"] = checks
+        log("checks: " + ", ".join(f"{c['check']} {'PASS' if c['ok'] else 'FAIL'}" for c in checks))
+        bad = [c["check"] for c in checks if not c["ok"]]
+        if bad:
+            raise RuntimeError("stable checks failed: " + ", ".join(bad))
+    except BaseException as e:  # noqa: BLE001 - Ctrl-C included: never leave a half-moved Hermes behind
+        failure = e
+    if failure is None:
+        rec.update(status="updated", finished_at=_now(), installed={"tag": pin["tag"], "commit": pin["commit"],
+                                                                     "version": _hermes_version_line(home)})
+        log(f"done: this Hermes runs {pin['tag']} ({pin['commit'][:10]})")
+        return {"ok": True, "updated": True, "from": {"head": cur["head"], "version": cur["version"]},
+                "to": rec["installed"], "checks": rec["checks"], "backup": rec["backup"]["path"], "receipt": str(rp)}
+
+    # 3. rollback
+    rec.update(status="rolling_back", error=_why(failure)[:800])
+    log(f"FAILED: {_why(failure)[:300]}; rolling back to {cur['head'][:10]}")
+    rb: dict = {}
+    try:
+        swap_to(cur["head"], "rolled back to")
+        rb["restored"] = restore_home(home, rdir / "backup", rec["backup"]["items"], before["history"])
+        log(f"files: {rb['restored'] or 'nothing had changed'}")
+        _drain(home, False)
+        if gateway_was_up:
+            rb["restart"] = restart_gateway(home, url, ns.health_timeout)
+            log(f"gateway restart: /health {'ok ' + str(rb['restart'].get('version')) if rb['restart'].get('ok') else 'not ok'}")
+        rb["checks"] = stable_checks(home, inst, pin, url, key, before, ns, gateway_was_up, cur["head"], None)
+        log("re-checks: " + ", ".join(f"{c['check']} {'PASS' if c['ok'] else 'FAIL'}" for c in rb["checks"]))
+        rb_ok = all(c["ok"] for c in rb["checks"])
+    except BaseException as e:  # noqa: BLE001
+        rb["error"] = _why(e)[:500]
+        rb_ok = False
+    rec.update(rollback=rb, status="rolled_back" if rb_ok else "rollback_failed", finished_at=_now())
+    log("rollback verified: the previous Hermes runs again with its history" if rb_ok else
+        f"ROLLBACK NOT VERIFIED: {rb.get('error') or 'a re-check failed'}; backup kept at {rdir / 'backup'}")
+    if isinstance(failure, KeyboardInterrupt):
+        raise failure
+    if rb_ok:
+        raise Fail("update_rolled_back", f"the update to {pin['tag']} failed ({_why(failure)[:200]}) and was rolled "
+                   f"back; this Hermes runs {cur['head'][:10]} again with its history", receipt=str(rp),
+                   checks=rec.get("checks"), rollback_checks=rb.get("checks"))
+    raise Fail("rollback_failed", f"the update to {pin['tag']} failed ({_why(failure)[:200]}) and the rollback did "
+               f"not verify ({rb.get('error') or 'a re-check failed'}); the backup is in {rdir / 'backup'}",
+               receipt=str(rp), rollback=rb)
+
+
+def update_lock():
+    import contextlib
+    import fcntl
+
+    @contextlib.contextmanager
+    def held():
+        osh = os_home()
+        osh.mkdir(parents=True, exist_ok=True)
+        fd = os.open(osh / ".hermes-update.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Fail("update_refused", "another `wizard hermes update` is running on this box") from None
+            yield
+        finally:
+            os.close(fd)
+    return held()
+
+
 def human(cmd: str, out: dict) -> str:
     if cmd == "doctor":
         lines = [f"{'PASS' if r['ok'] else 'FAIL'}  {r['check']}  {r['detail']}" for r in out["checks"]]
@@ -1252,6 +1998,20 @@ def human(cmd: str, out: dict) -> str:
         return "\n".join(lines)
     if cmd in ("link", "unlink"):
         return json.dumps(out, indent=2)
+    if cmd == "hermes-status":
+        cur, pin = out.get("current") or {}, out["stable"]
+        lines = [f"this Hermes:   {cur.get('version')}" + (f"  ({cur['head'][:10]})" if cur.get("head") else ""),
+                 f"Wizard stable: {pin['tag']}  ({pin['commit'][:10]}, release {pin['release']})",
+                 "matches stable" if out["matches_stable"] else (out.get("note") or out["next"])]
+        return "\n".join(lines)
+    if cmd == "hermes-update":
+        if out.get("dry_run"):
+            return json.dumps({k: out[k] for k in ("stable", "current", "order", "busy_now", "plan")}, indent=2)
+        if out.get("already_stable"):
+            return out["message"]
+        rows = [f"{'PASS' if c['ok'] else 'FAIL'}  {c['check']}" for c in out["checks"]]
+        return "\n".join([f"updated to {out['to']['tag']} ({out['to']['version']})", *rows,
+                          f"backup: {out['backup']}", f"receipt: {out['receipt']}"])
     if cmd == "apps":
         if not out["apps"]:
             return f"No apps installed ({out['registry']})."
@@ -1293,7 +2053,7 @@ def build_parser() -> Parser:
     common.add_argument("--timeout", type=float, default=S, help="seconds per HTTP request (default 120; env WIZARD_TIMEOUT)")
     p = Parser(prog="wizard", description="Use any installed Wizard app's MCP tools.", parents=[common])
     p.add_argument("--version", action="version", version=f"wizard {VERSION} ({MARKER})")
-    sub = p.add_subparsers(dest="cmd", metavar="{apps,tools,call,link,unlink,doctor}", parser_class=Parser)
+    sub = p.add_subparsers(dest="cmd", metavar="{apps,tools,call,link,unlink,doctor,hermes}", parser_class=Parser)
     apps = sub.add_parser("apps", help="installed apps", parents=[common])
     apps_sub = apps.add_subparsers(dest="apps_cmd", metavar="{list}", parser_class=Parser)
     apps_sub.add_parser("list", help="list installed apps from the registry", parents=[common])
@@ -1319,6 +2079,23 @@ def build_parser() -> Parser:
             x.add_argument("--gate", action="store_true", help="also run one weak-model gate request through Hermes")
             x.add_argument("--model", default=None)
             x.add_argument("--provider", default=None)
+    h = sub.add_parser("hermes", help="this box's own Hermes: compare with, or move it to, the Wizard stable release",
+                       parents=[common])
+    h_sub = h.add_subparsers(dest="hermes_cmd", metavar="{status,update}", parser_class=Parser)
+    for name, hlp in (("status", "the running Hermes next to the release Wizard stable pins"),
+                      ("update", "move this Hermes to the exact Wizard stable tag (backup, checks, rollback)")):
+        x = h_sub.add_parser(name, help=hlp, parents=[common])
+        x.add_argument("--hermes-home", default=None, help="the owner's Hermes home (default $HERMES_HOME or ~/.hermes)")
+        x.add_argument("--release", default=None, help="release version, file or URL to follow (default: the one "
+                       "releases/stable names; base URL from $WIZARD_RELEASE_BASE)")
+        x.add_argument("--gateway-url", default=None, help="Hermes API server (default from the Hermes .env, port 8642)")
+        if name == "update":
+            x.add_argument("--stable", action="store_true", help="required: move to the Wizard stable pin")
+            x.add_argument("--dry-run", action="store_true", help="check and print the plan; change nothing")
+            x.add_argument("--quiet-timeout", type=int, default=3600, help="seconds to wait for Hermes to be idle "
+                           "(default 3600)")
+            x.add_argument("--health-timeout", type=int, default=300, help="seconds for the gateway to come back")
+            x.add_argument("--no-chat", action="store_true", help="skip the chat round trip check (no model call)")
     return p
 
 
@@ -1353,12 +2130,18 @@ def main(argv: list[str] | None = None) -> int:
         elif ns.cmd == "unlink":
             with link_lock():
                 out, kind = cmd_unlink(ns), "unlink"
+        elif ns.cmd == "hermes" and getattr(ns, "hermes_cmd", None) == "status":
+            out, kind = cmd_hermes_status(ns), "hermes-status"
+        elif ns.cmd == "hermes" and getattr(ns, "hermes_cmd", None) == "update":
+            with update_lock():
+                out, kind = cmd_hermes_update(ns), "hermes-update"
         elif ns.cmd == "doctor":
             out, kind = cmd_doctor(ns), "doctor"
             print(json.dumps(out) if want_json else human(kind, out))
             return 0 if out["ok"] else 1
         else:
-            raise Fail("usage", "usage: wizard apps list | wizard tools <app>[.<tool>] | wizard call <app>.<tool> [ARGS]"
+            raise Fail("usage", "usage: wizard apps list | wizard tools <app>[.<tool>] | wizard call <app>.<tool> [ARGS] | "
+                       "wizard hermes status | wizard hermes update --stable"
                        "  (add --json for machine-readable output)")
     except Fail as e:
         if want_json:
