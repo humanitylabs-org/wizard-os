@@ -90,17 +90,18 @@ original.
 
 | Sign-in | Where it lives | How to reconnect it |
 |---|---|---|
-| Claude (subscription) | A Docker volume shared by the **Claude** app (`wizard-claude`) and the **Hermes Agent** app, mounted at `/claude` in both | Open the Claude app in Wizard, sign in again, then press Test |
-| ChatGPT / Codex | Hermes' own sign-in file, `~/runtipi/app-data/wizardapps/hermes-agent/data/auth.json`; the **ChatGPT** app (`wizard-chatgpt`) drives it | Open the ChatGPT app in Wizard and sign in again |
+| Claude (subscription) | Docker volume `wizard-ai-accounts-claude`, shared by the **Claude** app (`wizard-claude`) and the **Hermes Agent** app, mounted at `/claude` in both | Open the Claude app in Wizard, press Test (it renews), or sign in again |
+| ChatGPT / Codex | Hermes' own sign-in file, `~/runtipi/app-data/wizardapps/hermes-agent/data/auth.json`. The **ChatGPT** app (`wizard-chatgpt`) holds no token: it drives Hermes' dashboard sign-in (`http://hermes-agent:9119`) | Open the ChatGPT app in Wizard and sign in again |
 | Other model keys for Hermes | `~/runtipi/app-data/wizardapps/hermes-agent/data/.env` | Set the key through the connection app that owns it; don't hand-edit |
 | Tinfoil API key | The Tinfoil app's private volume (`/data/private` inside `wizard-tinfoil`); the key never leaves the app | Open Tinfoil, paste a new key, press Connect |
 | Cloudflare | The Cloudflare app's private volume (`/data/private` inside `wizard-cloudflare`) | Open Cloudflare and sign in again |
 | Connected accounts (Google etc.) | The Connected accounts app's data (`/data` inside `wizard-connectors`) | Open Connected accounts and reconnect the account |
-| App Manager API token | `~/.wizard-os/api-token` | Created by the App Manager; `wam doctor` checks it exists and is `0600` |
+| App Manager API token | `~/.wizard-os/api-token`, read by the user unit `wizard-app-manager-api.service` (`127.0.0.1:7790` only) | Created by the App Manager; `wam doctor` checks it exists and is `0600` |
+| App Manager's Runtipi operator login | `~/.wizard-os/runtipi-operator.json` (`owner@wizard.local`) | Created once by the App Manager; never edit the database |
 | Agent gateway token (`wizard` MCP) | `~/.wizard-os/mcp-token` | Created once by the App Manager; the shell and the agent share it |
 | Generated app secrets | `~/.wizard-os/secrets/<app-id>.json` | Created at install; reinstalling the app keeps them |
 | Runtipi's own database and queue passwords | `~/runtipi/.env` | Never change by hand |
-| Troubleshooter settings | `~/.local/share/wizard-troubleshooter/host.env` | `wam troubleshooter` rewrites it |
+| Troubleshooter settings and history | `~/.local/share/wizard-troubleshooter/host.env`, `~/.local/state/wizard-troubleshooter/` | `wam troubleshooter` rewrites the settings; keep the history |
 | Tailscale (the box's network identity) | Managed by the system `tailscaled` service | `sudo tailscale up`, open the link with **your** Tailscale account, then `wam links` |
 | GitHub (only boxes installed with `WIZARD_GITHUB=1`) | The owner's `gh` login | `gh auth login` as the owner |
 
@@ -112,7 +113,7 @@ Everything above still applies to the apps, with these differences:
 |---|---|---|
 | Hermes' model sign-ins | The existing Hermes home, usually `~/.hermes` (`auth.json`, `.env`), owned by whoever ran Hermes before | Sign in the way you always did with Hermes (`hermes` CLI), or through the ChatGPT app |
 | Claude (subscription) | The owner's own Claude Code folder (`~/.claude`, or `CLAUDE_CONFIG_DIR`). `wam alongside` points the Claude app at this same folder, so both use one sign-in | Sign in with the Claude app (or `claude` on the box), then run `wam alongside` |
-| Hermes dashboard password used by the ChatGPT app | `~/.wizard-os/secrets/host-dashboard.env` | `wam alongside` recreates the link |
+| Hermes dashboard password used by the ChatGPT app | `~/.wizard-os/secrets/host-dashboard.env`, served by `wizard-host-dashboard.service` | `wam alongside` recreates the link |
 | Wizard's record of the host Hermes | `~/.wizard-os/alongside.json` (no secrets) | `wam alongside` |
 
 ---
@@ -278,6 +279,10 @@ Restarting Hermes interrupts any reply in progress. Do it only when Hermes is re
   `~/.wizard-os/troubleshooter.json` records it). Its own built-in repair prompt is
   `wizard-troubleshooter/REPAIR_PROMPT.md`; [`tools/repair/REPAIR_PROMPT.md`](../tools/repair/REPAIR_PROMPT.md) is
   the off-box version for a helper's own Claude Code or Codex.
+- **Earlier draft.** [#95](https://github.com/humanitylabs-org/wizard-os/pull/95) (`CREDENTIALS.md`, `docs/REPAIR.md`)
+  is superseded by this page. Its review note still holds: `wam app list-backups` / `wam app restore` go straight to
+  `runtipi-cli`, which cannot reach Runtipi's queue on stock installs, so this kit gives no restore recipe. Restore
+  an app backup from the Runtipi dashboard (the app's Backups page) until `wam backup` lands.
 - **Not built yet:** `wizard report`, the single redacted diagnostics document in
   [`spec/LAUNCH_AUDITS_8_9.md`](../spec/LAUNCH_AUDITS_8_9.md). Until it lands, `wam doctor` plus the Troubleshooter
   status are the shareable diagnostics.
