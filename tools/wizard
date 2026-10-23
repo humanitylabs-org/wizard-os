@@ -1307,7 +1307,7 @@ def stable_pin(ns) -> dict:
         raise Fail("update_refused", f"release {doc.get('version') if isinstance(doc, dict) else '?'} ({src}) pins no "
                    "Hermes (`hermes` block missing; required from 0.3.23)")
     tag, commit = str(h.get("tag") or ""), str(h.get("commit") or "")
-    if not tag or NOT_FINAL_TAG.search(tag.lstrip("v")) or NOT_FINAL_TAG.search(tag):
+    if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
         raise Fail("update_refused", f"the pinned Hermes tag {tag!r} is not a final release tag")
     if not SHA40.fullmatch(commit):
         raise Fail("update_refused", f"the pinned Hermes commit {commit!r} is not a full 40-character commit")
@@ -1524,6 +1524,13 @@ def _epoch() -> str:   # the same instantiation epoch Hermes stamps on its drain
 def _drain(home: Path, on: bool) -> None:
     p = home / ".drain_request.json"
     if on:
+        if p.exists():
+            try:
+                owner = json.loads(p.read_text(encoding="utf-8")).get("principal")
+            except (OSError, ValueError, AttributeError):
+                owner = None
+            if owner != "wizard-hermes-update":
+                raise Fail("update_refused", "another operation owns the Hermes drain marker; left it alone")
         payload = {"action": "drain", "requested_at": _now().replace("Z", "+00:00"), "principal": "wizard-hermes-update",
                    "epoch": _epoch(), "suppress_notification": True}
         tmp = p.with_name(p.name + ".wizard-tmp")
@@ -1535,6 +1542,32 @@ def _drain(home: Path, on: bool) -> None:
                 p.unlink()
         except (OSError, ValueError):
             pass
+
+
+def wait_quiet(home: Path, gateway_was_up: bool, timeout: int, log) -> int:
+    import time as _t
+    t0, last = _t.monotonic(), -60.0
+    try:
+        while True:
+            reasons = busy_reasons(home)
+            if not reasons:
+                if gateway_was_up:
+                    _drain(home, True)
+                    _t.sleep(6)
+                    reasons = busy_reasons(home)
+                    if reasons:
+                        _drain(home, False)
+                if not reasons:
+                    return round(_t.monotonic() - t0)
+            if _t.monotonic() - t0 >= timeout:
+                raise Fail("not_quiet", f"Hermes stayed busy for {timeout} s; nothing changed", busy=reasons)
+            if _t.monotonic() - last > 60:
+                log("waiting for a quiet moment: " + "; ".join(reasons)[:300])
+                last = _t.monotonic()
+            _t.sleep(10)
+    except BaseException:
+        _drain(home, False)  # Interrupting the wait must not strand the box in drain mode.
+        raise
 
 
 def _tree_sha(path: Path) -> str | None:
@@ -1646,7 +1679,8 @@ def backup_home(home: Path, bdir: Path) -> dict:
             items[rel] = {"kind": "dir", "absent": True}
     for p in [bdir, *bdir.rglob("*")]:
         try:
-            os.chmod(p, 0o700 if p.is_dir() else 0o600)
+            if not p.is_symlink():  # Never chmod a linked live file outside the backup.
+                os.chmod(p, 0o700 if p.is_dir() else 0o600)
         except OSError:
             pass
     return items
@@ -1752,6 +1786,35 @@ def restart_gateway(home: Path, url: str, seconds: int, verb: str = "restart") -
     p = run_hermes(home, "gateway", verb, check=False, timeout=max(300, seconds))
     h = _wait_version(home, url, seconds)
     return {"restart_exit": p.returncode, "restart_tail": (p.stderr or p.stdout or "").strip()[-300:], **h}
+
+
+def _gateway_pid_alive(home: Path) -> bool:
+    path = home / "gateway_state.json"
+    if not path.exists():
+        return False
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        pid = state.get("pid")
+        if not pid:
+            return False
+        os.kill(int(pid), 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except (OSError, ValueError, TypeError, AttributeError):
+        return True  # Unknown is not permission to rewrite a possibly live writer's state.
+
+
+def stop_gateway(home: Path, url: str, seconds: int) -> None:
+    import time as _t
+    p = run_hermes(home, "gateway", "stop", check=False, timeout=max(300, seconds))
+    if p.returncode:
+        raise RuntimeError("gateway stop failed; refusing to change code or restore state")
+    until = _t.monotonic() + seconds
+    while _health(url).get("ok") or _gateway_pid_alive(home):
+        if _t.monotonic() >= until:
+            raise RuntimeError("gateway is still running; refusing to change code or restore state")
+        _t.sleep(1)
 
 
 def chat_check(url: str, key: str, timeout: float) -> dict:
@@ -1864,6 +1927,16 @@ def cmd_hermes_status(ns) -> dict:
     return out
 
 
+def prove_forward(repo: Path, current: str, pin: dict) -> str:
+    # Timestamps cannot prove ancestry: a newer-dated divergent commit can still be a downgrade.
+    if _git(repo, "rev-parse", "--is-shallow-repository", check=False) == "true":
+        _git(repo, "fetch", "--unshallow", "--no-tags", "origin", f"refs/tags/{pin['tag']}", timeout=900)
+    if _run(["git", "-C", repo, "merge-base", "--is-ancestor", current, pin["commit"]], check=False).returncode:
+        raise Fail("update_refused", f"{pin['tag']} is not proven newer than what this Hermes runs "
+                   f"({current[:10]}); Wizard OS never moves a Hermes backwards")
+    return "ancestry: the running commit is an ancestor of the pinned one"
+
+
 def cmd_hermes_update(ns) -> dict:
     import time as _t
     if not ns.stable:
@@ -1928,50 +2001,37 @@ def cmd_hermes_update(ns) -> dict:
         log("the fetched tag does not resolve to the pinned commit; nothing changed")
         raise Fail("update_refused", "the fetched tag does not resolve to the pinned commit; nothing changed",
                    receipt=str(rp))
-    if _run(["git", "-C", repo, "merge-base", "--is-ancestor", cur["head"], pin["commit"]], check=False).returncode:
-        older = True
-        if cur["shallow"]:   # a shallow installer clone can't prove ancestry; fall back to commit dates
-            d_cur = int(_git(repo, "log", "-1", "--format=%ct", cur["head"]) or 0)
-            d_new = int(_git(repo, "log", "-1", "--format=%ct", pin["commit"]) or 0)
-            older = d_new < d_cur
-            rec["order_proof"] = f"commit dates (shallow checkout): current {d_cur}, pinned {d_new}"
-        if older:
-            rec["status"] = "refused"
-            log(f"refused: {pin['tag']} is not newer than the running commit {cur['head'][:10]}; nothing changed")
-            raise Fail("update_refused", f"{pin['tag']} is not newer than what this Hermes runs ({cur['head'][:10]}); "
-                       "Wizard OS never moves a Hermes backwards", receipt=str(rp))
-    else:
-        rec["order_proof"] = "ancestry: the running commit is an ancestor of the pinned one"
+    try:
+        rec["order_proof"] = prove_forward(repo, cur["head"], pin)
+    except Fail:
+        rec["status"] = "refused"
+        log(f"refused: cannot prove {pin['tag']} descends from {cur['head'][:10]}; nothing changed")
+        raise
 
     gateway_was_up = bool(cur["gateway"].get("ok"))
-    before = {"history": history_stats(home), "cron": cron_jobs(home)}
-    before["cron"].pop("jobs", None)
-    rec["before"] = before
+    if not gateway_was_up and _gateway_pid_alive(home):
+        raise Fail("update_refused", "the gateway process exists but its health endpoint is unavailable; "
+                   "cannot safely supervise this update", receipt=str(rp))
     # 1. quiet moment, then hold it with Hermes's own drain marker
-    t0, last = _t.time(), 0.0
-    while True:
-        reasons = busy_reasons(home)
-        if not reasons:
-            if gateway_was_up:
-                _drain(home, True)
-                _t.sleep(6)
-                reasons = busy_reasons(home)
-                if reasons:
-                    _drain(home, False)
-            if not reasons:
-                break
-        if _t.time() - t0 >= ns.quiet_timeout:
-            _drain(home, False)
-            rec.update(status="not_quiet", busy=reasons)
-            log(f"no quiet moment within {ns.quiet_timeout} s ({'; '.join(reasons)[:300]}); nothing changed")
-            raise Fail("not_quiet", f"Hermes stayed busy for {ns.quiet_timeout} s ({'; '.join(reasons)[:200]}); "
-                       "nothing changed. Run it again later, or pass --quiet-timeout", busy=reasons, receipt=str(rp))
-        if _t.time() - last > 60:
-            log("waiting for a quiet moment: " + "; ".join(reasons)[:300])
-            last = _t.time()
-        _t.sleep(10)
-    log(f"quiet after {round(_t.time() - t0)} s" + ("; gateway draining" if gateway_was_up else "; gateway not running"))
     try:
+        elapsed = wait_quiet(home, gateway_was_up, ns.quiet_timeout, log)
+    except Fail as e:
+        rec.update(status=e.code, busy=e.detail.get("busy"))
+        e.detail["receipt"] = str(rp)
+        log(e.message)
+        raise
+    log(f"quiet after {elapsed} s" + ("; gateway draining" if gateway_was_up else "; gateway not running"))
+    try:
+        # Baseline after the idle wait, not before it: late-arriving history and jobs also belong to the owner.
+        if (_git(repo, "rev-parse", "HEAD") != cur["head"]
+                or _git(repo, "status", "--porcelain", "--untracked-files=no").strip()):
+            raise RuntimeError("Hermes checkout changed during the quiet wait; refusing to overwrite it")
+        before = {"history": history_stats(home), "cron": cron_jobs(home)}
+        if ((before["history"].get("present") and before["history"].get("integrity") != "ok")
+                or before["cron"].get("error")):
+            raise RuntimeError("history or cron is unreadable before the update")
+        before["cron"].pop("jobs", None)
+        rec["before"] = before
         # 2. backup
         items = backup_home(home, rdir / "backup")
         rec["backup"] = {"path": str(rdir / "backup"), "items": items,
@@ -2003,6 +2063,9 @@ def cmd_hermes_update(ns) -> dict:
     failure = None
     try:
         rec["status"] = "updating"
+        if gateway_was_up:
+            stop_gateway(home, url, ns.health_timeout)
+            log("gateway stopped and writer absence verified before changing code")
         swap_to(pin["commit"], f"moved to {pin['tag']}")
         _fault("after-swap")
         if os.environ.get("WIZARD_HERMES_UPDATE_FAULT") == "break-config":
@@ -2039,8 +2102,8 @@ def cmd_hermes_update(ns) -> dict:
     rb: dict = {}
     try:
         if gateway_was_up:
-            sp = run_hermes(home, "gateway", "stop", check=False, timeout=max(300, ns.health_timeout))
-            log(f"gateway stop exit {sp.returncode} (nothing may write while files are put back)")
+            stop_gateway(home, url, ns.health_timeout)
+            log("gateway stopped and writer absence verified before rollback")
         swap_to(cur["head"], "rolled back to")
         rb["restored"] = restore_home(home, rdir / "backup", rec["backup"]["items"], before["history"])
         log(f"files: {rb['restored'] or 'nothing had changed'}")
