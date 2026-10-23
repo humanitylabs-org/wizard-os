@@ -18,7 +18,7 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | `browser` | `browser` (headless Chromium) | no | |
 | `secrets` | `secret-drop` | no | One-time credential handoff |
 | `private-access` | Tailscale (native host integration) | no | Preinstalled by the installer; the owner joins their own tailnet. Cloudflare Tunnel + Access is the alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet an ordinary store app |
-| `notifications` | none yet | no | Spot exists; default to build |
+| `notifications` | `notifications` (ntfy, `oscarhenrycollins/notifications`) | no | Bell beside Chats search + phone push. Agents send one-way alerts with its `notify` tool; scheduled jobs with `deliver: notification` go here, falling back to their thread when the slot is empty ([scheduler](https://github.com/humanitylabs-org/wizard-agent-service/blob/main/docs/scheduler.md)). Chats stay for conversations |
 | `cloudflare-connection` | `wizard-cloudflare` (on demand) | no | Recommended in Setup; never installed by bootstrap |
 | `connected-accounts` | `wizard-connectors` (on demand) | no | Recommended in Setup; unavailable until a reviewed pullable release is indexed |
 | `microphone` | native shell (Android, Mac) | no | Through the native bridge, not a container |
