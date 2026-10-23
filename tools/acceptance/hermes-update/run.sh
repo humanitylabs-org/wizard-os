@@ -27,7 +27,7 @@ mkdir -p "$RUN/harness" "$LIMA_HOME"
 cp "$HERE"/{guest.py,fake_model.py,lima.yaml} "$SRC/tools/wizard" "$SRC/tools/tests/mcp_fixture.py" "$RUN/harness/"
 exec > >(tee -a "$RUN/run.log") 2>&1
 echo "run $STAMP vm $VM on $(hostname): $FROM_TAG ($FROM_COMMIT) -> $TO_TAG ($TO_COMMIT)"
-echo "wizard-os source $SRC at $(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo unknown)"
+echo "wizard-os source $SRC at $(git -C "$SRC" rev-parse HEAD 2>/dev/null || cat "$SRC/.candidate-sha" 2>/dev/null || echo unknown)"
 shasum -a 256 "$RUN/harness/wizard"
 python3 - "$RUN/harness/lima.yaml" "$WORK" <<'PY'
 import json, pathlib, sys
