@@ -57,6 +57,12 @@ class ParseTests(unittest.TestCase):
         self.assertIn(("GET", "/wizard/v1/bootstrap"), keys)
         self.assertEqual(cac.bootstrap_endpoints(SPEC)["runs"], "/wizard/hermes/v1/runs")
 
+    def test_thread_seen_manual_unread_contract(self):
+        self.assertIn('optional `unreadAt` are safe-integer epoch milliseconds no more than 24 hours ahead', SPEC)
+        self.assertIn('explicitly unread while `unreadAt > seenAt`', SPEC)
+        self.assertIn('greatest `seenAt` and `unreadAt` independently', SPEC)
+        self.assertIn('sidecar beside its schema-1 state', SPEC)
+
     def test_proposed_routes_are_pr7_only(self):
         proposed = {r["path"] for r in cac.parse_routes(SPEC) if r["cls"] == "proposed"}
         self.assertEqual(proposed, {"/wizard/v1/wizard-apps", "/wizard/v1/index/search", "/wizard/v1/index/tags", "/wizard/v1/index/apps/{owner}/{repo}"})
