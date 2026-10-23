@@ -68,7 +68,7 @@ agents/<id>/
 | `private` | none | `own` | none | confidential provider only (`tinfoil`, `local`), `fallback: false` |
 | `standard` | harness defaults | `shared-write` | owner's choice | any provider; fallback allowed |
 
-Apps column at install (#58): a standard agent's box starts ticked, a private agent's starts unticked.
+Apps column at install (#58, revised 23 Oct 2026): a new app starts on the main agent only; an app tagged `privacy: private` starts on private agents only. Every other box starts unticked.
 
 A preset sets the starting values; the owner adjusts any field afterwards. `preset` keeps the name it was created with.
 
@@ -117,7 +117,9 @@ A recording app (the Meeting Recorder, or any app that turns recordings into rec
 
 ## 5. Which agents can use an app (#58)
 
-Installing an app shows one tick box per agent: **"Which agents can use *App*?"** Standard agents start ticked, private agents start unticked. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
+Installing an app shows one tick box per agent: **"Which agents can use *App*?"** A new app starts ticked for the main agent only; every other agent starts unticked and the owner ticks it (James, 23 Oct 2026: "the user should have to enable things manually").
+
+**Optional private tag.** An app's `wizard.md` may say `privacy: private` (James, 23 Oct 2026: "Rather than each app needing to declare itself, let's just make an optional one that tags it as private"). Untagged apps are standard. A private app starts ticked for private agents only, never the main agent, and every new private agent gets it. Apps installed before the tag that provide `meeting-transcripts`, `meeting-recording` or `transcript-redaction` (Mizel, Airlock) count as private. `GET /wizard/v1/apps/<id>/agents` reports `privacy` and, for a private app, `needs_private_agent`. When no private agent exists, the install sheet says the app is meant to be privacy first and offers **Set up private agent** (the Agents app's New agent flow with Private chosen) or **Choose an agent** (this tick list); ticking a non-private agent is the owner's choice and the sheet says what it reveals. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
 
 Apps that produce work for an agent also show **"Sends its work to: [agent]"** (the app → agent binding). That decides where the app's output lands; it gives the app no right to run the agent or read its history.
 
