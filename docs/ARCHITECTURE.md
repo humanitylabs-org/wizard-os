@@ -68,6 +68,10 @@ A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 
 **Runtipi.** A thin fork (DECISIONS #32): upstream Runtipi plus a small backend patch (index-backed store, Wizard categories, and later permission-aware networking). Its own screens stay stock and serve as admin/break-glass. The image is a drop-in for `runtipi/runtipi`, so any box can go back to stock by changing one image tag. Fixes go upstream wherever possible.
 
+## Core path and launch evidence
+
+The [core agent path](CORE_AGENT_PATH.md) labels the existing person → shell → Agent Service → stock agent → reply path, distinguishes extensions without dropping their launch gates, and supplies the weekly evidence template for launch audit #132. The API specification below remains authoritative; the map is not an implementation or acceptance receipt.
+
 ## Contracts
 
 | Contract | Where | Owner |
