@@ -25,9 +25,9 @@ KEYS = R / 'keys'
 RIG = R / 'bin/rig'
 WAM_BRANCH = 'feature/wizard-backup-20261018'
 WAM_LINUX_SHA = '2ba5599c2d1b38ee2190f179225b12bc01a2868b'
-# Shipped 0.4.0 Macs run the release wam line (0696805f); the backup engine is ported onto it with managed admission.
+# Merge the current backup/API lifecycle into the managed Mac companion; retain its operation admission.
 MAC_WAM_BRANCH = 'integration/backup-launch-mac-v1'
-MAC_WAM_SHA = '75248544a64c17fc2894815b9cf8d793a98e6c6c'
+MAC_WAM_SHA = 'cd3d0593dbeb5ebb62585dc7c9ce825ebba36b25'
 WAM_REPO = 'https://github.com/humanitylabs-org/wizard-app-manager.git'
 SRC = 'l1-backup-src'
 DST = 'l1-backup-dst'

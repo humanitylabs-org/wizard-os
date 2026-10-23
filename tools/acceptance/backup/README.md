@@ -19,6 +19,14 @@ source pins, native contracts/build and actual VM gate must all succeed.
 `harness-manifest.json` binds staged bytes to the pushed branch/commit. Historical
 receipts from previous attempts must be preserved outside the active result paths.
 
+For a managed Mac engine integration, submit `rig/engine-suite.py --root <lane>
+--then-premerge` to the heavy worker. It validates both staged inventories, clones
+only the stopped lane-local `img-source-full`, runs the backup/restore/frontdoor
+selection and full Python suite in an isolated Linux venv, destroys its clone,
+then runs the existing premerge native/round-trip gate. The Linux environment is
+required for installer tests using Bash associative arrays; a macOS-only suite is
+not equivalent. Receipts/logs live under `evidence/engine-suite-<id>/`.
+
 ## Assertions exercised by the real VM gate
 
 1. Boot a private CoW Mac guest; install the pinned managed Mac engine/front door.

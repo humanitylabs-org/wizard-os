@@ -158,6 +158,21 @@ class HarnessContracts(unittest.TestCase):
                 with self.assertRaises(RuntimeError): fixture.seed(b,marker)
             self.assertFalse(marker.exists())
 
+    def test_engine_suite_source_verifier_rejects_tampering(self):
+        spec=importlib.util.spec_from_file_location('engine_suite',HERE/'engine-suite.py')
+        assert spec is not None and spec.loader is not None
+        suite=importlib.util.module_from_spec(spec); spec.loader.exec_module(suite)
+        import hashlib
+        with tempfile.TemporaryDirectory(dir=__import__('os').environ.get('TMPDIR')) as temp:
+            root=Path(temp)
+            source=root/'source.py'; source.write_text('fixture source\n')
+            row={'path':'source.py','sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'symlink':False}
+            for name in ('harness-manifest.json','source-manifest.json'):
+                (root/name).write_text(json.dumps({'files':[row]}))
+            suite.verify_inputs(root)
+            source.write_text('changed\n')
+            with self.assertRaisesRegex(RuntimeError,'source.py'): suite.verify_inputs(root)
+
     def test_embedded_stock_scripts_compile(self):
         import fixture, disturb
         for script in (fixture.STOCK_READ,fixture.STOCK_SEED,disturb.STOCK):
