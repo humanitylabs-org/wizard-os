@@ -113,7 +113,10 @@ def hermes(home, *args):
 
 def link_info(home):
     # Journal contains public config edits and hashes, not the gateway credential.
-    rec = json.loads((home / '.wizard-os/linked.json').read_text())
+    path = home / '.wizard-os/linked.json'
+    if not path.is_file():  # a rolled-back link leaves no journal
+        return {'linked': False, 'baseline': {'config.yaml': None, '.env': None}, 'plugin_ref': None}
+    rec = json.loads(path.read_text())
     require(Path(rec['hermes_home']) == home / '.hermes', 'link belongs to another Hermes home')
     ref = rec.get('plugin_ref')
     if not ref and rec.get('linked'):
@@ -134,7 +137,20 @@ def wizard(home, command, plugin_ref=None):
     if command == 'link':
         require(bool(re.fullmatch('[0-9a-f]{40}', plugin_ref or '')), 'missing pinned Wizard plugin ref')
         argv += ['--plugin-ref', plugin_ref]
-    out = json.loads(run(argv, env=owner_env(home), timeout=900).stdout)
+    p = run(argv, env=owner_env(home), timeout=900, check=False)
+    try:
+        out = json.loads(p.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        out = {}
+    if p.returncode != 0:
+        # Allowlisted summary of the CLI's own JSON failure: its code/stage, the hermes subcommand it names and
+        # whether it timed out. Never the message text, stderr or any value.
+        msg = str(out.get('error') or out.get('message') or '')
+        sub = re.search(r'`hermes ((?:[a-z][a-z-]* ?){1,3})', msg)
+        summary = {k: out.get(k) for k in ('code', 'stage') if isinstance(out.get(k), str) and re.fullmatch(r'[a-z_]{1,40}', out[k])}
+        summary.update(hermes=sub.group(1).strip() if sub else None, timed_out='Timeout' in msg or 'timed out' in msg,
+                       rolled_back='nothing was left changed' in msg)
+        raise CheckError('wizard %s exit %d %s' % (command, p.returncode, json.dumps(summary, sort_keys=True)))
     require(out.get('ok') is True and out.get('gateway_restarted') is True, 'Wizard link lifecycle failed')
     require(link_info(home)['linked'] == (command == 'link'), 'Wizard link state did not read back')
     return {k: out.get(k) for k in ('ok', 'linked', 'config_byte_identical', 'env_restored', 'gateway_restarted')}
@@ -185,6 +201,10 @@ def setup(home):
     report_path = home / STATE_DIR / 'setup.json'
     previous = json.loads(report_path.read_text()) if report_path.is_file() else {}
     info = link_info(home)
+    if not info['linked'] and re.fullmatch('[0-9a-f]{40}', previous.get('wizard_plugin_ref') or ''):
+        # An earlier setup failed during its relink (which rolls back cleanly): relink at the recorded pin first.
+        wizard(home, 'link', previous['wizard_plugin_ref'])
+        info = link_info(home)
     require(info['linked'], 'setup requires the existing Wizard link')
     # Wizard unlink replays the entire plugins.enabled list. Install owner plugins
     # while unlinked, then link afresh, otherwise unlink would remove owner enablement.
@@ -216,9 +236,16 @@ def setup(home):
             hermes(home, 'config', 'set', 'CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND', str(home / '.local/bin/claude'))
         report['plugin_ref'] = PLUGIN_REF
         report['setup_unlinked'] = hashes(home)
+    except Exception as e:  # noqa: BLE001 - keep the first failure visible even if the relink below fails too
+        report['setup_error'] = str(e)[:300] if isinstance(e, CheckError) else type(e).__name__
+        raise
     finally:
         if not link_info(home)['linked']:
-            wizard(home, 'link', info['plugin_ref'])
+            try:
+                wizard(home, 'link', info['plugin_ref'])
+            except CheckError as e:
+                save(report_path, report)
+                raise CheckError('%s; then relink: %s' % (report.get('setup_error', 'setup ok'), e)) from None
         report['after'] = hashes(home)
         report['left_linked'] = link_info(home)['linked']
         save(report_path, report)
