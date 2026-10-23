@@ -231,9 +231,9 @@ No body. A queued run is cancelled locally: `202` with the queued shape and `sta
 Per-account "last seen" state behind unread markers. A query string gives `400`. `GET` → `{"state":<state>|null}`. `PUT <state>` (JSON ≤ 256 KB) merges per thread, newest `updatedAt` winning, and returns the merged `{"state":<state>}`; a malformed state is `400 invalid_request`.
 ```json
 {"initializedAt":1791763200000,
- "threads":{"direct:chat-recent":{"updatedAt":"2026-10-12T00:00:00.000Z","previewFingerprint":"abc123","messageCount":2,"status":"completed","assistantActivityAt":"…","seenAt":1791763300000}}}
+ "threads":{"direct:chat-recent":{"updatedAt":"2026-10-12T00:00:00.000Z","previewFingerprint":"abc123","messageCount":2,"status":"completed","assistantActivityAt":"…","seenAt":1791763300000,"unreadAt":1791763400000}}}
 ```
-Thread keys match `[A-Za-z0-9._:-]{1,320}` (≤ 500 kept); `status` is one of `idle`, `submitting`, the run statuses.
+Thread keys match `[A-Za-z0-9._:-]{1,320}` (≤ 500 kept); `status` is one of `idle`, `submitting`, the run statuses. `seenAt` and optional `unreadAt` are non-negative epoch milliseconds. A thread is explicitly unread while `unreadAt > seenAt`; reading it writes a newer `seenAt`. Merges retain the greatest `seenAt` and `unreadAt` independently, so an older client cannot erase either marker and clients that do not understand `unreadAt` remain compatible.
 
 ### `GET|PUT /wizard/thread-dispositions`
 Per-account "later" (deferred) flags. A query string gives `400`. `GET` → `{"state":{…}}`. `PUT {"runtime":"direct","sessionId":"…","deferred":true}` (≤ 1 KB, same origin only) → `{"record":{…}}`. A new run in the thread clears its disposition.
