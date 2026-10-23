@@ -56,7 +56,8 @@ class Safety(unittest.TestCase):
         self.assertFalse((self.home / ".drain_request.json").exists())
 
     def test_stop_failure_is_not_writer_absence(self):
-        with patch.object(w, "run_hermes", return_value=SimpleNamespace(returncode=1)):
+        with patch.object(w, "run_hermes", return_value=SimpleNamespace(returncode=1)), \
+                patch.object(w, "_health", return_value={"ok": True}):
             with self.assertRaisesRegex(RuntimeError, "stop failed"):
                 w.stop_gateway(self.home, "http://fixture", 0)
 
@@ -68,9 +69,10 @@ class Safety(unittest.TestCase):
                 w.stop_gateway(self.home, "http://fixture", 0)
 
     def test_absent_gateway_allows_restoration(self):
-        with patch.object(w, "run_hermes", return_value=SimpleNamespace(returncode=0)), \
+        with patch.object(w, "run_hermes", side_effect=RuntimeError("broken dependency environment")) as run, \
                 patch.object(w, "_health", return_value={"ok": False}):
             w.stop_gateway(self.home, "http://fixture", 0)
+        run.assert_not_called()
 
     def test_unreadable_gateway_state_is_not_proof_of_absence(self):
         (self.home / "gateway_state.json").write_text("{broken")

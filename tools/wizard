@@ -1807,6 +1807,8 @@ def _gateway_pid_alive(home: Path) -> bool:
 
 def stop_gateway(home: Path, url: str, seconds: int) -> None:
     import time as _t
+    if not _health(url).get("ok") and not _gateway_pid_alive(home):
+        return  # After a failed dependency install the launcher may be broken; absence is sufficient.
     p = run_hermes(home, "gateway", "stop", check=False, timeout=max(300, seconds))
     if p.returncode:
         raise RuntimeError("gateway stop failed; refusing to change code or restore state")
