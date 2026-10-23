@@ -1,0 +1,22 @@
+[
+  {
+    "id": 3,
+    "session_id": "wizard_1792630948284_0c44cd94a770",
+    "role": "user",
+    "timestamp": 1792630948.7512639,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "HS-ECHO t1",
+    "shareable": false
+  },
+  {
+    "id": 4,
+    "session_id": "wizard_1792630948284_0c44cd94a770",
+    "role": "assistant",
+    "timestamp": 1792630948.9396455,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "ECHO t1",
+    "shareable": true
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "object": "hermes.run",
+  "run_id": "wizardq_43cc950639904f2c8830ef4adb538b63",
+  "status": "completed",
+  "updated_at": 1792630998.9808075,
+  "created_at": 1792630998.8565989,
+  "session_id": "wizard_1792630959812_33d0524776ee",
+  "model": "hs-fake",
+  "last_event": "run.completed",
+  "output": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false",
+  "usage": {
+    "input_tokens": 16545,
+    "output_tokens": 20,
+    "total_tokens": 16565,
+    "runtime": {
+      "provider": "custom",
+      "model": "hs-fake",
+      "route_source": "raw_request",
+      "requested": {
+        "provider": "custom",
+        "model": "hs-fake"
+      },
+      "model_lock": "confirmed"
+    }
+  },
+  "completed": true,
+  "partial": false,
+  "interrupted": false,
+  "runtime": {
+    "provider": "custom",
+    "model": "hs-fake",
+    "route_source": "raw_request",
+    "requested": {
+      "provider": "custom",
+      "model": "hs-fake"
+    },
+    "model_lock": "confirmed"
+  }
+}
