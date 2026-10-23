@@ -5,7 +5,7 @@ them, human or agent. Part 3 is the technical detail behind each recipe.
 
 Issue: [#93](https://github.com/humanitylabs-org/wizard-os/issues/93). The drill that tests this kit on a
 deliberately broken box is `tools/acceptance/repair/` (it lands with its first run, in
-[#97](https://github.com/humanitylabs-org/wizard-os/pull/97)).
+[#180](https://github.com/humanitylabs-org/wizard-os/pull/180)).
 
 Rules for everyone who uses this kit:
 
