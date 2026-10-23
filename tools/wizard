@@ -2133,8 +2133,11 @@ def main(argv: list[str] | None = None) -> int:
         elif ns.cmd == "hermes" and getattr(ns, "hermes_cmd", None) == "status":
             out, kind = cmd_hermes_status(ns), "hermes-status"
         elif ns.cmd == "hermes" and getattr(ns, "hermes_cmd", None) == "update":
-            with update_lock():
+            if getattr(ns, "dry_run", False):
                 out, kind = cmd_hermes_update(ns), "hermes-update"
+            else:
+                with update_lock():
+                    out, kind = cmd_hermes_update(ns), "hermes-update"
         elif ns.cmd == "doctor":
             out, kind = cmd_doctor(ns), "doctor"
             print(json.dumps(out) if want_json else human(kind, out))

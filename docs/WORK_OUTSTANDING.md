@@ -17,7 +17,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [x] **Pin in the snapshot** (21 Oct): `hermes` block required from 0.3.23, validated by `tools/check_release.py` offline and online (upstream tag commit, Docker Hub digest, `hermes-agent` app's `FROM`).
 - [ ] **Candidate test on Thales**: fresh VM per tag, record in `docs/acceptance/hermes-<tag>.md`.
 - [ ] **Weekly candidate post**: the Sunday release gate names the candidate and its blocker.
-- [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback.
+- [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback. Built on `feature/hermes-update-stable` (`wizard hermes status|update`, [WIZARD_CLI](../spec/WIZARD_CLI.md#updating-this-boxs-hermes-alongside-mode)); fresh-VM record [acceptance/hermes-update-stable.md](acceptance/hermes-update-stable.md); ticks when the PR merges.
 - [ ] **Fresh installs off `v2026.9.24`**: `hermes-agent` app moves to the first passing candidate with an image (review: app repo owner).
 
 ## Private model providers (Archimedes; DECISIONS #66, [PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))

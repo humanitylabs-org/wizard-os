@@ -74,6 +74,69 @@ It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only
 - the shell, and that the shell reaches this Hermes;
 - one live `wizard_apps` request through the gateway.
 
+## Updating this box's Hermes (alongside mode)
+
+```
+wizard hermes status [--release V|FILE|URL] [--json]
+wizard hermes update --stable [--dry-run] [--release V|FILE|URL] [--quiet-timeout S] [--health-timeout S] [--no-chat] [--json]
+```
+
+On an alongside box the owner installed Hermes, so Wizard OS does not move it on its own. These two commands carry out step 4 of [HERMES_STABLE](../docs/HERMES_STABLE.md) (DECISIONS #74). `status` compares the running Hermes with the release that Wizard stable pins. `update --stable` moves Hermes to exactly that release, and only when the owner runs it.
+
+**Which release.** The command reads the `hermes` block (`tag`, `commit`) of the release file that `releases/stable` names. Both files come from the same place `get.sh` uses: `$WIZARD_RELEASE_BASE`, which defaults to `wizard-app-manager/main/releases`. `--release` picks another version, a local file or a URL, which is how a candidate is tested before promotion. The command refuses to run in any of these cases:
+
+- the tag is not a final release, i.e. it is an `rc`, `canary`, `alpha`, `beta`, `dev`, `stable`, `latest` or `main` tag;
+- the commit is not a full 40-character hash;
+- upstream's tag does not resolve to the pinned commit.
+
+The last check guards against the trap PR #149 found: the published v0.21.6 image was built from `a28a5d03`, not from the tag's commit `818c13be`. The command installs by tag commit and records that commit in its receipt. It never runs `hermes update`, and it never follows `main` or `latest`.
+
+**What it updates.** It updates a Hermes that the stock installer put in place: a git checkout with a venv, such as `~/.hermes/hermes-agent` (`$WIZARD_HERMES_REPO` overrides the path). It leaves the install alone, exits 10 with `update_by_hand`, and names the target tag when any of these is true:
+
+- Hermes is not a git checkout;
+- the checkout has no venv;
+- `install-stamp.json` hands updates to another mechanism (for example `updateMechanism: external`).
+
+It also refuses, again with exit 10, when the checkout has local changes or when the target is not newer than the running commit. On a shallow installer clone it falls back to comparing commit dates. Wizard OS never moves a Hermes backwards.
+
+**Order of work.**
+
+1. **Quiet moment.** The command waits until no gateway run is active, no background delegation is running, no cron job is running or due within two minutes, and no kanban task is running. It reads these from Hermes's own state files. It then writes Hermes's own drain marker (`.drain_request.json`, principal `wizard-hermes-update`) so no new work starts. The wait is bounded by `--quiet-timeout` (default 3600 s). On timeout it exits 11 with `not_quiet` and lists what kept Hermes busy. Nothing has changed at that point.
+2. **Backup.** It copies the Hermes home into `$WIZARD_OS_HOME/hermes-update/<UTC stamp>/backup/` (directory mode 0700, files 0600):
+   - every SQLite database at the top of the home and in `cron/`, using SQLite's online-backup API, with each copy integrity-checked;
+   - `config.yaml`, `.env`, `auth.json`, `SOUL.md` and `cron/jobs.json`;
+   - `skills/` and `memories/`.
+3. **Install.** It fetches the tag, checks that the tag still resolves to the pinned commit, and checks out that commit (on the same branch, or detached). It then installs that commit's dependencies with `uv pip install -e .[all]`, falling back to `pip`. It does not use `uv sync`, because that removes packages the owner added. Finally it runs Hermes's own `hermes_cli.post_update --scope home` maintenance and an import smoke test.
+4. **Restart and check.** It removes the drain marker and runs `hermes gateway restart`, which is Hermes's own drain-aware restart. The stable checks then require all of the following:
+   - the checkout is the exact commit and carries the tag;
+   - `hermes --version` runs;
+   - `/health` answers, with the version that `hermes --version` names;
+   - a chat round trip through the API server succeeds (`--no-chat` skips this);
+   - `state.db` passes its integrity check and has at least as many sessions and messages as before, including five recent sessions sampled by id;
+   - every cron job is still in `jobs.json`, and `hermes cron list` runs.
+5. **Rollback.** If anything after the backup fails, including Ctrl-C, the command puts the old version back:
+   - it checks out the previous commit and reinstalls its dependencies;
+   - it restores every backed-up file whose content changed;
+   - it keeps `state.db` when it is intact and lost nothing, so conversations written since the backup survive; otherwise it restores `state.db` from the backup;
+   - it restarts the gateway and runs the same checks against the previous commit.
+
+   It then exits 12 with `update_rolled_back` and reports which checks failed. If the rollback itself cannot be verified, it exits 13 with `rollback_failed` and gives the backup path.
+
+**Dry run.** `--dry-run` runs every read-only check (pin, install, cleanliness, upstream tag, order, what is busy right now) and prints the plan. It writes nothing: no receipt, no lock file and no backup. The acceptance test proves this by hashing the Hermes home before and after.
+
+**Receipt.** Every real run writes `$WIZARD_OS_HOME/hermes-update/<UTC stamp>/receipt.json` (0600) as it goes. The receipt records:
+
+- the plan, the previous and target commits, and how their order was proven;
+- the busy reasons it waited on;
+- the backup items with their hashes;
+- each event with its time, the dependency route, the restart result and every check;
+- the rollback results, when there was one;
+- the final `status`: `updated`, `rolled_back`, `rollback_failed`, `not_quiet`, `refused` or `backup_failed`.
+
+Only one update can run per box (`$WIZARD_OS_HOME/.hermes-update.lock`).
+
+**Acceptance.** `tools/acceptance/hermes-update/run.sh` runs the test on Thales: a fresh Lima VM, stock Hermes from the official installer, `wizard link`, seeded sessions and a cron job. It then checks a dry run, a busy box, a forced failure with automatic rollback, and the real update. The record is [docs/acceptance/hermes-update-stable.md](../docs/acceptance/hermes-update-stable.md). `WIZARD_HERMES_UPDATE_FAULT` (`break-config`, `fail:after-backup`, `fail:after-swap`) exists only for that test.
+
 ## `--json` output
 
 With `--json`, stdout carries **exactly one JSON document**, and nothing goes to stderr. Without it, stdout gets readable text and errors go to stderr as `wizard: <message>`.
@@ -115,6 +178,10 @@ Failure always has `"ok": false` and a non-zero exit:
 | 7 | `unreachable`, `timeout`, `http_error`, `protocol_error` | Endpoint down, slow, non-2xx, or not speaking JSON-RPC |
 | 8 | `auth_missing`, `auth_failed` | No token configured, or the app answered 401/403 |
 | 9 | `tool_error` | The tool ran and reported failure (`isError`, or a JSON-RPC error on `tools/call`) |
+| 10 | `update_refused`, `update_by_hand` | `wizard hermes update`: the pin or the install is not safe to move (nothing changed) |
+| 11 | `not_quiet` | `wizard hermes update`: Hermes stayed busy for `--quiet-timeout` (nothing changed) |
+| 12 | `update_rolled_back` | `wizard hermes update`: the update failed and the previous Hermes runs again, verified |
+| 13 | `rollback_failed` | `wizard hermes update`: the update failed and the rollback did not verify; see the receipt and backup |
 
 Codes and exit numbers are stable. Adding a code or a detail field is not a breaking change.
 
