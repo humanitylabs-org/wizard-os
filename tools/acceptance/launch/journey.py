@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -99,7 +100,18 @@ def main():
         registry = json.loads((home / 'apps.json').read_text())
     wisdom = next(a for a in registry['apps'] if a['id'] == 'wisdom')
     endpoint = wisdom['mcp']['url'].removesuffix('/mcp')
-    state = request(endpoint + '/api/wisdom')
+    # A freshly installed app container may still be starting when wam returns;
+    # wait (bounded) for its first answer and record how long that took.
+    started = time.monotonic()
+    while True:
+        try:
+            state = request(endpoint + '/api/wisdom')
+            break
+        except (ConnectionError, urllib.error.URLError, TimeoutError) as error:
+            if time.monotonic() - started > 180:
+                raise AssertionError('Wisdom never answered after install') from error
+            time.sleep(3)
+    contact_result['wisdom_ready_seconds'] = round(time.monotonic() - started, 1)
     assert isinstance(state, dict)
     entries = state.get('entries', [])
     assert not any(e['id'] != ENTRY for e in entries), 'non-fixture content refused'
