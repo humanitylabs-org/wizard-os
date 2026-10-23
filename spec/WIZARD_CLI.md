@@ -105,21 +105,24 @@ It also refuses, again with exit 10, when the checkout has local changes or when
 2. **Backup.** It copies the Hermes home into `$WIZARD_OS_HOME/hermes-update/<UTC stamp>/backup/` (directory mode 0700, files 0600):
    - every SQLite database at the top of the home and in `cron/`, using SQLite's online-backup API, with each copy integrity-checked;
    - `config.yaml`, `.env`, `auth.json`, `SOUL.md` and `cron/jobs.json`;
-   - `skills/` and `memories/`.
+   - `skills/` and `memories/`;
+   - the `hermes` commands on PATH and the gateway's systemd user units, so a rollback can put them back as they were.
 3. **Install.** It fetches the tag, checks that the tag still resolves to the pinned commit, and checks out that commit (on the same branch, or detached). It then installs that commit's dependencies with `uv pip install -e .[all]`, falling back to `pip`. It does not use `uv sync`, because that removes packages the owner added. Finally it runs Hermes's own `hermes_cli.post_update --scope home` maintenance and an import smoke test.
 4. **Restart and check.** It removes the drain marker and runs `hermes gateway restart`, which is Hermes's own drain-aware restart. The stable checks then require all of the following:
    - the checkout is the exact commit and carries the tag;
    - `hermes --version` runs and prints no setup warning (a settings formatting error, "install out of sync", "source-update completion failed");
    - `config.yaml` parses with Hermes's own YAML. Hermes may keep running on its last good settings when the file is broken, so a gateway that answers is not proof that the owner's settings still apply;
-   - `/health` answers, with the version that `hermes --version` names;
+   - `/health` answers with the version that `hermes --version` names. The command waits for that version, not just for any answer;
    - a chat round trip through the API server succeeds (`--no-chat` skips this);
    - `state.db` passes its integrity check and has at least as many sessions and messages as before, including five recent sessions sampled by id;
    - every cron job is still in `jobs.json`, and `hermes cron list` runs.
 5. **Rollback.** If anything after the backup fails, including Ctrl-C, the command puts the old version back:
+   - it stops the gateway, so nothing writes while files are put back;
    - it checks out the previous commit and reinstalls its dependencies;
-   - it restores every backed-up file whose content changed;
-   - it keeps `state.db` when it is intact and lost nothing, so conversations written since the backup survive; otherwise it restores `state.db` from the backup;
-   - it restarts the gateway and runs the same checks against the previous commit.
+   - it restores every backed-up settings file and folder whose content changed;
+   - it puts back the `hermes` commands on PATH (`~/.local/bin/hermes`, `hermes-agent`, `hermes-acp`, `$HERMES_HOME/bin/hermes*`) and the gateway's systemd user units exactly as they were. From v0.21.6 on, Hermes re-mints its launchers for its own dependency manager, and the old code cannot run through them;
+   - it keeps each database when it is intact, so conversations, runs and tasks written since the backup survive. It restores a database from the backup only when that database fails its integrity check, or, for `state.db`, when it lost sessions or messages;
+   - it starts the gateway, waits until `/health` reports the previous version (an old process can keep answering for a while after a restart), and runs the same checks against the previous commit.
 
    It then exits 12 with `update_rolled_back` and reports which checks failed. If the rollback itself cannot be verified, it exits 13 with `rollback_failed` and gives the backup path.
 

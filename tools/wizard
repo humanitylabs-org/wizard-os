@@ -1549,6 +1549,62 @@ def _tree_sha(path: Path) -> str | None:
     return h.hexdigest()
 
 
+def command_paths(home: Path) -> list[Path]:
+    """Files outside the code checkout that an update can rewrite: the `hermes` commands on PATH (from v0.21.6 Hermes
+    re-mints them for its own dependency manager) and the gateway's systemd user units."""
+    import glob
+    pats = [str(Path.home() / ".local/bin" / n) for n in ("hermes", "hermes-agent", "hermes-acp")]
+    pats += [str(home / "bin" / "hermes*"), str(Path.home() / ".config/systemd/user/hermes*.service"),
+             str(Path.home() / ".config/systemd/user/hermes*.service.d/*.conf")]
+    out: list[Path] = []
+    for pat in pats:
+        out += [Path(m) for m in sorted(glob.glob(pat))] or ([Path(pat)] if "*" not in pat else [])
+    return out
+
+
+def snapshot_commands(home: Path, bdir: Path) -> dict:
+    import shutil
+    snap: dict = {}
+    for i, p in enumerate(command_paths(home)):
+        if p.is_symlink():
+            snap[str(p)] = {"link": os.readlink(p)}
+        elif p.is_file():
+            dst = bdir / "_commands" / f"{i}-{p.name}"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(p, dst)
+            snap[str(p)] = {"file": str(dst), "sha256": sha256_file(p)}
+        else:
+            snap[str(p)] = {"absent": True}
+    return snap
+
+
+def restore_commands(home: Path, snap: dict) -> dict:
+    import shutil
+    done: dict = {}
+    for path in sorted(set(snap) | {str(p) for p in command_paths(home)}):
+        p, it = Path(path), snap.get(path, {"absent": True})
+        same = ((it.get("link") is not None and p.is_symlink() and os.readlink(p) == it["link"])
+                or (it.get("file") and p.is_file() and not p.is_symlink() and sha256_file(p) == it["sha256"])
+                or (it.get("absent") and not (p.exists() or p.is_symlink())))
+        if same:
+            continue
+        if p.exists() or p.is_symlink():
+            if it.get("absent"):
+                os.replace(p, p.with_name(p.name + ".wizard-rolled-back"))
+                done[path] = "set aside (created by the update)"
+                continue
+            p.unlink()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if it.get("link") is not None:
+            os.symlink(it["link"], p)
+        else:
+            shutil.copy2(it["file"], p)
+        done[path] = "restored"
+    if any(".service" in k for k in done):
+        _run(["systemctl", "--user", "daemon-reload"], check=False, timeout=60)
+    return done
+
+
 def backup_home(home: Path, bdir: Path) -> dict:
     """Online-backup every SQLite DB at the top of the home and in cron/, copy config, secrets, cron, skills, memories."""
     import shutil
@@ -1597,21 +1653,30 @@ def backup_home(home: Path, bdir: Path) -> dict:
 
 
 def restore_home(home: Path, bdir: Path, items: dict, before_hist: dict) -> dict:
-    """Put back every backed-up file or folder whose content changed. state.db is kept when it is intact and lost
-    nothing (so nothing written since the backup is thrown away), and restored from the backup otherwise."""
+    """Put back every backed-up file or folder whose content changed. Databases are kept when intact (so nothing
+    written since the backup is thrown away) and restored from the backup only when damaged. Call with the gateway
+    stopped."""
     import shutil
     done: dict = {}
     for rel, it in items.items():
         cur = home / rel
         if it["kind"] == "sqlite":
+            # Databases keep everything written since the backup unless they are damaged (or, for the session
+            # history, lost rows): a changed hash alone is normal live use, not damage.
             if rel == "state.db":
                 now = history_stats(home, before_hist.get("sample") or [])
-                lost = (now.get("integrity") != "ok" or now.get("sessions", 0) < before_hist.get("sessions", 0)
-                        or now.get("messages", 0) < before_hist.get("messages", 0) or now.get("sample_missing"))
-                if not lost:
-                    done[rel] = "kept (intact, nothing lost)"
-                    continue
-            elif _tree_sha(cur) == it["sha256"]:
+                damaged = (now.get("integrity") != "ok" or now.get("sessions", 0) < before_hist.get("sessions", 0)
+                           or now.get("messages", 0) < before_hist.get("messages", 0) or now.get("sample_missing"))
+            else:
+                try:
+                    c = _ro_db(cur)
+                    damaged = c.execute("PRAGMA quick_check").fetchone()[0] != "ok"
+                    c.close()
+                except Exception:  # noqa: BLE001
+                    damaged = True
+            if not damaged:
+                if _tree_sha(cur) != it["sha256"]:
+                    done[rel] = "kept (intact; newer writes preserved)"
                 continue
             for side in ("-wal", "-shm"):
                 Path(str(cur) + side).unlink(missing_ok=True)
@@ -1667,9 +1732,25 @@ def _wait_health(url: str, seconds: int, want_change_from: int | None = None) ->
     return last
 
 
-def restart_gateway(home: Path, url: str, seconds: int) -> dict:
-    p = run_hermes(home, "gateway", "restart", check=False, timeout=max(300, seconds))
-    h = _wait_health(url, seconds)
+def _wait_version(home: Path, url: str, seconds: int) -> dict:
+    """Wait until /health answers with the version the code on disk reports (an old process can keep answering
+    for a while after a restart was requested)."""
+    import time as _t
+    t0, vline, h = _t.time(), _hermes_version_line(home), {}
+    while _t.time() - t0 < seconds:
+        h = _health(url)
+        if h.get("ok") and h.get("version") and str(h["version"]) in vline:
+            break
+        _t.sleep(3)
+    h = dict(h)
+    h["ok"] = bool(h.get("ok") and h.get("version") and str(h["version"]) in vline)
+    h.update(after_s=round(_t.time() - t0), want=vline)
+    return h
+
+
+def restart_gateway(home: Path, url: str, seconds: int, verb: str = "restart") -> dict:
+    p = run_hermes(home, "gateway", verb, check=False, timeout=max(300, seconds))
+    h = _wait_version(home, url, seconds)
     return {"restart_exit": p.returncode, "restart_tail": (p.stderr or p.stdout or "").strip()[-300:], **h}
 
 
@@ -1737,7 +1818,8 @@ def stable_checks(home: Path, inst: dict, pin: dict, url: str, key: str, before:
     cj = cron_jobs(home)
     lst = run_hermes(home, "cron", "list", check=False, timeout=120)
     row("cron list intact", set(before["cron"]["ids"]) <= set(cj["ids"]) and lst.returncode == 0,
-        {"jobs_before": before["cron"]["ids"], "jobs_now": cj["ids"], "hermes_cron_list_exit": lst.returncode})
+        {"jobs_before": before["cron"]["ids"], "jobs_now": cj["ids"], "hermes_cron_list_exit": lst.returncode,
+         "error": (lst.stderr or "").strip().splitlines()[-2:] if lst.returncode else None})
     return rows
 
 
@@ -1892,7 +1974,8 @@ def cmd_hermes_update(ns) -> dict:
     try:
         # 2. backup
         items = backup_home(home, rdir / "backup")
-        rec["backup"] = {"path": str(rdir / "backup"), "items": items}
+        rec["backup"] = {"path": str(rdir / "backup"), "items": items,
+                         "commands": snapshot_commands(home, rdir / "backup")}
         log(f"backup: {len(items)} items in {rdir / 'backup'}")
         _fault("after-backup")
     except BaseException as e:  # noqa: BLE001
@@ -1942,6 +2025,8 @@ def cmd_hermes_update(ns) -> dict:
     except BaseException as e:  # noqa: BLE001 - Ctrl-C included: never leave a half-moved Hermes behind
         failure = e
     if failure is None:
+        rec["commands_after"] = {k: (v.get("link") or v.get("sha256") or "absent") for k, v in
+                                 snapshot_commands(home, rdir / "after").items()}
         rec.update(status="updated", finished_at=_now(), installed={"tag": pin["tag"], "commit": pin["commit"],
                                                                      "version": _hermes_version_line(home)})
         log(f"done: this Hermes runs {pin['tag']} ({pin['commit'][:10]})")
@@ -1953,12 +2038,17 @@ def cmd_hermes_update(ns) -> dict:
     log(f"FAILED: {_why(failure)[:300]}; rolling back to {cur['head'][:10]}")
     rb: dict = {}
     try:
+        if gateway_was_up:
+            sp = run_hermes(home, "gateway", "stop", check=False, timeout=max(300, ns.health_timeout))
+            log(f"gateway stop exit {sp.returncode} (nothing may write while files are put back)")
         swap_to(cur["head"], "rolled back to")
         rb["restored"] = restore_home(home, rdir / "backup", rec["backup"]["items"], before["history"])
         log(f"files: {rb['restored'] or 'nothing had changed'}")
+        rb["commands"] = restore_commands(home, rec["backup"]["commands"])
+        log(f"commands and service units: {rb['commands'] or 'unchanged'}")
         _drain(home, False)
         if gateway_was_up:
-            rb["restart"] = restart_gateway(home, url, ns.health_timeout)
+            rb["restart"] = restart_gateway(home, url, ns.health_timeout, verb="start")
             log(f"gateway restart: /health {'ok ' + str(rb['restart'].get('version')) if rb['restart'].get('ok') else 'not ok'}")
         rb["checks"] = stable_checks(home, inst, pin, url, key, before, ns, gateway_was_up, cur["head"], None)
         log("re-checks: " + ", ".join(f"{c['check']} {'PASS' if c['ok'] else 'FAIL'}" for c in rb["checks"]))
