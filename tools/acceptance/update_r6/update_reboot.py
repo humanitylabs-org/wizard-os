@@ -12,8 +12,12 @@ Usage:
       public installer (`os.sh | WIZARD_RELEASE=TO bash -s start`) as the owner, bounded wait, read back.
   update_reboot.py dry-run ...   Print the plan for q2/q3 without touching any VM.
 
-Env: WAM_CANDIDATE_TGZ (optional) = tarball of a wizard-app-manager `wam/` package; its doctor and
-install_state are run read-only against a COPY of the box's state (never the live files) to prove the fix.
+Env: WAM_CANDIDATE_TGZ (optional) = tarball containing a wizard-app-manager `wam/` package; its
+install_state/status/retry are run against a COPY of the box's state (retry runner stubbed).
+WAM_CANDIDATE_APPLY=1 additionally requires get.sh in that archive and executes the candidate CLI and
+bootstrap during q2, from a separate cache directory in the newly-created disposable VM only. Installed
+release files remain stock. Candidate acceptance requires interruption reporting, a retry that starts,
+a verified successful final receipt, and a passing final doctor; it does not accept a failed install's version.
 Never touches a VM whose name does not start with `l4-`. No host credentials, no model calls.
 """
 import datetime, json, os, shlex, subprocess, sys, time, traceback
@@ -34,9 +38,12 @@ OS_SH = 'https://aiwizards.com/os.sh'
 IMAGE_SHA = 'cafa1a965b591b7c4184b484ffd8e625981a79d48f9b4ae8a4adf7b4c5ade927'
 IMAGE_URL = 'https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubuntu-24.04-server-cloudimg-arm64.img'
 CAND = os.environ.get('WAM_CANDIDATE_TGZ', '')
+APPLY_CANDIDATE = os.environ.get('WAM_CANDIDATE_APPLY') == '1'
+assert not APPLY_CANDIDATE or CAND, 'candidate application requires WAM_CANDIDATE_TGZ'
 os.environ.update(LIMA_HOME=lima, PATH='/opt/homebrew/bin:/usr/local/bin:' + os.environ.get('PATH', ''))
 receipt = {'mode': mode, 'vm': vm, 'LIMA_HOME': lima, 'from': FROM if mode == 'q2' else None, 'to': TO,
-           'candidate': CAND or None, 'started': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+           'candidate': CAND or None, 'candidate_applied': APPLY_CANDIDATE,
+           'started': datetime.datetime.now(datetime.timezone.utc).isoformat(),
            'steps': [], 'observations': {}}
 PLAN = []
 
@@ -67,8 +74,37 @@ def guest(name, cmd, timeout=300, required=True):
 
 
 def owner(name, cmd, timeout=300, required=True):
-    inner = 'export PATH=$HOME/.local/bin:$PATH; ' + cmd
-    return guest(name, 'sudo -iu wizard bash -lc ' + shlex.quote(inner), timeout, required)
+    # sudo -i re-quotes its command through the login shell, expanding $p before the
+    # inner bash assigns it. Use a single command shell as the owner instead.
+    inner = 'export PATH=$HOME/.local/bin:$PATH; '
+    inner += 'export XDG_RUNTIME_DIR=/run/user/$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus; '
+    if APPLY_CANDIDATE:
+        inner += ('export PATH=$HOME/.cache/wam-update-candidate/bin:$PATH; '
+                  'export WIZARD_GET_SH_URL=file://$HOME/.cache/wam-update-candidate/src/get.sh; '
+                  'export WIZARD_TAILSCALE_WAIT=1; ')
+    return guest(name, 'sudo -u wizard -H bash -c ' + shlex.quote(inner + cmd), timeout, required)
+
+
+def activate_candidate():
+    """Opt-in execution of the candidate in this disposable VM only; installed release files stay stock."""
+    if not APPLY_CANDIDATE:
+        return
+    run('candidate-activation-copy', ['limactl', 'copy', CAND, f'{vm}:/tmp/wam-update-candidate.tgz'], 120)
+    guest('candidate-activation-owner',
+          'sudo install -o wizard -m 600 /tmp/wam-update-candidate.tgz /home/wizard/wam-update-candidate.tgz', 60)
+    runner = ('import sys\nfrom pathlib import Path\nfrom wam import updates, cli\n'
+              'updates.INSTALLER = (Path(__file__).parent / "get.sh").as_uri()\n'
+              'sys.exit(cli.main())\n')
+    wrapper = ('#!/bin/bash\nexport WIZARD_RELEASE_PINS="${WIZARD_RELEASE_PINS-$HOME/.wizard-os/release-pins.json}"\n'
+               'cd "$HOME/.cache/wam-update-candidate/src" || exit 1\n'
+               'exec /usr/bin/python3 runner.py "$@"\n')
+    owner('candidate-activate',
+          'set -e; d=$HOME/.cache/wam-update-candidate; mkdir -p "$d/src" "$d/bin"; '
+          'tar -xzf "$HOME/wam-update-candidate.tgz" -C "$d/src"; '
+          'printf %s ' + shlex.quote(runner) + ' > "$d/src/runner.py"; '
+          'printf %s ' + shlex.quote(wrapper) + ' > "$d/bin/wam"; chmod 700 "$d/bin/wam"; '
+          'test -f "$d/src/get.sh"; sha256sum "$HOME/wam-update-candidate.tgz"; '
+          'command -v wam; wam updates', 180)
 
 
 def out(name):
@@ -90,7 +126,7 @@ def observe(key, value):
     receipt['observations'][key] = value; save()
 
 
-RAW = ('for f in install-status.json release.json updates.json install-outcome.json; do '
+RAW = ('for f in install-status.json release.json release-pins.json updates.json install-outcome.json; do '
        'p=$HOME/.wizard-os/$f; [ -f "$p" ] && { echo "FILE $f"; cat "$p"; echo; }; done; '
        'ls -la $HOME/.wizard-os/install.lock $HOME/.wizard-os/install.start.lock 2>&1; '
        'echo BOOT_ID $(cat /proc/sys/kernel/random/boot_id); grep ^btime /proc/stat; '
@@ -114,19 +150,19 @@ def candidate(name):
         return None
     if not dry:
         run(name + '-copy', ['limactl', 'copy', CAND, f'{vm}:/tmp/wam-candidate.tgz'], 120, required=False)
-    py = ('import json, sys; from pathlib import Path; d = Path.home() / ".cache/wam-candidate"; '
+    py = ('import json, sys, subprocess; from pathlib import Path; d = Path.home() / ".cache/wam-candidate"; '
           'sys.path.insert(0, str(d / "src")); from wam import updates; h = d / "home"; '
-          'print(json.dumps({"install_state": updates.install_state(h), "status_after": '
-          'json.loads((h / "install-status.json").read_text()) if (h / "install-status.json").exists() else None, '
-          '"lock_left": (h / "install.lock").exists()}))')
+          'retry = updates.apply(h, runner=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, "", "")); '
+          'print(json.dumps({"install_state": updates.install_state(h), "updates": updates.status(h), "retry": retry, '
+          '"status_after": json.loads((h / "install-status.json").read_text()) '
+          'if (h / "install-status.json").exists() else None, "lock_left": (h / "install.lock").exists()}))')
     cmd = ('d=$HOME/.cache/wam-candidate; rm -rf "$d" && mkdir -p "$d/src" "$d/home" && '
            'tar -xzf ~/wam-candidate.tgz -C "$d/src" && '
-           'for f in install-status.json install.lock install.start.lock; do '
-           '[ -e $HOME/.wizard-os/$f ] && cp -p $HOME/.wizard-os/$f "$d/home/"; done; '
-           'PY=$(head -1 "$(readlink -f $HOME/.local/bin/wam)" | sed "s/^#!//"); '
-           '$PY -c ' + shlex.quote(py))
+           'for f in install-status.json install.lock install.start.lock release.json release-pins.json updates.json; do '
+           '[ ! -e $HOME/.wizard-os/$f ] || cp -p $HOME/.wizard-os/$f "$d/home/"; done; '
+           '/usr/bin/python3 -c ' + shlex.quote(py))
     guest(name, 'sudo install -o wizard -m 600 /tmp/wam-candidate.tgz /home/wizard/wam-candidate.tgz && '
-          'sudo -iu wizard bash -lc ' + shlex.quote(cmd), 180, False)
+          'sudo -u wizard -H bash -c ' + shlex.quote(cmd), 180, False)
     return as_json(name)
 
 
@@ -197,23 +233,37 @@ def q2():
     install(FROM)
     owner('channel-latest', 'wam updates --channel latest', 120)       # TO is a latest-channel release
     owner('doctor-before', 'wam doctor', 300, required=False)
+    activate_candidate()
     owner('update-apply', 'wam updates --apply', 900, required=False)
     a = as_json('update-apply')
     observe('apply_started', (a or {}).get('started'))
     if not dry and not (a or {}).get('started'):
         raise RuntimeError(f'the update did not start: {a}')
-    # Cut it short once the runner is past "starting" (bounded), so the reboot lands mid-update.
-    owner('mid-update-wait', 'for i in $(seq 1 60); do s=$(python3 -c "import json;d=json.load(open('
-          '\'$HOME/.wizard-os/install-status.json\'));print(d.get(\'state\'),\'|\',d.get(\'step\'))"); echo "$i $s"; '
-          'case "$s" in running*starting*) ;; running*) sleep 20; exit 0 ;; esac; sleep 5; done; exit 3', 420, False)
-    raw('status-before-cut')
+    # Cut only a proved active target, never a timed-out wait or an already-completed update.
+    mid = ('import json,time\nfrom pathlib import Path\nh=Path.home()/".wizard-os"\n'
+           'for i in range(120):\n'
+           ' try:\n'
+           '  s=json.loads((h/"install-status.json").read_text())\n'
+           '  p=json.loads((h/"release-pins.json").read_text())\n'
+           ' except (OSError,ValueError):\n'
+           '  time.sleep(0.5); continue\n'
+           ' print(i,s.get("state"),s.get("step"),flush=True)\n'
+           ' if s.get("state") in ("running","needs_owner") and s.get("step") != "starting" '
+           'and p.get("version") == ' + repr(TO) + ':\n'
+           '  time.sleep(5); raise SystemExit(0)\n'
+           ' time.sleep(0.5)\nraise SystemExit(3)\n')
+    owner('mid-update-wait', 'python3 -c ' + shlex.quote(mid), 90)
+    before_cut = raw('status-before-cut')
+    if not dry and (not before_cut or before_cut.get('state') not in ('running', 'needs_owner')):
+        raise RuntimeError('no active installer at the cut point')
     hard_reboot('cut')
     observe('raw_after_reboot', raw('raw-after-reboot'))             # before any wam call can heal it
     observe('candidate_after_reboot', candidate('candidate-after-reboot'))
     owner('installer-status-after-reboot', f'curl -fsSL {OS_SH} | bash -s status', 120, required=False)
     owner('doctor-after-reboot', 'wam doctor', 300, required=False)
+    doctor_caught = 'FAIL  Wizard OS update completed' in out('doctor-after-reboot')
     observe('doctor_after_reboot', {'exit': receipt['steps'][-1]['exit'] if not dry else None,
-                                    'mentions_update': 'update' in out('doctor-after-reboot').lower()})
+                                    'mentions_update': doctor_caught})
     s = updates_state('updates-after-reboot')
     observe('updates_after_reboot', s)
     observe('raw_after_wam_updates', raw('raw-after-wam-updates'))
@@ -225,8 +275,21 @@ def q2():
     ok = wait_for('recovery-wait', TO, 2700)
     observe('recovered_to', ok)
     owner('installer-status-final', f'curl -fsSL {OS_SH} | bash -s status', 120, required=False)
-    owner('doctor-final', 'wam doctor', 300, required=False)
-    raw('raw-final')
+    final_doctor = owner('doctor-final', 'wam doctor', 300, required=False)
+    final_status = raw('raw-final')
+    verify = ('import json\nfrom pathlib import Path\nh=Path.home()/".wizard-os"\n'
+              'r=json.loads((h/"release.json").read_text())\n'
+              's=json.loads((h/"install-status.json").read_text())\n'
+              'print(json.dumps({"receipt":r,"installer":s}))\n'
+              'assert r.get("release") == ' + repr(TO) + ' and r.get("status") in ("pinned","drift")\n'
+              'assert s.get("state") == "done"\n')
+    final_readback = owner('verified-final-receipt', 'python3 -c ' + shlex.quote(verify), 120, False)
+    if APPLY_CANDIDATE:
+        recovered = as_json('update-reapply') or {}
+        ok = (ok and doctor_caught and bool(s) and s.get('interrupted') is True
+              and s.get('update_available') is True and s.get('unpinned') is False
+              and recovered.get('started') is True and final_readback == 0 and final_doctor == 0)
+    observe('candidate_acceptance_passed', ok if APPLY_CANDIDATE else None)
     return ok
 
 
