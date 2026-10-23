@@ -94,6 +94,18 @@ Everything an app must keep lives under `${APP_DATA_DIR}`, so the App Manager's 
 
 A share is the one way two apps see the same files. The provider lists it under `shares` (a folder relative to its `${APP_DATA_DIR}/data`); the consumer lists it under `mounts`. Installing the consumer proposes a `share` grant on the install sheet ([PERMISSIONS.md](PERMISSIONS.md#share-grants)). While the grant exists the App Manager bind-mounts the folder into the consumer's main service at `path`; revoking it removes the mount on the next restart. The files stay in the provider's app-data, so the provider's backup holds them and uninstalling the consumer never deletes them. Use a share only when an official client must run on both sides (Claude's login); everything else goes through the provider's API.
 
+## Spoken names
+
+Optional `voice_names: ["example name", "another name"]` declares **spoken names that open this app**.
+It is a list of at most 8 nonblank strings, each at most 40 Unicode characters, without control characters.
+Omitting it (or using an empty list) adds no alternative names; the app's display name still works.
+Names are case-insensitive and spacing-insensitive in the shell. They are launch names, not voice-input
+commands or an agent/model selection. Keep them short and app-specific, not an owner's topics or agents.
+The App Manager validates and copies the list unchanged to `apps.json`; the Agent Service carries it
+through to the shell. Shell-owned navigation words take precedence, then exact display names, then
+these declared alternatives (first app in registry order for duplicate alternatives). No installable
+app names belong in the shell's alias table.
+
 ## Receives voice input
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
@@ -119,6 +131,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
 7. Every `needs` entry is from the known capability list.
+8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.

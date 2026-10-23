@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 23 Oct 2026 — James: apps own their spoken launch names
+
+| # | Decision | Status |
+|---|---|---|
+| 92 | **Apps declare the spoken names that open them in `wizard.md` (`voice_names`).** The App Manager validates and carries these into `apps.json`; every shell resolves them from installed metadata, alongside the app's own display name. Only shell-owned navigation words stay in the shell. Shared app code selects agents and models from installation settings, never a specific owner's setup. | Approved by James |
+
 ## 15 Oct 2026, re-landed 23 Oct — James: account connectors and private-data routing ([spec/CONNECTORS.md](../spec/CONNECTORS.md))
 
 | # | Decision | Status |
