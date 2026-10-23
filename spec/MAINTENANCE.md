@@ -12,13 +12,19 @@ All steps share one maintenance lease, one owner-visible history and one Health 
 | Step | Owner | State |
 |---|---|---|
 | OS security patches | `wam maintain` → `os_patch` | slice 1 (this spec) |
-| Backup on schedule, then verify the snapshot | `wam backup` (wizard-app-manager #61) | slice 2 |
-| Wizard OS, Hermes and app updates, on the owner's Ask me / Automatic choice | `wam updates`, `wam hermes update`, `wam app update` | slice 3 (moves their timers into this run) |
+| Backups: catch up a missed one, report whether the last one succeeded and was read back | `wam backup` (wizard-app-manager #61) keeps its own schedule and lock | slice 2 |
+| The owner's Automatic Wizard OS update (stable, promoted releases), only when quiet | `wam updates` (`apply_if_auto`) | slice 3: replaces the separate 03:30 timer |
+| Hermes and app updates | `wam hermes update`, `wam app update` | stay explicit for now |
 | Repair | Troubleshooter guardian (report-only until the owner turns repairs on) | unchanged |
 | Quiet restarts and reboots | not offered | gated, see [Restarts](#restarts) |
 
 The timer fires at 02:00 box-local time, with up to 45 minutes of random delay. That is after the 00:00 backup and
 before the 03:30 Wizard OS update window. A missed night runs at the next boot (`Persistent=true`).
+The maintenance timer is always on, even with OS patching `off`: it owns the nightly backup check and the Automatic
+update. Installing it retires `wizard-os-update.timer`, and `wam updates` never reinstalls that timer while it exists.
+A daily backup older than 26 hours (weekly: 7 days) is caught up with `wam backup run --scheduled`. Health shows
+**Backups**: `verified, Nh ago`, `backed up Nh ago` (not read back this week), `last run failed`, `last N days ago`
+(error after 50 hours), or `not set up`.
 
 ## OS security patches: any Linux, using its own updater
 
@@ -56,7 +62,7 @@ whatever the owner set.
 |---|---|
 | `check` (default) | Look every night and show pending fixes in Health. Changes nothing. |
 | `patch` | Also install pending security fixes, only once the box has been quiet for two checks in a row. Never restarts a service or reboots. |
-| `off` | No OS check. The timer is removed. |
+| `off` | No OS check. The nightly timer stays for backups and updates. |
 
 `patch` becomes the default only after the gates in [Restarts](#restarts) pass (James, 23 Oct 2026).
 
