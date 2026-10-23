@@ -68,7 +68,7 @@ agents/<id>/
 | `private` | none | `own` | none | confidential provider only (`tinfoil`, `local`), `fallback: false` |
 | `standard` | harness defaults | `shared-write` | owner's choice | any provider; fallback allowed |
 
-Apps column at install (#58): a standard agent's box starts ticked, a private agent's starts unticked.
+Apps column at install (#58): a standard agent's box starts ticked, a private agent's starts unticked, except the redaction app (below).
 
 A preset sets the starting values; the owner adjusts any field afterwards. `preset` keeps the name it was created with.
 
@@ -117,7 +117,7 @@ A recording app (the Meeting Recorder, or any app that turns recordings into rec
 
 ## 5. Which agents can use an app (#58)
 
-Installing an app shows one tick box per agent: **"Which agents can use *App*?"** Standard agents start ticked, private agents start unticked. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
+Installing an app shows one tick box per agent: **"Which agents can use *App*?"** Standard agents start ticked, private agents start unticked. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent. One exception (James, 23 Oct 2026): an app that provides the `transcript-redaction` slot (Airlock) is the private agent's only owner-gated route to a standard agent, so it starts ticked for every private agent, at creation and when installed later. Nothing crosses without the owner releasing it in that app. The owner can untick it and nothing re-adds it.
 
 Apps that produce work for an agent also show **"Sends its work to: [agent]"** (the app → agent binding). That decides where the app's output lands; it gives the app no right to run the agent or read its history.
 
