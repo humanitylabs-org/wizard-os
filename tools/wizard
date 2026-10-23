@@ -1806,7 +1806,7 @@ def cmd_hermes_update(ns) -> dict:
              f"back up {home}: every SQLite DB (online backup), config.yaml, .env, auth.json, SOUL.md, cron/, skills/, "
              "memories/",
              f"fetch tag {pin['tag']} and move {repo} from {cur['head'][:10]} to {pin['commit'][:10]}",
-             "install that commit's dependencies into the venv (uv sync --locked --extra all, as the installer does)",
+             "install that commit's dependencies into the venv (uv pip install -e .[all]; nothing the owner added is removed)",
              "restart the gateway (hermes gateway restart) and run the stable checks: exact commit, gateway up on the "
              "new code, a chat round trip, session history readable, cron jobs intact",
              f"on any failure: back to {cur['head'][:10]}, its dependencies and every changed file, restart, re-check"]
