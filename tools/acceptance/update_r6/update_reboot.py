@@ -287,6 +287,7 @@ def q2():
     if APPLY_CANDIDATE:
         recovered = as_json('update-reapply') or {}
         ok = (ok and doctor_caught and bool(s) and s.get('interrupted') is True
+              and s.get('installed') == FROM and s.get('latest') == TO
               and s.get('update_available') is True and s.get('unpinned') is False
               and recovered.get('started') is True and final_readback == 0 and final_doctor == 0)
     observe('candidate_acceptance_passed', ok if APPLY_CANDIDATE else None)
