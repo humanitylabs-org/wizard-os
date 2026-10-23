@@ -4,6 +4,10 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 **Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
 
+## Account connectors and privacy routing (direction approved 15 Oct, mechanism proposed; #85)
+
+Archimedes owns the [contract](../spec/CONNECTORS.md) and [YouTube Music + simulated-chat MVP / release checklist](CONNECTORS_MVP.md). Next: slice B (pure admission function + fixtures) and slice A (real Music account seam and uncached playback). The Account Manager / Google broker seam is for Jan to confirm; App Manager descriptor/network enforcement for Miguel/Oscar. Real credential use and private-chat activation keep their release gates. Not on the v1 critical path.
+
 ## Receives voice input (15 Oct, approved; #62)
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.

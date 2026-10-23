@@ -11,8 +11,8 @@ A box runs more than one agent. The first extra one is a **Private** agent: stoc
 | **Agent** | One running agent instance with its own folder, chats, memory and skills. Its id is the instance (`private`), not the harness. |
 | **Harness** | The agent program: `hermes` today; Pi, Claude Code later. (Not "engine".) |
 | **Model provider** | Where the model runs: `tinfoil`, `local`, or an AI Accounts provider (`anthropic`, `openai-codex`, ...). A provider is **confidential** when the model runs locally or inside an attested enclave (Tinfoil). |
-| **Permissions** | What the agent may use. Set by a **preset**, then adjusted: outside tools, files, Wizard apps, agent apps, other agents. |
-| **Wizard app** | An installed Wizard app (has a window; may also have MCP tools). Listed in `apps.json`. |
+| **Permissions** | What the agent may use. Set by a **preset**, then adjusted: outside tools, files, apps, agent apps, other agents. |
+| **App** | An installed app with a window (may also have MCP tools). Listed in `apps.json`. Owners never see the old name "Wizard app" (#84). |
 | **Agent app** | A tool or connector only an agent uses (MCP server, connector, skill pack). No window. |
 | **Outside tools** | Harness toolsets that send content off the box: web, search, browser, x_search, image_gen, video_gen, tts, vision, video, delegation, connections, homeassistant, spotify. |
 
@@ -56,7 +56,7 @@ agents/<id>/
 - `model.allowed_models`: the only models a run in this agent's threads may use. `fallback: false` means the harness has no fallback provider.
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
-- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (Wizard apps) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
+- `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (apps with a window; the field keeps its old name) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
 - `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
