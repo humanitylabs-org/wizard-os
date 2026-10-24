@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 24 Oct 2026 — Miguel: launch phase ships the latest release
+
+| # | Decision | Status |
+|---|---|---|
+| 93 | **Amends #82 for the launch phase: tested feature releases skip the soak too.** A release that adds functionality (`--classification feature`) may go to stable the same day once the upgrade test from the current stable passed; the promotion record still keeps the classification, reason and `upgrade_test` evidence, and the App Manager gate (`wam/updates.py`) accepts exactly the same records. Why: stable 0.3.32 shipped a shell 356 merges behind main to the first private-launch testers, with chat fixes (stale "Sent / Dismiss" bubble) already merged. Revert: set `FAST_TRACK_CLASSES = ("fix",)` in both gates. | Miguel, 24 Oct 2026, for the private launch; peer review and the 72h soak return once the foundation is stable. |
+
 ## 23 Oct 2026 — James: apps own their spoken launch names
 
 | # | Decision | Status |

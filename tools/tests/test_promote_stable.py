@@ -94,13 +94,22 @@ class Flow(unittest.TestCase):
                                              "notes": "rides along: channel picker (low risk)"})
         self.assertEqual(run(self.d, "check").returncode, 0)
 
-    def test_fast_track_refuses_features_missing_reasons_and_missing_tests(self):
+    def test_fast_track_accepts_a_tested_feature_release(self):
+        """DECISIONS #93: during launch a feature release with a passed upgrade test goes to stable the same day."""
+        run(self.d, "cut", "0.3.26")
+        p = run(self.d, "promote", "0.3.26", "--from", "0.3.25", "--evidence", "log",
+                "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z", "--fast-track",
+                "--classification", "feature", "--reason", "current main shell for launch")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual((self.d / "stable").read_text().strip(), "0.3.26")
+        self.assertEqual(run(self.d, "check").returncode, 0)
+
+    def test_fast_track_refuses_unknown_classes_missing_reasons_and_missing_tests(self):
         run(self.d, "cut", "0.3.26")
         base = ["promote", "0.3.26", "--from", "0.3.25", "--evidence", "log",
                 "--latest-since", "2026-10-21T12:00:00Z", "--now", "2026-10-22T03:00:00Z", "--fast-track"]
-        p = run(self.d, *base, "--classification", "feature", "--reason", "new thing")
-        self.assertEqual(p.returncode, 1)
-        self.assertIn("features, data-format changes and big UX changes soak 72h", p.stdout)
+        p = run(self.d, *base, "--classification", "other", "--reason", "new thing")
+        self.assertNotEqual(p.returncode, 0)
         p = run(self.d, *base, "--classification", "fix")
         self.assertEqual(p.returncode, 1)
         self.assertIn("fast_track needs a reason", p.stdout)
