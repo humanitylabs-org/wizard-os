@@ -196,7 +196,8 @@ def main():
         result={k:raw[k] for k in ('ok','partial','refused','not_restored')}
     elif mode=='refusal-baseline':
         for p in (paths(b)['app'],b.home/'secrets/files.json',b.home/'app-tokens/files'):
-            root_python('from pathlib import Path; import sys; p=Path(sys.argv[1]); p.parent.mkdir(parents=True,exist_ok=True); p.write_text("REFUSAL-TARGET-KEEP"); p.chmod(0o600)',p)
+            # Seed as root, but leave created files/parent dirs owned like the box home, as the Service would.
+            root_python("import os,sys; from pathlib import Path; p=Path(sys.argv[1]); home=Path(sys.argv[2]); st=home.stat(); missing=[d for d in reversed(p.parents) if not d.exists()]; p.parent.mkdir(parents=True,exist_ok=True); [os.chown(d,st.st_uid,st.st_gid) for d in missing]; existed=p.exists(); p.write_text('REFUSAL-TARGET-KEEP'); p.chmod(0o600); None if existed else os.chown(p,st.st_uid,st.st_gid)",p,b.home)
         result={'seeded_refusal_baseline':True}
     else: raise ValueError(mode)
     print(json.dumps(result,sort_keys=True))
