@@ -62,6 +62,8 @@ requires:
       optional: true
 ```
 
+- Models and services are required unless `optional: true`. Each may declare an optional `purpose`: one owner-facing line of at most 80 characters. An omitted purpose is returned as `null`.
+- Service `private_data` defaults to `false`. When `true`, only a provider whose installed registry entry has `private: true` can satisfy the service; neither owner approval nor an optional declaration bypasses this check. The registry marker, not a provider's self-report, is authoritative.
 - `swap` is `ask` (default: the owner may approve a replacement) or `never`.
 - `recommends.model` stays for discovery and must equal one of the `tested_on` values.
 - A `services` slot counts as a `uses:` entry; it need not be listed twice. `recommend` names the provider app to install when none is present.
@@ -107,6 +109,56 @@ ANY  /v1/services/<slot>/<path>      forwarded to the provider app holding that 
 ```
 
 The app shows the model that answered ("Answered by Sonnet 5"). Errors use the AI_CONNECTIONS codes (`signed_out`, `expired`, `limit`, `unreachable`, `provider_error`) plus `needs_owner` and `blocked`, always with `fix_url`.
+
+### Setup readiness (additive needs fields)
+
+`GET /v1/needs` and the trusted-shell-only `GET /v1/owner/needs/<app>` return the same needs for the installed app; the owner endpoint additionally lists model providers. Both include:
+
+- Each model and service: `required: bool` (the inverse of `optional: true`) and `purpose: str|null`.
+- Each service: `private_data: bool`, `recommend: str|null`, and `fix_url: str|null`. A non-private selected provider for a private-data service yields `status: blocked` with a clear `error` message, even while running. The same check applies at call admission, not only in the checklist.
+- Top-level `ready_to_open: bool`: true exactly when every **required** model and service has `status: ready`. An empty needs list is ready. Optional blocked needs remain visible but do not prevent opening. `agent_binding` is passed through unchanged and does not enter this calculation.
+
+The shell uses these fields for the shared install/open checklist. Batch transcription through the box's existing shared `TRANSCRIPTION_URL` is not a live-transcription need.
+
+### WebSocket service transport
+
+`GET /v1/services/<slot>/<path>` with `Upgrade: websocket` uses the same caller grant, declared-service check, pinned slot selection, privacy check and outgoing provider grant as HTTP. The router connects directly to the provider's API origin (TLS verified for HTTPS); it never follows redirects or environment proxies.
+
+Only these caller headers may be forwarded: `Sec-WebSocket-Key`, `Sec-WebSocket-Version`, `Sec-WebSocket-Protocol`, `Sec-WebSocket-Extensions`, `Upgrade`, `Connection`. The router supplies `Host` and its own `X-Wizard-Grant`; it drops caller `Origin`, `Cookie`, `Authorization`, identity and forwarding headers. A successful provider `101` relays the upgrade and negotiation headers, not provider cookies, then tunnels opaque bytes bidirectionally until either side closes. The router does not log audio or transcript bytes and does not interpret frames. The service must enforce its frame/protocol limits. A session closes after 120 seconds without bytes in either direction or four hours overall. Other HTTP requests continue concurrently. Rejected/non-101 upgrades return the normal JSON error shape (`type`, `code`, `message`, `fix_url`), never provider HTML or credentials.
+
+Inference APIs remain unavailable through service routes. A provider that also offers `ai-connection` may expose the live-transcription contract below through **only** slot `live-transcription`, path `/v1/live` (with optional query); this is not general access to that provider's `/api/infer` or other paths.
+
+### Live transcription (`wizard.live-transcription/1`)
+
+A provider declares `provides: [live-transcription]` (possibly alongside `ai-connection`) and serves `GET /v1/live` as a WebSocket on its API port. Only the Router may call it, using its outgoing grant. A consuming app declares:
+
+```yaml
+requires:
+  services:
+    - slot: live-transcription
+      recommend: wizard-tinfoil
+      private_data: true
+      purpose: Words appear as you speak
+```
+
+Apps connect only through `ws(s)://<router>/v1/services/live-transcription/v1/live`, with their normal `X-Wizard-Grant` header. Providers are replaceable; `recommend` is not a hardcoded runtime route.
+
+Client → provider:
+
+- First frame, text: `{"type":"start","format":"pcm_s16le","sample_rate":16000,"channels":1,"language":null}`.
+- Binary frames: raw PCM in that format, each at most 64 KiB.
+- Text `{"type":"commit"}`: finalise the current utterance (a pause).
+- Text `{"type":"stop"}`: finalise pending audio, send `closed`, then close.
+
+Provider → client (JSON text frames):
+
+- `{"type":"ready","provider":"<app id>","model":"<model id>"}` once audio can be accepted. Audio arriving before `ready` must be buffered, never dropped.
+- `{"type":"delta","text":"..."}`: provisional words for the current utterance.
+- `{"type":"final","text":"..."}`: finished words, one per commit with audio.
+- `{"type":"error","code":"signed_out|limit|unreachable|unsupported_format|provider_error","message":"..."}`: failure.
+- `{"type":"closed"}` followed by a normal WebSocket close.
+
+Providers never log audio or text. An unsupported format produces `error` with `code: unsupported_format`, then closes. The tunnel is transport only: these semantics are enforced by provider and consumer, not by the router.
 
 ## Provider app additions (`wizard.ai-connection/2`, additive)
 
