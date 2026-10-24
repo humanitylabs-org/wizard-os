@@ -405,8 +405,12 @@ rows retain `scheduleId`.
 Agent jobs with a `script` prefix the prompt with instructions to run its exact,
 shell-quoted absolute command under `<HERMES_HOME>/scripts/` first in the terminal
 and use full stdout as context. Shell extensions `.sh`/`.bash` use `bash`; other
-extensions use the row's absolute Python `interpreter`, otherwise `python3`.
-The command uses an existing absolute row workdir, otherwise the script parent,
+extensions use the row's absolute Python `interpreter`, otherwise `python3`;
+existing interpreter symlink targets must also have a Python executable name.
+An existing absolute row workdir is also established for the rest of the agent
+turn by instructions to resolve relative paths there, explicitly cd in subsequent
+commands, and load applicable project AGENTS.md instructions (not a persistent
+runtime cwd change). The command uses that workdir, otherwise the script parent,
 and requests `cron.script_timeout_seconds` (default 3600). Script errors should
 be reported; empty stdout or a final JSON `{"wakeAgent":false}` should be silent.
 This is an agent instruction, not a pre-agent host executor: the execution
