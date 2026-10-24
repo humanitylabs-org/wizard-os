@@ -63,7 +63,9 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 - [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
   - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
-  - Agent Search system app: Hermes + Pi readers, per-agent index, MCP tools, grant checks, read log.
+  - Agent History (#45/#77, PR #70): sessions/history under `other_agents`, respecting silo and private seals. Separate from the shared-memory gateway.
+  - Agents app: owner-controlled `shared_with_agents` silo toggle, independently editable `other_agents`.
+  - Agents app: split/merge diff approval and lifecycle UI ([AGENT_SPLIT.md](../spec/AGENT_SPLIT.md)); spec and procedure only for now.
   - Agent-data grants in `wizard-grants.json` and on the Apps screen.
   - Wizard scheduler (Archimedes, 🔨; #47 approved 21 Oct): jobs API, UX list, Hermes cron import for alongside mode, blueprint templates. First slice: Agent Service jobs + results posted into their thread by run id (replaces host `cron_to_chats.py`), high-frequency watchdogs move to Supervisor health checks + Notifications.
 - [ ] **Approval policy across agents**: which actions need the owner's yes, enforced in Wizard rather than per agent. Unowned.
