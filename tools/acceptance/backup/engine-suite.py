@@ -81,6 +81,8 @@ def main():
         step('clone', [rig, 'clone', 'source-full', name], timeout=600)
         created = True
         step('boot', [rig, 'start', name, '--timeout', '420'], timeout=600)
+        # copy-in creates the parent as root; the wizard-run setup must own its work dir.
+        step('guest-dir', [rig, 'exec', name, '--', 'install -d -o wizard -g wizard ' + shlex.quote(guest)])
         step('copy-source', [rig, 'copy-in', name, archive, guest + '/source.tar.gz', '--owner', 'wizard'])
         setup = ('set -eu; cd ' + shlex.quote(guest) + '; mkdir src home tmp; '
                  'tar -xzf source.tar.gz -C src; python3 -m venv venv; '
