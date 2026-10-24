@@ -48,7 +48,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [ ] **Install alongside an existing Hermes** (#41; Archimedes): `os.sh` detect + alongside mode, `wizard link / unlink / doctor`, tested on a fresh VM with stock Hermes preinstalled.
 - [x] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together. Done: `releases/0.3.7.json` … `0.3.12.json` plus `releases/stable` on `main` (stable = 0.3.12, PR #76).
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
-- [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): serve `/pages/` from `media/Pages/` with the sandbox header; list / save-with-version / history / restore API; git commit on every write; refuse `Origin: null` on `/wizard/...`; redirect James's old `/reports/<slug>/`.
+- [ ] **Pages** ([PAGES.md](../spec/PAGES.md), #35): Agent Service half built in [wizard-agent-service#134](https://github.com/humanitylabs-org/wizard-agent-service/pull/134) (in review): `/pages/` served from `media/Pages/` with the sandbox header; list / save-with-version (409 keeps both texts) / history / restore API; a git commit on every owner save and agent write, with history kept in the Agent Service's state; `Origin: null` refused on `/wizard/...`. Still open: redirect James's old `/reports/<slug>/`.
 - [ ] **Agent switch for the Opus-vs-Hermes test.** One thread, routed either to Hermes or straight to Opus.
 
 - [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
