@@ -81,7 +81,9 @@ mounts:                     # optional: another app's share this app needs
     share: claude-login
     path: /claude           # where it appears inside this app's main service
 needs: []                   # device capabilities: mic, system-audio, camera,
-                            # notifications, files, credentials:<provider>
+                            # notifications, files, credentials:<provider>,
+                            # home-network (only works on a home internet
+                            # connection; the Store says so on the app page)
 health: /healthz
 ---
 ```
