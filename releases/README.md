@@ -212,6 +212,27 @@ new release stay on it; the next promoted release moves them on. To drop the pol
 itself, remove the `fast_track` branch from both gates (fast-tracked records then fail
 `check`, so move `stable` back first).
 
+## Developer mode
+
+DECISIONS #97 (James, 24 Oct 2026). Not a channel. A box in developer mode installs and
+updates from a git branch or fork its owner names, instead of following `releases/latest`
+or `releases/stable`. It exists for people who change Wizard itself and want to run their
+change daily before proposing it.
+
+- **Off by default.** Anyone may turn it on after a confirmation that says what stops:
+  Automatic updates and the promotion gates above no longer protect the box.
+- **Visible drift.** The box shows `Developer build: <branch> @ <commit>, N behind main`.
+- **Way back.** Switching back to latest or stable uses the normal upgrade path and its
+  upgrade test, so the box lands on a promoted or cut release.
+- **Into a PR.** A change that has run there is proposed as a fix or a feature, labelled
+  `from: <owner> dev build`, and merges under the rules in AGENTS.md (DECISIONS #96).
+
+Owners who only want Wizard to look or behave differently use their skin, settings or
+apps; none of those need developer mode.
+
+Status: decided, not built. The App Manager source setting, banner and return path are
+still to implement.
+
 ## Publication is a separate gate
 
 `get.sh` defaults to the anonymous raw GitHub URL for `releases/stable`, followed
