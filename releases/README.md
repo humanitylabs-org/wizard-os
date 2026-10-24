@@ -232,6 +232,21 @@ apps; none of those need developer mode.
 
 Status: decided, not built. The App Manager source setting, banner and return path are
 still to implement.
+## PR pipeline board
+
+[Wizard OS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
+only) shows every pull request in the repos a release pins, plus wizard-os and try-wizard,
+in one of six columns: **Draft → In review → Merged → On Latest → On Stable**, or
+**Dropped**. Each card carries its **Tier** (from the `tier:` label) and **Opened by**, so
+the board can be filtered to open fixes or one person's PRs.
+
+`tools/pr_board.py` keeps it in sync every 15 minutes (a timer on the Archimedes VPS). A
+merged PR moves to On Latest or On Stable once the commit that `releases/latest` or
+`releases/stable` pins for its repo contains it, so the board follows
+`tools/promote_stable.py` with no extra step. Repos no release pins stop at Merged.
+Finished cards are archived two days after merge or close. Run it by hand with
+`python3 tools/pr_board.py` (`--dry-run` prints the counts only); it needs `gh` with the
+`project` scope.
 
 ## Publication is a separate gate
 
