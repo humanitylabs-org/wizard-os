@@ -37,6 +37,8 @@ def test_candidate_source_manifest_changes_only_wam_and_records_exception(tmp_pa
     original = {"version": "0.3.33", "components": {"wizard-app-manager": {"commit": "b" * 40},
                 "wizard-agent-service": {"commit": "c" * 40}}, "images": {"agent": "immutable-digest"}}
     (d / "original-release.json").write_text(json.dumps(original))
+    base = json.dumps({"version": "0.3.32", "components": {"wizard-app-manager": {"commit": "d" * 40}}})
+    (d / "base-release.json").write_text(base)
     code = python_code(steps["candidate-source-stage"])
     compile(code, "candidate-source-stage", "exec")
     p = subprocess.run([sys.executable, "-c", code], env={**os.environ, "HOME": str(tmp_path)},
@@ -48,6 +50,8 @@ def test_candidate_source_manifest_changes_only_wam_and_records_exception(tmp_pa
     assert candidate == original
     assert json.loads((d / "candidate-exception.json").read_text())["source_exception"]["ok"] is False
     assert (d / "releases/latest").read_text().strip() == "0.3.33"
+    assert (d / "releases/0.3.32.json").read_text() == base
+    assert '0.3.32.json' in steps['candidate-source-stage']['argv'][-1]
     assert "WIZARD_RELEASE_BASE=file://" in steps["update-reapply"]["argv"][-1]
     for name in ("original-release-readback", "verified-final-receipt"):
         compile(python_code(steps[name]), name, "exec")

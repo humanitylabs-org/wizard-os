@@ -130,7 +130,10 @@ def activate_candidate():
                  'original=json.loads(raw); candidate=copy.deepcopy(original)\n'
                  'old=candidate["components"]["wizard-app-manager"]["commit"]\n'
                  'candidate["components"]["wizard-app-manager"]["commit"]=' + repr(CANDIDATE_COMMIT) + '\n'
+                 'base_raw=(d/"base-release.json").read_bytes()\n'
+                 'assert json.loads(base_raw)["version"]=='+repr(FROM)+'\n'
                  'p=d/"releases"; p.mkdir()\n'
+                 '(p/'+repr(FROM+'.json')+').write_bytes(base_raw)\n'
                  '(p/(candidate["version"]+".json")).write_text(json.dumps(candidate))\n'
                  '(p/"latest").write_text(candidate["version"]+"\\n")\n'
                  'record={"kind":"candidate-bootstrap-not-release-acceptance","release_exact":False,\n'
@@ -141,7 +144,9 @@ def activate_candidate():
         owner('candidate-source-stage',
               'set -e; d=$HOME/.cache/wam-update-candidate; curl -fsSL '
               'https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases/'
-              + shlex.quote(TO + '.json') + ' -o "$d/original-release.json"; python3 -c ' + shlex.quote(stage)
+              + shlex.quote(TO + '.json') + ' -o "$d/original-release.json"; curl -fsSL '
+              'https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases/'
+              + shlex.quote(FROM + '.json') + ' -o "$d/base-release.json"; python3 -c ' + shlex.quote(stage)
               + '; curl -fsSL https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases/stable'
               ' -o "$d/releases/stable"', 180)
         observe('candidate_source_exception', as_json('candidate-source-stage'))
@@ -241,8 +246,10 @@ def durable_fixture():
         # __init__.py may deliberately be empty. Executables and entrypoints may not.
         check += ('assert all(p.stat().st_size for p in files if p.name!="__init__.py")\n')
         if CANDIDATE_COMMIT:
-            check += ('files += [d/"original-release.json",d/"candidate-exception.json",'
-                      'd/"releases"/'+repr(TO+'.json')+',d/"releases/latest",d/"releases/stable"]\n'
+            check += ('files += [d/"original-release.json",d/"base-release.json",d/"candidate-exception.json",'
+                      'd/"releases"/'+repr(FROM+'.json')+',d/"releases"/'+repr(TO+'.json')+',d/"releases/latest",d/"releases/stable"]\n'
+                      'assert (d/"releases"/'+repr(FROM+'.json')+').read_bytes()==(d/"base-release.json").read_bytes()\n'
+                      'assert json.loads((d/"base-release.json").read_text())["version"]=='+repr(FROM)+'\n'
                       'pins=json.loads((d/"releases"/'+repr(TO+'.json')+').read_text())\n'
                       'assert pins["components"]["wizard-app-manager"]["commit"]=='+repr(CANDIDATE_COMMIT)+'\n')
     check += ('inventory={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}\n'

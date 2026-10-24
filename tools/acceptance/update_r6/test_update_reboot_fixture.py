@@ -38,6 +38,9 @@ def fixture_home(tmp_path):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text('fixture\n' if not name.endswith('__init__.py') else '')
     (d/'releases/0.3.33.json').write_text(json.dumps({'components':{'wizard-app-manager':{'commit':'a'*40}}}))
+    base = json.dumps({'version':'0.3.32','components':{'wizard-app-manager':{'commit':'b'*40}}})
+    (d/'base-release.json').write_text(base)
+    (d/'releases/0.3.32.json').write_text(base)
     return state, d
 
 
@@ -63,7 +66,7 @@ def test_fixture_inventory_detects_empty_wrapper_and_keeps_raw_state(tmp_path):
     assert json.loads((state/'release.json').read_text())['status'] == 'pinned'
 
 
-@pytest.mark.parametrize('bad', ['empty-wrapper', 'failed-base', 'wrong-candidate-manifest'])
+@pytest.mark.parametrize('bad', ['empty-wrapper', 'failed-base', 'wrong-candidate-manifest', 'missing-base-manifest', 'changed-base-manifest'])
 def test_bad_base_or_fixture_is_rejected_before_cut(tmp_path, bad):
     _, steps = candidate_plan(tmp_path)
     state, d = fixture_home(tmp_path)
@@ -71,6 +74,10 @@ def test_bad_base_or_fixture_is_rejected_before_cut(tmp_path, bad):
         (d/'bin/wam').write_text('')
     elif bad == 'failed-base':
         (state/'release.json').write_text(json.dumps({'release':'0.3.32','status':'install-failed'}))
+    elif bad == 'missing-base-manifest':
+        (d/'releases/0.3.32.json').unlink()
+    elif bad == 'changed-base-manifest':
+        (d/'releases/0.3.32.json').write_text('{"version":"0.3.32","altered":true}')
     else:
         (d/'releases/0.3.33.json').write_text(json.dumps({'components':{'wizard-app-manager':{'commit':'b'*40}}}))
     p = exec_check(python_code(steps['fixture-before-update']), tmp_path)
