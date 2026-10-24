@@ -132,7 +132,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 4. `runtime.config` and `runtime.compose` exist in the repo.
 5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
-7. Every `needs` entry is from the known capability list.
+7. Every `needs` entry is a known device permission (including `home-network`), `credentials:<provider>`, a non-null default app ID, or an explicit `provides` capability from the source defaults. The spec/index checkers carry an offline snapshot of `wizard-app-manager/wam/defaults.json` (app IDs and explicit `provides` only). Slot aliases, null placeholders and a candidate's own `provides` do not extend that vocabulary. This is manifest validation, not proof a provider is installed or permission to install it.
 8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
