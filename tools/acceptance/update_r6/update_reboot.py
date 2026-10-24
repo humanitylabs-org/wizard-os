@@ -21,6 +21,10 @@ a verified successful final receipt, and a passing final doctor; it does not acc
 WAM_CANDIDATE_COMMIT selects a pushed WAM source SHA in a separately recorded TO manifest copy so
 install.sh fixes are really executed. Only that source pin changes; images/default apps remain original.
 This is candidate-bootstrap QA, never exact-release acceptance: the original-source comparison stays red.
+The completed FROM receipt stays stock; only the TO mirror substitutes the candidate WAM pin.
+Before starting the update, validate and sync the completed base and QA fixture, then sync the host.
+After the cut, verify their hashes before executing WAM; never restore them or sync in-flight update writes.
+Every updates call must emit JSON; combined stdout/stderr and its exit code are retained on failure.
 Never touches a VM whose name does not start with `l4-`. No host credentials, no model calls.
 """
 import datetime, json, os, re, shlex, subprocess, sys, time, traceback
@@ -202,9 +206,66 @@ def candidate(name):
     return as_json(name)
 
 
+def wam_json(name, args='updates', timeout=180):
+    # An empty executable is a successful shell no-op, not a successful WAM call.
+    # Keep the command's stderr and exit status even when no JSON was emitted.
+    rc = owner(name, 'wam ' + args + '; rc=$?; printf "\\nWAM_COMMAND_RC=%s\\n" "$rc" >&2; exit "$rc"',
+               timeout, required=False)
+    value = as_json(name)
+    if not dry and (rc or not isinstance(value, dict)):
+        raise RuntimeError(f'{name}: wam {args} exit={rc}, no valid JSON object; inspect {name}.log (stdout + stderr)')
+    return value
+
+
 def updates_state(name):
-    owner(name, 'wam updates', 180, required=False)
-    return as_json(name)
+    return wam_json(name)
+
+
+def durable_fixture():
+    """Flush the completed base + QA fixture BEFORE launching the update under test.
+
+    A fresh install and candidate activation can finish seconds before the cut. Without
+    this boundary ext4 may retain names but lose their dirty data: even an empty shell
+    wrapper then exits 0. Never sync once the update has begun; its crash writes remain
+    part of the test. The inventory detects fixture corruption without repairing it.
+    """
+    check = ('import hashlib,json\nfrom pathlib import Path\n'
+             'h=Path.home(); state=h/".wizard-os"; d=h/".cache/wam-update-candidate"\n'
+             'r=json.loads((state/"release.json").read_text())\n'
+             'assert r.get("release")=='+repr(FROM)+' and r.get("status") in ("pinned","drift"), r\n'
+             'assert json.loads((state/"updates.json").read_text()).get("channel")=="latest"\n'
+             'files=[state/"release.json",state/"updates.json"]\n')
+    if APPLY_CANDIDATE:
+        check += ('files += [d/"bin/wam", d/"src/runner.py", d/"src/get.sh", d/"src/wam/cli.py", '
+                  'd/"src/wam/updates.py", d/"src/wam/__init__.py"]\n')
+        # __init__.py may deliberately be empty. Executables and entrypoints may not.
+        check += ('assert all(p.stat().st_size for p in files if p.name!="__init__.py")\n')
+        if CANDIDATE_COMMIT:
+            check += ('files += [d/"original-release.json",d/"candidate-exception.json",'
+                      'd/"releases"/'+repr(TO+'.json')+',d/"releases/latest",d/"releases/stable"]\n'
+                      'pins=json.loads((d/"releases"/'+repr(TO+'.json')+').read_text())\n'
+                      'assert pins["components"]["wizard-app-manager"]["commit"]=='+repr(CANDIDATE_COMMIT)+'\n')
+    check += ('inventory={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}\n'
+              '(state/"qa-fixture-sha256.json").write_text(json.dumps(inventory))\n'
+              'print(json.dumps({"base_receipt":r,"fixture_sha256":inventory}))\n')
+    owner('fixture-before-update', 'set -e; python3 -c ' + shlex.quote(check) + '; sync', 180)
+    run('fixture-host-sync', ['sync'], 120)
+    observe('fixture_before_update', as_json('fixture-before-update'))
+    st = updates_state('updates-before-cut') or {}
+    if not dry and (st.get('installed') != FROM or st.get('channel') != 'latest' or st.get('failed')):
+        raise RuntimeError(f'candidate activation invalidated the completed base: {st}')
+
+
+def verify_fixture_after_reboot():
+    check = ('import hashlib,json\nfrom pathlib import Path\n'
+             'p=Path.home()/".wizard-os/qa-fixture-sha256.json"\n'
+             'inventory=json.loads(p.read_text())\n'
+             'bad=[name for name,digest in inventory.items() if not Path(name).is_file() '
+             'or hashlib.sha256(Path(name).read_bytes()).hexdigest()!=digest]\n'
+             'print(json.dumps({"fixture_files":len(inventory),"changed_or_missing":bad}))\n'
+             'assert not bad, "completed base or QA fixture corrupted by power cut"\n')
+    owner('fixture-after-reboot', 'python3 -c ' + shlex.quote(check), 120)
+    observe('fixture_after_reboot', as_json('fixture-after-reboot'))
 
 
 def wait_for(name, release, limit, apply_note=None):
@@ -270,8 +331,8 @@ def q2():
     owner('channel-latest', 'wam updates --channel latest', 120)       # TO is a latest-channel release
     owner('doctor-before', 'wam doctor', 300, required=False)
     activate_candidate()
-    owner('update-apply', 'wam updates --apply', 900, required=False)
-    a = as_json('update-apply')
+    durable_fixture()
+    a = wam_json('update-apply', 'updates --apply', 900)
     observe('apply_started', (a or {}).get('started'))
     if not dry and not (a or {}).get('started'):
         raise RuntimeError(f'the update did not start: {a}')
@@ -294,6 +355,7 @@ def q2():
         raise RuntimeError('no active installer at the cut point')
     hard_reboot('cut')
     observe('raw_after_reboot', raw('raw-after-reboot'))             # before any wam call can heal it
+    verify_fixture_after_reboot()
     observe('candidate_after_reboot', candidate('candidate-after-reboot'))
     owner('installer-status-after-reboot', f'curl -fsSL {OS_SH} | bash -s status', 120, required=False)
     owner('doctor-after-reboot', 'wam doctor', 300, required=False)
@@ -306,8 +368,7 @@ def q2():
     # Does it carry on by itself? (Ask me is the default mode; the nightly timer only exists in Automatic.)
     observe('self_recovered', wait_for('passive-wait', TO, 600))
     owner('timers', 'systemctl --user list-timers --all | grep -i wizard || true; cat ~/.wizard-os/updates.json', 60, False)
-    owner('update-reapply', 'wam updates --apply', 900, required=False)
-    observe('reapply', as_json('update-reapply'))
+    observe('reapply', wam_json('update-reapply', 'updates --apply', 900))
     ok = wait_for('recovery-wait', TO, 2700)
     observe('recovered_to', ok)
     owner('installer-status-final', f'curl -fsSL {OS_SH} | bash -s status', 120, required=False)

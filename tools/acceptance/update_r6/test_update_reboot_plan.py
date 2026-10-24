@@ -47,6 +47,7 @@ def test_candidate_source_manifest_changes_only_wam_and_records_exception(tmp_pa
     candidate["components"]["wizard-app-manager"]["commit"] = "b" * 40
     assert candidate == original
     assert json.loads((d / "candidate-exception.json").read_text())["source_exception"]["ok"] is False
+    assert (d / "releases/latest").read_text().strip() == "0.3.33"
     assert "WIZARD_RELEASE_BASE=file://" in steps["update-reapply"]["argv"][-1]
     for name in ("original-release-readback", "verified-final-receipt"):
         compile(python_code(steps[name]), name, "exec")
