@@ -349,7 +349,7 @@ def acceptance(native_key):
     REPORT['P1'] = 'PASS'; REPORT['P2'] = 'RUNNING'; save_report()
     # Disturb the destination so return-leg checks cannot pass on leftover Mac
     # markers. The engine's Undo must restore this distinct pre-import baseline.
-    mac('mac-return-baseline', 'python3 /mnt/rig-shared/mac-backup-qa/disturb.py',wizard=True)
+    mac('mac-return-baseline', 'cd /home/wizard/wizard-app-manager && python3 /mnt/rig-shared/mac-backup-qa/disturb.py',wizard=True)
     mac_before = snapshot('mac-return-before', 'mac')
     disturbed = fixture('mac-return-disturbed','mac')
     assert all(disturbed['checks'][key] is False for key in __import__('fixture').CLASSES), 'Return baseline retained a source marker'
