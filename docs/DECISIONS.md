@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 24 Oct 2026 — James: agent templates, an idea for later ([spec/AGENT_TEMPLATES.md](../spec/AGENT_TEMPLATES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 98 | **Agent templates (idea, not on the roadmap).** A shareable shape for an agent: soul, starting skills, model recommendation, tool preset and an empty memory layout, with no memory, history or sign-ins. Installing one creates a fresh agent on a harness the box already runs, through the existing create API, so it isn't a `type: agent` runtime app. Example roles: Philosopher/thinking partner, Tutor/study, Builder, Assistant. Templates are offered once real use shows a pattern, and never as a setup question. They also seed #95 split proposals. Why: an agent that arrives shaped for a job fits it better than a blank one, and James's Philosopher agent already shows the shape. | Idea (James, 24 Oct 2026); revisit after more use |
+
 ## 24 Oct 2026 — James: developer mode, not personal builds ([releases/README.md](../releases/README.md#developer-mode))
 
 | # | Decision | Status |
