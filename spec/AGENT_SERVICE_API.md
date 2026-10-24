@@ -31,10 +31,12 @@ An explicitly configured existing-Hermes installation (`WIZARD_SETUP_MODE=alongs
 without marking Setup seen or the tour completed. Setup and its tour remain available explicitly.
 Absent or unknown launch modes retain the VM onboarding flow. This field grants no access.
 For already configured host-managed private access, the phone item may return `state: "done"`
-and `phone_ready: true`: the same validated host address the phone page offers is ready to open,
+and `phone_ready: true` before the first recorded phone visit: the same validated host address the phone page offers is ready to open,
 not proof that a phone has connected. Clients say "Ready to open on your phone", not "connected".
 A present-but-unreachable helper never turns a stale host address into readiness. This read does
 not persist `phone_seen_at` or alter enrollment, authorization, or the host's Tailscale configuration.
+`phone_ready` is only a checklist-copy hint for ready-before-first-visit, not an availability capability:
+after an observed phone visit it is omitted, preserving the existing connected checklist copy.
 `GET /wizard/v1/setup/phone` returns the current Tailscale/checklist state; `POST .../start` begins
 interactive sign-in and `POST .../reset` disconnects the box. Only the owner may use these routes;
 agent credentials never authorize Setup. Writes require a same-origin browser request. The box-local
