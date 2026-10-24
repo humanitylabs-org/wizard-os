@@ -1,6 +1,6 @@
 # Wizard ID v0.1
 
-**Status:** approved by James, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #39). Jan to review the key handling and bridge. Build step 1 in progress (Archimedes).
+**Status:** approved by James, 10 Oct 2026 ([DECISIONS](../docs/DECISIONS.md) #39); key model revised 24 Oct 2026 (#94). Jan to review the key handling and bridge. Build step 1 in progress (Archimedes).
 
 Your Wizard ID is a Nostr key pair. The public half (`npub`) is your name everywhere in Wizard: the apps you publish, who follows you, and what your Wizard does for you. The private half signs. It is created on your phone, inside the Wizard app, and no one else holds a copy. That includes Humanity Labs, your Wizard box and the agent.
 
@@ -49,9 +49,60 @@ People never have to install a separate signer app (Amber or anything else). The
 - Desktop UX, Wizard for Mac and browsers hold no key. Their requests appear as a notification on the paired phone.
 - iPhone and Mac-only owners get the same design later, on Keychain plus Face ID or Touch ID. Until then they can still publish, and their apps show as unclaimed.
 
-## Your Wizard's own key
+## Your Wizard's own key ([DECISIONS](../docs/DECISIONS.md) #94)
 
-The box generates the Wizard's own key. The owner signs one attestation: "*<Wizard npub>* is my Wizard, within this scope, until revoked." Under its own key the Wizard signs its own work: it is listed as an app maintainer and posts as itself. Revoking the attestation never touches the owner's key. This is locked from 1 Sep.
+Each person has two keys and two names. Nothing else is ever shown.
+
+- **Wizard ID (the phone key)** is the only key anyone sees as the person. Their name, friends, follows, apps and skins all hang off this `npub`.
+- **Wizard (the box key)** is a device key. Its kind 0 says "*<name>*'s Wizard" and carries a `p` tag to the owner. It is never presented as the person. The box needs it for one reason: something must decrypt and answer while the phone is asleep. The box key is also the inbox key; there is no third key.
+- Protocol-internal keys (Marmot/MLS leaf keys, NIP-59 throwaway keys) stay inside their protocol and are never named.
+
+### The device list
+
+The phone signs one addressable event, kind `30078` with `d=wizard-devices` (NIP-78 application data; a registered kind replaces it once a NIP exists). It has one `p` tag per device: `["p", <box hex>, <relay hint>, <roles…>]`, with roles `inbox`, `profile`, `messenger` and `agent`, plus an `expiration` tag about 90 days out that the phone renews. The sheet reads **Let this Wizard receive for you**.
+
+**Every Wizard client reads identity with one rule, from one shared module:**
+1. An `npub` with a current device list is a person, and their inbox is the listed device.
+2. An `npub` whose kind 0 `p`-tags an owner whose current list names it is that owner's Wizard. Show the owner.
+3. Otherwise the `npub` is a provisional identity and its own inbox. Show "*name*'s Wizard (unclaimed)". An unclaimed Wizard can't publish apps or skins under a person's name.
+
+**Claim:** when a box-only user gets a phone ID, the phone lists the old box key. Friends re-key the pair to the owner automatically. Nobody has to re-add anyone.
+
+**Revoke:** the phone republishes the list without the box, adding `["revoked", <box hex>, <unix time>]`. Readers drop that box's events after that time and stop encrypting to it. Name, friends, follows and apps are untouched. Whatever the box already decrypted stays exposed, and that is accepted.
+
+### Who signs what
+
+**The phone, with a fresh biometric each time:**
+- kind 0 (name and photo) and kind 3 (follows);
+- the device list, and attesting or revoking a Wizard;
+- sending and accepting friend requests (the NIP-59 seal is signed and NIP-44-encrypted by the owner key);
+- app and skin announcements;
+- the owner action envelopes.
+
+**The phone, under a short-timeout second Keystore key, limited to Messenger chores so that a batch takes one tap:**
+- Marmot account-identity proofs and KeyPackage events;
+- unwrapping Welcomes and any gift wrap addressed to the owner `npub`.
+
+**The box, automatically:**
+- receiving and unwrapping anything wrapped to its inbox key;
+- re-sharing friends' encrypted profile parts on every change;
+- relay authentication and routine Blossom uploads;
+- Archimedes's own labelled posts.
+
+**Messenger leaf keys on the box** sign every message in groups the box has joined. Sending invites (MLS Commits) and receiving need no phone.
+
+### Messenger
+
+The Marmot account is the owner `npub`, through MDK's external-signer account. The box runs MDK; its signer callback forwards to the phone over Wizard Link. The phone is needed:
+- to join or create a group;
+- for KeyPackage batches;
+- for the per-group leaf rotation every 24–36 days, which the box queues into one sheet.
+
+If the phone is offline, existing chats keep working, and new invites wait for a tap. Redirecting Welcomes to the box inbox key is a later Marmot proposal, not v1.
+
+### Agent line
+
+Anything that needs the owner key is the owner's act. The agent prepares it, and the phone shows "*Archimedes* asks: …", quoting the chat line behind it. The agent can't approve. Inside an existing conversation the box can already send, so the gate there is a per-contact switch, **Archimedes may reply for me** (default off), plus an audit log. Agent-sent messages carry a visible marker.
 
 ## App publishing ([DECISIONS](../docs/DECISIONS.md) #38)
 
@@ -73,6 +124,8 @@ These go in [NATIVE_BRIDGE.md](NATIVE_BRIDGE.md) once confirmed.
 | `identity.info` | `{npub, name, picture, backed_up}` or `{none: true}` |
 | `identity.setup` | Opens onboarding natively; returns `{npub}` when done or `{cancelled: true}` |
 | `identity.sign` `{event}` | The signed event, or `{denied: true}`. Always goes through the native sheet and biometric/PIN. |
+| `identity.nip44_encrypt` `{pubkey, plaintext}` | `{ciphertext}`. Used to seal friend requests. The sheet shows the inner event being sealed and to whom. |
+| `identity.nip44_decrypt` `{pubkey, ciphertext}` | `{plaintext}`. Used for gift wraps addressed to the owner `npub`. The sheet says "Open a sealed message from *name*". |
 
 No method returns or accepts the private key. Only the native onboarding and import screens ever handle it.
 

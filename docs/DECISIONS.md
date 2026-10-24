@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 24 Oct 2026 — James: two keys per person, the phone key is the person ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md#your-wizards-own-key-decisions-94))
+
+| # | Decision | Status |
+|---|---|---|
+| 94 | **The phone Wizard ID is the only identity anyone sees, and the box key is that person's Wizard (a device), listed in a phone-signed device list (kind 30078, `d=wizard-devices`).** The owner key signs, with a fresh biometric each time: identity and follows, friend adds and accepts, publishing, and the device list (attest or revoke). The box key is the inbox: it decrypts unattended, re-shares profile parts, and signs the agent's labelled posts. Messenger uses the owner `npub` as its Marmot account through MDK's external signer. MLS leaf keys on the box sign each message, and the phone handles proofs, KeyPackages and Welcomes under a short-timeout key. There are no per-app identities. Box-only users start as an unclaimed Wizard that their phone ID later claims, without anyone re-adding them. Profiles (Miguel's app) adopts the resolution rule through our PR. Why: a box compromise must be revocable without losing the person. Reviewed with Fable over two rounds (transcripts in agent context sources). | Approved by James, 24 Oct 2026. Miguel to confirm (Profiles). |
+
 ## 24 Oct 2026 — Miguel: launch phase ships the latest release
 
 | # | Decision | Status |
