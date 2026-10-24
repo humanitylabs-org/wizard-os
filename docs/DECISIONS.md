@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 24 Oct 2026 — James: developer mode, not personal builds ([releases/README.md](../releases/README.md#developer-mode))
+
+| # | Decision | Status |
+|---|---|---|
+| 97 | **Personal builds are a developer mode, not a Wizard feature or a third channel.** Owners change Wizard through their skin, settings and apps, which never drift from `main`; there is no "my build" for ordinary owners. A box may instead turn on **developer mode**: it installs and updates from a git branch or fork the owner names, instead of `releases/latest` or `releases/stable`. (1) **Off by default; open to anyone** behind a confirmation screen that states the trade-off: Automatic updates and the stable guarantees (#75, #82, #93) stop while it is on. (2) **Drift stays visible:** the box shows "Developer build: `<branch>` @ `<commit>`, N commits behind `main`". (3) **One step back** to latest or stable, through the same upgrade path a release uses. (4) **It is the bench before a PR:** a change that has run there carries the `from: <owner> dev build` label (AGENTS.md), which counts as daily-use evidence when it is reviewed and merged. Everyone else has two public routes: propose a fix (`tier: recommended fix`, ships under #96 and #82) or propose a feature (any other tier, reviewed under #96). Why: Miguel's three-lane proposal ("my build / propose to main / propose a fix") would make every owner's build a fork that drifts and that we then support; only developers (James, Archimedes, Jan, Miguel, Oscar) actually run one. | **Approved by James, 24 Oct 2026**; mechanism (App Manager source setting, banner, return path) proposed, not built. Miguel to confirm. |
+
 ## 24 Oct 2026 — Miguel: humans are the only admins; agents ship verified fixes on Write
 
 | # | Decision | Status |
