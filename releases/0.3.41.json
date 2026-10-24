@@ -1,8 +1,8 @@
 {
-  "version": "0.3.40-rc1",
-  "name": "Wizard OS install snapshot 0.3.40-rc1 (defaults candidate)",
+  "version": "0.3.41",
+  "name": "Wizard OS install snapshot 0.3.41 — Voice and Connection Router defaults",
   "date": "2026-10-24",
-  "about": "Candidate only; not a channel release. 0.3.39 plus merged App Manager PR #142 at fc84567: Voice and Connection Router bootstrap defaults; Agent History reserved with no default. Connected accounts remains on-demand and is not installed at bootstrap. Troubleshooter remains the unchanged host component. No accounts slot, migrations or owner-data deletion. Prior candidate passed fresh-defaults acceptance; confirmation at the merged pins is pending. Do not promote or mirror this candidate.",
+  "about": "0.3.39 plus merged App Manager #142: Voice and Connection Router install as bootstrap defaults. Voice uses the existing Transcription engine. Connected accounts remains on-demand; Agent History remains reserved with no default; Troubleshooter remains the unchanged host component. Existing app pins and data are preserved. No duplicate accounts slot, migrations or owner-data deletion. 0.3.40 is reserved by the independent orientation release; this snapshot retains the tested 0.3.39 UX pin and does not include that independent change.",
   "install": {
     "command": "curl -fsSL aiwizards.com/os.sh | bash",
     "agent": {
@@ -21,7 +21,7 @@
       "repo": "humanitylabs-org/wizard-app-manager",
       "commit": "fc84567cafdd4e77a906a1a57f8343d1cf6cc083",
       "branch": "main",
-      "note": "PR #142 squash merge after fresh-defaults acceptance of the pre-merge candidate; exact merged-pin confirmation remains required before release promotion."
+      "note": "Official main at merged #142 (fc84567); adds Voice and Connection Router defaults, capability needs checking and on-demand connected accounts without duplicate slots."
     },
     "wizard-troubleshooter": {
       "repo": "humanitylabs-org/wizard-troubleshooter",
@@ -61,7 +61,7 @@
         "arm64"
       ],
       "ci_run": "https://github.com/humanitylabs-org/wizard-app-manager/actions/runs/40008375561",
-      "note": "Retained official multi-arch image from db4325a; candidate installer/default changes do not change declared image inputs (check_release.py must verify)."
+      "note": "Retained official multi-arch image from db4325a; declared image inputs are unchanged at fc84567 (verified by check_release.py provenance comparison)."
     },
     "wizard-ux": {
       "ref": "ghcr.io/humanitylabs-org/wizard-ux:sha-c8433e348f1e715a5652089411f11d401a7860bc",
@@ -148,7 +148,7 @@
       "repo": "oscarhenrycollins/secret-drop",
       "index_version": "0.1.1",
       "commit": "690b277619847405cffc711917abafd85223f10b",
-      "note": "secret-drop #1: the engine image is pinned by its multi-arch digest (secret-drop:0.1.1@sha256:29ebc6a7\u2026c03302), the same bytes as the 0.1.1 tag in 0.3.19."
+      "note": "secret-drop #1: the engine image is pinned by its multi-arch digest (secret-drop:0.1.1@sha256:29ebc6a7…c03302), the same bytes as the 0.1.1 tag in 0.3.19."
     },
     "notifications": {
       "app": "notifications",
