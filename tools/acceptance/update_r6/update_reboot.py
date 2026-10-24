@@ -15,12 +15,15 @@ Usage:
 Env: WAM_CANDIDATE_TGZ (optional) = tarball containing a wizard-app-manager `wam/` package; its
 install_state/status/retry are run against a COPY of the box's state (retry runner stubbed).
 WAM_CANDIDATE_APPLY=1 additionally requires get.sh in that archive and executes the candidate CLI and
-bootstrap during q2, from a separate cache directory in the newly-created disposable VM only. Installed
-release files remain stock. Candidate acceptance requires interruption reporting, a retry that starts,
+bootstrap during q2, from a separate cache directory in the newly-created disposable VM only.
+Candidate acceptance requires interruption reporting, a retry that starts,
 a verified successful final receipt, and a passing final doctor; it does not accept a failed install's version.
+WAM_CANDIDATE_COMMIT selects a pushed WAM source SHA in a separately recorded TO manifest copy so
+install.sh fixes are really executed. Only that source pin changes; images/default apps remain original.
+This is candidate-bootstrap QA, never exact-release acceptance: the original-source comparison stays red.
 Never touches a VM whose name does not start with `l4-`. No host credentials, no model calls.
 """
-import datetime, json, os, shlex, subprocess, sys, time, traceback
+import datetime, json, os, re, shlex, subprocess, sys, time, traceback
 from pathlib import Path
 
 mode = sys.argv[1]
@@ -40,9 +43,13 @@ IMAGE_URL = 'https://cloud-images.ubuntu.com/releases/noble/release-20260615/ubu
 CAND = os.environ.get('WAM_CANDIDATE_TGZ', '')
 APPLY_CANDIDATE = os.environ.get('WAM_CANDIDATE_APPLY') == '1'
 assert not APPLY_CANDIDATE or CAND, 'candidate application requires WAM_CANDIDATE_TGZ'
+CANDIDATE_COMMIT = os.environ.get('WAM_CANDIDATE_COMMIT', '')
+assert not CANDIDATE_COMMIT or re.fullmatch('[0-9a-f]{40}', CANDIDATE_COMMIT), 'candidate commit must be a full SHA'
+assert not CANDIDATE_COMMIT or APPLY_CANDIDATE, 'candidate source requires candidate application'
 os.environ.update(LIMA_HOME=lima, PATH='/opt/homebrew/bin:/usr/local/bin:' + os.environ.get('PATH', ''))
 receipt = {'mode': mode, 'vm': vm, 'LIMA_HOME': lima, 'from': FROM if mode == 'q2' else None, 'to': TO,
            'candidate': CAND or None, 'candidate_applied': APPLY_CANDIDATE,
+           'candidate_source_commit': CANDIDATE_COMMIT or None, 'release_exact': not APPLY_CANDIDATE,
            'started': datetime.datetime.now(datetime.timezone.utc).isoformat(),
            'steps': [], 'observations': {}}
 PLAN = []
@@ -82,6 +89,10 @@ def owner(name, cmd, timeout=300, required=True):
         inner += ('export PATH=$HOME/.cache/wam-update-candidate/bin:$PATH; '
                   'export WIZARD_GET_SH_URL=file://$HOME/.cache/wam-update-candidate/src/get.sh; '
                   'export WIZARD_TAILSCALE_WAIT=1; ')
+        if CANDIDATE_COMMIT:
+            # Baseline install precedes activation; only subsequent updates use the mirror.
+            inner += ('if [ -d "$HOME/.cache/wam-update-candidate/releases" ]; then '
+                      'export WIZARD_RELEASE_BASE=file://$HOME/.cache/wam-update-candidate/releases; fi; ')
     return guest(name, 'sudo -u wizard -H bash -c ' + shlex.quote(inner + cmd), timeout, required)
 
 
@@ -105,6 +116,31 @@ def activate_candidate():
           'printf %s ' + shlex.quote(wrapper) + ' > "$d/bin/wam"; chmod 700 "$d/bin/wam"; '
           'test -f "$d/src/get.sh"; sha256sum "$HOME/wam-update-candidate.tgz"; '
           'command -v wam; wam updates', 180)
+    if CANDIDATE_COMMIT:
+        # get.sh checks out the manifest's WAM commit before running install.sh.
+        # A CLI-only archive does NOT exercise installer fixes in that checkout.
+        # Use an explicitly non-release mirror, changing only the WAM source pin.
+        stage = ('import copy,hashlib,json\nfrom pathlib import Path\n'
+                 'd=Path.home()/".cache/wam-update-candidate"\n'
+                 'raw=(d/"original-release.json").read_bytes()\n'
+                 'original=json.loads(raw); candidate=copy.deepcopy(original)\n'
+                 'old=candidate["components"]["wizard-app-manager"]["commit"]\n'
+                 'candidate["components"]["wizard-app-manager"]["commit"]=' + repr(CANDIDATE_COMMIT) + '\n'
+                 'p=d/"releases"; p.mkdir()\n'
+                 '(p/(candidate["version"]+".json")).write_text(json.dumps(candidate))\n'
+                 '(p/"latest").write_text(candidate["version"]+"\\n")\n'
+                 'record={"kind":"candidate-bootstrap-not-release-acceptance","release_exact":False,\n'
+                 ' "original_manifest_sha256":hashlib.sha256(raw).hexdigest(),\n'
+                 ' "source_exception":{"expected":old,"candidate":' + repr(CANDIDATE_COMMIT) + ',"ok":False}}\n'
+                 '(d/"candidate-exception.json").write_text(json.dumps(record,indent=2)+"\\n")\n'
+                 'print(json.dumps(record))\n')
+        owner('candidate-source-stage',
+              'set -e; d=$HOME/.cache/wam-update-candidate; curl -fsSL '
+              'https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases/'
+              + shlex.quote(TO + '.json') + ' -o "$d/original-release.json"; python3 -c ' + shlex.quote(stage)
+              + '; curl -fsSL https://raw.githubusercontent.com/humanitylabs-org/wizard-app-manager/main/releases/stable'
+              ' -o "$d/releases/stable"', 180)
+        observe('candidate_source_exception', as_json('candidate-source-stage'))
 
 
 def out(name):
@@ -282,8 +318,23 @@ def q2():
               's=json.loads((h/"install-status.json").read_text())\n'
               'print(json.dumps({"receipt":r,"installer":s}))\n'
               'assert r.get("release") == ' + repr(TO) + ' and r.get("status") in ("pinned","drift")\n'
-              'assert s.get("state") == "done"\n')
+              'assert s.get("state") == "done"\n'
+              'assert all(c["ok"] for c in r["checks"] if c.get("core"))\n'
+              'assert any(c["name"] == "image wizard-agent-service" and c["ok"] for c in r["checks"])\n')
     final_readback = owner('verified-final-receipt', 'python3 -c ' + shlex.quote(verify), 120, False)
+    if CANDIDATE_COMMIT:
+        # Keep the public release comparison red, separately from candidate success.
+        comparison = ('import json\nfrom pathlib import Path\n'
+                      'd=Path.home()/".cache/wam-update-candidate"\n'
+                      'r=json.loads((Path.home()/".wizard-os/release.json").read_text())\n'
+                      'exception=json.loads((d/"candidate-exception.json").read_text())\n'
+                      'c=next(c for c in r["checks"] if c["name"]=="wizard-app-manager commit")\n'
+                      'assert c["observed"]==' + repr(CANDIDATE_COMMIT) + '\n'
+                      'c.update(expected=exception["source_exception"]["expected"],ok=False)\n'
+                      'r.update(status="mismatch",release_exact=False,candidate_exception=exception)\n'
+                      'print(json.dumps(r))\n')
+        owner('original-release-readback', 'python3 -c ' + shlex.quote(comparison), 120)
+        observe('original_release_readback', as_json('original-release-readback'))
     if APPLY_CANDIDATE:
         recovered = as_json('update-reapply') or {}
         ok = (ok and doctor_caught and bool(s) and s.get('interrupted') is True
@@ -337,6 +388,8 @@ finally:
     receipt['finished'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     if dry:
         print(json.dumps({'mode': mode, 'vm': vm, 'from': FROM, 'to': TO, 'state': receipt.get('state'),
+                          'candidate_source_commit': CANDIDATE_COMMIT or None,
+                          'release_exact': not APPLY_CANDIDATE,
                           'error': receipt.get('error'), 'plan': PLAN}, indent=1))
     else:
         save(); print(json.dumps(receipt, indent=2))
