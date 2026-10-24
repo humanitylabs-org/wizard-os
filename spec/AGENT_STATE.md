@@ -7,7 +7,7 @@ Hermes is the agent today. A box will often run more than one agent: a frontier 
 Wizard OS owns **where** that state lives and **who** may read it. The agent owns **how** it uses its own state. That keeps three promises:
 
 - **No lock-in.** Switching agents, or running two side by side, doesn't throw away what the first one learned. The new agent can look it up.
-- **Privacy by grant.** One agent can't read another's sessions, skills or memory unless the owner says so.
+- **Owner-controlled sharing.** Standard agents read each other on demand by default. The owner can silo any one; private agents stay sealed.
 - **One place for the box's moving parts.** Schedules, keys and approvals are Wizard's, not buried inside one agent's container.
 
 ## 1. One folder per agent
@@ -56,44 +56,31 @@ Every installed agent gets one folder. Its id is the **instance**, not the harne
 
 - **Each agent writes only its own skills.** Skills are written for one harness's tools (`skill_view`, `delegate_task`, `~/.hermes/...`). A skill shared by every agent would be wrong for most of them.
 - **Wizard system skills** stay in `~/.wizard-os/skills/` (#40): app skills from the App Manager plus pointer skills from the Agent Service. Every agent reads them, read-only (Hermes through `skills.external_dirs`). We call them **system skills**, not "shared", because Wizard writes them and no agent edits them.
-- **Other agents' skills are looked up, never injected.** No agent's skills list ever includes another agent's skills by default. With a grant (section 4), an agent can call Agent Search:
+- **Other agents' skills are looked up, never injected.** No agent's skills list ever includes another agent's skills by default. Under section 4 permissions, an agent can use the Agent Service gateway for skills and memory. Session retrieval belongs to Agent History (#45/#77, PR #70):
   - `skills_search(query, agents?)` returns names, descriptions and which agent and harness wrote each.
   - `skill_read(agent, name)` returns the skill. It starts with: "Written by *agent* for the *harness* harness. Tools and paths it names may not exist for you. Adapt it into your own skill before relying on it."
 - **Adapting is the agent's job.** If the skill is useful, the reading agent writes its own version with its own skill tooling and records `adapted_from: <agent>/<skill>` in the frontmatter. The original is never edited.
 
 When and how often agents should look up another agent's skills is left to usage. This spec only provides the ability.
 
-## 3. Agent Search: one system app that reads across agents
+## 3. Agent History: sessions and history
 
-**Agent Search** (`wizard-agent-search`, slot `agent-search`, `system: true`) is a headless system app. It's the only thing that reads another agent's state, and it does that only under grants.
+**Agent History** (#45/#77, [PR #70](https://github.com/humanitylabs-org/wizard-os/pull/70)) owns session/history search and reading. Sessions arrive through it under the same `permissions.other_agents` level and source seals in section 4. This is separate from the Agent Service's bounded memory/skills/notes reads. Do not expose raw `state.db` files or add a second session reader here.
 
-- **Reads each agent's own store through a small reader per harness.** First readers: `hermes-state-db` (sessions), Hermes skills folder, `hermes-holographic` (facts), `pi-jsonl` (sessions), Pi skills folder. It mounts `~/.wizard-os/agents/*` **read-only** and never writes to an agent's store.
-- **Builds its own index per agent**, in `~/.wizard-os/agent-search/<agent>/`. Revoking a grant never needs a re-index: the reader agent simply can't query that index any more. Uninstalling an agent and choosing "forget" deletes its index.
-- **Search method:** the same ones Hermes uses today. Its session search is SQLite full-text search, and its fact memory is the holographic provider (both MIT). We vendor them so every agent gets Hermes-quality recall without running Hermes.
-- **MCP tools** (through the `wizard` gateway, #40): `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read`, `agents_list`. Every result names the source agent.
-- **Own data is always allowed.** An agent can search its own history through Agent Search with no grant (useful for harnesses with no session search of their own, such as Pi).
-- **The Wizard thread list reads from here too.** The Agent Service's thread list, archive and status checks move from reading Hermes' `state.db` directly to the agent adapter (#47) and Agent Search, so a second agent's threads can appear in the same list.
+## 4. Sharing: the owner decides who reads what
 
-Why not give agents each other's database files: SQLite with a write-ahead log across containers risks corruption. The formats are each harness's private schema and change with updates. And a file grant is all-or-nothing and invisible. Why not each harness's own MCP: Hermes has one (`hermes mcp serve`), Pi has none, the shapes differ, and the private agent's own endpoint would be a second door to guard.
-
-## 4. Grants: the owner decides who reads what
-
-A grant is one direction, **reader agent → source agent**, with a scope per kind:
-
-```json
-{"from": "pi-trial", "to": "hermes", "sessions": "search", "skills": "read", "memory": "none",
- "subjects": ["Wizard OS"], "approved": "owner", "created_at": 1791700000}
-```
-
-- Scopes: `none`, `titles` (thread titles and dates), `search` (search results with snippets), `read` (whole sessions or skills).
-- `subjects` optionally limits it to threads in those subjects.
-- **Default: no grants.** Installing a second agent gives it nothing from the first. The owner turns it on per pair, in the Apps screen or by asking an agent that holds the "manage grants" right (owner-approved).
-- **Private agents are sealed (#59, James 14 Oct; replaces the earlier "no hard wall" rule).** No grant can name a private agent as its source, for any reader, standard or private. A private agent shares by publishing a copy, item by item, after the owner approves it in that agent's chat; moving harness works the same way. Grants between standard agents keep the rules above.
-- Stored alongside app grants in `wizard-grants.json` (PERMISSIONS.md) as `kind: "agent-data"`, so one file and one screen show every permission on the box. Agent Search enforces them on every call and logs each cross-agent read (reader, source, kind, scope, no content).
+- **Standard defaults: read and shared.** New standard agents and the main agent default to `permissions.other_agents: "read"` and `permissions.shared_with_agents: true`. This amends #46 for standard agents only. Existing stored `other_agents` values are not migrated. Missing `shared_with_agents` means true for standard, false for private.
+- **Opt-out silo.** The owner may set `shared_with_agents: false` at any time. This agent disappears from every reader's readable sources, including explicit grants (`409 check: "agent.not_shared"`). Its own `other_agents` stays independently editable. Normally a silo also uses `none`, but that is not forced.
+- **Read covers bounded, read-only files.** Hermes `memories/MEMORY.md`, `memories/USER.md`, `SOUL.md` labelled "persona (read-only)", skills list and each `SKILL.md`, and an optional owner-visible notes folder declared by `notes_dir` relative to home (for example `wiki`). Never `.env`, credentials, auth/key/config files or raw databases. Realpath must stay inside the source home; no dotfiles or escaping symlinks.
+- **Look up, never inject.** Another agent's memory, persona and skills are read only when relevant, never injected into the reader's default prompt. Each agent is the sole writer of its memory, skills and notes. A reader keeps an adapted note in its own store with `adapted_from: <agent>/<item>`, never copy-edits the source.
+- **Gateway levels.** `none` gives no sources; `titles` lists agents only; `search` also lists skills and notes; `read` permits content reads. Tools on `/wizard/mcp`: `wizard_agents__list`, `wizard_agents__memory_read(agent)`, `wizard_agents__skills_list(agent)`, `wizard_agents__skill_read(agent,name)`, `wizard_agents__notes_list(agent)` and `wizard_agents__notes_read(agent,path)`. Hermes prefixes these with `mcp__wizard__`. Every call rechecks permissions.
+- **Explicit grants** are reader → source, with `titles`, `search` or `read` scope. Grants may extend access to shared standard sources, never bypass a silo. Every cross-agent read logs reader, source, kind and scope, never content.
+- **Private agents remain sealed (#59).** No grant can name a private source, for any reader. `shared_with_agents` is always false for private agents, even in forged stored records. Setting true returns 409 `agent.private_sealed`. A private agent shares only by publishing exact copies the owner approves item by item, including when moving harnesses.
+- **Sessions stay with Agent History.** Full transcripts and history search arrive through Agent History under the same `other_agents` level, silo and private seals; not through these file tools.
 
 ## 5. Memory: opinionated by default
 
-- **Each agent keeps its own memory engine.** Memory is wired into the harness's turn loop (what gets recalled into the prompt, when facts are written), so we don't replace it. Agent Search reads it across agents, under grants.
+- **Each agent keeps its own memory engine.** Memory is wired into the harness's turn loop (what gets recalled into the prompt, when facts are written), so we don't replace it. The gateway reads only the always-loaded files listed in section 4. Other memory engines are not exposed by these tools.
 - **One opinionated default.** The Wizard OS Hermes app ships with the holographic fact store turned on (`memory.provider: holographic`), the setup we run ourselves and install for clients. Owners can change it, but nobody has to choose among Hermes' eight memory backends to get started.
 - **Same engine at Wizard level.** Agent Search uses that same holographic method for facts, so a lean agent with no memory of its own still gets good recall through Agent Search.
 - **Later, optional:** a `wizard` memory provider plugin (stock Hermes plugin API) could point Hermes' memory at Agent Search instead of its own store. Only if usage shows one shared memory beats per-agent memory.
@@ -163,7 +150,7 @@ Stock Hermes backup covers its home, not its whole working environment. Begin wi
 ## Done when (first version)
 
 1. A box runs two agents (stock Hermes and a second Hermes or Pi), each in its own `~/.wizard-os/agents/<id>/`, and nothing in either harness was changed.
-2. With no grant, agent B's `sessions_search` and `skills_search` return nothing from agent A. After the owner grants `search`, they return A's results labelled with A's name, and the read is logged.
+2. Standard B reads standard A on demand by default, with labelled results and content-free logs. Siloing A removes it immediately, including stored grants. Private sources stay sealed. Session retrieval is verified separately through Agent History.
 3. B adapts one of A's skills into its own skills folder with `adapted_from`, and A's skill is unchanged.
 4. A schedule created in the Wizard UX runs on the agent it names and posts to its thread; `hermes cron list` on that box is empty.
 5. The Wizard thread list shows both agents' threads, with no direct `state.db` read left in the Agent Service.
