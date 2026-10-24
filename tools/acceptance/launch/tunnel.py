@@ -33,8 +33,21 @@ argv = argv[:-1] + ['-i', str(lima / '_config/user'), '-o', 'IdentitiesOnly=yes'
                    '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                    '-o', 'UserKnownHostsFile=' + str(known), '-o', 'GlobalKnownHostsFile=/dev/null'] + argv[-1:]
 # Refuse an occupied forward rather than accidentally reading another service.
-with socket.socket() as probe:
-    probe.bind(('127.0.0.1', 18795))
+# SO_REUSEADDR lets the probe ignore TIME_WAIT left by the previous case's forward
+# (macOS refuses a plain bind for ~30s after it); a live listener still refuses.
+def forward_port_free():
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind(('127.0.0.1', 18795))
+            return True
+        except OSError:
+            return False
+deadline = time.monotonic() + 60
+while not forward_port_free():
+    if time.monotonic() > deadline:
+        raise RuntimeError('loopback port 18795 is held by another process')
+    time.sleep(1)
 with (a.evidence / 'private-ssh.log').open('w') as log:
     proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
     try:
