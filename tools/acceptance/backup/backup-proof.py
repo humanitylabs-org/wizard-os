@@ -381,9 +381,16 @@ def acceptance(native_key):
     assert all(word in message for word in ('partly restored','not restored:','9999.0.0','newer than this box', 'Update this box, then restore again.','paused')), 'Unclear refusal message'
     receipt = fixture('refusal-receipt',DST,'receipt')
     assert receipt['ok'] is False and receipt['partial'] is True
-    assert [r['id'] for r in receipt['refused']]==['files'], 'Wrong or additional app refused'
-    assert receipt['refused'][0]['backup']['version']=='9999.0.0'
-    assert receipt['refused'][0]['here']['version'] != '9999.0.0'
+    # Files must be refused for 9999.0.0. The bundle was exported while Mac-imported apps were live, so other
+    # apps may be genuinely newer than this Linux baseline; each such refusal must be a real newer-version one.
+    by_id = {r['id']: r for r in receipt['refused']}
+    assert 'files' in by_id, 'Files was not refused'
+    assert by_id['files']['backup']['version']=='9999.0.0'
+    assert by_id['files']['here']['version'] != '9999.0.0'
+    extra = {k: v for k, v in by_id.items() if k != 'files'}
+    for k, r in extra.items():
+        assert r['backup']['version'] != r['here']['version'] and 'newer than this box' in r['message'], 'Unjustified refusal: '+k
+    write_json('newer-app-refusal-extra', extra)
     refused = fixture('refusal-after',DST)
     assert refused['refused_scope']==refusal_before['refused_scope'], 'Refused Files data/wiring/logins changed'
     # Files app data is refused, but owner files and every OTHER named class must restore.
