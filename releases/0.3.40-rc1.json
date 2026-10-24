@@ -2,7 +2,7 @@
   "version": "0.3.40-rc1",
   "name": "Wizard OS install snapshot 0.3.40-rc1 (defaults candidate)",
   "date": "2026-10-24",
-  "about": "Candidate only; not a channel release. 0.3.39 plus unmerged App Manager PR #142 at 13d6b37: Voice and Connection Router bootstrap defaults; Agent History reserved with no default. Connected accounts remains on-demand and is not installed at bootstrap. Troubleshooter remains the unchanged host component. No accounts slot, migrations or owner-data deletion. Fresh-install acceptance pending; do not promote or mirror this candidate.",
+  "about": "Candidate only; not a channel release. 0.3.39 plus merged App Manager PR #142 at fc84567: Voice and Connection Router bootstrap defaults; Agent History reserved with no default. Connected accounts remains on-demand and is not installed at bootstrap. Troubleshooter remains the unchanged host component. No accounts slot, migrations or owner-data deletion. Prior candidate passed fresh-defaults acceptance; confirmation at the merged pins is pending. Do not promote or mirror this candidate.",
   "install": {
     "command": "curl -fsSL aiwizards.com/os.sh | bash",
     "agent": {
@@ -19,9 +19,9 @@
   "components": {
     "wizard-app-manager": {
       "repo": "humanitylabs-org/wizard-app-manager",
-      "commit": "13d6b37fc7cb5691bf9942c34add28c0f385e358",
-      "branch": "feature/launch-defaults",
-      "note": "CANDIDATE ONLY: unmerged PR #142. Never use this PR commit for a stable release; repin to the reviewed merge commit after acceptance."
+      "commit": "fc84567cafdd4e77a906a1a57f8343d1cf6cc083",
+      "branch": "main",
+      "note": "PR #142 squash merge after fresh-defaults acceptance of the pre-merge candidate; exact merged-pin confirmation remains required before release promotion."
     },
     "wizard-troubleshooter": {
       "repo": "humanitylabs-org/wizard-troubleshooter",
