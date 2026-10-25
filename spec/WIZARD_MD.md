@@ -112,6 +112,23 @@ app names belong in the shell's alias table.
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
+## App-to-app endpoints and grants
+
+A consumer declares `uses: [wizard-connectors]` (app IDs or capability slots); an AI consumer's `requires.models` or `requires.services` also proposes `slot:connection-router`. These are permission proposals, not addresses. WAM applies defaults as `approved: install` when no install-sheet answer is supplied and remembers denials. They never grant every app to every agent.
+
+For each approved app grant WAM generates a 32-byte random key. It publishes the raw key only in the consumer's `outgoing[<app-id or slot:name>]`, and a SHA-256 row in each provider's `incoming`. Every Wizard app service receives `${APP_DATA_DIR}/wizard:/wizard:ro` and `WIZARD_GRANTS_FILE=/wizard/grants.json`. The directory mount is intentional: atomic file replacement must be visible without a container restart. Providers re-read it for every request, and consumers send their key as `X-Wizard-Grant`. `enforce: false` remains the initial report-only policy; a provider may enforce more strictly for private data. Existing owner files retain their keys, extra fields and enforcement policy on adoption. Network isolation is a separate, disabled layer.
+
+Consumers must read `provider_endpoints[<app-id or slot:name>]` from the same file; do not guess service addresses or scrape owner-facing `apps.json` URLs. WAM derives the endpoint from the provider's sole `x-runtipi.is_main` compose service: an explicit network alias (if present), otherwise its service name, and `x-runtipi.internal_port`. Give shared ingress services a unique alias, for example `wizard-connectors-calendar:8799`, rather than a generic `ingress` name. If there is no unambiguous routable main service, declare an explicit endpoint in the provider's `wizard.md`:
+
+```yaml
+api:
+  port: 8799
+  path: /api
+  endpoint: http://wizard-connectors-calendar:8799
+```
+
+`api.endpoint` is an advertised app-to-app base URL, not an owner-facing URL. It must be an absolute `http` or `https` URL without user info, query, fragment, whitespace or compose interpolation. It can include a fixed path prefix. Explicit owner endpoint overrides in existing grants files are preserved, including host-network Router deployments. If neither declaration nor derivation is possible, WAM omits the endpoint; consumers report unavailable rather than inventing a fallback. Slot grants retain the `slot:` key, not the selected provider's app ID.
+
 ## Packaging: source, build or image
 
 An app says how its containers come to exist with `runtime.package`. Nobody should have to build images for two kinds of CPU to publish a small app, and an owner should be able to read what their box runs. Source is the canonical artifact; a prebuilt image is a cache.
