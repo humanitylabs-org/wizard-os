@@ -114,7 +114,10 @@ def seed(b, manifest):
         agent = last_json(b.runner.python(b.main_agent(), STOCK_SEED, ''))
     pp = paths(b)
     # Require the app-created named volume; do not fabricate a volume outside Docker.
-    subprocess.run(['docker', 'volume', 'inspect', 'wizard-ai-accounts-claude'],
+    # Reach Docker the way WAM backup does (plain docker, else sudo -n docker): a fresh
+    # box's owner is in the docker group only after the next login.
+    from wam.backup.dockercli import docker
+    subprocess.run([*docker(), 'volume', 'inspect', 'wizard-ai-accounts-claude'],
                    check=True, stdout=subprocess.DEVNULL)
     for key, text in (('app', APP_MARKER), ('login', LOGIN_CONTENT)):
         root_python('from pathlib import Path; import sys; p=Path(sys.argv[1]); p.parent.mkdir(parents=True,exist_ok=True); p.write_text(sys.argv[2]); p.chmod(0o600)', pp[key], text)
