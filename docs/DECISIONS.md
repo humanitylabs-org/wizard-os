@@ -2,6 +2,24 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 25 Oct 2026 — James: Tuesday small-group backup/restore release; explicit soak override
+
+James explicitly directed a new build containing the finished backup/restore now,
+ready for the first small test group by **Tuesday 27 October 2026**, and explicitly
+said not to wait 72 hours on latest. This is his **release-specific policy override
+of the 72-hour soak**, dated **25 October 2026**, not an inferred urgency waiver
+and not a mass rollout. Version **0.3.42** is reserved for this lane because
+0.3.41 is already owned by #206/#211; carry the published 0.3.40 bundle forward
+with reviewed WAM backup/report/retry/recovery changes only. It does not supersede
+that defaults/UI candidate. Review, official attested image provenance, release
+validation and real fresh-install, 0.3.39/0.3.40 upgrade and new-version backup /
+restore evidence remain mandatory. Record this authority in the eventual
+promotion's `fast_track.reason` using the existing feature fast-track gate;
+stable moves only in its later evidence-backed promotion PR. Preparation/evidence
+slots and offline-only scheduler/AI-login limitations:
+[0.3.42 admission](acceptance/release-0.3.42-backup.md).
+
+
 ## 24 Oct 2026 — James: agent templates, an idea for later ([spec/AGENT_TEMPLATES.md](../spec/AGENT_TEMPLATES.md))
 
 | # | Decision | Status |
