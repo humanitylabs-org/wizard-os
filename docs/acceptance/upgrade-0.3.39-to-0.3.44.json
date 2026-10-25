@@ -1,0 +1,87 @@
+{
+  "state": "pass: 0.3.39 -> 0.3.44 real detached update; defaults/health/preservation/doctor",
+  "from": "0.3.39",
+  "to": "0.3.44",
+  "vm": "l4-upgrade-0339-0344-r1",
+  "port": 18844,
+  "runner_sha256": "d593b5f61f27f3f58e4cc939f69b49bf0981f344c0a591c639b51e051322b5ef",
+  "started": "2026-10-25T10:24:05.528591+00:00",
+  "scope": "real detached installer update; pins/defaults/health/app and data preservation/doctor; not UI, model inference or alongside acceptance",
+  "sources": {
+    "candidate": {
+      "commit": "5f2dafe42ef24f56f9d25fa3c68b0a67f89e9bce",
+      "tree": "a4f4142d249c620d1839ba1e854401bedf0995cd",
+      "clean": true
+    },
+    "pr94": {
+      "commit": "34e06d444b003fa4a107f5b57b2a0c275378d6ae",
+      "tree": "032ba20d810dc4502dfd6cf88c284b4349c5a079",
+      "clean": true
+    },
+    "wam142": {
+      "commit": "42999861f941baad33aa5731fd041f4abdd0c673",
+      "tree": "761a742608430e4cbe76ccc8fad2d9d5deb64fbe",
+      "clean": true
+    },
+    "baseline-wam": {
+      "commit": "d926eec199c6440249c799677ff87585ece76a96",
+      "tree": "a16a4fd46c7827ee0cfa7d4a5dee24de7aeab025",
+      "clean": true
+    }
+  },
+  "public_channels": {
+    "latest": "0.3.43",
+    "stable": "0.3.39"
+  },
+  "snapshot_sha256": "a2b474e255c5a02fba4ac32ae4175c7045640519ec6f62b13185691f568fa213",
+  "baseline_sha256": "6aa5201e633339f71b3854c13dff30189d0a03d57799854713c1455e19a60243",
+  "upstream_runner_sha256": "ab5c1087fd161029f4f99398201fc3847c4e5d856670f6747be967d1d15a895c",
+  "adapted_sha256": "f6085f1484ab4438eee149ce8345faa19b8c747ad05148306a90911b9433b979",
+  "input_sha256": {
+    "upgrade-gate.py": "d593b5f61f27f3f58e4cc939f69b49bf0981f344c0a591c639b51e051322b5ef",
+    "upgrade-probe.py": "eb489b0749cb4a7f4c51f7f72a57aeb0379acac2cab26f2ebfb2e0e7430364be",
+    "wait-upgrade.py": "186a76e00bf70d2c0592e0e90438f57211551804413e4a2ac04cfe8f0ab1ef7a",
+    "fresh-harness.py": "ebe64efef17a7cd1855c7cd218b902acd2cd55e7b61b481a88033cd4287ec3a9",
+    "assert-defaults-final.py": "a96adbcbc59092ea769d144db5bde8c645e6f2bdac4441a243f59c97df3342e4",
+    "test-upgrade-gate.py": "f9483592857a72165d0a206ad9b8f400da9c02b68b4b5da01d0392d624d84197"
+  },
+  "reserve_bytes": 268435456000,
+  "guest_disk_gib": 17,
+  "free_bytes": 301731311616,
+  "preseeded_image_bytes": 614949888,
+  "image_digest_checked_by_runtime_before_vm": "sha256:cafa1a965b591b7c4184b484ffd8e625981a79d48f9b4ae8a4adf7b4c5ade927",
+  "flow_receipt_sha256": "1da5e7d12d0040cc965ec4e1d880dd882b5b5e03d24552d480d3122a022d2a21",
+  "phase_exits": {
+    "host-preflight": 0,
+    "vm-start": 0,
+    "fresh-baseline": 0,
+    "baseline-files-dir": 0,
+    "input-copy-0": 0,
+    "input-copy-1": 0,
+    "input-copy-2": 0,
+    "input-copy-3": 0,
+    "input-copy-4": 0,
+    "input-copy-5": 0,
+    "input-copy-6": 0,
+    "guest-input-verification": 0,
+    "baseline-logind-ready": 0,
+    "baseline-install": 0,
+    "installed-readback": 0,
+    "doctor": 0,
+    "baseline-refresh": 0,
+    "baseline-preservation-seed": 0,
+    "upgrade-start": 0,
+    "upgrade-wait": 0,
+    "upgrade-detached-status": 0,
+    "upgrade-refresh": 0,
+    "upgrade-preservation-and-defaults": 0,
+    "upgrade-doctor": 0,
+    "vm-final": 0
+  },
+  "cleanup": {
+    "exit": 0,
+    "vm_directory_absent": true
+  },
+  "free_bytes_after": 286224273408,
+  "finished": "2026-10-25T10:35:53.629201+00:00"
+}

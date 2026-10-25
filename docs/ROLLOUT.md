@@ -2,6 +2,9 @@
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 
+
+> **Current focus (23 Oct 2026):** launch v1 and the post-launch tracks live in [TRACKS.md](TRACKS.md). The dated sections below are history.
+
 ## App-owned model consistency (16 Oct, approved; #63)
 
 Every installation uses each app's packaged AI model/workflow unless its owner explicitly approves a scoped override. Archimedes owns the [shared contract](../spec/APP_WORKFLOWS.md) and Wisdom's first implementation repair. Done when the package contains its actual prompt/model, changed orchestrator defaults preserve that route, missing/mismatched models stop, and the requested rewrite preserves reading history. The builder documentation mirror remains subject to App Manager owner review; other apps need their own execution evidence.
@@ -85,7 +88,7 @@ Why bother: a GitHub topic is public and unsigned, so anyone can tag a repo (`wi
 | Stage | Unparks when | What changes | Owner |
 |---|---|---|---|
 | 1. GitHub only | now, until the v0.2 contracts go public | Apps use the approved `wizard-app` topic (on Nostr, the same `wizard-app` hashtag). Keep the catalog fetcher pluggable. The Nostr source exists in `wam` behind a flag (off). | Miguel |
-| 2. Dual-publish | **Wizard ID ships** in the Wizard app ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md), #39) | Publisher identity is Nostr from here on (#38): `wizard.md` names `publisher: npub1…`, and publishing an app posts a NIP-34 announcement signed on the publisher's phone, with its `clone` URL still on GitHub. The index and `wam` read both sources, list the same repo once, and credit an app to an npub only when both sides match (`wizard.md` names the key, and the key signs an announcement for that repo and its first commit). The store shows publisher profiles. Humanity Labs signs the official list. | Archimedes (Wizard ID, publish tooling), Miguel (index, App Manager), James + Archimedes (store) |
+| 2. Dual-publish | **Wizard ID ships** in the Wizard phone app (`ai.wizards.os`) ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md), #39) | Publisher identity is Nostr from here on (#38): `wizard.md` names `publisher: npub1…`, and publishing an app posts a NIP-34 announcement signed on the publisher's phone, with its `clone` URL still on GitHub. The index and `wam` read both sources, list the same repo once, and credit an app to an npub only when both sides match (`wizard.md` names the key, and the key signs an announcement for that repo and its first commit). The store shows publisher profiles. Humanity Labs signs the official list. | Archimedes (Wizard ID, publish tooling), Miguel (index, App Manager), James + Archimedes (store) |
 | 3. Nostr primary | **first outside developer or ~20 apps** (same trigger as monetization) | Nostr announcements and signed lists become the main catalog. The Apps screen shows verified publishers and the apps friends use. GitHub topic search stays as a fallback. | Miguel + James (Apps screen) |
 | 4. Multi-host | **GitHub actually hurts**: a takedown, rate limits, private-repo cost, or developers who won't use it | Apps add a GRASP clone URL beside GitHub's (`relay.ngit.dev`, `gitnostr.com`, or our own). GitHub becomes one copy of several. | App authors; we run one GRASP host |
 

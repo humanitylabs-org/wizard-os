@@ -33,6 +33,8 @@ HERMES_TAG = re.compile(r"^v\d+\.\d+\.\d+$")          # a final upstream tag, ne
 HERMES_IMAGE = re.compile(r"^docker\.io/nousresearch/hermes-agent:(v\d+\.\d+\.\d+)$")
 HERMES_UPSTREAM = "NousResearch/hermes-agent"
 HERMES_PIN_FROM = (0, 3, 23)   # DECISIONS #74: snapshots from 0.3.23 on name their Hermes; older files are history
+SERVICE_ROUTES_FROM = (0, 3, 33)   # snapshots from 0.3.33 on: the pinned Agent Service serves every stable spec route
+SPEC = Path(__file__).resolve().parents[1] / "spec" / "AGENT_SERVICE_API.md"
 
 
 def _vtuple(v: str) -> tuple[int, ...]:
@@ -63,6 +65,13 @@ def hermes_shape(rel: dict) -> list[str]:
             errs.append(f"hermes.image: ref tag {m.group(1)} differs from hermes.tag {h.get('tag')}")
         if not isinstance(im, dict) or not DIGEST.fullmatch(str(im.get("digest", ""))):
             errs.append("hermes.image: digest is not sha256:<64 hex>")
+        # Historical carried-over pins stay readable; a newly tested pin must name the image's source too.
+        image_commit = im.get("commit") if isinstance(im, dict) else None
+        if image_commit is not None or not str(h.get("test_record", "")).startswith("none: "):
+            if not SHA.fullmatch(str(image_commit or "")):
+                errs.append("hermes.image: commit must record the 40-char image source commit for a tested pin")
+            elif image_commit != h.get("commit"):
+                errs.append("hermes.image: commit differs from the upstream tag commit; do not promote this image")
     agent = (rel.get("default_apps") or {}).get("agent")
     if im is None and isinstance(agent, dict) and agent.get("app") == "hermes-agent":
         errs.append("hermes.image: fresh installs run the hermes-agent container, so the pin needs an image")
@@ -276,6 +285,60 @@ def index_drift(defaults: dict) -> list[str]:
     return out
 
 
+def missing_service_routes(spec_text: str, sources: dict[str, str]) -> list[str]:
+    """Stable /wizard/ routes in the spec's ```routes block that no Agent Service server file mentions.
+
+    A release pairs one shell image with one Agent Service image. 0.3.32 shipped a shell that calls GET /wizard/v1/setup
+    with an Agent Service from before that route existed, so first-run Setup never opened on a fresh box. A route counts
+    as served when its literal prefix (up to the first {param}) appears in server/*.mjs, plain or regex-escaped."""
+    m = re.search(r"```routes\n(.*?)```", spec_text, re.S)
+    if not m:
+        return ["spec: no ```routes block"]
+    text = "\n".join(sources.values())
+    out = []
+    for raw in m.group(1).splitlines():
+        parts = raw.split()
+        if len(parts) < 4 or raw.lstrip().startswith("#") or parts[2] != "stable" or not parts[1].startswith("/wizard/"):
+            continue
+        pre = parts[1].split("{", 1)[0]
+        forms = {pre, pre.rstrip("/")}
+        forms |= {f.replace("/", "\\/") for f in forms}
+        if not any(f in text for f in forms if f):
+            out.append(f"{parts[0]} {parts[1]}")
+    return out
+
+
+def service_sources(repo: str, sha: str) -> tuple[dict[str, str] | None, str]:
+    """server/*.mjs of the pinned Agent Service commit (GitHub tarball through gh)."""
+    import io
+    import tarfile
+    r = subprocess.run(["gh", "api", f"repos/{repo}/tarball/{sha}"], capture_output=True)
+    if r.returncode != 0:
+        return None, ((r.stderr or b"").decode("utf-8", "replace").strip().splitlines() or ["tarball failed"])[-1][:160]
+    out = {}
+    with tarfile.open(fileobj=io.BytesIO(r.stdout)) as t:
+        for mem in t.getmembers():
+            rel = mem.name.split("/", 1)[-1]
+            if mem.isfile() and rel.startswith("server/") and rel.endswith(".mjs"):
+                out[rel] = t.extractfile(mem).read().decode("utf-8", "replace")
+    return (out, "") if out else (None, "no server/*.mjs in the tarball")
+
+
+def service_routes_online(rel: dict, spec_text: str) -> tuple[list[str], list[str]]:
+    version = str(rel.get("version", ""))
+    c = (rel.get("components") or {}).get("wizard-agent-service")
+    if not c or not VERSION.fullmatch(version) or _vtuple(version) < SERVICE_ROUTES_FROM:
+        return [], []
+    src, why = service_sources(c["repo"], c["commit"])
+    if src is None:
+        return [], [f"wizard-agent-service: can't read server sources at {c['commit'][:12]} ({why})"]
+    miss = missing_service_routes(spec_text, src)
+    if miss:
+        return [], [f"wizard-agent-service@{c['commit'][:12]} does not serve stable spec route(s) the shell may call: "
+                    + ", ".join(miss)]
+    return [f"wizard-agent-service@{c['commit'][:12]}: serves every stable /wizard/ route in spec/AGENT_SERVICE_API.md"], []
+
+
 def commit_exists(repo: str, sha: str) -> tuple[bool, str]:
     r = subprocess.run(["gh", "api", f"repos/{repo}/commits/{sha}", "-q", ".sha"], capture_output=True, text=True)
     if r.returncode == 0 and r.stdout.strip() == sha:
@@ -335,6 +398,52 @@ def dockerhub_digest_exists(digest: str) -> tuple[bool, str]:
         return False, str(e)[:160]
 
 
+def dockerhub_image_revision(digest: str) -> tuple[str | None, str]:
+    """Prove the digest's revision on BOTH install architectures, without downloading image layers.
+
+    No inferred revision from a tag, build date, or another architecture. Missing metadata blocks promotion.
+    """
+    import hashlib
+    accept = ", ".join(["application/vnd.oci.image.index.v1+json",
+                        "application/vnd.docker.distribution.manifest.list.v2+json",
+                        "application/vnd.oci.image.manifest.v1+json",
+                        "application/vnd.docker.distribution.manifest.v2+json"])
+    try:
+        tok = json.load(urllib.request.urlopen(
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:nousresearch/hermes-agent:pull",
+            timeout=20))["token"]
+
+        def get(path: str, expected: str) -> dict:
+            req = urllib.request.Request(f"https://registry-1.docker.io/v2/nousresearch/hermes-agent/{path}",
+                                         headers={"Authorization": f"Bearer {tok}", "Accept": accept})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = r.read()
+            if "sha256:" + hashlib.sha256(raw).hexdigest() != expected:
+                raise ValueError("registry content differs from its digest")
+            return json.loads(raw)
+
+        top = get(f"manifests/{digest}", digest)
+        revisions = set()
+        for arch in ("amd64", "arm64"):
+            matches = [m for m in top.get("manifests", []) if m.get("platform", {}).get("os") == "linux"
+                       and m.get("platform", {}).get("architecture") == arch]
+            if len(matches) != 1:
+                return None, f"expected one linux/{arch} manifest"
+            md = matches[0]["digest"]
+            man = get(f"manifests/{md}", md)
+            cd = man["config"]["digest"]
+            cfg = get(f"blobs/{cd}", cd)
+            rev = ((cfg.get("config") or {}).get("Labels") or {}).get("org.opencontainers.image.revision")
+            if not SHA.fullmatch(str(rev or "")):
+                return None, f"linux/{arch} has no full OCI revision label; image/tag agreement is unproven"
+            revisions.add(rev)
+        if len(revisions) != 1:
+            return None, "Linux architectures carry different source revisions"
+        return revisions.pop(), ""
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return None, str(e)[:160]
+
+
 def app_dockerfile(repo: str, commit: str) -> str | None:
     r = subprocess.run(["gh", "api", f"repos/{repo}/contents/image/Dockerfile?ref={commit}", "-q", ".content"],
                        capture_output=True, text=True)
@@ -362,6 +471,14 @@ def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
     if im:
         found, why = dockerhub_digest_exists(im["digest"])
         (ok if found else errs).append(f"hermes.image: {im['digest'][:19]}" + ("" if found else f" missing ({why})"))
+        if found:
+            rev, why = dockerhub_image_revision(im["digest"])
+            expected = im.get("commit", h["commit"])
+            if rev is not None and rev == expected == h["commit"]:
+                ok.append(f"hermes.image: linux/amd64 + linux/arm64 built from tag commit {rev[:12]}")
+            else:
+                errs.append(f"hermes.image: built from {(rev or '?')[:12]}, tag pins {h['commit'][:12]}, "
+                            f"image pin says {expected[:12]}" + (f" ({why})" if why else ""))
         agent = (rel.get("default_apps") or {}).get("agent") or {}
         if agent.get("app") == "hermes-agent" and agent.get("repo") and agent.get("commit"):
             df = app_dockerfile(agent["repo"], agent["commit"])
@@ -455,6 +572,12 @@ def main(argv: list[str] | None = None) -> int:
         h_ok, h_errs = hermes_online(rel)
         ok_lines += h_ok
         errs += h_errs
+        try:
+            s_ok, s_errs = service_routes_online(rel, SPEC.read_text(encoding="utf-8"))
+        except OSError as e:
+            s_ok, s_errs = [], [f"spec: can't read {SPEC.name} ({e})"]
+        ok_lines += s_ok
+        errs += s_errs
     warns = index_drift(rel.get("default_apps") or {}) if not errs and not a.offline else []
     for line in ok_lines:
         print(f"PASS  {line}")

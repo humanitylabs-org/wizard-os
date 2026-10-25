@@ -1,0 +1,79 @@
+[
+  {
+    "id": 5,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "user",
+    "timestamp": 1792631247.2408328,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "HS-DELEGATE h1",
+    "shareable": false
+  },
+  {
+    "id": 6,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "assistant",
+    "timestamp": 1792631247.2579877,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "",
+    "shareable": false,
+    "tool_calls": [
+      {
+        "id": "call_h1",
+        "type": "function",
+        "function": {
+          "name": "delegate_task"
+        },
+        "display_label": "Consulted another agent"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "tool",
+    "timestamp": 1792631247.2974107,
+    "display_kind": null,
+    "tool_call_id": "call_h1",
+    "content": "",
+    "shareable": false
+  },
+  {
+    "id": 8,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "assistant",
+    "timestamp": 1792631247.3143454,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "HELPER-DISPATCHED",
+    "shareable": true
+  },
+  {
+    "id": 12,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "system",
+    "timestamp": 1792631253.9572692,
+    "display_kind": "run_context",
+    "author": "system",
+    "content": "",
+    "display_content": "",
+    "shareable": false,
+    "run_context": {
+      "kind": "continuation",
+      "from": "Wizard follow-through",
+      "summary": "The delegated results above have arrived. Finish the original request now, in one self-contained reply.",
+      "original": "[Wizard follow-through] The delegated results above have arrived. Finish the original request now, in one self-contained reply."
+    }
+  },
+  {
+    "id": 13,
+    "session_id": "wizard_1792631247200_51d32b0fa49e",
+    "role": "assistant",
+    "timestamp": 1792631253.9708428,
+    "display_kind": null,
+    "tool_call_id": null,
+    "content": "PARENT-SAW CHILD-RESULT h1",
+    "shareable": true
+  }
+]

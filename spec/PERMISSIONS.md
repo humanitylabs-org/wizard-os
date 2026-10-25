@@ -12,7 +12,7 @@ Today every Wizard app can reach every other app. Runtipi puts every app's main 
 |---|---|---|---|
 | **App → app** (Wisdom → Connection Router, Router → Claude app, a recorder → Transcriber) | Owner-approved grants (this spec) | Per-app Docker networks + per-grant key at the provider | this file |
 | Agent → app (Hermes or a container agent calling an app's tools) | The owner's tick boxes per agent, chosen at install (#58) | The Agent Service's `wizard` MCP gateway, one key per agent | [AGENTS.md](AGENTS.md) §5, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) |
-| Agent → another agent's data | Agent-data grants, default none (#46); private agents can never be a source (#59) | Agent Search / Agent Service | [AGENT_STATE.md](AGENT_STATE.md) §4 |
+| Agent → another agent's data | Agent-data grants, default none (#46); private agents can never be a source (#59) | Agent History / Agent Service | [AGENT_STATE.md](AGENT_STATE.md) §4 |
 | Where an app's work goes | App → agent binding (#60) | Agent Service delivery endpoint | [AGENTS.md](AGENTS.md) §7 |
 
 This spec adds **no agent defaults**. Draft v0.1 gave every agent a grant to every app at install; #58 replaced that, and it does not come back here. Agents never call apps directly: they go through the gateway, and the gateway serves each agent only the apps ticked for it.
@@ -40,6 +40,10 @@ A grant is one direction: **consumer app → provider**. The consumer may open c
 - An app never needs a grant to itself. Uninstalling an app removes its grants as consumer and as provider; reinstalling proposes them again unless they are in `denied`.
 - **Grants carry no agent authority.** A grant lets app A call app B's own API. It never lets A act as an agent, reach the gateway, read agent data, or read a private agent (#59). An app bound to a private agent (#60) delivers through the Agent Service endpoint, not through a grant to the agent.
 
+## Share grants
+
+A `share` grant lets a consumer mount a folder a provider exports ([WIZARD_MD.md](WIZARD_MD.md#shared-folders)): `{"kind": "share", "from": "hermes-agent", "to": "wizard-claude", "share": "claude-login", "reason": "mounts", "approved": "install", "created_at": …}`. It is proposed at install for each `mounts:` entry whose provider is installed (and again when the provider is installed later), shown on the install sheet as "Hermes Agent will be able to use: Claude sign-in", and revocable like any grant. The App Manager adds the bind mount when it compiles the consumer and restarts the consumer when a share grant is added or revoked. A share grant carries no network access and no key; it is only the mount.
+
 ## Where grants live (no database migration)
 
 The App Manager writes one JSON file, `<runtipi data dir>/state/wizard-grants.json` (e.g. `~/runtipi/state/wizard-grants.json`). Apps never see it. Stock Runtipi ignores it. Atomic writes (temp + rename). No keys in this file.
@@ -57,8 +61,8 @@ The App Manager writes one JSON file, `<runtipi data dir>/state/wizard-grants.js
 }
 ```
 
-- `kind`: `app` here. `agent-data` grants (AGENT_STATE #46) share the file so one screen shows every permission on the box; their rules stay in AGENT_STATE.md.
-- `reason`: `uses` | `requires` | `owner` (added by hand). `approved`: `install` (accepted on the install sheet) | `owner` (changed later).
+- `kind`: `app` or `share` here. `agent-data` grants (AGENT_STATE #46) share the file so one screen shows every permission on the box; their rules stay in AGENT_STATE.md.
+- `reason`: `uses` | `requires` | `mounts` | `owner` (added by hand). `approved`: `install` (accepted on the install sheet) | `owner` (changed later).
 - `seeded`: apps whose proposals were already made, so a restart doesn't re-add revoked grants.
 - **Mirrored into `apps.json`** as top-level `grants` (same objects, no keys) so the Agent Service and the shell can show them ([APPS_JSON.md](APPS_JSON.md)).
 - Agent → app ticks stay in each `agent.json` (`permissions.wizard_apps`, AGENTS.md). The Apps screen may show them beside app grants, labelled as agents; they are not written here.

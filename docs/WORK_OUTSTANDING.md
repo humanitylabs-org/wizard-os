@@ -4,6 +4,19 @@ Components still to build. Pick one up: put your name on it in a PR, and close i
 
 **Release labels** (every Wizard repo): `release: v1` = needed for the first release; `release: later` = future feature, parked until after it. Tag every new issue with one. Ideas for later go in as an issue labelled `release: later` + `enhancement`, never as a build. Cross-repo views: [v1](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+v1%22+is%3Aopen&type=issues) · [later](https://github.com/search?q=org%3Ahumanitylabs-org+label%3A%22release%3A+later%22+is%3Aopen&type=issues).
 
+## Launch v1 core path (audit #132)
+
+**Owner: Archimedes.** The core path is launch items [#87–#93](https://github.com/humanitylabs-org/wizard-os/issues/87) **plus audits #133–#140**, on both profiles: fresh Linux box and Mac app. The [reading map and weekly receipt template](CORE_AGENT_PATH.md) separate this launch checklist from the lower-level agent request path. Historical component receipts below do not close current launch acceptance.
+
+- Launch items: [first chat #87](https://github.com/humanitylabs-org/wizard-os/issues/87), [phone pairing #88](https://github.com/humanitylabs-org/wizard-os/issues/88), [model connection #89](https://github.com/humanitylabs-org/wizard-os/issues/89), [updates #90](https://github.com/humanitylabs-org/wizard-os/issues/90), [backup/restore #91](https://github.com/humanitylabs-org/wizard-os/issues/91), [app set #92](https://github.com/humanitylabs-org/wizard-os/issues/92), [repair #93](https://github.com/humanitylabs-org/wizard-os/issues/93).
+- Audit guardrails: [browser boundary #133](https://github.com/humanitylabs-org/wizard-os/issues/133), [box state #134](https://github.com/humanitylabs-org/wizard-os/issues/134), [release evidence #135](https://github.com/humanitylabs-org/wizard-os/issues/135), [defaults/custody #136](https://github.com/humanitylabs-org/wizard-os/issues/136), [route contract #137](https://github.com/humanitylabs-org/wizard-os/issues/137), [security inventory #138](https://github.com/humanitylabs-org/wizard-os/issues/138), [first contact/report #139](https://github.com/humanitylabs-org/wizard-os/issues/139), [daily real-use signal #140](https://github.com/humanitylabs-org/wizard-os/issues/140).
+- **No scope freeze.** New work proceeds behind a profile flag or as a non-default app until promoted with tests. Each PR declares effects on frozen client fields (#137), box state (#134), updates (#135) and trust (#133).
+- **Still required:** the daily architecture check-in reports merge risk, and its weekly report names core items that moved or stalled. Before launch, verify every new feature is either promoted with evidence or off by default on tester boxes. This index/template does not claim those operational checks have run.
+
+## Account connectors and privacy routing (direction approved 15 Oct, mechanism proposed; #85)
+
+Archimedes owns the [contract](../spec/CONNECTORS.md) and [YouTube Music + simulated-chat MVP / release checklist](CONNECTORS_MVP.md). Next: slice B (pure admission function + fixtures) and slice A (real Music account seam and uncached playback). The Account Manager / Google broker seam is for Jan to confirm; App Manager descriptor/network enforcement for Miguel/Oscar. Real credential use and private-chat activation keep their release gates. Not on the v1 critical path.
+
 ## Receives voice input (15 Oct, approved; #62)
 
 Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard UX receiver/capture UX and Manager, Video Editor and Search adapters. App-owned results do not create automatic success Chats. Implementation/live acceptance is in progress; the App Manager checker/metadata/builder mirror goes through Miguel/Oscar review.
@@ -13,7 +26,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [x] **Pin in the snapshot** (21 Oct): `hermes` block required from 0.3.23, validated by `tools/check_release.py` offline and online (upstream tag commit, Docker Hub digest, `hermes-agent` app's `FROM`).
 - [ ] **Candidate test on Thales**: fresh VM per tag, record in `docs/acceptance/hermes-<tag>.md`.
 - [ ] **Weekly candidate post**: the Sunday release gate names the candidate and its blocker.
-- [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback.
+- [ ] **`wizard hermes update --stable`** for alongside boxes: backup, quiet moment, exact tag, check, automatic rollback. Built on `feature/hermes-update-stable` (`wizard hermes status|update`, [WIZARD_CLI](../spec/WIZARD_CLI.md#updating-this-boxs-hermes-alongside-mode)); fresh-VM record [acceptance/hermes-update-stable.md](acceptance/hermes-update-stable.md); ticks when the PR merges.
 - [ ] **Fresh installs off `v2026.9.24`**: `hermes-agent` app moves to the first passing candidate with an image (review: app repo owner).
 
 ## Private model providers (Archimedes; DECISIONS #66, [PRIVATE_PROVIDERS.md](../spec/PRIVATE_PROVIDERS.md))
@@ -41,6 +54,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [ ] **Agent bridge** ([AGENT_BRIDGE.md](../spec/AGENT_BRIDGE.md), #40; Archimedes): `wizard` MCP gateway at `/wizard/mcp` over `apps.json`, `list_changed` on change, `wizard_apps` meta tool; kernel at `/wizard/v1/agent-context`; `wizard-os` Hermes plugin; weak-model gate. Replaces "`apps.json` reader: register each app's MCP".
 - [ ] **Pointer skills** (Archimedes, part of #40). One short skill per job type ("short-form video → DeFleur Video"), rebuilt from `apps.json` `provides` on every change.
 - [x] **`spec/AGENT_SERVICE_API.md`** (Archimedes, 12 Oct; [#22](https://github.com/humanitylabs-org/wizard-os/pull/22)). v1 written from shipped behaviour (wizard-agent-service `main` `f772b83`, wizard-ux `daily` `8866124`): 46 served routes plus the 4 proposed PR #7 routes and 1 gap, with discrepancies D1–D5. Evidence: `tools/check_api_contract.py --ux` maps all 63 UX requests (web + Android) onto documented routes, 0 problems; `tools/tests/test_api_contract.py` 12/12 with negative controls; `tools/api_contract_probe.mjs` 75/75 cases against an isolated service, 46/46 served routes exercised, 11 negative controls (undocumented, proposed and gap paths answer 404).
+- [ ] **Current core-path launch acceptance (#132).** [CORE_AGENT_PATH.md](CORE_AGENT_PATH.md) labels the existing core versus its extensions and supplies a weekly receipt template. The historical #22 receipt above remains historical: reconcile current UX calls, isolated served-route results and the selected release's service pin before closing #132. Keep documented gaps, skips and proposed routes explicit; a checker or template existing is not a passing current run.
 - [ ] **Install alongside an existing Hermes** (#41; Archimedes): `os.sh` detect + alongside mode, `wizard link / unlink / doctor`, tested on a fresh VM with stock Hermes preinstalled.
 - [x] **Release file** (Archimedes). `releases/<version>.json`: the commit of each repo that goes together. Done: `releases/0.3.7.json` … `0.3.12.json` plus `releases/stable` on `main` (stable = 0.3.12, PR #76).
 - [ ] **Attachments into the files root** ([SYSTEM_APPS.md](SYSTEM_APPS.md#files)).
@@ -49,9 +63,11 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 - [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
   - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
-  - Agent History system app (#77): daily copy from each agent, sealed monthly files, conversation export, `release` then harness prune of machine sessions past `live_days`, disk forecast, `sessions_search` with `deep`; then Chats reading old threads from History, the Pi reader, grant checks and read log. v0 runs on James's box (Archimedes): copy live since 21 Oct, first scheduled-job prune 22 Oct.
+  - Agent History system app (#102, PR #70): daily copy from each agent, sealed monthly files, conversation export, `release` then harness prune of machine sessions past `live_days`, disk forecast, `sessions_search` with `deep`; then Chats reading old threads from History, the Pi reader, grant checks and read log. v0 runs on James's box (Archimedes): copy live since 21 Oct, first scheduled-job prune 22 Oct.
+  - Agents app: owner-controlled `shared_with_agents` silo toggle, independently editable `other_agents`.
+  - Agents app: split/merge diff approval and lifecycle UI ([AGENT_SPLIT.md](../spec/AGENT_SPLIT.md)); spec and procedure only for now.
   - Agent-data grants in `wizard-grants.json` and on the Apps screen.
-  - Wizard scheduler: jobs API, UX list, Hermes cron import for alongside mode, blueprint templates.
+  - Wizard scheduler (Archimedes, 🔨; #47 approved 21 Oct): jobs API, UX list, Hermes cron import for alongside mode, blueprint templates. First slice: Agent Service jobs + results posted into their thread by run id (replaces host `cron_to_chats.py`), high-frequency watchdogs move to Supervisor health checks + Notifications.
 - [ ] **Approval policy across agents**: which actions need the owner's yes, enforced in Wizard rather than per agent. Unowned.
 - [ ] **Lean-agent bake-off** (once a containerised box exists): 20 real tasks, four setups (Hermes + frontier model, Hermes + flash model, slim Hermes profile + flash model, Pi + flash model), scored on pass rate, cost, time and tool calls. Runs in fresh containers on Thales with stub app MCPs.
 
@@ -68,7 +84,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 - [x] `wizard.md` for every app: each split into its own public repo with history, an MCP and a skill, and listed in the index (9 Oct).
 - [x] **Index** `wizard-app-index` live at apps.aiwizards.com, store page at aiwizards.com/wizard-apps (9 Oct).
 - [ ] **App Manager reads the index**: install = fetch one app at the index's commit, re-check, add to the local store. Retire per-box topic search.
-- [ ] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28).
+- [x] **Lock the App Manager API**: loopback bind, token for install/uninstall/refresh (#28). Done in code (`WAM_BIND` default 127.0.0.1, bearer in `~/.wizard-os/api-token`); see [SECURITY_INVENTORY.md](SECURITY_INVENTORY.md).
 - [ ] Move DeFleur's image build and e2e scripts into `defleur-video`.
 - [ ] **Thin-fork terms (#32, Miguel):** ~~frontend back to stock Runtipi~~ done 10 Oct (only the four Wizard categories remain; Wizard views in `wizard-app-manager/wizard-views/` for Wizard UX); image stays a drop-in for `runtipi/runtipi`; "Open port" fix sent upstream; index store offered upstream as a pluggable store source. Review 20 Nov 2026.
 - [x] **App-to-app permissions spec**: [spec/PERMISSIONS.md](../spec/PERMISSIONS.md) v0.2, approved by James 21 Oct (#76). App → app grants only; agents stay on #58 ticks and #59 seals.
@@ -120,6 +136,6 @@ The Try Wizard VM that runs the whole stack on a Mac. Not started until the App 
 - [x] **Style tokens** pulled from `wizard-ux` into `style/` (colours, type, spacing, radius, motion) plus core components. Appearance v1, five skins, `tokens.json` → `tokens.css` with a drift check; demo sits on the same glass as Chats; Wisdom and a fresh generated app re-dress live in all five skins, window and full screen, on Thales (308 real-shell + 43 browser checks). [evidence](evidence/style-tokens-t_24e03d53.md). Staged in #36, awaiting James's style review.
 - [x] **`wizard-app-builder` skill.** It knows the style, the system apps, the template and the checker, and ends every build by asking "is there a component here other apps could share?" Pointer in `system-skills/wizard-app-builder/`; WAM's builder takes `style/` as a hash-locked copy (wizard-app-manager#32, `wam new` app imports it byte-identically and passes the checker). [evidence](evidence/style-tokens-t_24e03d53.md). Awaiting Oscar's review.
 - [x] **Generic `wizard` CLI**: `wizard apps list --json`, `wizard tools <app>`, `wizard call <app>.<tool> --json`. Archimedes. Contract [`spec/WIZARD_CLI.md`](../spec/WIZARD_CLI.md), code `tools/wizard`, end-to-end tests `tools/tests/`.
-- [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures.
+- [ ] **`docs/CREDENTIALS.md` + break-glass kit**, after the token-sharing test (Miguel + Oscar). The kit is one "repair with any working subscription" path (Claude Code or Codex against the box) plus scripts for known failures. Kit written: [`REPAIR_KIT.md`](REPAIR_KIT.md) (where every sign-in lives and how to reconnect it, the helper repair path with [`tools/repair/REPAIR_PROMPT.md`](../tools/repair/REPAIR_PROMPT.md), one recipe per known failure; #93). Open: the broken-box drill run on a fresh VM, and a review of the sign-in table after the token-sharing test.
 - [ ] **One-button host move**: snapshot → verify → cut over → roll back.
 - [x] GitHub tag: `wizard-app` (approved by James, 9 Oct).

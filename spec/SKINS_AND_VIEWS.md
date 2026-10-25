@@ -155,7 +155,21 @@ registry refresh. Several installed providers remain available side by side.
 
 ## 4. Skins can recommend views, never replace them
 
-A skin's entry may list views it was designed with (`recommends: [mizel-chats]`). Picking the skin offers "This skin was made with Mizel Chats. Install it?" Saying yes installs the app and fills the slot. Each piece stays separately swappable: Mizel skin with James's Chats, or James's skin with Mizel Chats.
+A skin family may name the view it was designed with, per slot:
+
+```js
+{ id: 'mizel', name: 'Mizel', recommends: { chats: 'mizel-chats' }, palettes: [...] }
+```
+
+`recommends` is an object keyed by slot id (only `chats` today); each value is one installed-app id. Behaviour (wizard-ux Settings, live 21 Oct 2026):
+
+- When the worn skin recommends a Chats that is not the current default, Settings shows one suggestion on the Appearance page and on Chats & app screens: "Mizel goes with Mizel Chats".
+- If the app is installed the button is **Use it**: a confirm sheet, then `POST /wizard-os-home/store-install/_slots/chats {"default":"<id>"}`, then the registry is re-read and Chats re-renders. A failed POST keeps the old default and shows the error.
+- If it is not installed the button is **Get it**, which opens the Store on that app. Installing never changes the default by itself.
+- **Not now** hides the suggestion for that skin and that recommended id (`localStorage` key `wos.settings.chats.dismiss.<family id>`). A different recommendation shows again.
+- Nothing switches automatically, ever.
+
+Each piece stays separately swappable: Mizel skin with James's Chats, or James's skin with Mizel Chats.
 
 Why a skin does not carry its own views:
 - James wants Miguel's Chats while keeping his own skin.
@@ -182,5 +196,5 @@ Unchanged from the views proposal and already built in the App Manager (`wam vie
 | 1 | Settings shows skins with their colours underneath | Archimedes | `wizard-ux` | The picker shows Wizard and Mizel as two skins. Switching skins restores the last palette. Saved choices load unchanged. Live on James's Wizard |
 | 2 | My skin folder with optional `skin.js` | Archimedes | `wizard-ux`, `wizard-agent-service` | An agent adds a gesture through `Skins/My skin/skin.js`. A broken script switches off and names the file |
 | 3 | Chats as a swappable view in a `chats` slot | Archimedes (extraction); Miguel forks it whenever he likes | `wizard-ux`, `wizard-app-manager` | Two Chats are installed. Each opens on its own desk on the same threads. The slot choice decides which one the dock opens |
-| 4 | Skins recommend views | Archimedes | `wizard-ux` | Picking Mizel offers Mizel Chats. Declining leaves the slot unchanged |
+| 4 | Skins recommend views (live 21 Oct 2026, wizard-ux #272) | Archimedes | `wizard-ux` | Picking Mizel offers Mizel Chats. Declining leaves the slot unchanged |
 | 5 | The shell opens owner-customised app screens | Archimedes | `wizard-ux`, `wizard-agent-service` | A `wam views` own version opens from the launcher. Revert brings the original back |
