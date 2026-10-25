@@ -1,4 +1,5 @@
 """Stage rules for tools/pr_board.py (the GitHub PR pipeline board). No network."""
+import datetime as dt
 import pathlib
 import sys
 import unittest
@@ -40,6 +41,47 @@ class Stage(unittest.TestCase):
     def test_tier(self):
         self.assertEqual(b.tier_of(pr(labels=["tier: recommended fix"])), "Bug fix")
         self.assertEqual(b.tier_of(pr(labels=["needs: james review"])), "No tier")
+
+
+class PullRequests(unittest.TestCase):
+    def test_direct_connection_paginates_without_search_index(self):
+        from unittest.mock import patch
+        recent = dt.datetime.now(dt.timezone.utc).isoformat()
+        def node(id, state, ended=recent, updated=recent):
+            return dict(id=id, state=state, isDraft=False, closedAt=ended,
+                        updatedAt=updated, mergeCommit=None)
+        old = "2000-01-01T00:00:00Z"
+        pages = [
+            ([node("old-open", "OPEN", None, old)], True, "open-next"),
+            ([node("other-open", "OPEN", None)], False, None),
+            ([node("444", "CLOSED"), node("445", "CLOSED"),
+              node("old-closed-recent-edit", "CLOSED", old)], True, "closed-next"),
+            ([node("merged", "MERGED"), node("old", "CLOSED", old, old)], True, "stop"),
+        ]
+        calls = []
+        def gql(query, **variables):
+            self.assertNotIn("search(", query)
+            self.assertIn("orderBy:{field:UPDATED_AT,direction:DESC}", query)
+            self.assertEqual((variables["o"], variables["n"]), tuple(REPO.split("/")))
+            calls.append(variables)
+            nodes, more, cursor = pages[len(calls) - 1]
+            return {"repository": {"pullRequests": {
+                "nodes": nodes, "pageInfo": {"hasNextPage": more, "endCursor": cursor}}}}
+        with patch.object(b, "gql", side_effect=gql):
+            prs = b.pull_requests(REPO)
+        self.assertEqual([p["id"] for p in prs], ["old-open", "other-open", "444", "445", "merged"])
+        self.assertEqual([c["after"] for c in calls], [None, "open-next", None, "closed-next"])
+        self.assertEqual([c["states"] for c in calls], [["OPEN"], ["OPEN"],
+                                                       ["CLOSED", "MERGED"], ["CLOSED", "MERGED"]])
+        self.assertEqual([b.stage_of(p, REPO, PINS, ANC) for p in prs[2:4]], ["Dropped", "Dropped"])
+
+    def test_empty_repository(self):
+        from unittest.mock import patch
+        response = {"repository": {"pullRequests": {
+            "nodes": [], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}
+        with patch.object(b, "gql", return_value=response) as gql:
+            self.assertEqual(b.pull_requests(REPO), [])
+        self.assertEqual(gql.call_count, 2)
 
 
 if __name__ == "__main__":
