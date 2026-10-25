@@ -14,6 +14,23 @@ import subprocess
 import sys
 
 
+def run_backup(wam, *argv):
+    # This admitted fixture uses synthetic credentials and `key new --out`.
+    # WAM's key command without --out can print the recovery key, so refuse it.
+    assert not (argv[:2] == ('key', 'new') and '--out' not in argv)
+    r = subprocess.run([wam, 'backup', *map(str, argv), '--json'],
+                       capture_output=True, text=True, timeout=1800)
+    if r.returncode:
+        # capture.py forwards stderr only to private-run.log on failure. Never
+        # attach diagnostics to an exception/result (which can become a receipt).
+        for name, text in (('stdout', r.stdout), ('stderr', r.stderr)):
+            sys.stderr.write(f'backup {argv[0]} {name} tail:\n{text[-4000:]}\n')
+        raise RuntimeError('real backup CLI failed: ' + argv[0])
+    result = json.loads(r.stdout)
+    assert result.get('ok', True) is True and not result.get('partial')
+    return result
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--fixture', required=True, type=Path)
@@ -44,11 +61,7 @@ def main():
     assert all(before['checks'][k] is True for k in fixture.CLASSES)
     wam = str(Path.home() / '.local/bin/wam')
     def backup(*argv):
-        r = subprocess.run([wam, 'backup', *map(str, argv), '--json'], capture_output=True, text=True, timeout=1800)
-        assert r.returncode == 0, 'real backup CLI failed: ' + argv[0]
-        result = json.loads(r.stdout)
-        assert result.get('ok', True) is True and not result.get('partial')
-        return result
+        return run_backup(wam, *argv)
     key = state / 'recovery.key'
     backup('key', 'new', '--out', key)
     bundle = state / 'release.wizardbackup'
