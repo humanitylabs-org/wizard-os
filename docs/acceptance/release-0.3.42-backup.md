@@ -20,13 +20,13 @@ in the promotion reason. Stable promotion is a separate PR after passing gates.
 
 | Gate | Status / evidence slot |
 | --- | --- |
-| Non-author backup review | WAM #61, comment 6395098867 found recovery/stop blockers; final fix review must close them before pinning. |
-| Canonical state contract and recovery fixes | WAM #213; final-head CI and merge required. |
-| Published WAM image | Official `image.yml` run 40171067383, source `80c76cf9e61df78abe4c09ffa419ad899bbc61a6`; digest must verify via `gh attestation verify`, and image-input diff to pinned WAM must be empty. No hand-built image. |
-| Release validation | `python3 tools/check_release.py releases/0.3.42.json` must pass online. |
+| Non-author backup review | Independent Codex reviews found recovery/stop blockers (WAM #61, comments 6395098867 and 6395231293); fixes and killed-helper/Undo-ordering regression in #213. Final closure **PASS for merge/pin once final-head CI passes**, [review receipt](https://github.com/humanitylabs-org/wizard-app-manager/pull/61#issuecomment-6395237727). Reviewer executed no tests; do not confuse review with acceptance. |
+| Canonical state contract and recovery fixes | [WAM #213](https://github.com/humanitylabs-org/wizard-app-manager/pull/213) merged as `1459438e1ec9375b60145f99905fe880d11da589` after final-head test/backend/CodeQL/gitleaks PASS. Local eight targeted crash/stop/durability regressions passed; broader final CI passed. |
+| Published WAM image | Official [image.yml run 40171067383](https://github.com/humanitylabs-org/wizard-app-manager/actions/runs/40171067383), source `80c76cf9e61df78abe4c09ffa419ad899bbc61a6`, digest `sha256:ff30d81d103c7ca408692fb25b98827d0fb382a8034e2bcbd0daf46b99547e39`. `gh attestation verify` passed: main-ref workflow identity, matching subject digest/source, GitHub-hosted signer. Release checker must also prove empty image-input diff to final WAM pin. No hand-built image. |
+| Release validation | `python3 tools/check_release.py releases/0.3.42.json` **PASS online**: commits on main, image digests/architectures, empty WAM image-input diff, stock Hermes tag/image agreement and Service API routes. Catalog drift is informational: install pins are unchanged from 0.3.40. |
 | Fresh 0.3.42 + 0.3.39 -> 0.3.42 | Thales `release_gate.py`, no overlays; attach real `receipt.json` including pin/contact/diagnostics, marker preservation and cleanup. Pending. |
 | Fresh 0.3.42 + 0.3.40 -> 0.3.42 | Same admission, distinct sequential disposable VM and receipt. Pending. |
-| Real new-version backup/restore/Undo | `backup_journey.py` on the upgraded guest, exact-hash class fixture from the L1 backup rig. Export, full verify, distinct baseline, import, all nine marker classes + paused cron, Undo digest and return baseline. Pending. |
+| Real new-version backup/restore/Undo | `backup_journey.py` on the upgraded guest, exact-hash class fixture from the L1 backup rig. Export, full verify, distinct baseline, import, all marker classes + paused cron, Undo digest and return baseline. Pending. |
 | Public mirror | WAM releases/ bytes must match canonical release and latest pointer after PR merge; stable stays 0.3.39. |
 
 The dedicated `release_gate.py` reuses launch `disposable_cases`, bootstrap,
