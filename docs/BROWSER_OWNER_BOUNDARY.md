@@ -32,7 +32,13 @@ Evidence paths and final counts are posted on #133 rather than asserted before e
 
 ## Launch app origin inventory
 
-See [BROWSER_BOUNDARY_ORIGINS.json](BROWSER_BOUNDARY_ORIGINS.json). Scope is the current **13 WAM default slots**, plus built-in Store/Setup/Settings and the explicitly discussed Wisdom/Calendar apps. Source commits are pinned. This is source inspection, **not a live installed-app census or opaque-origin compatibility certification**. Unknown installed apps must stay unadmitted until inventoried and runtime-tested. No app is approved for `allow-same-origin` on the shared shell origin.
+The first-draft [BROWSER_BOUNDARY_ORIGINS.json](BROWSER_BOUNDARY_ORIGINS.json) preserves 13 then-current WAM slots and 18 source-reviewed entries as historical inspection, **not** the current census or an opaque-origin certification.
+
+[BROWSER_BOUNDARY_CENSUS.json](BROWSER_BOUNDARY_CENSUS.json) refreshes scope from installed/launcher metadata and current WAM defaults: 24 installed registrations (two non-browser agent registrations excluded from browser review), 22 installed app entries, 17 default slots (15 populated), 23 launcher entries, and **53 exact scoped IDs**. Launcher aliases remain distinct; this is not a claim of 53 different products. The source scan pins 27 repository revisions and records review locations without source snippets. No private agent or Messenger data was read. A GitHub-main scan is **not** live-source parity proof or positive runtime acceptance. Local/launcher-only apps and backend-only apps still need correct classification.
+
+Current blockers include ambient app fetch/storage in opaque frames; Android `WizardOSNative` and `WizardOSDevice` JavaScript interfaces; matching-origin Mizel subframe admission; and Cloudflare's declared repository remaining outside the requested organization. The ChatGPT/Claude default and installed repository claims also differ and must not be silently equated. No app is approved for `allow-same-origin` on the shell origin.
+
+Since the first snapshot, `WizardApp.share.wizard` (#471) and `WizardApp.voice.transcribe` (#460) landed. With the boundary on, `WizAppServices` refuses its legacy synchronous connection, hello and RPC transport, including these operations. Regression tests pin that **fail-closed refusal**, for both same-origin and opaque callers. This prevents an owner-authority bypass but also means these capabilities **do not work in opaque apps yet**. Reuse their existing implementations behind bounded source/channel/grant admission; do not add a generic fetch or native proxy. The flag remains off until positive real-app and native compatibility are proved.
 
 ## Independent review disposition
 

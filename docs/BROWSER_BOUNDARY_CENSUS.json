@@ -1,0 +1,1406 @@
+{
+  "version": 1,
+  "collected_at_utc": "2026-10-25T07:14:48.131975+00:00",
+  "status": "BLOCKED_NOT_ENABLE_READY",
+  "method": "Read installed/launcher metadata and current WAM defaults; scan GitHub default-branch source archives at pinned commits. No private agent directories, containers, transcripts, Messenger records or credential stores read. No owner deployment or boundary enablement performed.",
+  "identity_policy": "Exact registry IDs preserved; launcher aliases are separate records, not presumed product identities. Repo claims are not normalized across owners or forks.",
+  "counts": {
+    "installed_registry_entries": 24,
+    "non_browser_agent_registrations_excluded": 2,
+    "installed_app_entries": 22,
+    "default_slots": 17,
+    "default_apps": 15,
+    "launcher_entries": 23,
+    "unique_scoped_ids": 53,
+    "source_repositories_scanned": 27
+  },
+  "default_source_commit": "c35ca2e9747f8fc0f8cf254d8f24adcbc2bd3c5e",
+  "default_slots": [
+    {
+      "slot": "chats",
+      "app": null,
+      "repo": null
+    },
+    {
+      "slot": "shell",
+      "app": "wizard-ux",
+      "repo": "humanitylabs-org/wizard-ux"
+    },
+    {
+      "slot": "agent-service",
+      "app": "wizard-agent-service",
+      "repo": "humanitylabs-org/wizard-agent-service"
+    },
+    {
+      "slot": "agent",
+      "app": "hermes-agent",
+      "repo": null
+    },
+    {
+      "slot": "ai-connection",
+      "app": "wizard-chatgpt",
+      "repo": "oscarhenrycollins/chatgpt-connection"
+    },
+    {
+      "slot": "claude-subscription",
+      "app": "wizard-claude",
+      "repo": "oscarhenrycollins/claude-connection"
+    },
+    {
+      "slot": "troubleshooter",
+      "app": "wizard-troubleshooter",
+      "repo": "humanitylabs-org/wizard-troubleshooter"
+    },
+    {
+      "slot": "connection-router",
+      "app": "wizard-connection-router",
+      "repo": "humanitylabs-org/wizard-connection-router"
+    },
+    {
+      "slot": "agent-history",
+      "app": null,
+      "repo": "humanitylabs-org/wizard-agent-history"
+    },
+    {
+      "slot": "files",
+      "app": "files",
+      "repo": "oscarhenrycollins/files"
+    },
+    {
+      "slot": "transcription",
+      "app": "transcriber",
+      "repo": null
+    },
+    {
+      "slot": "voice",
+      "app": "wizard-voice-service",
+      "repo": "humanitylabs-org/wizard-voice-service"
+    },
+    {
+      "slot": "browser",
+      "app": "browser",
+      "repo": null
+    },
+    {
+      "slot": "secrets",
+      "app": "secret-drop",
+      "repo": null
+    },
+    {
+      "slot": "cloudflare-connection",
+      "app": "wizard-cloudflare",
+      "repo": "oscarhenrycollins/wizard-cloudflare"
+    },
+    {
+      "slot": "connected-accounts",
+      "app": "wizard-connectors",
+      "repo": "humanitylabs-org/wizard-connectors"
+    },
+    {
+      "slot": "notifications",
+      "app": "notifications",
+      "repo": null
+    }
+  ],
+  "entries": [
+    {
+      "id": "airlock",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "local/airlock"
+        }
+      ],
+      "view_urls": [
+        "/airlock/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "android-apps",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/android-apps/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "browser",
+      "scopes": [
+        "default:browser"
+      ],
+      "repo_claims": [],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "calendar",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-calendar/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "cinequeue",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/cinequeue/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "cinequeue-next",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/cinequeue"
+        }
+      ],
+      "view_urls": [
+        "/cinequeue-next/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "console",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/console/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "defleur-video",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/defleur-video"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "files",
+      "scopes": [
+        "default:files"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:files",
+          "repo": "oscarhenrycollins/files"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "files-legacy",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/files/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "hermes-agent",
+      "scopes": [
+        "default:agent"
+      ],
+      "repo_claims": [],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "iching",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/iching/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "meditate-next",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/meditate"
+        }
+      ],
+      "view_urls": [
+        "/meditate-next/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "meditation",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/meditation/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "messenger",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-messenger"
+        }
+      ],
+      "view_urls": [
+        "/messenger/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "mindfeed",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/mindfeed/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "mizel",
+      "scopes": [
+        "installed",
+        "launcher"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "local:mizel"
+        }
+      ],
+      "view_urls": [
+        "/mizel-live/#/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "morning",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/morning/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "notifications",
+      "scopes": [
+        "installed",
+        "default:notifications"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "oscarhenrycollins/notifications"
+        }
+      ],
+      "view_urls": [
+        "/notifications/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "oscar-graph",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-os-home/oscar-graph/index.html"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "outline-streaming-demo",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-ux"
+        }
+      ],
+      "view_urls": [
+        "/voice-outline-streaming/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "photos",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/photos/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "profiles",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "oscarhenrycollins/profiles"
+        }
+      ],
+      "view_urls": [
+        "/profiles/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "projects",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-projects/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "reference",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-reference"
+        }
+      ],
+      "view_urls": [
+        "/reference/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "secret-drop",
+      "scopes": [
+        "default:secrets"
+      ],
+      "repo_claims": [],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "shopping",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-shopping/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "social",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-social/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "stories",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "local/stories"
+        }
+      ],
+      "view_urls": [
+        "/stories/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "topics",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-topics-preview/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "trackhunt",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/trackhunt/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "transcriber",
+      "scopes": [
+        "default:transcription"
+      ],
+      "repo_claims": [],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "video-editor",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/video-editor/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wisdom",
+      "scopes": [
+        "installed",
+        "launcher"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wisdom-history"
+        }
+      ],
+      "view_urls": [
+        "/wisdom/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-agent-service",
+      "scopes": [
+        "default:agent-service"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:agent-service",
+          "repo": "humanitylabs-org/wizard-agent-service"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-calendar",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-calendar"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-chatgpt",
+      "scopes": [
+        "installed",
+        "default:ai-connection"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/chatgpt-connection"
+        },
+        {
+          "scope": "default:ai-connection",
+          "repo": "oscarhenrycollins/chatgpt-connection"
+        }
+      ],
+      "view_urls": [
+        "/wizard-chatgpt/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-claude",
+      "scopes": [
+        "installed",
+        "default:claude-subscription"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/claude-connection"
+        },
+        {
+          "scope": "default:claude-subscription",
+          "repo": "oscarhenrycollins/claude-connection"
+        }
+      ],
+      "view_urls": [
+        "/wizard-claude/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-cloudflare",
+      "scopes": [
+        "default:cloudflare-connection"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:cloudflare-connection",
+          "repo": "oscarhenrycollins/wizard-cloudflare"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-connection-router",
+      "scopes": [
+        "installed",
+        "default:connection-router"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-connection-router"
+        },
+        {
+          "scope": "default:connection-router",
+          "repo": "humanitylabs-org/wizard-connection-router"
+        }
+      ],
+      "view_urls": [
+        "/wizard-connection-router/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-connectors",
+      "scopes": [
+        "installed",
+        "default:connected-accounts"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-connectors"
+        },
+        {
+          "scope": "default:connected-accounts",
+          "repo": "humanitylabs-org/wizard-connectors"
+        }
+      ],
+      "view_urls": [
+        "/wizard-connectors/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-files",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-files"
+        }
+      ],
+      "view_urls": [
+        "/wizard-files/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-manager",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-manager/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-music",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-music/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-recorder",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-recorder"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-search",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-search/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-shopping",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-shopping"
+        }
+      ],
+      "view_urls": [
+        "/alpha-wizard-shopping/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-signal",
+      "scopes": [
+        "launcher"
+      ],
+      "repo_claims": [],
+      "view_urls": [
+        "/wizard-signal/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-supervisor",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-supervisor"
+        }
+      ],
+      "view_urls": [
+        "/supervisor-prototype/"
+      ],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-tinfoil",
+      "scopes": [
+        "installed"
+      ],
+      "repo_claims": [
+        {
+          "scope": "installed",
+          "repo": "humanitylabs-org/wizard-tinfoil"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-troubleshooter",
+      "scopes": [
+        "default:troubleshooter"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:troubleshooter",
+          "repo": "humanitylabs-org/wizard-troubleshooter"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-ux",
+      "scopes": [
+        "default:shell"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:shell",
+          "repo": "humanitylabs-org/wizard-ux"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    },
+    {
+      "id": "wizard-voice-service",
+      "scopes": [
+        "default:voice"
+      ],
+      "repo_claims": [
+        {
+          "scope": "default:voice",
+          "repo": "humanitylabs-org/wizard-voice-service"
+        }
+      ],
+      "view_urls": [],
+      "opaque_runtime_status": "NOT_PROVED"
+    }
+  ],
+  "source_reports": [
+    {
+      "repo": "humanitylabs-org/chatgpt-connection",
+      "canonical_repo": "humanitylabs-org/chatgpt-connection",
+      "source_commit": "10887eba131b738b865c8725d72172a8c5755d14",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "own_http": 1,
+        "parent_shell": 2
+      },
+      "review_locations": [
+        {
+          "file": "static/appearance.js",
+          "line": 30,
+          "categories": [
+            "parent_shell"
+          ]
+        },
+        {
+          "file": "static/appearance.js",
+          "line": 31,
+          "categories": [
+            "parent_shell"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/cinequeue",
+      "canonical_repo": "humanitylabs-org/cinequeue",
+      "source_commit": "87f625ce2cd74b093be5468bd469f1ed0b657483",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "app_client": 7,
+        "own_http": 1,
+        "storage": 4
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/claude-connection",
+      "canonical_repo": "humanitylabs-org/claude-connection",
+      "source_commit": "d41c0a3b7ae735c2df526971b012b0538aa0416e",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "own_http": 1,
+        "parent_shell": 2
+      },
+      "review_locations": [
+        {
+          "file": "static/appearance.js",
+          "line": 30,
+          "categories": [
+            "parent_shell"
+          ]
+        },
+        {
+          "file": "static/appearance.js",
+          "line": 31,
+          "categories": [
+            "parent_shell"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/defleur-video",
+      "canonical_repo": "humanitylabs-org/defleur-video",
+      "source_commit": "75ec113303b8486dbd834b60fc8c197f4262430f",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 2,
+      "category_counts": {},
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/meditate",
+      "canonical_repo": "humanitylabs-org/meditate",
+      "source_commit": "9d828c12b2f38384a6507061b740eaae7317309a",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "storage": 2,
+        "own_http": 2
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wisdom-history",
+      "canonical_repo": "humanitylabs-org/wisdom-history",
+      "source_commit": "d5ae72d3c28687b43352ca7bc6b2c522c0bbb131",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 6,
+      "category_counts": {
+        "own_http": 6,
+        "app_client": 18,
+        "storage": 12,
+        "parent_shell": 1,
+        "native": 1
+      },
+      "review_locations": [
+        {
+          "file": "static/wisdom.js",
+          "line": 665,
+          "categories": [
+            "parent_shell",
+            "native"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-agent-history",
+      "canonical_repo": "humanitylabs-org/wizard-agent-history",
+      "source_commit": "959fe4004f61a278c2572510dca3781945623338",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 0,
+      "category_counts": {},
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-agent-service",
+      "canonical_repo": "humanitylabs-org/wizard-agent-service",
+      "source_commit": "d0bbe4b09a165e7e0c25e7a719935e6674c004a2",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 96,
+      "category_counts": {
+        "own_http": 17,
+        "owner_http": 82,
+        "oauth_or_popup": 2,
+        "storage": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-calendar",
+      "canonical_repo": "humanitylabs-org/wizard-calendar",
+      "source_commit": "a2a12cf1a27690e957b3f8a784fad48f3bb90868",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 2,
+      "category_counts": {
+        "storage": 2,
+        "app_client": 7,
+        "own_http": 2
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-connection-router",
+      "canonical_repo": "humanitylabs-org/wizard-connection-router",
+      "source_commit": "ae602a69b65b00be04b205087abb872bbd280766",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 2,
+      "category_counts": {
+        "parent_shell": 2
+      },
+      "review_locations": [
+        {
+          "file": "static/appearance.js",
+          "line": 30,
+          "categories": [
+            "parent_shell"
+          ]
+        },
+        {
+          "file": "static/appearance.js",
+          "line": 31,
+          "categories": [
+            "parent_shell"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-connectors",
+      "canonical_repo": "humanitylabs-org/wizard-connectors",
+      "source_commit": "9ba25f52036a333136d4411ef428537883e88d7c",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "own_http": 1,
+        "app_client": 3,
+        "oauth_or_popup": 2
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-files",
+      "canonical_repo": "humanitylabs-org/wizard-files",
+      "source_commit": "74a816eaf3bd73526b9d0717b9e6726e8d72a1ba",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "app_client": 7,
+        "own_http": 8,
+        "storage": 4,
+        "owner_http": 2
+      },
+      "review_locations": [
+        {
+          "file": "my-files.js",
+          "line": 4,
+          "categories": [
+            "owner_http"
+          ]
+        },
+        {
+          "file": "my-files.js",
+          "line": 17,
+          "categories": [
+            "owner_http"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-messenger",
+      "canonical_repo": "humanitylabs-org/wizard-messenger",
+      "source_commit": "6ff66b5711af351292fff7c8d598684a686273bd",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "oauth_or_popup": 1,
+        "app_client": 27,
+        "storage": 24,
+        "own_http": 5
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-recorder",
+      "canonical_repo": "humanitylabs-org/wizard-recorder",
+      "source_commit": "e157185b523af72c4898d77bc9bb01f5323568e1",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 17,
+      "category_counts": {
+        "own_http": 31,
+        "app_client": 24,
+        "owner_http": 2,
+        "storage": 22
+      },
+      "review_locations": [
+        {
+          "file": "adoptions/mizel-live/server.mjs",
+          "line": 206,
+          "categories": [
+            "owner_http"
+          ]
+        },
+        {
+          "file": "adoptions/mizel-live/web/app.js",
+          "line": 1689,
+          "categories": [
+            "owner_http",
+            "own_http"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-reference",
+      "canonical_repo": "humanitylabs-org/wizard-reference",
+      "source_commit": "6b06179e13f32b7b890b371bc9730fdb3e6249eb",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "app_client": 2,
+        "storage": 2,
+        "own_http": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-shopping",
+      "canonical_repo": "humanitylabs-org/wizard-shopping",
+      "source_commit": "653ccc55109473c34910cc7e3924dd08d3e92c0c",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "native": 8,
+        "storage": 7,
+        "app_client": 19,
+        "parent_shell": 1,
+        "own_http": 5
+      },
+      "review_locations": [
+        {
+          "file": "static/core/app-capture.js",
+          "line": 34,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-capture.js",
+          "line": 263,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-capture.js",
+          "line": 537,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-capture.js",
+          "line": 571,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-capture.js",
+          "line": 582,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-client.js",
+          "line": 40,
+          "categories": [
+            "parent_shell"
+          ]
+        },
+        {
+          "file": "static/core/app-client.js",
+          "line": 135,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-client.js",
+          "line": 145,
+          "categories": [
+            "native"
+          ]
+        },
+        {
+          "file": "static/core/app-client.js",
+          "line": 167,
+          "categories": [
+            "native"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-supervisor",
+      "canonical_repo": "humanitylabs-org/wizard-supervisor",
+      "source_commit": "2ab9b22b08b794d1ec4c5bc61980671b8371b6f2",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 3,
+      "category_counts": {
+        "own_http": 2,
+        "app_client": 5
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-tinfoil",
+      "canonical_repo": "humanitylabs-org/wizard-tinfoil",
+      "source_commit": "cbfa896fdd1d484f9c96c44d8b5ad7c20dc3474e",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "own_http": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-troubleshooter",
+      "canonical_repo": "humanitylabs-org/wizard-troubleshooter",
+      "source_commit": "eb27a1654cfdb49698f75d9186b3234864bf75d6",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 8,
+      "category_counts": {
+        "own_http": 4,
+        "storage": 2,
+        "parent_shell": 1
+      },
+      "review_locations": [
+        {
+          "file": "web/index.html",
+          "line": 309,
+          "categories": [
+            "parent_shell"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-ux",
+      "canonical_repo": "humanitylabs-org/wizard-ux",
+      "source_commit": "5746150bb3354db1cc33a413a85e869513869d4a",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 590,
+      "category_counts": {
+        "native": 158,
+        "oauth_or_popup": 19,
+        "storage": 570,
+        "parent_shell": 18,
+        "owner_http": 259,
+        "own_http": 229,
+        "app_client": 126
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "humanitylabs-org/wizard-voice-service",
+      "canonical_repo": "humanitylabs-org/wizard-voice-service",
+      "source_commit": "d28c5f7cd29040ab1df3b5a945a81486f53e445a",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 0,
+      "category_counts": {},
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/chatgpt-connection",
+      "canonical_repo": "oscarhenrycollins/chatgpt-connection",
+      "source_commit": "f72659fa7835422bbf025bfcdad8bdb888e055b3",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 2,
+      "category_counts": {
+        "own_http": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/claude-connection",
+      "canonical_repo": "oscarhenrycollins/claude-connection",
+      "source_commit": "ae11571c090ae4d4740569ccd39480c1fb4dc68d",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 2,
+      "category_counts": {
+        "own_http": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/files",
+      "canonical_repo": "oscarhenrycollins/files",
+      "source_commit": "8a4dd8ac5189d7d9d8af2bb8a2416936668e90df",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 0,
+      "category_counts": {},
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/notifications",
+      "canonical_repo": "oscarhenrycollins/notifications",
+      "source_commit": "cdce9f18d10f74e1714ee2284a1c55497b49eef1",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "own_http": 1,
+        "parent_shell": 1,
+        "app_client": 4
+      },
+      "review_locations": [
+        {
+          "file": "web/minimal/inbox.js",
+          "line": 56,
+          "categories": [
+            "parent_shell"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/profiles",
+      "canonical_repo": "oscarhenrycollins/profiles",
+      "source_commit": "589f810a0ed2f301726e94e3e269a1a4400d2225",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 4,
+      "category_counts": {
+        "own_http": 4,
+        "storage": 4,
+        "owner_http": 2
+      },
+      "review_locations": [
+        {
+          "file": "web/app.js",
+          "line": 94,
+          "categories": [
+            "owner_http"
+          ]
+        },
+        {
+          "file": "web/app.js",
+          "line": 552,
+          "categories": [
+            "owner_http",
+            "own_http"
+          ]
+        }
+      ],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    },
+    {
+      "repo": "oscarhenrycollins/wizard-cloudflare",
+      "canonical_repo": "oscarhenrycollins/wizard-cloudflare",
+      "source_commit": "30bfabd34e9e0100f30d115080708140da0fcc8a",
+      "status": "source_scanned_not_runtime_certified",
+      "source_kind": "default_branch_archive_not_live_parity",
+      "scanned_source_files": 7,
+      "category_counts": {
+        "oauth_or_popup": 10,
+        "own_http": 4,
+        "app_client": 1
+      },
+      "review_locations": [],
+      "warning": "Pattern matches are review leads, not verified vulnerabilities or compatibility results; backend-only calls may be authorized."
+    }
+  ],
+  "remaining_gates": [
+    "Trace every source finding against the actual serving source; default-branch scans are not live-source parity proof.",
+    "Inventory launcher-only and local apps that have no published repository; do not replace their live features with a GitHub-main port.",
+    "Resolve different default and installed ChatGPT/Claude repository owners without silently changing identity. Cloudflare currently declares an oscarhenrycollins repository, not an existing humanitylabs-org Cloudflare repo.",
+    "Opaque frames cannot use ambient app-origin fetch/storage, parent globals or legacy native interfaces. Implement bounded capability/grant paths and real positive workflows, not generic owner fetch.",
+    "Bridge share.wizard (#471) and voice.transcribe (#460) fail closed with the boundary on but are NOT migrated to opaque frames. Add per-capability positive and rejection proof before enablement.",
+    "Android MainActivity still registers WizardOSNative and WizardOSDevice with addJavascriptInterface; MizelBridge admits matching-origin subframes. Replace ambient native authority with a proven scoped/main-frame transport, including standalone app-session lifecycle.",
+    "Complete exact-head Thales browser/Android adversarial and positive real-app proof, nested-view Back and two skins; then review deployment and rollback before owner enablement."
+  ]
+}
