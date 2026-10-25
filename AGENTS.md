@@ -20,6 +20,14 @@ This repo is the shared map of Wizard OS: architecture, decisions, contracts (`s
    - If you touched `tools/check_wizard_md.py` or `spec/WIZARD_MD.md`, run the checker against a real app repo. Keep its rules identical to the copies in wizard-app-manager and wizard-app-index, and change all three together.
 7. Changing the team rules below? Edit them here first. Then copy the block, unchanged, into the `AGENTS.md` of every other Wizard OS repo in the same round of PRs.
 
+## Shared names
+
+Use these three names one way, in chat, PRs and docs (DECISIONS #99-101, James, 25 Oct 2026):
+
+- **Supervisor**: when James says "report this to supervisor", the worker files a report and carries on; a fresh Supervisor session in the Agent Service designs the durable fix, has it built, checks it and closes the loop. Only this is "the Supervisor".
+- **Reporter**: the one plain-words report format every scheduled task ends with, plus the Agent Service check that enforces it. A contract and a checker, not an agent.
+- **Maintenance**: the parked 16 Oct self-repair prototype (`wizard-supervisor` package). Its package name is historical; never call it the Supervisor. Not to be confused with the `Maintenance:` PR tier below.
+
 ## Portable machine configuration
 
 Machine-specific paths and hosts come from env vars: `WIZARD_WORK_ROOT`,
