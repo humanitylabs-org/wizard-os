@@ -63,7 +63,7 @@ Archimedes owns the [shell-independent contract](../spec/VOICE_INPUT.md), Wizard
 
 - [ ] **Agent state** ([AGENT_STATE.md](../spec/AGENT_STATE.md), #43–#49), after the agent bridge lands:
   - `~/.wizard-os/agents/<id>/` layout and `agent.json`; the Hermes agent app mounts its home there.
-  - Agent History system app (#102, PR #70): daily copy from each agent, sealed monthly files, conversation export, `release` then harness prune of machine sessions past `live_days`, disk forecast, `sessions_search` with `deep`; then Chats reading old threads from History, the Pi reader, grant checks and read log. v0 runs on James's box (Archimedes): copy live since 21 Oct, first scheduled-job prune 22 Oct.
+  - Agent History system app (#102, PR #70): daily copy from each agent, sealed monthly files, conversation export, `release` then harness prune of machine sessions past `live_days`, disk forecast, `sessions_search` with `deep`; then Chats reading old threads from History, the Pi reader, grant checks and read log. v0 runs on James's box (Archimedes): copy live since 21 Oct, first scheduled-job prune 25 Oct (864 sessions, verified).
   - Agents app: owner-controlled `shared_with_agents` silo toggle, independently editable `other_agents`.
   - Agents app: split/merge diff approval and lifecycle UI ([AGENT_SPLIT.md](../spec/AGENT_SPLIT.md)); spec and procedure only for now.
   - Agent-data grants in `wizard-grants.json` and on the Apps screen.

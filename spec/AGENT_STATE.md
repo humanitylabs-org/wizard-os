@@ -68,9 +68,9 @@ When and how often agents should look up another agent's skills is left to usage
 **Agent History** (`wizard-agent-history`, slot `agent-history`, `system: true`) is a headless system app with two jobs. Renamed from Agent Search (James, 18 Oct, #102: "clear rather than clever"); "archive" already means a closed thread in Chats, so it is not used for this app.
 
 1. **Keep.** It holds a permanent copy of every agent's full history, so each agent's own store stays bounded.
+2. **Look up.** It owns session search and reading, for an agent's own history and, under section 4, other standard agents'. Memory, skills and notes are read through the Agent Service gateway (section 4); there is no second session reader and no raw `state.db` access.
 
 **The promise to the owner: your history is never lost, and your Wizard never fills itself up.** Without a rule, an agent's store grows without limit (on James's box, about 11 GB a month). Backups and restores slow down, search gets slower and cluttered with machine output, big-store maintenance gets riskier, and eventually the disk fills. The harness's own fix, a timed prune, deletes history. History is how a Wizard box avoids both outcomes.
-2. **Look up.** It owns session search and reading, for an agent's own history and, under section 4, other standard agents'. Memory, skills and notes are read through the Agent Service gateway (section 4); there is no second session reader and no raw `state.db` access.
 
 ### 3.1 Keeping
 
