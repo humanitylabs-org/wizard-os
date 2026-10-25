@@ -57,7 +57,7 @@ def main():
             if hmac.compare_digest(self.path, '/' + key):
                 self.send_response(303)
                 self.send_header('Location', '/')
-                self.send_header('Set-Cookie', f'launch-signin={key}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=21600')
+                self.send_header('Set-Cookie', f'launch-signin={key}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=21600')
                 self.send_header('Referrer-Policy', 'no-referrer')
                 self.send_header('Cache-Control', 'no-store')
                 self.send_header('Content-Length', '0')
