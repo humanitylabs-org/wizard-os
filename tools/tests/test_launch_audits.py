@@ -3,6 +3,7 @@ import datetime as dt
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -137,6 +138,26 @@ class HarnessTests(unittest.TestCase):
             subprocess.run([sys.executable, str(ROOT / 'sqlite_copy.py'), str(backup), str(db)], check=True)
             with sqlite3.connect(db) as c:
                 self.assertEqual(c.execute('SELECT progress FROM reading').fetchone()[0], 7)
+
+    def test_release_vm_reserves_full_backup_capacity(self):
+        with patch.dict(sys.modules, {'run': module('run')}):
+            gate = module('release_gate')
+        self.assertEqual(gate.GUEST_DISK_GIB, 24)
+        # macOS TMPDIR is long enough to trip Lima's UNIX socket limit. Use a
+        # short, synthetic root: this is a check-only test and creates no VM.
+        with tempfile.TemporaryDirectory() as td:
+            work = Path('/capacity-test')
+            cli = Path(td) / 'cli'; cli.write_text('fixture')
+            argv = ['release_gate.py', '--root', str(work / 'check'), '--release', '0.3.48',
+                    '--previous-release', '0.3.39', '--cli', str(cli), '--wam-commit', 'a' * 40, '--check-only']
+            with patch.object(gate.sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=str(work)), \
+                    patch.object(Path, 'is_mount', return_value=True), patch.object(gate.sys, 'stdout', io.StringIO()):
+                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=274 * gate.GIB)):
+                    with self.assertRaises(AssertionError):
+                        gate.main()
+                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=275 * gate.GIB)):
+                    self.assertEqual(gate.main(), 0)
+                self.assertFalse((work / 'check').exists())
 
     def test_backup_failure_tails_go_only_to_private_stderr(self):
         backup = module('backup_journey')
