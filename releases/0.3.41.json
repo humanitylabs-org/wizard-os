@@ -2,7 +2,7 @@
   "version": "0.3.41",
   "name": "Wizard OS install snapshot 0.3.41 — Voice and Connection Router defaults",
   "date": "2026-10-24",
-  "about": "0.3.40 plus merged App Manager #142: Voice and Connection Router install as bootstrap defaults. Voice uses the existing Transcription engine. Connected accounts remains on-demand; Agent History remains reserved with no default; Troubleshooter remains the unchanged host component. Other app pins and existing data are preserved. No duplicate accounts slot, migrations or owner-data deletion. Carries official main UX through #502, including orientation #482/#483 and iPhone tour readability #486. Includes feature ride-alongs #450, #460 and #471 plus fixes #485/#492/#484/#495/#498/#500 and hosted publication #501/#502. This is a feature release requiring independent review and exact combined upgrade acceptance.",
+  "about": "0.3.40 plus merged App Manager #142: Voice and Connection Router install as bootstrap defaults. Voice uses the existing Transcription engine. Connected accounts remains on-demand; Agent History remains reserved with no default; Troubleshooter remains the unchanged host component. Other app pins and existing data are preserved. No duplicate accounts slot, migrations or owner-data deletion. Carries official main UX through #504, including signed Android companion web compatibility and recording custody fixes, including orientation #482/#483 and iPhone tour readability #486. Includes feature ride-alongs #450, #460 and #471 plus fixes #485/#492/#484/#495/#498/#500 and hosted publication #501/#502. This is a feature release requiring independent review and exact combined upgrade acceptance.",
   "install": {
     "command": "curl -fsSL aiwizards.com/os.sh | bash",
     "agent": {
@@ -37,9 +37,9 @@
     },
     "wizard-ux": {
       "repo": "humanitylabs-org/wizard-ux",
-      "commit": "964a75d4223f871c8456f3442a0606b5f847d926",
+      "commit": "6c5d1649b1284235410b8a6f402ac29340c014f8",
       "branch": "main",
-      "note": "Official main through #502; includes alongside/desktop orientation #482/#483 and immediately readable iPhone tour #486. Additional merged UX: #450 skin/tweak/resources integration, #460 installed-app transcription, #471 internal sharing; fixes #485/#492/#484/#495/#498/#500; hosted publication #501/#502. Classify as feature, not fix-only."
+      "note": "Official main through #504; signed Android companion web integration, native hold/pause and serialized Send, async recording custody fixes; includes alongside/desktop orientation #482/#483 and immediately readable iPhone tour #486. Additional merged UX: #450 skin/tweak/resources integration, #460 installed-app transcription, #471 internal sharing; fixes #485/#492/#484/#495/#498/#500; hosted publication #501/#502. Classify as feature, not fix-only."
     }
   },
   "images": {
@@ -64,14 +64,14 @@
       "note": "Retained official multi-arch image from db4325a; declared image inputs are unchanged at fc84567 (verified by check_release.py provenance comparison)."
     },
     "wizard-ux": {
-      "ref": "ghcr.io/humanitylabs-org/wizard-ux:sha-964a75d4223f871c8456f3442a0606b5f847d926",
-      "digest": "sha256:d80a264dcb05c5a3a1a2894b0baf2bab9aaf1cc3b3a865053000de1bf93a8570",
+      "ref": "ghcr.io/humanitylabs-org/wizard-ux:sha-6c5d1649b1284235410b8a6f402ac29340c014f8",
+      "digest": "sha256:b00b438156c934440da1e0d181d010d18e850d09fbabd8e5c8f794d4e9605f59",
       "built_from": "wizard-ux",
       "architectures": [
         "amd64",
         "arm64"
       ],
-      "ci_run": "https://github.com/humanitylabs-org/wizard-ux/actions/runs/40151903950"
+      "ci_run": "https://github.com/humanitylabs-org/wizard-ux/actions/runs/40164384534"
     },
     "wizard-agent-service": {
       "ref": "ghcr.io/humanitylabs-org/wizard-agent-service:sha-6424db094d03af255b7ec35cb731bfc0087c61ef",
@@ -89,7 +89,7 @@
       "app": "wizard-ux",
       "repo": "humanitylabs-org/wizard-ux",
       "index_version": "0.3.0-candidate.20261012",
-      "commit": "964a75d4223f871c8456f3442a0606b5f847d926",
+      "commit": "6c5d1649b1284235410b8a6f402ac29340c014f8",
       "note": "Alongside installs use the immutable official image above; index drift is informational."
     },
     "agent-service": {
