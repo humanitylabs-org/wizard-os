@@ -28,7 +28,10 @@ host update refuses until a reviewed promotion exists and the operator explicitl
 sets `WIZARD_HERMES_PROMOTION` to its id. A missing, malformed, mismatched or
 unavailable lock fails closed for Hermes. Dry-run/status remain read-only.
 New installs consume the exact frozen recipe/image; existing runtimes are not
-rewritten merely because policy is installed. Direct upstream `hermes update`,
+rewritten merely because policy is installed. Normal Apps UI and update-all
+routes enforce the pause before status/queue mutation; an optional internal
+`hermesPromotion` field forwards the explicit operator id but is not approval.
+The backend index also pins Hermes when no owner selection exists. Direct upstream `hermes update`,
 Docker/Runtipi administrator operations and owner cron jobs are outside these
 Wizard entry points; operators must inventory and pause those separately. Do not
 pause unrelated app timers. This policy does not patch or interpose stock Hermes.

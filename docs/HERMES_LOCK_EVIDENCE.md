@@ -39,6 +39,14 @@ Read-only discovery on 25 October 2026:
   Hermes independently of unrelated app defaults. `app_update`, flag-first/bulk
   CLI passthrough and the host transactional updater require a reviewed promotion
   plus explicit matching operator id. Automatic OS updates clear that id.
+- App Manager backend `UpdateAppHandler.execute` enforces the same bundled
+  policy before repository access, status changes or queue publication. Thus
+  the normal Apps UI and update-all route cannot bypass the CLI pause; bulk
+  updates still reach unrelated apps. The explicit operator id is forwarded
+  by the CLI client as optional `hermesPromotion`, never treated as approval on
+  its own. The index store forces the locked recipe even without a selection
+  file and rejects an out-of-lock selection. Backend bundle inputs include
+  `wam/hermes-lock.json`; future image-reuse manifests must include that input.
 - `tools/wizard`: standalone alongside updater reads the public lock; an arbitrary
   `--release` cannot bypass it. The gate precedes runtime access.
 - Agent Service `ops/agent-runtime`: normal/import defaults consume the same
