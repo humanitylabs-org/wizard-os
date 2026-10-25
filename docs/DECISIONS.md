@@ -8,7 +8,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 |---|---|---|
 | 99 | **Supervisor** (Agent Service): the spell *"report this to supervisor and continue"* makes the worker file a complete report (what happened, owner's words verbatim, evidence) and carry on without fixing the process itself. A fresh Supervisor session per report checks past lessons, designs the durable fix, hands the build to a fresh worker thread and closes with one line back in the original thread. It acts only as broadly as the owner's words; anything wider, cross-agent, private, paid, external or editing the owner's own rules waits for the owner. Spec: `~/context/projects/ai-wizards/SUPERVISOR_REPORTER_SPEC.md` (consulted with Fable). | Approved (James, 25 Oct) |
 | 100 | **Reporter**: every scheduled task ends in one short plain-words report (bold point, What happened, What you need to do, Still open, status line) checked automatically by the Agent Service; a failing report gets one rewrite. Digest jobs keep their body. It is a contract plus a checker, not an agent. | Approved (James, 25 Oct) |
-| 101 | The 16 Oct self-repair prototype (`wizard-supervisor` package) is parked and renamed **Maintenance**; "Supervisor" means #99. | Approved (James, 25 Oct) |
+| 101 | The 16 Oct self-repair prototype (`wizard-supervisor` package) is removed: uninstalled and its repo archived. Troubleshooter owns repair and the nightly maintenance run (#91) owns upkeep; nothing in it was worth porting. "Supervisor" means #99. | Approved (James, 25 Oct; removal confirmed same day) |
 
 ## 25 Oct 2026 — James: Tuesday small-group backup/restore release; explicit soak override
 
