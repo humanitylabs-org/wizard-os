@@ -37,9 +37,9 @@
     },
     "wizard-ux": {
       "repo": "humanitylabs-org/wizard-ux",
-      "commit": "6c5d1649b1284235410b8a6f402ac29340c014f8",
+      "commit": "03b07142e1245f9b4c4f6f77545f92652e97db6f",
       "branch": "main",
-      "note": "Official main through #504; signed Android companion web integration, native hold/pause and serialized Send, async recording custody fixes; includes alongside/desktop orientation #482/#483 and immediately readable iPhone tour #486. Additional merged UX: #450 skin/tweak/resources integration, #460 installed-app transcription, #471 internal sharing; fixes #485/#492/#484/#495/#498/#500; hosted publication #501/#502. Classify as feature, not fix-only."
+      "note": "Official main through #490 (one-agent Spaces strip, James-approved 25 Oct 2026) on #504; signed Android companion web integration, native hold/pause and serialized Send, async recording custody fixes; includes alongside/desktop orientation #482/#483 and immediately readable iPhone tour #486. Additional merged UX: #450 skin/tweak/resources integration, #460 installed-app transcription, #471 internal sharing; fixes #485/#492/#484/#495/#498/#500; hosted publication #501/#502. Classify as feature, not fix-only."
     }
   },
   "images": {
@@ -64,14 +64,14 @@
       "note": "Retained official multi-arch image from db4325a; declared image inputs are unchanged at fc84567 (verified by check_release.py provenance comparison)."
     },
     "wizard-ux": {
-      "ref": "ghcr.io/humanitylabs-org/wizard-ux:sha-6c5d1649b1284235410b8a6f402ac29340c014f8",
-      "digest": "sha256:b00b438156c934440da1e0d181d010d18e850d09fbabd8e5c8f794d4e9605f59",
+      "ref": "ghcr.io/humanitylabs-org/wizard-ux:sha-03b07142e1245f9b4c4f6f77545f92652e97db6f",
+      "digest": "sha256:a498c985fddc25d1e8efc6df5a16436584ea886ba351ec62a192c89b674c9f77",
       "built_from": "wizard-ux",
       "architectures": [
         "amd64",
         "arm64"
       ],
-      "ci_run": "https://github.com/humanitylabs-org/wizard-ux/actions/runs/40164384534"
+      "ci_run": "https://github.com/humanitylabs-org/wizard-ux/actions/runs/40166980976"
     },
     "wizard-agent-service": {
       "ref": "ghcr.io/humanitylabs-org/wizard-agent-service:sha-6424db094d03af255b7ec35cb731bfc0087c61ef",
@@ -89,7 +89,7 @@
       "app": "wizard-ux",
       "repo": "humanitylabs-org/wizard-ux",
       "index_version": "0.3.0-candidate.20261012",
-      "commit": "6c5d1649b1284235410b8a6f402ac29340c014f8",
+      "commit": "03b07142e1245f9b4c4f6f77545f92652e97db6f",
       "note": "Alongside installs use the immutable official image above; index drift is informational."
     },
     "agent-service": {
