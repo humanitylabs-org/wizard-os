@@ -96,7 +96,18 @@ def main():
     # No automatic repairs: missing catalog app/install or private content is a failing journey.
     if not any(a['id'] == 'wisdom' for a in registry['apps']):
         assert args.case == 'clean' or not args.state.exists(), 'installed app vanished'
-        run(str(Path.home() / '.local/bin/wam'), 'install', 'wisdom', timeout=900)
+        wam = str(Path.home() / '.local/bin/wam')
+        try:
+            run(wam, 'install', 'wisdom', timeout=900)
+        except RuntimeError:
+            # The upgrade baseline is an old release whose App Manager predates install
+            # retry (WAM #209) and occasionally drops the first Wisdom pull. Mirror the
+            # owner tapping Install again, once, on the baseline only; the release under
+            # test gets no second chance.
+            if args.case != 'upgrade-baseline':
+                raise
+            sys.stderr.write('baseline wisdom install: retrying once\n')
+            run(wam, 'install', 'wisdom', timeout=900)
         registry = json.loads((home / 'apps.json').read_text())
     wisdom = next(a for a in registry['apps'] if a['id'] == 'wisdom')
     endpoint = wisdom['mcp']['url'].removesuffix('/mcp')
