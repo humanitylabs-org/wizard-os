@@ -22,7 +22,7 @@ The architecture audits that protect this path are #132–#140. The map of who o
 
 Each track is a broad area that holds many projects. New ideas go under one of these tracks, tagged `release: later`.
 
-1. **Privacy.** A private agent anyone can set up. Transcripts are redacted by the private agent before the main agent sees them. Next, the main model teaches the private model until it processes transcripts well enough. Then private by default: most conversations pass through the private pipeline before handoff. Each stage has a quality bar it must pass before the next stage starts.
+1. **Privacy.** A private agent anyone can set up. Transcripts are redacted by the private agent before the main agent sees them. Next, the main model teaches the private model until it processes transcripts well enough. Then private by default: most conversations pass through the private pipeline before handoff. Each stage has a quality bar it must pass before the next stage starts. Next project: **Wizard Notes redaction share.** Notes is private by default (joins the private agent only). To share a note with a non-private agent, the private agent first marks what you may want to redact (an Airlock-style pass), you approve, and only the cleaned copy goes over. `release: later`.
 2. **Apps and builders.** Grow the catalogue. Owners customise an app's screens against the same data ([#30](https://github.com/humanitylabs-org/wizard-os/issues/30)). Publisher profiles. The goal is the first outside developer.
 3. **Voice and presence.** The side button on the shared recorder, the voice engine comparison, and native desktop hotkeys.
 4. **Always-on.** A one-button move from a Mac to a home box or the VPS, vacation mode, and Wizard hardware.
