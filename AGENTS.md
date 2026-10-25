@@ -22,11 +22,11 @@ This repo is the shared map of Wizard OS: architecture, decisions, contracts (`s
 
 ## Shared names
 
-Use these three names one way, in chat, PRs and docs (DECISIONS #99-101, James, 25 Oct 2026):
+Use these names one way, in chat, PRs and docs (DECISIONS #99-101, James, 25 Oct 2026):
 
 - **Supervisor**: when James says "report this to supervisor", the worker files a report and carries on; a fresh Supervisor session in the Agent Service designs the durable fix, has it built, checks it and closes the loop. Only this is "the Supervisor".
 - **Reporter**: the one plain-words report format every scheduled task ends with, plus the Agent Service check that enforces it. A contract and a checker, not an agent.
-- **Maintenance**: the parked 16 Oct self-repair prototype (`wizard-supervisor` package). Its package name is historical; never call it the Supervisor. Not to be confused with the `Maintenance:` PR tier below.
+- **Maintenance prototype** (removed 25 Oct 2026): the 16 Oct self-repair experiment (`wizard-supervisor` package, repo archived). Troubleshooter does repair and the App Manager's nightly maintenance run does upkeep. Never call either "the Supervisor". The `Maintenance:` PR tier below is unrelated.
 
 ## Portable machine configuration
 
