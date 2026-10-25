@@ -8,7 +8,13 @@ This adds host diagnostics and an isolated acceptance appliance, not a new auth 
 An owner who installs through SSH already has a trusted, encrypted path to the box.
 Before Tailscale, `wizard contact` prints an SSH local-forward command and a browser
 URL for the installed shell. The target is discovered from the active SSH connection
-and the shell slot's loopback `view.local`; no fixed owner address is shipped. Run
+and the shell slot's loopback `view.local`; this is the same-origin front door, whose
+nginx forwards API paths to Agent Service. Both shell HTML and a 200 Setup JSON
+response with boolean `first_run` must pass before printing a usable command.
+The previous 0.3.32 release pins a service without Setup; it is only an explicitly
+labelled upgrade-state baseline, not candidate first-contact proof. Test the
+candidate independently from empty disk, then test the previous→candidate upgrade.
+No fixed owner address is shipped. Run
 the printed SSH command **on the owner's computer**, keep it open, then open the
 loopback browser URL there. Existing SSH host-key verification and authentication
 remain mandatory. This is the same owner-only loopback entry as sitting at the box;
