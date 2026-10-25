@@ -138,6 +138,32 @@ class HarnessTests(unittest.TestCase):
             with sqlite3.connect(db) as c:
                 self.assertEqual(c.execute('SELECT progress FROM reading').fetchone()[0], 7)
 
+    def test_backup_failure_tails_go_only_to_private_stderr(self):
+        backup = module('backup_journey')
+        stdout, stderr = io.StringIO(), io.StringIO()
+        failed = SimpleNamespace(returncode=1, stdout='x' * 5000 + 'diagnostic-json', stderr='y' * 5000 + 'diagnostic-stderr')
+        with patch.object(backup.subprocess, 'run', return_value=failed), \
+                patch.object(backup.sys, 'stdout', stdout), patch.object(backup.sys, 'stderr', stderr):
+            with self.assertRaisesRegex(RuntimeError, '^real backup CLI failed: export$'):
+                backup.run_backup('wam', 'export', '--key-file', Path('private.key'))
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertIn('diagnostic-json', stderr.getvalue())
+        self.assertIn('diagnostic-stderr', stderr.getvalue())
+        self.assertNotIn('x' * 4001, stderr.getvalue())
+        self.assertNotIn('y' * 4001, stderr.getvalue())
+
+    def test_backup_key_must_be_written_not_printed_and_success_is_quiet(self):
+        backup = module('backup_journey')
+        with patch.object(backup.subprocess, 'run') as run:
+            with self.assertRaises(AssertionError):
+                backup.run_backup('wam', 'key', 'new')
+            run.assert_not_called()
+        with patch.object(backup.subprocess, 'run', return_value=SimpleNamespace(
+                returncode=0, stdout='{"ok": true}', stderr='private progress')), \
+                patch.object(backup.sys, 'stderr', io.StringIO()) as stderr:
+            self.assertEqual(backup.run_backup('wam', 'key', 'new', '--out', Path('private.key')), {'ok': True})
+            self.assertEqual(stderr.getvalue(), '')
+
     def test_public_comment_cannot_leak_canaries(self):
         canary = 'private-token owner@example.invalid /private/home private.tail111.ts.net'
         value = {'release': canary, 'step': canary, 'sha256': 'a' * 64, 'private_log': canary,
