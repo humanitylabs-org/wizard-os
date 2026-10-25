@@ -20,6 +20,9 @@ import run as launch
 
 HERE = Path(__file__).resolve().parent
 GIB = 1 << 30
+# Public launch defaults plus a real ~1 GiB backup, staging, and Undo copies.
+# 17 GiB leaves ~1 GiB free: WAM correctly refuses its ~2.5 GiB export budget.
+GUEST_DISK_GIB = 24
 
 
 def main():
@@ -41,7 +44,7 @@ def main():
     assert not sys.flags.optimize, 'assertions may not be optimized away'
     if a.fixture:
         assert hashlib.sha256(a.fixture.read_bytes()).hexdigest() == a.fixture_sha256
-    assert shutil.disk_usage(work).free >= (250 + 17 + 1) * GIB, '250 GiB reserve plus 17 GiB guest and metadata required'
+    assert shutil.disk_usage(work).free >= (250 + GUEST_DISK_GIB + 1) * GIB, '250 GiB reserve plus guest and metadata required'
     os.environ.update(PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
                       LIMA_HOME=str(root / 'lima'), LIMA_CACHE_HOME=str(root / 'cache'))
     vm = 'release-check'
@@ -56,7 +59,7 @@ def main():
     log = evidence / 'private-run.log'
     result = {'passed': False, 'release': a.release, 'from': a.previous_release,
               'cases': [], 'step': 'start', 'overlays': [], 'architecture': 'aarch64',
-              'at': dt.datetime.now(dt.timezone.utc).isoformat(), 'disk_gib': 17, 'reserve_gib': 250}
+              'at': dt.datetime.now(dt.timezone.utc).isoformat(), 'disk_gib': GUEST_DISK_GIB, 'reserve_gib': 250}
     stop = threading.Event()
     low_space = threading.Event()
     def command(argv, timeout=1800):
@@ -66,7 +69,7 @@ def main():
     def shell(argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', vm, '--', *argv], timeout)
     def create(name):
-        config = {'vmType': 'vz', 'arch': 'aarch64', 'cpus': 4, 'memory': '6GiB', 'disk': '17GiB',
+        config = {'vmType': 'vz', 'arch': 'aarch64', 'cpus': 4, 'memory': '6GiB', 'disk': f'{GUEST_DISK_GIB}GiB',
                   'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-arm64.img',
                               'arch': 'aarch64', 'digest': 'sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e'}],
                   'mounts': [{'location': str(root), 'writable': True},
