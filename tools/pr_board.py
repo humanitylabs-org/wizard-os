@@ -117,19 +117,26 @@ def ancestors(repo: str, sha: str) -> set[str]:
 
 def pull_requests(repo: str) -> list[dict]:
     since = (dt.date.today() - dt.timedelta(days=WINDOW_DAYS)).isoformat()
-    q = """query($q:String!,$after:String){search(query:$q,type:ISSUE,first:50,after:$after){
-      pageInfo{hasNextPage endCursor}
-      nodes{... on PullRequest{id number title isDraft state mergedAt closedAt
-        mergeCommit{oid} author{login} labels(first:20){nodes{name}}}}}}"""
+    owner, name = repo.split("/")
+    # Search is an eventually consistent index: a recently closed PR can disappear
+    # from both searches, leaving its existing card stuck in review. Read the
+    # repository connection instead, ordered by update time to bound history.
+    q = """query($o:String!,$n:String!,$states:[PullRequestState!]!,$after:String){
+      repository(owner:$o,name:$n){pullRequests(first:100,states:$states,
+        orderBy:{field:UPDATED_AT,direction:DESC},after:$after){
+        pageInfo{hasNextPage endCursor}
+        nodes{id number title isDraft state updatedAt mergedAt closedAt
+          mergeCommit{oid} author{login} labels(first:20){nodes{name}}}}}}"""
     out = {}
-    for query in (f"repo:{repo} is:pr is:open", f"repo:{repo} is:pr is:closed closed:>={since}"):
+    for states in (["OPEN"], ["CLOSED", "MERGED"]):
         after = None
         while True:
-            d = gql(q, q=query, after=after)["search"]
+            d = gql(q, o=owner, n=name, states=states, after=after)["repository"]["pullRequests"]
             for n in d["nodes"]:
-                if n:
+                if states == ["OPEN"] or (n.get("closedAt") or "") >= since:
                     out[n["id"]] = n
-            if not d["pageInfo"]["hasNextPage"]:
+            if (not d["pageInfo"]["hasNextPage"] or
+                    (states != ["OPEN"] and d["nodes"] and d["nodes"][-1]["updatedAt"] < since)):
                 break
             after = d["pageInfo"]["endCursor"]
     return list(out.values())
