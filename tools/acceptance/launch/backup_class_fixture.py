@@ -99,9 +99,23 @@ def boxes():
     return b
 
 
+LEGACY_LOGIN = Path('/var/lib/docker/volumes/wizard-ai-accounts-claude/_data')
+
+
+def login_root(b):
+    # Current boxes compile the Claude app's fixed login volume into its own app-data
+    # folder (wizard-storage.ts rewriteVolumes: data/claude); older boxes keep the named
+    # volume. Use whichever the installed app actually created; never fabricate one.
+    folder = b.runtipi_root/'app-data/wizardapps/wizard-claude/data/claude'
+    for root in (folder, LEGACY_LOGIN):
+        if root_python('import sys; from pathlib import Path; print(Path(sys.argv[1]).is_dir())', root) == 'True':
+            return root
+    raise AssertionError('Claude app login folder missing: install wizard-claude before seeding')
+
+
 def paths(b):
     return {'app': b.runtipi_root/'app-data/wizardapps/files/data/.backup-acceptance',
-            'login': Path('/var/lib/docker/volumes/wizard-ai-accounts-claude/_data/backup-acceptance/.credentials.json')}
+            'login': login_root(b)/'backup-acceptance/.credentials.json'}
 
 
 def seed(b, manifest):
@@ -113,12 +127,6 @@ def seed(b, manifest):
     with getattr(b, 'operation', contextlib.nullcontext)():
         agent = last_json(b.runner.python(b.main_agent(), STOCK_SEED, ''))
     pp = paths(b)
-    # Require the app-created named volume; do not fabricate a volume outside Docker.
-    # Reach Docker the way WAM backup does (plain docker, else sudo -n docker): a fresh
-    # box's owner is in the docker group only after the next login.
-    from wam.backup.dockercli import docker
-    subprocess.run([*docker(), 'volume', 'inspect', 'wizard-ai-accounts-claude'],
-                   check=True, stdout=subprocess.DEVNULL)
     for key, text in (('app', APP_MARKER), ('login', LOGIN_CONTENT)):
         root_python('from pathlib import Path; import sys; p=Path(sys.argv[1]); p.parent.mkdir(parents=True,exist_ok=True); p.write_text(sys.argv[2]); p.chmod(0o600)', pp[key], text)
     obj = {'schema':2, 'origin':'mac', 'classes':list(CLASSES), 'agent':agent,
