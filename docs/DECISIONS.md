@@ -2,6 +2,38 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 25 Oct 2026 — James: Agent History keeps every agent's record ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md) section 3)
+
+| # | Decision | Status |
+|---|---|---|
+| 102 | **Agent History** (`wizard-agent-history`, slot `agent-history`) replaces Agent Search (#45) and adds a second job: it keeps the permanent copy of every agent's full history (messages, reasoning, tool calls and output; provider-encrypted reasoning excluded) in sealed monthly files per agent, plus a conversation-only export, copied daily after the box backup. The promise: **your history is never lost, and your Wizard never fills itself up.** Machine sessions (scheduled jobs, helpers) leave the agent's store after `live_days` (owner setting, default 30), only after History has released them row by row, through the harness's own prune. The owner's conversations stay in the agent's store until Chats reads old threads from History. No store rewrites; harness auto-prune stays off. Session search covers the conversation by default and reasoning and tool output with `deep`; memory, skills and notes go through the Agent Service gateway (#95). Private agents stay sealed (#59). Named for clarity: "archive" already means a closed thread in Chats. James, 18 Oct: "let's be clear rather than clever." | **Approved by James (18 Oct; storage rule 21 Oct; first prune verified 25 Oct)**; Jan and Miguel to confirm |
+
+## 25 Oct 2026 — James: Supervisor and Reporter
+
+| # | Decision | Status |
+|---|---|---|
+| 99 | **Supervisor** (Agent Service): the spell *"report this to supervisor and continue"* makes the worker file a complete report (what happened, owner's words verbatim, evidence) and carry on without fixing the process itself. A fresh Supervisor session per report checks past lessons, designs the durable fix, hands the build to a fresh worker thread and closes with one line back in the original thread. It acts only as broadly as the owner's words; anything wider, cross-agent, private, paid, external or editing the owner's own rules waits for the owner. Spec: `~/context/projects/ai-wizards/SUPERVISOR_REPORTER_SPEC.md` (consulted with Fable). | Approved (James, 25 Oct) |
+| 100 | **Reporter**: every scheduled task ends in one short plain-words report (bold point, What happened, What you need to do, Still open, status line) checked automatically by the Agent Service; a failing report gets one rewrite. Digest jobs keep their body. It is a contract plus a checker, not an agent. | Approved (James, 25 Oct) |
+| 101 | The 16 Oct self-repair prototype (`wizard-supervisor` package) is removed: uninstalled and its repo archived. Troubleshooter owns repair and the nightly maintenance run (#91) owns upkeep; nothing in it was worth porting. "Supervisor" means #99. | Approved (James, 25 Oct; removal confirmed same day) |
+
+## 25 Oct 2026 — James: Tuesday small-group backup/restore release; explicit soak override
+
+James explicitly directed a new build containing the finished backup/restore now,
+ready for the first small test group by **Tuesday 27 October 2026**, and explicitly
+said not to wait 72 hours on latest. This is his **release-specific policy override
+of the 72-hour soak**, dated **25 October 2026**, not an inferred urgency waiver
+and not a mass rollout. Version **0.3.42** is reserved for this lane because
+0.3.41 is already owned by #206/#211; carry the published 0.3.40 bundle forward
+with reviewed WAM backup/report/retry/recovery changes only. It does not supersede
+that defaults/UI candidate. Review, official attested image provenance, release
+validation and real fresh-install, 0.3.39/0.3.40 upgrade and new-version backup /
+restore evidence remain mandatory. Record this authority in the eventual
+promotion's `fast_track.reason` using the existing feature fast-track gate;
+stable moves only in its later evidence-backed promotion PR. Preparation/evidence
+slots and offline-only scheduler/AI-login limitations:
+[0.3.42 admission](acceptance/release-0.3.42-backup.md).
+
+
 ## 24 Oct 2026 — James: agent templates, an idea for later ([spec/AGENT_TEMPLATES.md](../spec/AGENT_TEMPLATES.md))
 
 | # | Decision | Status |
@@ -24,7 +56,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 | # | Decision | Status |
 |---|---|---|
-| 95 | **Standard agents share read-only memory on demand by default:** `other_agents: read`, `shared_with_agents: true`; false silos a source from every reader and grant. Private agents remain sealed (#59), always false. Read covers MEMORY.md, USER.md, labelled SOUL.md, skills and declared notes, never secrets or raw databases; sessions belong to Agent History (#45/#77, PR #70). No prompt injection or cross-agent writes: adapt into your own note with source attribution. **One agent per identity, skills per task:** split only for a different model/fallback AND narrower tools AND conflicting always-loaded memory register. Start with one; recommend at most three, a fourth retires/merges one. Owner approves a split/merge diff; retain original transcripts, archive rather than delete merged homes. [Agent state](../spec/AGENT_STATE.md), [split/merge procedure](../spec/AGENT_SPLIT.md). | Approved by James 24 Oct 2026 |
+| 95 | **Standard agents share read-only memory on demand by default:** `other_agents: read`, `shared_with_agents: true`; false silos a source from every reader and grant. Private agents remain sealed (#59), always false. Read covers MEMORY.md, USER.md, labelled SOUL.md, skills and declared notes, never secrets or raw databases; sessions belong to Agent History (#45/#102, PR #70). No prompt injection or cross-agent writes: adapt into your own note with source attribution. **One agent per identity, skills per task:** split only for a different model/fallback AND narrower tools AND conflicting always-loaded memory register. Start with one; recommend at most three, a fourth retires/merges one. Owner approves a split/merge diff; retain original transcripts, archive rather than delete merged homes. [Agent state](../spec/AGENT_STATE.md), [split/merge procedure](../spec/AGENT_SPLIT.md). | Approved by James 24 Oct 2026 |
 | 94 | **The phone Wizard ID is the only identity anyone sees, and the box key is that person's Wizard (a device), listed in a phone-signed device list (kind 30078, `d=wizard-devices`).** The owner key signs, with a fresh biometric each time: identity and follows, friend adds and accepts, publishing, and the device list (attest or revoke). The box key is the inbox: it decrypts unattended, re-shares profile parts, and signs the agent's labelled posts. Messenger uses the owner `npub` as its Marmot account through MDK's external signer. MLS leaf keys on the box sign each message, and the phone handles proofs, KeyPackages and Welcomes under a short-timeout key. There are no per-app identities. Box-only users start as an unclaimed Wizard that their phone ID later claims, without anyone re-adding them. Profiles (Miguel's app) adopts the resolution rule through our PR. Why: a box compromise must be revocable without losing the person. Reviewed with Fable over two rounds (transcripts in agent context sources). | Approved by James, 24 Oct 2026. Miguel to confirm (Profiles). |
 
 
@@ -175,7 +207,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | # | Decision | Status |
 |---|---|---|
 | 58 | **The owner picks which agents can use an app when installing it.** The install screen lists every agent with a tick box: standard agents start ticked, private agents start unticked. Editable later from the app or from the agent. No agent gains an app silently. Replaces the draft default in PR #6 (every agent gets every app at install). Apps that produce work for an agent also show where their work goes (app → agent binding, separate setting). | **Approved by James (14 Oct)** |
-| 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent Search never indexes it for another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
+| 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent History never serves it to another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
 
 Deferred by James (14 Oct), brought back when due: whether apps that can run an agent need a separate warning at install (due before apps from other publishers are installable), and whether network isolation between apps is required before the stable release (due before any box installs another person's app).
 
@@ -205,12 +237,12 @@ Deferred by James (14 Oct), brought back when due: whether apps that can run an 
 | # | Decision | Status |
 |---|---|---|
 | 43 | **One folder per agent instance:** `~/.wizard-os/agents/<id>/home`, bind-mounted into that agent's container as its home, with an `agent.json` saying where its skills, sessions and memory sit. Harness layouts stay native; nothing in Hermes changes. Outside `media/`, so other apps can't read it. Survives uninstall and host moves. | **Approved (James, 14 Oct)** |
-| 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent Search, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
-| 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
+| 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent History, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
+| 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`; **renamed Agent History and given the keeping job by #102**): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
 | 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James); **amended by #59** for private agents and **#95** for standard-agent defaults |
 | 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Approved (James, 21 Oct) |
 | 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | **Approved (James, 14 Oct)** |
-| 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent Search uses the same method across agents. | Proposed (James) |
+| 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent History uses the same method across agents. | Proposed (James) |
 
 ## 11 Oct 2026 — James: Archimedes owns the Agent Service; agent bridge; install alongside Hermes
 

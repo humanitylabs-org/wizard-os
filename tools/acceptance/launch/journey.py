@@ -30,6 +30,26 @@ def run(*argv, timeout=120):
     return p.stdout.strip()
 
 
+def install_wisdom(wam, case):
+    # Capture the backend's reason before a retry can replace it, and before the
+    # disposable VM is deleted. Never repair/prefetch/change the installed release.
+    for attempt in range(2 if case == 'upgrade-baseline' else 1):
+        try:
+            run(wam, 'install', 'wisdom', timeout=900)
+            return
+        except (RuntimeError, subprocess.TimeoutExpired) as error:
+            try:
+                subprocess.run(['python3', str(Path(__file__).with_name('diagnostics.py'))],
+                               stdout=sys.stderr, stderr=sys.stderr, timeout=130, check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                sys.stderr.write('install diagnostics unavailable\n')
+            # Preserve the existing single old-baseline retry, not timeouts or
+            # candidate failures. A diagnostic failure never replaces this error.
+            if not isinstance(error, RuntimeError) or attempt or case != 'upgrade-baseline':
+                raise
+            sys.stderr.write('baseline wisdom install: retrying once\n')
+
+
 def request(url, value=None, raw=None):
     headers = {}
     if value is not None:
@@ -96,7 +116,8 @@ def main():
     # No automatic repairs: missing catalog app/install or private content is a failing journey.
     if not any(a['id'] == 'wisdom' for a in registry['apps']):
         assert args.case == 'clean' or not args.state.exists(), 'installed app vanished'
-        run(str(Path.home() / '.local/bin/wam'), 'install', 'wisdom', timeout=900)
+        wam = str(Path.home() / '.local/bin/wam')
+        install_wisdom(wam, args.case)
         registry = json.loads((home / 'apps.json').read_text())
     wisdom = next(a for a in registry['apps'] if a['id'] == 'wisdom')
     endpoint = wisdom['mcp']['url'].removesuffix('/mcp')

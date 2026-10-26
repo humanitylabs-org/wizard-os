@@ -40,7 +40,7 @@ Wizard UX is the **shell**: a system app filling the `shell` slot, always exactl
 - It also keeps one short **pointer skill** per job type, for example "short-form video → DeFleur Video". The app's full skill stays with the app.
 - It owns the versioned `/wizard/...` API.
 
-**Agent.** Hermes today. Any harness that speaks MCP can sit here later. It gets its abilities from apps and its standing instructions from the Agent Service. Its skills, sessions and memory live in its own folder under `~/.wizard-os/agents/<id>/`; other agents reach them only through Agent Search under owner grants ([AGENT_STATE.md](../spec/AGENT_STATE.md)).
+**Agent.** Hermes today. Any harness that speaks MCP can sit here later. It gets its abilities from apps and its standing instructions from the Agent Service. Its skills, sessions and memory live in its own folder under `~/.wizard-os/agents/<id>/`; Agent History keeps the permanent copy of every agent's history, and other agents reach that state only through it, under owner grants ([AGENT_STATE.md](../spec/AGENT_STATE.md)).
 
 **Apps.** One repo each. Every app has:
 - a root `wizard.md` ([spec](../spec/WIZARD_MD.md))

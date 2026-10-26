@@ -12,7 +12,7 @@ Today every Wizard app can reach every other app. Runtipi puts every app's main 
 |---|---|---|---|
 | **App → app** (Wisdom → Connection Router, Router → Claude app, a recorder → Transcriber) | Owner-approved grants (this spec) | Per-app Docker networks + per-grant key at the provider | this file |
 | Agent → app (Hermes or a container agent calling an app's tools) | The owner's tick boxes per agent, chosen at install (#58) | The Agent Service's `wizard` MCP gateway, one key per agent | [AGENTS.md](AGENTS.md) §5, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) |
-| Agent → another agent's data | Agent-data grants, default none (#46); private agents can never be a source (#59) | Agent Search / Agent Service | [AGENT_STATE.md](AGENT_STATE.md) §4 |
+| Agent → another agent's data | Agent-data grants, default none (#46); private agents can never be a source (#59) | Agent History / Agent Service | [AGENT_STATE.md](AGENT_STATE.md) §4 |
 | Where an app's work goes | App → agent binding (#60) | Agent Service delivery endpoint | [AGENTS.md](AGENTS.md) §7 |
 
 This spec adds **no agent defaults**. Draft v0.1 gave every agent a grant to every app at install; #58 replaced that, and it does not come back here. Agents never call apps directly: they go through the gateway, and the gateway serves each agent only the apps ticked for it.
