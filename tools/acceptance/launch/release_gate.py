@@ -25,6 +25,18 @@ GIB = 1 << 30
 GUEST_DISK_GIB = 24
 
 
+def capture_failure_diagnostics(vm, log):
+    """Read the guest before cleanup; best effort must never hide the real failure."""
+    try:
+        with log.open('a') as out:
+            subprocess.run(['limactl', 'shell', '--workdir', '/', vm, '--', 'env',
+                            'WIZARD_LAUNCH_FIXTURE=launch-audits-8-9', 'python3',
+                            str(HERE / 'diagnostics.py')], stdout=out, stderr=subprocess.STDOUT,
+                           timeout=150, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--root', required=True, type=Path)
@@ -124,6 +136,8 @@ def main():
         stop.set()
         watcher.join(timeout=130)
         if (root / 'lima' / vm).exists():
+            if not result['passed']:
+                capture_failure_diagnostics(vm, log)
             cleanup = subprocess.run(['limactl', 'delete', '-f', vm], capture_output=True, timeout=180)
             result['cleanup'] = cleanup.returncode == 0 and not (root / 'lima' / vm).exists()
             if not result['cleanup']:
