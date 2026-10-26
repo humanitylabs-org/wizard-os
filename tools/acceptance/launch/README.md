@@ -15,8 +15,9 @@ or an acceptance directory outside that volume.
 The runner accepts `--root`, `--release`, `--previous-release`, and `--cli` (the
 frozen WAM CLI source mounted into the guest). Both VM installs use the **public**
 `https://aiwizards.com/os.sh` and release pins. No `WAM_REF` or verifier override.
-`WIZARD_PRIVATE_ACCESS=none` explicitly postpones enrollment; no auth keys or provider
-sign-ins are used. Frozen CLI probes do not modify the shipped profile. This is not
+`WIZARD_PRIVATE_ACCESS=none` explicitly postpones enrollment in the legacy daily
+lane. The opt-in onboarding lane below adds a dedicated ChatGPT sign-in; it never
+uses an owner's existing provider login. Frozen CLI probes do not modify the shipped profile. This is not
 proof that an unreleased CLI change is already in a released installer.
 
 - `launch-real-use`: persistent Ubuntu 24.04 ARM appliance; never automatically deleted.
@@ -96,3 +97,126 @@ bash -n tools/acceptance/launch/bootstrap.sh
 
 These check fixture provenance, real SQLite backup/restore semantics, gate reset
 conditions, receipt chaining and comment-canary rejection; they do not run VMs.
+
+## Real first chat and second-owner Android (#87 / #88)
+
+Implementation/reuse plan:
+- REUSE: public installer, installed Agent Service bootstrap/run/history APIs,
+  ChatGPT app's pushed OAuth implementation and existing UI, Android Connect and
+  exported thread handoff, android-build-thales SDK/API35 and shared worker lock.
+- EXTEND: `run.py` clean journey; `tunnel.py` exposes its host-key-verified forward
+  as a context manager for a temporary HTTPS transport to that **same** guest.
+- NEW: acceptance-only credential lease / phone assertions / login access gate;
+  no new production auth, chat, pairing or UI implementation.
+
+Keep the running daily stage and its retained VM **unchanged**. Stage a new pushed
+wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Use a new,
+short acceptance root, outside the directory holding host secrets. An onboarding
+receipt is labelled `launch-onboarding-87-88` and can never satisfy the daily soak.
+The default daily invocation still does not require a credential or emulator.
+
+### Dedicated sign-in (the only owner action)
+
+Run `login.py --oauth-source CHATGPT_SOURCE --state SECRETS/chatgpt --origin HTTPS_ORIGIN`
+under the build machine's service supervisor, bound to loopback. Give it a new,
+private Tailscale Serve HTTPS port (never reset existing Serve configuration).
+Share only the `owner-link` generated in the private state directory. Owner opens
+that link, presses **Connect**, then approves the code on the official ChatGPT
+page. The app UI and OAuth are reused unmodified; the acceptance wrapper adds a
+Secure, HttpOnly, SameSite capability cookie. No device codes, request paths,
+tokens, upstream bodies or credentials are logged. The station does not connect
+to any existing Hermes dashboard, change its defaults or register a pool entry.
+
+`connection.json` is app-owned, 0600, in the build machine's 0700 secrets directory,
+**outside source and every guest mount**, including already-running retained VMs.
+Older daily VMs mount their entire acceptance root: use a host-only backing directory
+outside that root and a `secrets` directory symlink at the required logical path.
+Verify from the retained guest (including sudo) that a harmless probe file through
+that symlink is unreadable, without changing the VM/stage. `run.py` also checks the
+old fixture's mount configurations against the resolved credential path. Do not
+archive it, put it in an argv/env,
+or copy an owner's live Hermes auth. The host alone renews the new login. Guest
+receives only its short-lived access token, never the rotating refresh token.
+
+### Frozen heavy worker invocation
+
+```
+env WIZARD_WORK_ROOT=WORK_VOLUME python3 tools/acceptance/launch/run.py \
+  --root NEW_SHORT_ACCEPTANCE_ROOT --release 0.3.40 --previous-release 0.3.39 \
+  --cli FROZEN_WAM/wizard-cli/wizard --onboarding-only \
+  --first-chat-secret SECRETS/chatgpt/connection.json --secrets-root SECRETS \
+  --oauth-source CHATGPT_SOURCE --phone-config PRIVATE_PHONE_CONFIG.json
+```
+
+Submit this as a **heavy** job; never start a VM/emulator in a conversational SSH
+shell. `--onboarding-only` creates one disposable VM, installs the public release,
+runs the existing shell/Setup/reading journey, then chat + phone, and deletes the VM
+in `finally`. It never starts or mutates `launch-real-use`. For a separate full
+acceptance root, omitting this flag also retains the original upgrade/soak cases.
+
+First chat reads `/wizard/v1/bootstrap`, creates a Wizard thread through Agent
+Service, selects the first safe text-model slug advertised by the dedicated host
+ChatGPT connection's authenticated catalog, sends through `/wizard/hermes/v1/runs`,
+waits for **completed + non-empty output + confirmed actual provider/model**, then
+reads back an assistant message. The same selected slug is locked at thread creation,
+send and runtime readback; there is no retired hardcoded slug or fallback retry.
+Catalog errors fail closed before any guest credential injection.
+The shipped Service has no `/wizard/v1` *send* API; the `/wizard/hermes/v1` route is
+the actual shell send contract, not a direct Hermes bypass. Do not invent a
+`/wizard/v1/chat` endpoint. Receipts record only `{passed, latency_ms, provider}`;
+thread IDs and response text travel only through captured in-memory pipes to the
+phone assertion. A model error is never interpreted as a reply. In `finally`, the
+guest auth file is removed, the disposable Hermes engine restarted to drop cached
+credentials, and the exact path read back to assert absence. VM deletion is an
+additional containment layer, not a substitute for lease cleanup.
+
+Failures append `first_chat_failure` to the **private** run log: fixed snippet
+`install`/`chat`/`remove`, guest return code (null on timeout), and an allowlisted
+stderr exception class. Nested Docker failures use the same class-only projection.
+Raw stderr, argv, HTTP bodies, credential values, session IDs and response text are
+never copied into that diagnostic or the public receipt. An install failure and a
+subsequent cleanup failure each retain a separate diagnostic row.
+
+### Android input and assertions
+
+The private phone config contains host paths/settings, never provider credentials:
+
+```
+{"apk":"PUBLISHED_APK", "feed":"FROZEN_PUBLISHED_FEED.json",
+ "sdk":"ANDROID_SDK", "work_root":"ANDROID_BUILD_WORK_ROOT",
+ "java_home":"JAVA21_HOME", "emulator_port":5682, "https_port":9450}
+```
+
+Freeze the **actual published** feed and APK together; record version/code drift
+rather than relabelling a newer feed as an older version. Verify byte size, SHA256,
+release signer, package and version/code before installation. No build or QA APK
+is substituted. The source supports Android SDK/AVD placement from the
+android-build-thales tooling and takes the same `worker.lock` non-blockingly.
+
+The emulator has a new AVD/disk and no installed package or stored origin. It opens
+the real native Connect before any owner server loads. A generic artifact proves
+normal Main → first-run Connect; a published owner-upgrade artifact is identified
+from its BuildConfig constant and enters the exported Connect activity directly,
+never Main at its migration default. That entry is reported explicitly and is not
+claimed as generic first-run proof. It pastes the new HTTPS address
+into the real native control, uses a temporary unused Tailscale Serve port to the
+verified SSH forward, and waits for the real shell. No mock shell, TLS bypass,
+private CA, preferences injection, debug bridge or CDP. It opens the just-proven
+chat with the release's native thread handoff and asserts the actual reply is
+visible in accessibility XML. It exercises Back at nested thread and shell root
+(the nested composer must really disappear), plus process-death persistence.
+Unpaired root Back is also exercised for generic APKs, but deliberately not for
+owner-default artifacts, where it would navigate to the old live server.
+
+Only bounded pass/fail checks + APK identity enter the phone receipt. UI XML,
+transcripts and screenshots are never retained. Emulator disk and temporary XML
+are deleted, emulator stopped, and only the new HTTPS handler removed/read back
+in `finally`; existing Serve handlers must remain identical. **Address pairing is
+not QR proof. Emulator is not physical-device proof.** #88 still requires QR and
+one real handset; #87's separate Mac/public-app gate also remains open.
+
+Lightweight tests (not evidence of a model/emulator run):
+
+```
+python3 -m unittest tools/tests/test_launch_audits.py tools/tests/test_launch_onboarding.py -v
+```

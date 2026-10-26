@@ -37,7 +37,7 @@ def gate(rows):
     window = []
     previous = None
     for row in rows:
-        if row.get('passed') is not True or row.get('interventions', 0) or row.get('overlays'):
+        if row.get('fixture') == 'launch-onboarding-87-88' or row.get('passed') is not True or row.get('interventions', 0) or row.get('overlays'):
             window = []
             previous = None
             continue
@@ -80,7 +80,18 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--previous-release', default='0.3.32')
     p.add_argument('--cli', required=True, type=Path)
+    p.add_argument('--first-chat-secret', type=Path)
+    p.add_argument('--secrets-root', type=Path)
+    p.add_argument('--oauth-source', type=Path, help='pushed ChatGPT connection source, for host-only OAuth renewal')
+    p.add_argument('--phone-config', type=Path, help='private host paths to the published feed/APK and Android tools')
+    p.add_argument('--onboarding-only', action='store_true', help='fresh install + chat + phone; never touches the retained soak VM')
     args = p.parse_args()
+    if args.first_chat_secret and not (args.secrets_root and args.oauth_source):
+        p.error('first chat requires --secrets-root and --oauth-source')
+    if args.phone_config and not args.first_chat_secret:
+        p.error('phone proof requires a real first chat')
+    if args.onboarding_only and not (args.first_chat_secret and args.phone_config):
+        p.error('onboarding-only requires both chat and phone')
     root = args.root.resolve()
     work_value = os.environ.get('WIZARD_WORK_ROOT')
     if not work_value:
@@ -91,6 +102,23 @@ def main():
     import re
     if not all(re.fullmatch(r'\d+\.\d+\.\d+', v) for v in (args.release, args.previous_release)):
         p.error('numeric released versions required')
+    mounts = [root, HERE.parents[2], args.cli.resolve().parents[1]]
+    if args.first_chat_secret:
+        from first_chat import private_file
+        private_file(args.first_chat_secret, args.secrets_root)
+        # Secrets MUST NOT be in any Lima mount (the old daily root also contains
+        # its secrets sibling). Source/CLI mounts are read-only; only run state is writable.
+        secret = args.first_chat_secret.resolve()
+        if any(secret.is_relative_to(m) for m in mounts):
+            p.error('secret must be outside all guest mounts; use a separate onboarding --root')
+        # Older retained fixtures mount the original acceptance root wholesale.
+        # Audit their frozen JSON-form Lima YAML too; never expose a new plaintext
+        # directory just because the *new* VM's mount table is narrow enough.
+        for config in (args.secrets_root.parent / 'lima').glob('*/lima.yaml'):
+            old = json.loads(config.read_text())
+            if any(secret.is_relative_to(Path(m['location']).resolve()) for m in old.get('mounts', [])):
+                p.error('credential is visible through an existing guest mount')
+    os.umask(0o077)
     os.environ['LIMA_HOME'] = str(root / 'lima')
     os.environ['LIMA_CACHE_HOME'] = str(root / 'cache')
     os.environ['PATH'] = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
@@ -115,7 +143,7 @@ def main():
         config = {'vmType': 'vz', 'arch': 'aarch64', 'cpus': 4, 'memory': '6GiB', 'disk': '50GiB',
                   'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-arm64.img',
                               'arch': 'aarch64', 'digest': 'sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e'}],
-                  'mounts': [{'location': str(root), 'writable': True}],
+                  'mounts': [{'location': str(m), 'writable': m == root} for m in dict.fromkeys(mounts)],
                   'containerd': {'system': False, 'user': False},
                   'portForwards': [{'guestPortRange': [1, 65535], 'ignore': True}],
                   'provision': [{'mode': 'system', 'script': '#!/bin/sh\nset -eu\napt-get update\napt-get install -y curl git python3\n'}]}
@@ -142,8 +170,41 @@ def main():
         if case != 'upgrade-baseline':
             assert value['contact'] is True and value['setup_route'] is True, 'candidate Setup not proven'
         result['cases'].append(value)
+        if case == 'clean' and args.first_chat_secret:
+            from first_chat import credential_lease, run_chat, PROVIDER
+            started = time.monotonic()
+            result['step'] = 'first-chat'
+            result['first_chat'] = {'passed': False, 'provider': PROVIDER, 'latency_ms': 0}
+            try:
+                with credential_lease(name, args.first_chat_secret, args.secrets_root, args.oauth_source, log=log) as chat_model:
+                    result['first_chat'], internal = run_chat(name, model=chat_model, log=log)
+                    if args.phone_config:
+                        from phone import run_phone
+                        result['step'] = 'second-owner-phone'
+                        result['phone'] = {'passed': False}
+                        result['phone'] = run_phone(name, args.cli, run / 'phone', args.phone_config, internal)
+                        del internal
+            except Exception:
+                if not result['first_chat']['passed']:
+                    result['first_chat']['latency_ms'] = round((time.monotonic() - started) * 1000)
+                raise RuntimeError('onboarding_failed') from None
+    class OnboardingComplete(Exception):
+        pass
     try:
-        disposable_cases(args, run, clean, create, install, journey, delete, result)
+        if args.onboarding_only:
+            result['fixture'] = 'launch-onboarding-87-88'
+            result['step'] = 'clean-create'
+            create(clean)
+            result['step'] = 'clean-public-install'
+            install(clean, run / 'clean-install', args.release)
+            result['step'] = 'clean-candidate-journey'
+            journey(clean, 'clean', run / 'clean-state.json', args.release)
+            result['step'] = 'complete'
+            result['passed'] = True
+        else:
+            disposable_cases(args, run, clean, create, install, journey, delete, result)
+        if args.onboarding_only:
+            raise OnboardingComplete
         instance = root / 'lima' / retained
         state = root / 'persistent-state.json'
         if not instance.exists():
@@ -172,6 +233,8 @@ def main():
         journey(retained, 'retained', state, args.release)
         result['step'] = 'complete'
         result['passed'] = True
+    except OnboardingComplete:
+        pass
     except (Exception, KeyboardInterrupt):
         # Step names are enums owned by this file. No exception text crosses the publication boundary.
         result['passed'] = False
