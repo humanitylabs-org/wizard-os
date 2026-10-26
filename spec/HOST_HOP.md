@@ -1,6 +1,6 @@
 # Host hop: move a Wizard to another machine
 
-**Status:** proposed by Miguel, 26 Oct 2026. Proven once in production: Miguel's Wizard (Oscar) moved from a VPS (Ubuntu) to a mini PC (Debian 13, installed from `wizard-os-iso`) on 26 Oct 2026. Reference scripts: `tools/host-hop/` (to land in a follow-up PR). James's box is the next test.
+**Status:** proposed by Miguel, 26 Oct 2026. Proven once in production: Miguel's Wizard (Oscar) moved from a VPS (Ubuntu) to a mini PC (Debian 13, installed from `wizard-os-iso`) on 26 Oct 2026. Reference scripts: `tools/host-hop/`. Archimedes review applied ("Wizards" naming).
 
 A Wizard's **main** is the machine that runs its agent, apps and data. A **host hop** makes another machine on the owner's tailnet the main, with the same history, apps, schedules and address, and keeps the old main as a **standby**. It is how an owner moves off a full or rented server, upgrades hardware, or recovers from a failing box.
 
@@ -24,14 +24,14 @@ This builds on [MACHINES.md](MACHINES.md) and [DEVICES.md](DEVICES.md): every ma
 4. **Switch.** A dry run shows the expected offline time, measured from the last sync. Then it waits for the Wizard to be idle, stops the main, copies the last changes, swaps names and starts the standby as main.
 5. **Switch back.** The same action in reverse. The old main has all data up to the switch.
 
-## Client: workspaces and the hop screen
+## Client: Wizards list and the hop screen
 
-The native clients (Android `ai.wizards.os`, Wizard for Mac) gain a **workspace switcher**: a list of Wizards the owner can open, such as "Oscar", "Carlos" and "AI Wizards". Each entry is a Wizard identity plus its current main address. The same switcher serves a hop:
+The native clients (Android `ai.wizards.os`, Wizard for Mac) gain a **Wizards list**: the Wizards the owner can open, such as "Oscar", "Carlos" and "AI Wizards". Each entry is a Wizard identity plus its current main address. The same switcher serves a hop:
 
 - Clients address a Wizard by its role name `<agent>-main.<tailnet>`, never a machine name, so a hop needs no new bookmark.
 - During a switch the main publishes `hop: {phase, eta_seconds}` on a small status endpoint that stays up on the standby (independent of the Wizard). The client shows a hop screen ("Moving Oscar to Mini PC · about 6 minutes") instead of a connection error, then reconnects to the same name and reopens the thread the owner was on.
 - Pending sends stay queued in the client outbox and deliver after the switch.
-- Adding another workspace uses the same pairing as [PHONE_SETUP.md](PHONE_SETUP.md). Switching workspaces never mixes chats, notifications or credentials between Wizards.
+- Adding another Wizard uses the same pairing as [PHONE_SETUP.md](PHONE_SETUP.md). Switching Wizards never mixes chats, notifications or credentials between Wizards.
 
 ## What the switch must guarantee
 
@@ -64,6 +64,5 @@ Each of the four attempts failed safely and restored the old main in about 5 min
 ## Build order
 
 1. Land the reference scripts with every box value moved to one settings file, plus their tests (23 runner tests, Postgres fixture, teardown fixture).
-2. James hops Archimedes from Thales to a second machine with the scripts and reports gaps.
-3. The Machines page gains Role, Add standby, Sync, Test, Switch and Switch back, calling a small root-capable helper on each machine.
-4. Native clients gain the workspace switcher, hop screen and outbox hold.
+2. The Machines page gains Role, Add standby, Sync, Test, Switch and Switch back, calling a small root-capable helper on each machine.
+3. Native clients gain the Wizards list, hop screen and outbox hold.
