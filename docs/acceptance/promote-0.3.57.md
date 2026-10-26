@@ -56,13 +56,32 @@ The forward-port to main is wizard-ux #549, which is labelled `needs: james revi
 - **Installer acceptance of the manifest.** The 0.3.57 file fetched from the wizard-app-manager mirror PR head (byte-identical, SHA256 above) was run through the installer's own `get.sh` pin validator together with the shared Hermes lock. It resolves `PIN_UX_IMAGE=…@sha256:a667cd87…`, and the App Manager and Agent Service pins are unchanged from 0.3.55.
 - `tools/check_release.py releases/0.3.57.json`: ok. `promote_stable.py check`: channels ok.
 
+### Upgrade test 0.3.55 → 0.3.57 (component level), 26 Oct 2026 UTC
+
+This follows the same standard as 0.3.55: the real component step, run in an isolated sandbox. It used the App Manager code pinned by both releases (`wizard-app-manager` `d926eec199c6440249c799677ff87585ece76a96`) and called `wam.alongside.write_shell_override(..., 'wizard-ux', role='shell')`, the step `wam alongside` runs for the shell app. `WIZARD_RELEASE_PINS` was set to the canonical 0.3.55 file and then the 0.3.57 file. The sandbox had a temporary Wizard home and Runtipi `user-config` tree. Docker Compose recreated the container from the override that step wrote, in its own project on loopback, with a local mock as the Agent Service origin. Nothing on any live box was read or changed.
+
+- **0.3.55.** The override pins `wizard-ux@sha256:03a93684…`. The running container's image is that digest, `/wizard/v1/setup` proxies through, and the served `tour.js` is the old one.
+- **Upgrade to 0.3.57.**
+  - The override pins `wizard-ux@sha256:a667cd87…`, and `previous_images` records `03a93684…`.
+  - Compose recreated the container, and the running image is `a667cd87…`.
+  - The served `core/tour.js`, `core/tour.css` and `pwa-install.js` have the same sha256 as the reviewed source.
+- **Browser matrix against the upgraded container:** 11/11 PASS. The cells are the same as above.
+- **Rollback to 0.3.55**, then re-upgrade to 0.3.57: the image and the served files switch back and forth as expected.
+
+| Receipt (private scratch) | SHA256 |
+|---|---|
+| before-0.3.55.json | `f67a68826019f5773804ac3db8afa8eb6c05f3493bbf2d1dca965f44f0f55394` |
+| after-0.3.57.json | `14439a8578def1f4f7be9d18735aa18fa4f44d469a8e6b1acd7d679f54abc446` |
+| rollback-0.3.55.json | `467bc94c229c366d2b7ad4984917cd1e8cde9c94e84ffb9e51aa0051254f64b1` |
+| reupgrade-0.3.57.json | `6e8367c1a40c1ae53edd67155da60744fd75da0489d1cced1704051ead3ba6a7` |
+
 ## Not checked / caveats
 
 - **No full installer upgrade or fresh install was run on a real box.**
   - `demo` was wiped and taken offline for the owner's own first-install test and was deliberately not touched.
   - `demo-2` and `demo-3` are offline.
   - No other disposable VM was available: this host has no KVM, and the Lima acceptance runner needs the ARM build machine.
-- The upgrade 0.3.55 → 0.3.57 replaces one immutable UX image digest through the same installer/WAM path as 0.3.53 → 0.3.55. The exact image's runtime was exercised directly, as above. **Run the installer upgrade and a fresh install on `demo` when it is back.** Miguel's next fresh install will exercise this exact path.
+- The upgrade test above was component level: the real pinned App Manager pin step plus a Compose recreate. It was not a full `os.sh` installer run. The upgrade 0.3.55 → 0.3.57 replaces one immutable UX image digest through the same installer/WAM path as 0.3.53 → 0.3.55. **Run the installer upgrade and a fresh install on `demo` when it is back.** Miguel's next fresh install will exercise this exact path.
 - Emulation cannot prove three things: a real iPhone Add to Home Screen, the real Telegram in-app browser, or the real Android install sheet.
 - Boxes on 0.3.26–0.3.31 set to Automatic skip a fast-tracked stable as `unpromoted`; Update now still works.
 
