@@ -45,5 +45,6 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 
 - `tools/check_wizard_md.py <repo> [--github owner/repo]`: pass/fail check for an app. The App Manager and each app's CI run copies of it; the rules must stay identical.
 - `tools/wizard`: the generic Wizard CLI; install with `sh tools/install_wizard_cli.sh`. Tests: `python3 -m unittest discover -s tools/tests`.
+- `tools/host-hop/`: reference scripts that move a Wizard to another machine (spec/HOST_HOP.md). Box values live in one `hosts.env`; tests: `python3 tools/host-hop/test-runner.py`, `python3 tools/host-hop/test-teardown.py`.
 - `tools/build_store.py`: compiles passing app repos into a stock Runtipi store (the App Manager does this live).
 - `examples/defleur-video/`: DeFleur Video as a v0.2 app.
