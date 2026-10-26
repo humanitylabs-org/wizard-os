@@ -1312,6 +1312,15 @@ def stable_pin(ns) -> dict:
     if not SHA40.fullmatch(commit):
         raise Fail("update_refused", f"the pinned Hermes commit {commit!r} is not a full 40-character commit")
     image = h.get("image") if isinstance(h.get("image"), dict) else {}
+    # The standalone CLI reads the same central lock as the App Manager. A custom
+    # --release may select an OS snapshot, never bypass Hermes promotion policy.
+    try:
+        lock = json.loads(_read_source(f"{base}/hermes-lock.json", ns.timeout))
+        locked = lock['hermes']
+        if lock['schema'] != 1 or lock['automatic_updates'] != 'paused' or any(h.get(k) != locked.get(k) for k in ('tag', 'commit', 'image')):
+            raise ValueError('release differs from the shared exact Hermes lock')
+    except (ValueError, KeyError, TypeError) as exc:
+        raise Fail('update_refused', f'Hermes lock: {exc}') from None
     return {"release": doc.get("version"), "source": src, "tag": tag, "commit": commit,
             "image_digest": image.get("digest"), "test_record": h.get("test_record"), "rollback": h.get("rollback")}
 
@@ -1943,6 +1952,25 @@ def cmd_hermes_update(ns) -> dict:
     import time as _t
     if not ns.stable:
         raise Fail("usage", "say which release to move to: wizard hermes update --stable")
+    if not ns.dry_run:
+        # Keep the single-file install dependency-free. This verifies the same
+        # approval/evidence/age gate as tools/hermes_lock.py before any mutation.
+        from datetime import datetime, timedelta, timezone
+        base = (os.environ.get('WIZARD_RELEASE_BASE') or RELEASE_BASE).rstrip('/')
+        try:
+            lock = json.loads(_read_source(f'{base}/hermes-lock.json', ns.timeout))
+            p = lock.get('promotion') or {}
+            if lock.get('state') != 'approved' or lock.get('minimum_release_age_days') != 7 or not p.get('id') or os.environ.get('WIZARD_HERMES_PROMOTION') != p['id']:
+                raise ValueError('updates paused; reviewed promotion and explicit WIZARD_HERMES_PROMOTION id required')
+            for field in ('recommendation', 'approval', 'acceptance', 'canary', 'bug_review', 'rollback'):
+                if not re.fullmatch(r'https://[^\s]+', str(p.get(field, ''))):
+                    raise ValueError('missing promotion evidence: ' + field)
+            published = datetime.fromisoformat(p['published_at'].replace('Z', '+00:00'))
+            approved = datetime.fromisoformat(p['approved_at'].replace('Z', '+00:00'))
+            if published.tzinfo is None or approved.tzinfo is None or approved < published + timedelta(days=7) or approved > datetime.now(timezone.utc):
+                raise ValueError('seven complete days after publication required')
+        except (ValueError, KeyError, TypeError) as exc:
+            raise Fail('update_refused', f'Hermes lock: {exc}') from None
     home = hermes_home_path(ns.hermes_home)
     if not (home / "config.yaml").is_file():
         raise Fail("usage", f"no Hermes config at {home / 'config.yaml'}")
