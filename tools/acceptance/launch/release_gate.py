@@ -65,7 +65,11 @@ def main():
     a = p.parse_args()
     work = Path(os.environ['WIZARD_WORK_ROOT']).resolve()
     root = a.root.resolve()
-    assert work.is_mount() and root.is_relative_to(work) and root != work
+    # Linux workers may use a reserved directory on the root filesystem. The
+    # same disk reserve and containment checks still apply. Mac keeps its
+    # external-volume admission requirement.
+    assert work.is_mount() or (platform.system() == 'Linux' and work.is_dir())
+    assert root.is_relative_to(work) and root != work
     assert not root.exists(), 'use a fresh isolated acceptance root'
     assert a.cli.is_file()
     assert not sys.flags.optimize, 'assertions may not be optimized away'
