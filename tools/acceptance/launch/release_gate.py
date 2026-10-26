@@ -9,6 +9,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,6 +24,20 @@ GIB = 1 << 30
 # Public launch defaults plus a real ~1 GiB backup, staging, and Undo copies.
 # 17 GiB leaves ~1 GiB free: WAM correctly refuses its ~2.5 GiB export budget.
 GUEST_DISK_GIB = 24
+
+
+def native_vm_config():
+    """Select a native guest; never silently run amd64 under CPU emulation."""
+    host = (platform.system(), platform.machine())
+    if host == ('Linux', 'x86_64'):
+        return {'vmType': 'qemu', 'arch': 'x86_64', 'mountType': '9p',
+                'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-amd64.img',
+                            'arch': 'x86_64', 'digest': 'sha256:04e8f2461a16a44e78a370284471f29616cdd9baf1893df25807b71f985b6c94'}]}
+    if host == ('Darwin', 'arm64'):
+        return {'vmType': 'vz', 'arch': 'aarch64',
+                'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-arm64.img',
+                            'arch': 'aarch64', 'digest': 'sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e'}]}
+    raise RuntimeError('unsupported native acceptance host: ' + repr(host))
 
 
 def capture_failure_diagnostics(vm, log):
@@ -70,7 +85,7 @@ def main():
     evidence.mkdir()
     log = evidence / 'private-run.log'
     result = {'passed': False, 'release': a.release, 'from': a.previous_release,
-              'cases': [], 'step': 'start', 'overlays': [], 'architecture': 'aarch64',
+              'cases': [], 'step': 'start', 'overlays': [], 'architecture': native_vm_config()['arch'],
               'at': dt.datetime.now(dt.timezone.utc).isoformat(), 'disk_gib': GUEST_DISK_GIB, 'reserve_gib': 250}
     stop = threading.Event()
     low_space = threading.Event()
@@ -81,13 +96,12 @@ def main():
     def shell(argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', vm, '--', *argv], timeout)
     def create(name):
-        config = {'vmType': 'vz', 'arch': 'aarch64', 'cpus': 4, 'memory': '6GiB', 'disk': f'{GUEST_DISK_GIB}GiB',
-                  'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-arm64.img',
-                              'arch': 'aarch64', 'digest': 'sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e'}],
+        config = {**native_vm_config(), 'cpus': 4, 'memory': '6GiB', 'disk': f'{GUEST_DISK_GIB}GiB',
                   'mounts': [{'location': str(root), 'writable': True},
                              {'location': str(HERE.parents[3]), 'writable': False}],
                   'containerd': {'system': False, 'user': False},
-                  'portForwards': [{'guestPortRange': [1, 65535], 'ignore': True}],
+                  'portForwards': [{'guestIP': ip, 'guestPortRange': [1, 65535], 'ignore': True}
+                                   for ip in ('127.0.0.1', '0.0.0.0')],
                   'provision': [{'mode': 'system', 'script': '#!/bin/sh\nset -eu\napt-get update\napt-get install -y curl git python3\n'}]}
         config_path = evidence / 'vm.json'
         config_path.write_text(json.dumps(config))
