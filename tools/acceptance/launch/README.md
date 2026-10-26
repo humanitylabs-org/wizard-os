@@ -155,8 +155,12 @@ in `finally`. It never starts or mutates `launch-real-use`. For a separate full
 acceptance root, omitting this flag also retains the original upgrade/soak cases.
 
 First chat reads `/wizard/v1/bootstrap`, creates a Wizard thread through Agent
-Service, sends through `/wizard/hermes/v1/runs`, waits for **completed + non-empty
-output + confirmed actual provider/model**, then reads back an assistant message.
+Service, selects the first safe text-model slug advertised by the dedicated host
+ChatGPT connection's authenticated catalog, sends through `/wizard/hermes/v1/runs`,
+waits for **completed + non-empty output + confirmed actual provider/model**, then
+reads back an assistant message. The same selected slug is locked at thread creation,
+send and runtime readback; there is no retired hardcoded slug or fallback retry.
+Catalog errors fail closed before any guest credential injection.
 The shipped Service has no `/wizard/v1` *send* API; the `/wizard/hermes/v1` route is
 the actual shell send contract, not a direct Hermes bypass. Do not invent a
 `/wizard/v1/chat` endpoint. Receipts record only `{passed, latency_ms, provider}`;
@@ -165,6 +169,13 @@ phone assertion. A model error is never interpreted as a reply. In `finally`, th
 guest auth file is removed, the disposable Hermes engine restarted to drop cached
 credentials, and the exact path read back to assert absence. VM deletion is an
 additional containment layer, not a substitute for lease cleanup.
+
+Failures append `first_chat_failure` to the **private** run log: fixed snippet
+`install`/`chat`/`remove`, guest return code (null on timeout), and an allowlisted
+stderr exception class. Nested Docker failures use the same class-only projection.
+Raw stderr, argv, HTTP bodies, credential values, session IDs and response text are
+never copied into that diagnostic or the public receipt. An install failure and a
+subsequent cleanup failure each retain a separate diagnostic row.
 
 ### Android input and assertions
 

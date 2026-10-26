@@ -176,8 +176,8 @@ def main():
             result['step'] = 'first-chat'
             result['first_chat'] = {'passed': False, 'provider': PROVIDER, 'latency_ms': 0}
             try:
-                with credential_lease(name, args.first_chat_secret, args.secrets_root, args.oauth_source):
-                    result['first_chat'], internal = run_chat(name)
+                with credential_lease(name, args.first_chat_secret, args.secrets_root, args.oauth_source, log=log) as chat_model:
+                    result['first_chat'], internal = run_chat(name, model=chat_model, log=log)
                     if args.phone_config:
                         from phone import run_phone
                         result['step'] = 'second-owner-phone'
