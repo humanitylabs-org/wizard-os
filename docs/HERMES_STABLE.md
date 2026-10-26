@@ -3,6 +3,14 @@
 **Status:** direction approved by James on 21 Oct 2026 (DECISIONS #74). The details below are a proposal by Archimedes.
 **Owner:** Archimedes. The `hermes-agent` app repo owner reviews the image change in step 5.
 
+**Shared lock implementation:** [contract](../spec/HERMES_LOCK.md) and
+[baseline/discovery evidence](HERMES_LOCK_EVIDENCE.md). This freezes the existing
+exact September pin; it does not declare the latest release safe or authorize a
+downgrade of alongside installations. Hermes automatic changes stay paused,
+independently of unrelated Wizard app updates. A recommendation precedes admin
+approval and an explicit coordinated promotion; elapsed release age alone is
+never approval.
+
 ## The idea in one paragraph
 
 Hermes ships a new release roughly every few days, and some of them break things. In October, 0.22.x had open reports of lost and duplicated conversations, and one update restored a three-week-old copy of someone's chat history. We are not going to maintain our own trimmed copy of Hermes. Instead, Wizard picks **one upstream release that it has tested**, and every Wizard box runs that release. A new upstream release reaches Wizard boxes only after it has been public for a week, has passed our own test run on Thales, and has run on Archimedes for a few days. Rolling back is one step. Wizard ships no changes to Hermes code by default.
