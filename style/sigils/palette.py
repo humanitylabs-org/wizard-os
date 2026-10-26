@@ -60,6 +60,7 @@ REGISTRY = {
     'v-week':        ('week',     310, None),
     'social':        ('social',   322, None),
     'wizard-music':  ('music',    344, None),
+    'notes':         ('notes',    356, None),
     # quiet: system, tools, legacy
     'iching':        ('iching',   75,  0.06),
     'console':       ('console',  250, 0.025),
