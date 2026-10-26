@@ -12,4 +12,4 @@ jobs:
   review:
     uses: humanitylabs-org/wizard-ux/.github/workflows/pr-agent-review.yml@main
     with:
-      runs-on: '["self-hosted","macOS","ARM64","wizard-os"]'
+      runs-on: '"ubuntu-24.04"'
