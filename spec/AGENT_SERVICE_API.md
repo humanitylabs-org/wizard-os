@@ -54,6 +54,7 @@ Classes: `stable` = Agent Service route, v1. `passthrough` = Hermes route behind
 
 ```routes
 # methods       path                                              class        ux  query
+GET,PUT         /wizard/v1/threads/{sessionId}/route               proposed     ux  agent,agent_id
 GET             /wizard/v1/bootstrap                              stable       ux  -
 GET             /wizard/v1/setup                                  stable       ux  -
 POST            /wizard/v1/setup/seen                             stable       -   -
@@ -254,6 +255,84 @@ Example, `GET /wizard/hermes/api/sessions/chat-recent/messages?order=oldest&limi
 {"messages":[{"id":"m-1","role":"user","created_at":"…","content":"Help me plan a quiet weekend.","shareable":false},
              {"id":"m-2","role":"assistant","created_at":"…","content":"I found three gentle options close to home.","shareable":false}]}
 ```
+
+## Proposed: per-thread answer route (Opus direct)
+
+**Proposed; additive, not served on main until its implementation PR is merged.** The owner
+may choose which answer path one existing thread uses. Untouched threads default to Hermes;
+this is not a provider/model switch inside Hermes.
+
+### `GET|PUT /wizard/v1/threads/{sessionId}/route`
+
+Owner authentication is identical to other owner thread controls; agent credentials are refused.
+An optional `agent_id` (or `agent`) qualifies a session ID when it exists on multiple agents.
+PUT body: `{"route":"hermes"}` or `{"route":"opus-direct"}`.
+
+GET and successful PUT return the same shape:
+
+```json
+{"session_id":"example-thread","route":"opus-direct","available":true,"updated_at":"2026-10-27T12:00:00.000Z"}
+```
+
+`route` is always `hermes` or `opus-direct`. `available` describes direct-answer readiness;
+optional `reason`, `fix_url` explain an unavailable connection. `updated_at` is optional for an
+untouched default. An unavailable direct selection remains selected: it never silently falls
+back to Hermes. The setting survives an Agent Service restart.
+
+Errors: 400 invalid route, 404 unknown session, 409 ambiguous unqualified thread, and
+409 `thread_route.private_agent` for private/confidential/restricted agents (including an agent
+sealed after selection), confidential Operator threads and recovery runtimes. Ordinary Claude
+subscriptions must never receive private content. Changing a route during an active direct
+turn returns 409 `session_busy`.
+
+### Additive session/message fields
+
+- Session list rows and detail may include `answer_route: "opus-direct"`; absence means Hermes.
+- Assistant messages may include `route: {"kind":"hermes"|"opus-direct","provider"?:string,"model"?:string}`.
+  Provider/model are effective execution provenance, not the user's requested model.
+- Direct user/assistant message IDs start with `direct:`. Agent Service side-store messages are
+  merged with the existing read-only Hermes history by timestamp, including message pagination.
+  Hermes's own history database remains unmodified.
+
+### Unchanged send and stream paths
+
+The shell continues to send `POST /wizard/hermes/v1/runs`, read
+`GET /wizard/hermes/v1/runs/{run_id}`, and subscribe to `.../{run_id}/events`. For an
+`opus-direct` thread the Agent Service owns the run itself: **no Hermes inference run/request
+is created**, including through the locked-run bridge. It emits the existing `message.delta`
+and terminal `run.completed`/`run.failed` event shapes. The successful terminal event includes
+`route: {"kind":"opus-direct","provider":string,"model":string}`. A direct run ID starts with
+`direct:` and remains readable after restart. An interrupted direct run is failed, not replayed.
+Direct turns are text-only; unsupported attachments and Hermes steer/stop controls are refused,
+never forwarded as a fallback.
+
+The service calls only Connection Router `POST /v1/models/opus-direct/run` with `X-Wizard-Grant`.
+Its manifest declares:
+
+```yaml
+requires:
+  models:
+    opus-direct:
+      label: Opus direct replies
+      tier: frontier
+      tested_on: claude-opus-5-5
+      swap: never
+```
+
+Discovery uses the `connection-router` slot and app upstream in `apps.json`, with the App
+Manager's internal provider endpoint when supplied. App Manager mounts the consumer's
+`WIZARD_GRANTS_FILE=/wizard/grants.json`; its `outgoing["slot:connection-router"]` supplies the
+token. Alongside installations need an explicitly provisioned `WIZARD_ROUTER_GRANT` or
+`WIZARD_ROUTER_GRANT_FILE`. Provider login files are never read by this feature.
+
+Direct inference uses bounded thread user/assistant text and a minimal system prompt: no
+agent tools, memory or persona. `direct-turns.sqlite3` in the service state directory records
+turns and router done-event provenance (`provider`, `model`, `chosen`, `usage`). Router failures
+(`signed_out`, `expired`, `limit`, `needs_owner`, `unreachable`, `blocked`, `provider_error`)
+remain visible errors with `fix_url`; there is no automatic retry via Hermes. When the owner
+switches back, the next Hermes run receives a bounded background transcript of direct turns
+since the last Hermes assistant reply, through the existing run-context projection. Hermes
+stays stock.
 
 ## Runs (Hermes passthrough, through the Wizard run queue)
 
