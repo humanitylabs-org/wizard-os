@@ -246,5 +246,24 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(phone.center(next(phone.ET.fromstring(xml).iter('node'))), (20, 30))
 
 
+    def test_phone_reuses_heavy_worker_lock_instead_of_blocking_on_it(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as d:
+            lock = Path(d) / 'worker.lock'
+            with lock.open('a') as parent:
+                fcntl.flock(parent, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with patch.dict(os.environ, {'WIZARD_HEAVY_LOCK_FD': str(parent.fileno())}):
+                    with phone.worker_lock(d):
+                        pass
+                with patch.dict(os.environ, {}, clear=False):
+                    os.environ.pop('WIZARD_HEAVY_LOCK_FD', None)
+                    with self.assertRaises(BlockingIOError), phone.worker_lock(d):
+                        pass
+            other = Path(d) / 'other.lock'
+            other.touch()
+            with other.open('a') as wrong, patch.dict(os.environ, {'WIZARD_HEAVY_LOCK_FD': str(wrong.fileno())}):
+                with self.assertRaises(RuntimeError), phone.worker_lock(d):
+                    pass
+
 if __name__ == '__main__':
     unittest.main()
