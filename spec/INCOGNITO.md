@@ -1,36 +1,45 @@
 # Incognito private-agent chat
 
-**Status: implementation candidate; not a live rollout.** Ordinary private chats keep their existing durable behavior. Incognito is an explicit owner-only new conversation, not a setting on an existing chat and not a query/header flag on the usual chat API.
+**Status: implementation candidate; not a live rollout.** Ordinary private chats remain durable. Incognito is an owner-only new conversation, not a setting on an existing thread.
 
 ## Owner experience
 
-- Only a new private-agent chat before its first send exposes an **Incognito** toggle. Existing threads, the Chats list and standard-agent chats never expose it. The temporary thread has a persistent label, dashed frame, and warning that it is never saved.
-- Conversation and composer text live only in the current browser process. No durable outbox, automatic retry, draft recovery, session listing, title generation, search indexing, read state, pins, reminders, app actions, attachments or voice capture participate.
-- Back/Close or leaving the conversation asks whether to discard it. Reload/pagehide/BFCache and removed windows wipe it and request teardown. A dropped browser or service expires its lease; reopening cannot restore it.
-- v1 is text-only and tools are disabled, not merely hidden. A failed connection stays failed; no automatic ordinary-chat or public-provider fallback exists.
+- Only a new private-agent composer before its first send exposes the Incognito toggle. The temporary conversation stays visibly labelled.
+- Draft and transcript remain in browser memory, never the ordinary outbox, history, title/index/read-state or recovery stores. Close/Back asks “End incognito chat? It will be erased.” Reload, leaving, expired leases and service/helper recovery discard it.
+- v1 accepts text only. The hint explicitly says that the microphone is unavailable. No normal-chat fallback exists. **Retry** explicitly resends the in-memory input to the same temporary session; no automatic resend occurs.
+- Normal shared Markdown, live answer deltas, tool progress and Stop are reused through the shared run-stream component with a scoped ephemeral target. The shared stream's ordinary status-read safety net remains; Incognito has no separate polling adapter.
 
-## Boundary
+## Runtime and capability boundary
 
-The Agent Service authenticates the owner before accepting `POST /wizard/v1/agents/:agent/incognito {}`. It requires a private agent on its configured confidential Tinfoil model. The runtime helper creates a fresh stock-Hermes sibling with a fresh API credential, returning the target only to the service. The returned browser identifier is a random `incog_<32 hex>` reference; only that owner's ephemeral route can use it.
+The owner-only Service creates a fresh stock-Hermes sibling and keeps its fresh API credential and target only in memory. The sibling uses the **exact source container image ID**, its numeric user, network memberships (including existing egress/Tinfoil sidecar routes) and scoped `/run/` socket mounts. No source home is mounted into the sibling; unsupported non-socket mounts/imported or host-network runtimes fail closed. Existing source networks/sidecars are neither labelled nor removed. The normal private runtime is never restarted.
 
-The sibling uses the locked stock image without Hermes patches. Its root is read-only. Hermes HOME/workdir/cache/output/SQLite histories and API run state are in `noswap` tmpfs; logs are disabled at Docker and conversation-related paths are never host-mounted. No normal-agent home, Docker socket, App Manager socket, owner files, gateway credential, shared prompt mirror or persistent volume is mounted. Core dumps and container swap are disabled. A separate internal network permits only the attesting Tinfoil proxy, whose separate network supplies egress; the session itself has no public network. Provider credentials enter through stdin into tmpfs, not Docker argv/environment metadata.
+The root is read-only, capabilities dropped, privilege escalation disabled, core dumps disabled, container swap disabled and Docker logging disabled. Home, caches, output, histories and logs live in `noswap` tmpfs. No durable reconnect registry or content-bearing Docker argv/environment is created.
 
-The read-only seed allowlist is `AGENTS.md`, `SOUL.md`, `memories/MEMORY.md`, `memories/USER.md`, bounded and no-symlink at every path component. No directory enumeration occurs. Existing normal sessions, SQLite state, configuration, cron, credentials, plugins and skill implementations are excluded. Configuration is constructed for the configured private model, empty toolsets/MCP/plugins and no provider fallback. No write reaches the normal home. This is read-only context availability, not permission to persist new memories.
+### Full working-home seed
 
-The Service reuses its existing secret-safe agent JSON/SSE proxy with an explicit ephemeral target context. The context is an allowlist, not a spread of normal hooks. Pin, catalog, input receipt, provenance, media mirrors, presentation status/title, queue and follow-up hooks do not run. The reserved `incog_` namespace is refused by ordinary discovery and side-state routes. Incognito only permits its own text-run admission, owned-run read/event/stop, own-session messages and lease/destroy endpoints. No session list or search is exposed.
+A bounded anonymous pipe connects `docker exec <source> … tar -c` to `docker exec -i <temporary> tar -x`. It never creates a host archive or logs content. It includes config, provider/fallback settings, `.env`/auth, skills, plugins, memories and fact-store files rather than a four-file allowlist. Logs, session transcripts, response-store DB/WAL files, caches, compiled caches and cron state are excluded. Symlinks/special files are not copied. No content inspection on the real owner runtime is part of development or acceptance.
+
+The existing **384 KiB total transfer cap** is preserved. Non-history seed overflow fails admission rather than silently dropping capabilities. `state.db` is copied separately using SQLite's backup API into source-process RAM (including WAL), then streamed directly to the temporary home. If that snapshot exceeds the remaining budget, only it is omitted; `history_search: unavailable` is returned in session metadata and shown in the UI. This small inherited cap may prevent admission of a large real home; no real home has been measured or read, and increasing the budget requires an explicit decision.
+
+Configuration retains toolsets, MCP servers, providers, fallback chain, memory/fact backend, skills and plugins. Only durable orchestration is disabled: cron, schedules, kanban, delegate/heavy operations that write service records, cross-platform `send_message`, and service-history writes. A temporary **stock plugin pre-tool-call hook**, verified before admission, blocks these named operations. Platform listeners are disabled except the API listener so copied bot credentials cannot start a second messaging gateway. Cron state is not seeded. Hermes core and image remain unchanged.
+
+Memory, fact and skill writes are allowed inside the RAM home and disappear with it. Existing home symlinks and external non-socket mounts are not a supported capability source in this candidate; refusal is preferable to mounting normal writable state.
+
+### External actions
+
+Read-only Wizard app access keeps the private agent's grants. Every run receives an Incognito system note: before **each** external write (Notes, Calendar, Files, Messenger sends, etc.), explain what will change, ask James and wait for an explicit yes in the current chat. The original action request does not count as that confirmation. This is the approved conversational route, not a separate approval UI or a cryptographic side-effect sandbox. Approved app changes persist in those apps. The agent must never export this chat's transcript/history into service stores.
+
+The Service reuses `proxyToAgent` with an allowlisted ephemeral context, never a spread of normal hooks. Pins, catalog/input/provenance/media/title/queue/follow-up projections do not run. Only that temporary session's admitted runs, stream, Stop, own messages, lease and destroy are routed. Normal endpoints reject the reserved `incog_` namespace.
 
 ## Lifetime and failure
 
-- At most one active Incognito session per private agent. No normal runtime start/stop/restart is part of the operation.
-- Browser heartbeats every 20 seconds; service and helper leases expire after 90 seconds, with a two-hour owner-message idle limit and periodic reaping. Heartbeats do not count as owner activity; sending another message renews the idle deadline.
-- Closing forgets the service map before aborting streams and removing resources. Late start responses are destroyed, not reattached.
-- Every helper-created container/network is labeled `wizard.incognito=1`; recovery removes only those resources, never the ordinary agent. Startup orphan recovery completes before creating sessions; the normal helper is supervised with restart. No durable reconnect registry is written.
-- v1 rejects imported/restricted runtimes instead of falling back to a normal or less confined target. Supporting those runtimes requires separate acceptance, not weakening the boundary.
+- One active session per private agent; 20-second heartbeats, 90-second leases and a two-hour **owner-message** idle deadline. Heartbeats do not renew owner activity.
+- Closing forgets the Service map before aborting streams and removing the disposable container. Late callbacks cannot revive it.
+- Only created disposable containers are labelled `wizard.incognito=1`; startup recovery removes labelled orphans. Existing source networks, sidecars, mounts and the normal runtime are never removed.
+- Any unavailable route, seed, stock policy hook or provider fails closed. No silent standard-agent or ordinary-chat fallback is allowed.
 
-## Honest privacy limits
+## Acceptance and honest limits
 
-This is no conversation persistence on the owner's machine, not anonymity or a way to hide intent from the active browser/OS. Text necessarily exists temporarily in browser, service, stock Hermes and confidential-provider memory. A compromised host/browser, extension, remote debugger, copied text or screenshots can capture it. The provider's attestation/privacy guarantees remain a separate dependency. Normal read-only prompt/memory seeds were already durable before this conversation. Operating-system memory protection and crash-dump/swap settings for the service/helper/browser must also be considered; container tmpfs and disabled loggers alone do not prove all host persistence absent.
+Run only on fresh synthetic agents on the approved remote Linux worker. The staged stock test uses a **labelled deterministic OpenAI protocol fixture**, not confidential inference: actual stock Hermes must read its synthetic memory context, call a synthetic MCP tool, execute a RAM-only memory save, and retain two input canaries only in RAM. After end, abandoned lease and helper restart, require no disposable leftovers, unchanged synthetic normal home, and no canaries in synthetic service/home stores. Metadata proves no durable target volumes/log paths. Service-restart and browser-store/lifecycle checks exercise the isolated Service fixture separately. Local unit/fixture passes do not prove any remote stock result.
 
-## Required acceptance before promotion
-
-Use only fresh synthetic agents on the approved remote Linux rig. Prove the pinned image actually honors the constructed tool policy and prompts. Verify multi-turn reasoning through the real confidential provider; seed-memory recall without writes; stdout/stderr and Docker logging; exact mounts/network/cgroup limits; unique canary absence on all durable stores; close, reload, offline, dropped browser, service restart, helper interruption and late-callback cleanup. Confirm normal private persistence unchanged, full agent chat parity, two-skin phone/desktop screenshots and source-matched staging. Fixture/unit results never stand in for real stock/provider/browser evidence.
+Real confidential-provider reasoning/attestation, actual restart interruption, source-only live parity reconciliation and owner preview/feedback remain separate promotion requirements. This is no local conversation persistence, not anonymity: the active browser/OS, debugger, copied text, screenshots, host/service swap or crash dumps remain outside the container-only boundary. External app writes explicitly approved by James remain durable.

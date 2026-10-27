@@ -31,10 +31,10 @@ All routes below require an authenticated owner and same-origin writes, return `
 
 | Method | Path | Contract |
 |---|---|---|
-| POST | `/wizard/v1/agents/:agent/incognito` | Empty JSON object. Private confidential-Tinfoil agent only. `201 {session_id, incognito:true, lease_seconds:90}`; no credentials or target addresses. |
-| POST | `/wizard/v1/agents/:agent/incognito/:temporary/lease` | Empty JSON object. Renew to 90 seconds, never beyond the 30-minute lifetime. `200 {open:true}`. |
+| POST | `/wizard/v1/agents/:agent/incognito` | Empty JSON object. Private confidential-Tinfoil agent only. `201 {session_id, incognito:true, history_search:"available"|"unavailable", lease_seconds:90}`; no credentials or target addresses. |
+| POST | `/wizard/v1/agents/:agent/incognito/:temporary/lease` | Empty JSON object. Renew to 90 seconds, never beyond the two-hour owner-message idle deadline. `200 {open:true}`. |
 | DELETE | `/wizard/v1/agents/:agent/incognito/:temporary` | Forget before cancelling streams/teardown. Idempotent `200 {closed:true}`. |
-| POST | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs` | Only `{input:string}` (nonblank, at most 64,000 chars). The Service supplies session/model/private policy and read-only instructions; upstream run admission response. |
+| POST | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs` | Only `{input:string}` (nonblank, at most 64,000 chars). The Service supplies session/model/Incognito instructions (RAM memory writes allowed; external writes require explicit yes); upstream run admission response. |
 | GET | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run` | Only runs admitted by this temporary session; standard secret-safe run response. |
 | GET | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run/events` | Same ownership rule and shared secret-safe SSE projection. No durable event log/replay. |
 | POST | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run/stop` | Stop only an owned temporary run. |
