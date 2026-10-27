@@ -23,8 +23,11 @@ class ConnectorType(unittest.TestCase):
     def test_plain_app_has_no_rule(self):
         self.assertEqual(self.rules(id='movies', type='service', provides=['watch-queue']), {})
 
-    def test_music_source_service_fails(self):
-        self.assertFalse(self.rules(id='wizard-youtube-music', type='service', provides=['music-source'])[RULE])
+    def test_music_player_is_not_a_connector(self):
+        self.assertEqual(self.rules(id='wizard-youtube-music', type='service', provides=['music-source']), {})
+
+    def test_connection_slot_service_fails(self):
+        self.assertFalse(self.rules(id='acme', type='service', provides=['acme-connection'])[RULE])
 
     def test_connector_id_fails(self):
         self.assertFalse(self.rules(id='zoom-connector', type='service')[RULE])
