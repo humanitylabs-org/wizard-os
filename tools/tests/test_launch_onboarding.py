@@ -241,6 +241,38 @@ class OnboardingTests(unittest.TestCase):
                 phone.validate_apk({'apk': str(apk), 'feed': str(feed)}, d, run)
             run.assert_not_called()
 
+    # Documentation-range addresses and example names only: never a real tailnet.
+    SCUTIL = ('DNS configuration\n\nresolver #1\n  nameserver[0] : 192.0.2.1\n\n'
+              'resolver #2\n  domain   : other.example\n  nameserver[0] : 192.0.2.9\n\n'
+              'resolver #3\n  domain   : example.ts.net\n  nameserver[0] : 192.0.2.53\n')
+
+    def fake_device(self, unknown_host=False):
+        from unittest.mock import Mock
+        def command(argv, **kwargs):
+            text = ' '.join(map(str, argv))
+            output = ''
+            if text.startswith('tailscale status'):
+                output = json.dumps({'Self': {'DNSName': 'box.example.ts.net.'}})
+            elif text.startswith('scutil --dns'):
+                output = self.SCUTIL
+            elif 'sys.boot_completed' in text:
+                output = '1'
+            elif 'ro.build.version.sdk' in text:
+                output = '35'
+            elif ' install ' in text:
+                output = 'Success'
+            elif 'shell cat /sdcard/launch-ui.xml' in text:
+                output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
+            elif ' ping ' in text and unknown_host:
+                return Mock(returncode=2, stdout='', stderr='ping: unknown host box.example.ts.net')
+            return Mock(returncode=0, stdout=output, stderr='')
+        return command
+
+    def test_tailnet_resolver_is_read_from_the_hosts_scoped_magicdns_entry(self):
+        self.assertEqual(phone.tailnet_resolver('box.example.ts.net.', self.SCUTIL), '192.0.2.53')
+        with self.assertRaisesRegex(RuntimeError, 'phone_tailnet_dns'):
+            phone.tailnet_resolver('box.missing.ts.net', self.SCUTIL)
+
     def test_phone_failure_keeps_stage_and_completed_checks_without_private_text(self):
         from unittest.mock import Mock
         with tempfile.TemporaryDirectory() as d:
@@ -248,23 +280,11 @@ class OnboardingTests(unittest.TestCase):
             config = root / 'phone.json'
             config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root),
                 'java_home': str(root)}))
-            def command(argv, **kwargs):
-                text = ' '.join(map(str, argv))
-                output = ''
-                if 'sys.boot_completed' in text:
-                    output = '1'
-                elif 'ro.build.version.sdk' in text:
-                    output = '35'
-                elif ' install ' in text:
-                    output = 'Success'
-                elif 'shell cat /sdcard/launch-ui.xml' in text:
-                    output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
-                return Mock(returncode=0, stdout=output)
             em = Mock()
             em.poll.return_value = None
             with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
-                 patch.object(phone.subprocess, 'run', side_effect=command), \
+                 patch.object(phone.subprocess, 'run', side_effect=self.fake_device()), \
                  patch.object(phone.subprocess, 'Popen', return_value=em), \
                  patch.object(phone, 'https_forward', side_effect=RuntimeError('private-url transcript-canary')):
                 result = phone.run_phone('lc-fresh', 'unused', root, config, {'output': 'private-reply'})
@@ -281,32 +301,18 @@ class OnboardingTests(unittest.TestCase):
             root = Path(d)
             config = root / 'phone.json'
             config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root), 'java_home': str(root)}))
-            def command(argv, **kwargs):
-                text = ' '.join(map(str, argv))
-                output = ''
-                if 'sys.boot_completed' in text:
-                    output = '1'
-                elif 'ro.build.version.sdk' in text:
-                    output = '35'
-                elif ' install ' in text:
-                    output = 'Success'
-                elif 'shell cat /sdcard/launch-ui.xml' in text:
-                    output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
-                elif ' ping ' in text:
-                    return Mock(returncode=2, stdout='', stderr='ping: unknown host box.example.ts.net')
-                return Mock(returncode=0, stdout=output, stderr='')
             em = Mock()
             em.poll.return_value = None
             with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
-                 patch.object(phone.subprocess, 'run', side_effect=command), \
+                 patch.object(phone.subprocess, 'run', side_effect=self.fake_device(unknown_host=True)), \
                  patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
                  patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')), \
                  patch.object(phone.time, 'sleep'), \
                  patch.object(phone.time, 'monotonic', side_effect=itertools.count(0, 5)):
                 result = phone.run_phone('lc-fresh', 'unused', root, config, {})
             argv = start.call_args.args[0]
-            self.assertEqual(argv[argv.index('-dns-server') + 1], '100.100.100.100')
+            self.assertEqual(argv[argv.index('-dns-server') + 1], '192.0.2.53')
             self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
                                      'failure_stage': 'tailnet-dns'})
             self.assertNotIn('example', json.dumps(result))

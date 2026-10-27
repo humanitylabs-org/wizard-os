@@ -20,11 +20,24 @@ from tunnel import open_forward
 
 PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
-# Tailscale's fixed MagicDNS resolver. A real phone runs Tailscale and resolves
-# the box's ts.net name through it; the emulator otherwise inherits only the
-# host's primary LAN resolver, because macOS keeps tailnet DNS in a split
-# scoped resolver, and the published APK correctly reports "Couldn't reach".
-TAILNET_DNS = '100.100.100.100'
+
+
+def tailnet_resolver(dns_name, resolvers):
+    """Return the host's scoped resolver for the box's tailnet DNS suffix.
+
+    A real phone runs Tailscale and resolves the box's tailnet name itself. The
+    emulator inherits only the host's primary resolver, while macOS keeps
+    MagicDNS as a split resolver scoped to the tailnet suffix, so the published
+    APK correctly reports "Couldn't reach". Read that scoped resolver from
+    `scutil --dns` instead of hardcoding an address.
+    """
+    suffix = dns_name.rstrip('.').split('.', 1)[-1].lower()
+    for block in re.split(r'\n(?=resolver #)', resolvers):
+        domain = re.search(r'^\s*domain\s*:\s*(\S+)', block, re.M)
+        server = re.search(r'^\s*nameserver\[0\]\s*:\s*([0-9.]+)\s*$', block, re.M)
+        if domain and server and domain.group(1).rstrip('.').lower() == suffix:
+            return server.group(1)
+    raise RuntimeError('phone_tailnet_dns')
 
 
 def validate_apk(config, sdk, call):
@@ -182,6 +195,9 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
         return any(PACKAGE + '/' in line for line in dump.splitlines() if 'topResumedActivity' in line or 'mResumedActivity' in line)
     em = None
     checks = progress['checks']
+    progress['stage'] = 'tailnet-dns'
+    dns_server = config.get('dns_server') or tailnet_resolver(
+        json.loads(call(['tailscale', 'status', '--json']))['Self']['DNSName'], call(['scutil', '--dns']))
     progress['stage'] = 'worker-lock'
     # Match android-build-thales / emulator_qa_thales.py's shared exclusion lock.
     with worker_lock(work):
@@ -195,7 +211,7 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
             with (evidence / 'private-emulator.log').open('w') as log:
                 em = subprocess.Popen([str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
                     '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
-                    '-dns-server', config.get('dns_server', TAILNET_DNS)], env=env, stdout=log, stderr=log)
+                    '-dns-server', dns_server], env=env, stdout=log, stderr=log)
             progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'

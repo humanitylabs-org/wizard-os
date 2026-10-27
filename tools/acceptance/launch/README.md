@@ -217,6 +217,10 @@ Unpaired root Back is also exercised for generic APKs, but deliberately not for
 owner-default artifacts, where it would navigate to the old live server.
 
 Only bounded pass/fail checks + APK identity enter a successful phone receipt.
+The emulator uses the host's scoped MagicDNS resolver for the box's tailnet
+suffix (read from `scutil --dns`, or `dns_server` in the phone config), as a
+real phone running Tailscale would; otherwise it sees only the host's primary
+resolver and cannot resolve the box address.
 Failures retain completed checks and an allowlisted `failure_stage` (preflight,
 APK validation/install, lock/AVD/emulator, Connect, HTTPS, address entry/pairing,
 reply, Back, restart, crash or cleanup); a failed phone receipt fails the whole
