@@ -34,7 +34,7 @@ An audit on 27 Oct 2026 covered 22 installed apps. Kit apps capped their content
 
 ### 4. One pop-up: the sheet
 - Every pop-up inside an app is a `<dialog class="wz-sheet">`. In narrow windows it is a **bottom sheet**: full width, rounded top and a grip. In wide windows it is a **centred card**, 520 px at most.
-- It always closes **five ways**: the × button (`.wz-sheet-x`), Esc, tapping outside, Back (`window.__wizardCloseOverlay()` returns true) and swiping down on the grip. `style/sheet.js` wires all five.
+- It always closes **five ways**: the × button (`.wz-sheet-x`), Esc, tapping outside, Back (through `WizardApp.back` in apps that use it, otherwise `window.__wizardCloseOverlay()`) and swiping down on the grip. `style/sheet.js` wires all five.
 - No side drawers, no extra windows and no full-page takeovers for options, details or confirmations. A sheet holds one task. A flow longer than one screen is a page in the app, with Back.
 
 ### 5. One pattern per job
