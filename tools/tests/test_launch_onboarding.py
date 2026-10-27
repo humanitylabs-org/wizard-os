@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -300,7 +301,9 @@ class OnboardingTests(unittest.TestCase):
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
                  patch.object(phone.subprocess, 'run', side_effect=command), \
                  patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
-                 patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')):
+                 patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')), \
+                 patch.object(phone.time, 'sleep'), \
+                 patch.object(phone.time, 'monotonic', side_effect=itertools.count(0, 5)):
                 result = phone.run_phone('lc-fresh', 'unused', root, config, {})
             argv = start.call_args.args[0]
             self.assertEqual(argv[argv.index('-dns-server') + 1], '100.100.100.100')

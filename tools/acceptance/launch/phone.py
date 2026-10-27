@@ -222,11 +222,16 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
             with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450)) as origin:
                 progress['stage'] = 'tailnet-dns'
                 # Name resolution only: ICMP may be filtered, so rc/reply are ignored.
+                # The emulator's resolver can need a few seconds to settle after boot.
                 host = origin.split('//', 1)[1].rsplit(':', 1)[0]
-                lookup = subprocess.run([str(adb), '-s', serial, 'shell', 'ping', '-c', '1', '-W', '3', host],
-                                        env=env, capture_output=True, text=True, timeout=30)
-                if 'unknown host' in (lookup.stdout + lookup.stderr).lower():
-                    raise RuntimeError('phone_tailnet_dns')
+                def resolves():
+                    lookup = subprocess.run([str(adb), '-s', serial, 'shell', 'ping', '-c', '1', '-W', '3', host],
+                                            env=env, capture_output=True, text=True, timeout=30)
+                    return 'unknown host' not in (lookup.stdout + lookup.stderr).lower()
+                try:
+                    wait_for(resolves, 60)
+                except RuntimeError:
+                    raise RuntimeError('phone_tailnet_dns') from None
                 checks['tailnet_dns'] = True
                 progress['stage'] = 'address-entry'
                 xml = ui()
