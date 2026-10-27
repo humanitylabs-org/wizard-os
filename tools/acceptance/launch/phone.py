@@ -84,6 +84,29 @@ def https_forward(vm, cli, evidence, port):
             assert all(after.get(k, {}).get(n) == v for k in ('TCP', 'Web') for n, v in before.get(k, {}).items())
 
 
+@contextlib.contextmanager
+def worker_lock(work):
+    """Hold the shared Android/VM lock, reusing the heavy worker's lease.
+
+    The Thales heavy worker already holds worker.lock and passes that open file
+    description as WIZARD_HEAVY_LOCK_FD; opening the file again would conflict
+    with our own parent and fail with BlockingIOError.
+    """
+    path = Path(work) / 'worker.lock'
+    inherited = os.environ.get('WIZARD_HEAVY_LOCK_FD')
+    if inherited:
+        fd = int(inherited)
+        expected, actual = path.stat(), os.fstat(fd)
+        if (expected.st_dev, expected.st_ino) != (actual.st_dev, actual.st_ino):
+            raise RuntimeError('phone_inherited_lock_mismatch')
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+        return
+    with path.open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+
+
 def run_phone(vm, cli, evidence, config_path, chat):
     if not vm.startswith('lc-'):
         raise RuntimeError('phone_disposable_required')
@@ -132,8 +155,7 @@ def run_phone(vm, cli, evidence, config_path, chat):
     em = None
     checks = {}
     # Match android-build-thales / emulator_qa_thales.py's shared exclusion lock.
-    with (work / 'worker.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with worker_lock(work):
         assert serial not in call([adb, 'devices'])
         try:
             call([sdk / 'cmdline-tools/latest/bin/avdmanager', 'create', 'avd', '-n', 'launch_phone',
