@@ -110,7 +110,13 @@ Implementation/reuse plan:
   no new production auth, chat, pairing or UI implementation.
 
 Keep the running daily stage and its retained VM **unchanged**. Stage a new pushed
-wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Use a new,
+wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Set
+`--oauth-source` to the exact directory containing `codex.py`, not its archive
+wrapper. Inspect archive member paths rather than assuming every archive has one
+leading directory. The runner rejects a missing helper before starting any VM;
+`first_chat.validate_oauth_source` performs the same metadata-only preflight without
+reading credentials, importing the helper, renewing OAuth or contacting a provider.
+Use a new,
 short acceptance root, outside the directory holding host secrets. An onboarding
 receipt is labelled `launch-onboarding-87-88` and can never satisfy the daily soak.
 The default daily invocation still does not require a credential or emulator.
@@ -172,7 +178,9 @@ additional containment layer, not a substitute for lease cleanup.
 
 Failures append `first_chat_failure` to the **private** run log: fixed snippet
 `install`/`chat`/`remove`, guest return code (null on timeout), and an allowlisted
-stderr exception class. Nested Docker failures use the same class-only projection.
+stderr exception class. Host catalog/access failures use fixed `catalog`/`access`
+stages, a null return code and the same class allowlist. Nested Docker failures use
+the same class-only projection.
 Raw stderr, argv, HTTP bodies, credential values, session IDs and response text are
 never copied into that diagnostic or the public receipt. An install failure and a
 subsequent cleanup failure each retain a separate diagnostic row.
