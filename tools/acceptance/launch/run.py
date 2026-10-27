@@ -104,7 +104,12 @@ def main():
         p.error('numeric released versions required')
     mounts = [root, HERE.parents[2], args.cli.resolve().parents[1]]
     if args.first_chat_secret:
-        from first_chat import private_file
+        from first_chat import private_file, validate_oauth_source
+        # Catch a wrapped/mis-staged helper before paying for a public VM install.
+        try:
+            validate_oauth_source(args.oauth_source)
+        except RuntimeError:
+            p.error('oauth_source_missing: --oauth-source must contain codex.py directly')
         private_file(args.first_chat_secret, args.secrets_root)
         # Secrets MUST NOT be in any Lima mount (the old daily root also contains
         # its secrets sibling). Source/CLI mounts are read-only; only run state is writable.

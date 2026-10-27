@@ -36,6 +36,59 @@ class OnboardingTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'boundary'):
                 first_chat.private_file(p, root / 'other')
 
+    def test_wrapped_oauth_archive_is_rejected_before_any_vm_or_secret_read(self):
+        import run as launch_run
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            cli = work / 'wam/wizard-cli/wizard'
+            cli.parent.mkdir(parents=True)
+            cli.touch()
+            source = work / 'oauth'
+            (source / 'chatgpt-connection').mkdir(parents=True)
+            (source / 'chatgpt-connection/codex.py').write_text('raise RuntimeError("must not import")')
+            argv = ['run.py', '--root', str(work / 'run'), '--release', '0.3.70',
+                    '--cli', str(cli), '--first-chat-secret', str(work / 'secret/connection.json'),
+                    '--secrets-root', str(work / 'secret'), '--oauth-source', str(source)]
+            error = io.StringIO()
+            with patch.object(sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=d), \
+                 patch.object(Path, 'is_mount', return_value=True), \
+                 patch.object(first_chat, 'private_file') as secret, \
+                 patch.object(launch_run.subprocess, 'run') as subprocess_run, \
+                 contextlib.redirect_stderr(error), self.assertRaises(SystemExit) as caught:
+                launch_run.main()
+            self.assertEqual(caught.exception.code, 2)
+            self.assertIn('oauth_source_missing', error.getvalue())
+            secret.assert_not_called()
+            subprocess_run.assert_not_called()
+            self.assertFalse((work / 'run').exists())
+
+    def test_oauth_source_preflight_accepts_only_explicit_helper_directory(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            helper = root / 'chatgpt-connection'
+            helper.mkdir()
+            source = helper / 'codex.py'
+            source.write_text('raise RuntimeError("must not import")')
+            self.assertEqual(first_chat.validate_oauth_source(helper), source)
+            with self.assertRaisesRegex(RuntimeError, '^oauth_source_missing$'):
+                first_chat.validate_oauth_source(root)
+
+    def test_host_catalog_and_access_failures_log_only_fixed_stage_and_class(self):
+        for stage, target in [('catalog', 'select_model'), ('access', 'access_lease')]:
+            with tempfile.TemporaryDirectory() as d:
+                log = Path(d) / 'private.log'
+                with patch.object(first_chat, 'select_model', return_value='gpt-test'), \
+                     patch.object(first_chat, 'access_lease', return_value={}), \
+                     patch.object(first_chat, target, side_effect=FileNotFoundError('secret-canary')), \
+                     patch.object(first_chat, 'guest') as guest:
+                    with self.assertRaises(FileNotFoundError):
+                        with first_chat.credential_lease('lc-fresh', 'x', 'x', 'x', log=log):
+                            self.fail('host failure must not install')
+                guest.assert_not_called()
+                self.assertEqual(json.loads(log.read_text()), {'first_chat_failure': {
+                    'snippet': stage, 'rc': None, 'stderr_class': 'FileNotFoundError'}})
+                self.assertNotIn('canary', log.read_text())
+
     def test_guest_snippets_compile(self):
         for s in (first_chat.INSTALL, first_chat.REMOVE, first_chat.CHAT):
             compile(s, '<guest>', 'exec')
