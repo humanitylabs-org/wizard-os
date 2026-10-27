@@ -69,19 +69,37 @@ The App Manager writes one JSON file, `<runtipi data dir>/state/wizard-grants.js
 
 ## Enforcement layer 1: Docker networks
 
-With isolation on, a Wizard app's main service (`is_main`) and any `add_to_main_network` service **leave** the shared main network and join the app's own network, `wizard-app-<id>` (created by the App Manager, not internal, label `wizard.app=<id>`).
+A Wizard app's main service (`is_main`) and any `add_to_main_network` service **leave** the shared main network. One
+network per grant replaces it. This is the form Miguel approved on 27 Oct 2026, implemented in
+[wizard-app-manager#271](https://github.com/humanitylabs-org/wizard-app-manager/pull/271). A network per provider
+would let two consumers of the same provider reach each other.
 
-| Before | After |
-|---|---|
-| Main services of all apps on `runtipi_tipi_main_network` | Main services on `wizard-app-<id>` only |
-| Any app reaches any app by service name | A consumer's containers are **connected to the provider's network** for each grant, with the provider's service name as alias, so `http://wizard-claude:8080` resolves as before, but only for granted apps |
-| Multi-service private network `<app>_<store>_network` | Unchanged |
+| Network | Members | Internal |
+|---|---|---|
+| `wizard-app-<id>` | that app's services only (its internet access and published `127.0.0.1` port) | no |
+| `wizard-link-<consumer>--<provider>` | the consumer's services + the provider's main service, aliased `<provider id>` so `http://wizard-claude:8080` resolves as before | yes |
+| `wizard-gw-<id>`, `wizard-core` | fresh boxes only: the app + the shell, Agent Service and agent (the gateway runs in containers there) | yes |
+| `<app>_<store>_network` | unchanged | as Runtipi makes it |
 
-- The App Manager **reconciles** after every install/start/update/restart of a Wizard app, on boot and every few minutes: create missing `wizard-app-<id>` networks, connect each granted consumer, disconnect anything without a grant. `docker compose up` drops manual connections, which is why reconcile runs after every start.
-- **Runtipi's own reach.** Wizard apps publish their port on `127.0.0.1` only and aren't exposed through Traefik, so leaving the main network loses nothing. If an owner exposes a Wizard app through Traefik, that main service stays on the main network too and the Apps screen warns that every app can reach it.
-- **Agent containers** are not connected to any `wizard-app-<id>` network. They reach apps only through the gateway.
+- **Persistence.** The App Manager writes the topology into each app's stock Runtipi user-config compose override
+  (a block marked `x-wizard-networks`), so every Runtipi start, restart, update and reboot keeps it. No timer.
+- **Reconcile.** `wam network reconcile` runs after every install (planned before the first start), uninstall,
+  update and installer run. It creates the networks and writes the blocks. It moves running containers live:
+  connect first, then leave the shared network. Then it removes orphaned networks. Undeclared pairs share no network.
+- **The gateway.**
+  - Alongside boxes run the gateway on the host network. It reaches apps on their published loopback port and joins
+    no app network.
+  - Fresh boxes: the gateway containers join each app's `wizard-gw-<id>`.
+- **Host access.** `wam install` refuses a recipe with `network_mode: host`, `privileged` or the container runtime
+  socket unless the owner passes `--allow-host-access`.
+- **Runtipi's own reach.** If an owner exposes a Wizard app through Traefik, that main service stays on the main
+  network too and also gets its declared links. The Connections view warns that every app can reach it.
 - Apps from other Runtipi stores stay on the main network and can no longer reach isolated Wizard apps.
-- Limit: networks stop other **containers**. Host processes (the Agent Service, a host Hermes) reach every app on its loopback port. Layer 2 covers them.
+- **Limits.**
+  - A link is two-way at the network level: the provider can also open connections to the consumer.
+  - Host processes (the Agent Service, a host Hermes) reach every app on its loopback port. Layer 2 covers them.
+- **The Connections view and `wam connections`** show each app's declared connections and the gateway path. They
+  include a live check of Docker membership against the declarations.
 
 ## Enforcement layer 2: per-grant key
 
@@ -105,10 +123,15 @@ The network says "this container may connect"; the key says "this caller is that
 
 ## Rollout
 
-1. **Flag off by default.** `WIZARD_APP_ISOLATION=1` on the App Manager turns layer 1 on. Off means byte-for-byte today's compose files and no network changes.
+1. **On by default** (Miguel, 27 Oct 2026). `wam network off` (or `WIZARD_APP_ISOLATION=0`) turns layer 1 off. Every
+   override block is removed, apps go back to the shared network live, and the networks are deleted. `wam network on`
+   redoes it.
 2. **Layer 2 first, per app.** The App Manager writes grants files and keys for every installed Wizard app whether or not layer 1 is on. Providers start with `enforce: false` and move to `enforce: true` once their log shows zero unknown callers on dogfood boxes. The Router on the owner's daily box already runs with `enforce: true` from a hand-written file; the App Manager takes that file over without changing its shape.
-3. **Turning layer 1 on (existing box):** on first reconcile with no grants file, the App Manager makes the install-time proposals for every installed Wizard app as if each had just been installed, shows them on the Apps screen, then restarts Wizard apps one by one.
-4. **Back to stock:** turn the flag off or change the image tag. Runtipi regenerates every compose file on start, so apps return to the main network; the grants file and `wizard-app-*` networks are ignored (remove with `docker network rm`). No database changes either way.
+3. **Turning layer 1 on (existing box):** the installer's `wam bootstrap` reconciles. Running apps move live (no
+   restart unless a published port stops answering) from the declarations already on the box. Those are `uses:`,
+   router needs and approved grants.
+4. **Back to stock:** `wam network off` first. Changing the image tag alone leaves the user-config override blocks,
+   which stock Runtipi still applies. No database changes either way.
 
 Whether layer 1 must be on for the stable release stays deferred (AGENTS.md "Deferred"): due before any box installs another person's app.
 
