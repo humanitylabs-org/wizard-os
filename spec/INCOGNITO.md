@@ -34,6 +34,8 @@ The Service reuses `proxyToAgent` with an allowlisted ephemeral context, never a
 ## Lifetime and failure
 
 - One active session per private agent; 20-second heartbeats, 90-second leases and a two-hour **owner-message** idle deadline. Heartbeats do not renew owner activity.
+- Installation does not release the gateway. The helper verifies the stock policy and published loopback port first, then touches the RAM lease and readiness marker. It refreshes the RAM lease again after HTTP readiness, so policy-import/readiness time cannot shorten the admitted session lease. A helper lost before launch leaves a bounded pre-admission watchdog: the unlaunched sibling exits after 300 seconds.
+- Startup failures record only a fixed phase name and bounded exception class in the helper log and failure detail. Container output, exception messages, credentials, seed content, URLs and session identifiers are never diagnostics.
 - Closing forgets the Service map before aborting streams and removing the disposable container. Late callbacks cannot revive it.
 - Only created disposable containers are labelled `wizard.incognito=1`; startup recovery removes labelled orphans. Existing source networks, sidecars, mounts and the normal runtime are never removed.
 - Any unavailable route, seed, stock policy hook or provider fails closed. No silent standard-agent or ordinary-chat fallback is allowed.
