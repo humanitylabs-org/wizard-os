@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 27 Oct 2026 — release source returns to main (James)
+
+| # | Decision | Status |
+|---|---|---|
+| 104 | **The next Latest is cut from main again; Stable follows.** Return the next Latest snapshot to main-derived component pins, then promote Stable from that tested Latest through the existing acceptance and promotion rules. The one-off onboarding backport was not an evergreen maintenance release lane. This records the release source decision only: no release is cut or published by this change, and no test, upgrade, rollback or promotion gate is waived. See #135. | **Approved by James, 27 Oct 2026** (“Ship everything you recommend”). Release cuts: Oscar for Miguel. |
+
 ## 27 Oct 2026 — Miguel: shared app design rules ([style/APP-DESIGN-RULES.md](../style/APP-DESIGN-RULES.md))
 
 | # | Decision | Status |
