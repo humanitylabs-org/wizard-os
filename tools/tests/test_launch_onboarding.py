@@ -324,8 +324,8 @@ class OnboardingTests(unittest.TestCase):
 
     def test_phone_failure_receipt_fails_the_whole_onboarding_run(self):
         import run as launch_run
-        from unittest.mock import Mock
-        with tempfile.TemporaryDirectory() as d:
+        # macOS runner temp paths exceed Lima's socket limit; /tmp is short on both hosts.
+        with tempfile.TemporaryDirectory(dir='/tmp', prefix='lo') as d:
             work = Path(d)
             cli = work / 'wam/wizard-cli/wizard'
             cli.parent.mkdir(parents=True)
@@ -341,7 +341,6 @@ class OnboardingTests(unittest.TestCase):
                     '--first-chat-secret', str(work / 'secret/connection.json'),
                     '--secrets-root', str(work / 'secret'), '--oauth-source', str(work / 'oauth'),
                     '--phone-config', 'private-config', '--onboarding-only']
-            # Shorten only the synthetic socket check; real fixtures retain it.
             with patch.object(sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=d), \
                  patch.object(Path, 'is_mount', return_value=True), \
                  patch.object(first_chat, 'private_file'), patch.object(first_chat, 'validate_oauth_source'), \
