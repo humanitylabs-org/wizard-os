@@ -4,11 +4,14 @@
 
 ## Canonical files
 
+- [APP-DESIGN-RULES.md](APP-DESIGN-RULES.md): how every app is laid out (window is the page, width-based layout, one sheet, connector pattern) and who owns those rules: Robert (design), Jan (process). Start here before building or restyling an app.
+
 - `tokens.json`: the fourteen Appearance v1 colour roles for every skin, plus the existing UI/type, spacing, radius and motion defaults. Window material comes from `--sk-win`; surfaces are 6%/10% ink tints, exactly as the live appearance host resolves them.
 - `tokens.css`: generated CSS custom properties, including all five skin defaults. Run `python3 style/generate_tokens.py` after a source edit; `--check` fails if JSON and CSS drift.
 - `appearance-client.js`: framework-neutral, exact parent + same-origin + version/schema validation, strictly advancing revisions, revision acknowledgements, `wizard:theme` events. Only fourteen validated colour values are applied; no agent or app-data authority.
 - `boot.js`: marks a hosted document before first paint.
 - `ui.css`: the existing Chats-derived builder kit plus card, chip, bar, sheet, list row, button and empty state. The kit references the tokens above, rather than maintaining another palette.
+- `sheet.js`: the one pop-up's behaviour (×, Esc, outside tap, Back, swipe down) for `.wz-sheet`.
 - `demo.html`: executable component gallery, with a nested sheet handled by `__wizardCloseOverlay()`. Serve this directory with any static HTTP server to inspect it.
 
 ## Use
