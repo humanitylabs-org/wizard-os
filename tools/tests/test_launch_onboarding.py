@@ -274,6 +274,40 @@ class OnboardingTests(unittest.TestCase):
             self.assertFalse((root / 'avd').exists())
             self.assertFalse((root / 'device').exists())
 
+    def test_emulator_resolves_tailnet_names_like_a_phone_running_tailscale(self):
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            config = root / 'phone.json'
+            config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root), 'java_home': str(root)}))
+            def command(argv, **kwargs):
+                text = ' '.join(map(str, argv))
+                output = ''
+                if 'sys.boot_completed' in text:
+                    output = '1'
+                elif 'ro.build.version.sdk' in text:
+                    output = '35'
+                elif ' install ' in text:
+                    output = 'Success'
+                elif 'shell cat /sdcard/launch-ui.xml' in text:
+                    output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
+                elif ' ping ' in text:
+                    return Mock(returncode=2, stdout='', stderr='ping: unknown host box.example.ts.net')
+                return Mock(returncode=0, stdout=output, stderr='')
+            em = Mock()
+            em.poll.return_value = None
+            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+                 patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone.subprocess, 'run', side_effect=command), \
+                 patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
+                 patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')):
+                result = phone.run_phone('lc-fresh', 'unused', root, config, {})
+            argv = start.call_args.args[0]
+            self.assertEqual(argv[argv.index('-dns-server') + 1], '100.100.100.100')
+            self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
+                                     'failure_stage': 'tailnet-dns'})
+            self.assertNotIn('example', json.dumps(result))
+
     def test_phone_receipt_allowlists_stages_and_preflight_errors(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

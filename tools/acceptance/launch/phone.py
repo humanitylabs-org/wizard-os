@@ -20,6 +20,11 @@ from tunnel import open_forward
 
 PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
+# Tailscale's fixed MagicDNS resolver. A real phone runs Tailscale and resolves
+# the box's ts.net name through it; the emulator otherwise inherits only the
+# host's primary LAN resolver, because macOS keeps tailnet DNS in a split
+# scoped resolver, and the published APK correctly reports "Couldn't reach".
+TAILNET_DNS = '100.100.100.100'
 
 
 def validate_apk(config, sdk, call):
@@ -109,7 +114,7 @@ def worker_lock(work):
 
 PHONE_STAGES = frozenset({
     'preflight', 'apk-validation', 'worker-lock', 'avd-create', 'emulator-start',
-    'emulator-boot', 'empty-install', 'apk-install', 'connect-ui', 'https-forward',
+    'emulator-boot', 'empty-install', 'apk-install', 'connect-ui', 'https-forward', 'tailnet-dns',
     'address-entry', 'address-pairing', 'model-reply', 'nested-back', 'root-back',
     'pairing-restart', 'crash-check', 'https-cleanup', 'emulator-cleanup',
 })
@@ -189,7 +194,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
             progress['stage'] = 'emulator-start'
             with (evidence / 'private-emulator.log').open('w') as log:
                 em = subprocess.Popen([str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
-                    '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect'], env=env, stdout=log, stderr=log)
+                    '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
+                    '-dns-server', config.get('dns_server', TAILNET_DNS)], env=env, stdout=log, stderr=log)
             progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'
@@ -214,6 +220,14 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 checks['unpaired_back_stays'] = True
             progress['stage'] = 'https-forward'
             with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450)) as origin:
+                progress['stage'] = 'tailnet-dns'
+                # Name resolution only: ICMP may be filtered, so rc/reply are ignored.
+                host = origin.split('//', 1)[1].rsplit(':', 1)[0]
+                lookup = subprocess.run([str(adb), '-s', serial, 'shell', 'ping', '-c', '1', '-W', '3', host],
+                                        env=env, capture_output=True, text=True, timeout=30)
+                if 'unknown host' in (lookup.stdout + lookup.stderr).lower():
+                    raise RuntimeError('phone_tailnet_dns')
+                checks['tailnet_dns'] = True
                 progress['stage'] = 'address-entry'
                 xml = ui()
                 edit = next(n for n in ET.fromstring(xml).iter('node') if n.get('class') == 'android.widget.EditText')
