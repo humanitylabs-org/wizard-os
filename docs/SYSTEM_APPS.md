@@ -24,6 +24,7 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | `microphone` | native shell (Android, Mac) | no | Through the native bridge, not a container |
 
 **How it works on a box** (built in `wizard-app-manager`, `wam/defaults.json`):
+- **System apps are exactly the spot defaults.** WAM writes `system: true` on each such app in `apps.json` (on a pinned box the release's `default_apps` decide), the Agent Service passes it on, and every shell draws the system ring from that flag rather than its own id list. The same set is what a Wizard OS update brings to the release's pinned commits (installed defaults are upgraded with the release).
 - `wam slots` lists every spot: which app fills it, or that it's empty / has no default yet. `apps.json` carries the same list as `parking`, so the UX can show empty spots as placeholders.
 - `wam bootstrap` installs the default app for every empty spot that has one, except `install: on-demand` slots. A spot already filled by another provider is left alone. ChatGPT and Claude connection apps stay preinstalled because they hold the agent's own sign-in.
 - Setup has one **Recommended next** list. One tap selects the indexed immutable release through the existing owner-only Store/WAM route, waits for installation, then opens the connector's sign-in. Unpublished recommendations are visibly unavailable, never installed from an unchecked branch.
