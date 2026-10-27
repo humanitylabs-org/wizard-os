@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 27 Oct 2026 — Miguel: shared app design rules ([style/APP-DESIGN-RULES.md](../style/APP-DESIGN-RULES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 103 | **Apps share one design baseline, with named owners.** Every Wizard app follows `style/APP-DESIGN-RULES.md`: the window is the page (no max-width app frame), layout follows the window's width rather than the device, no duplicate title in a window, one pop-up (`.wz-sheet`: bottom sheet when narrow, centred card when wide, closes with ×, Esc, outside tap, Back and swipe), one connector-app pattern, and kit components before custom ones. **Robert owns the design** (rules and values in `style/`), **Jan owns the process** (how rules are checked, reviewed and rolled out), James and Archimedes keep `style/` and the shell copy in step, and anyone proposes changes by PR. The rules are a v0 foundation from a 27 Oct audit (22 apps, six different content widths, five different pop-ups), meant to be reshaped by Robert. Shell-side surfaces (Settings as a window on desktop, previews) are proposed separately in wizard-ux. | **Proposed by Miguel, 27 Oct 2026.** Robert, Jan, James to confirm |
+
 ## 25 Oct 2026 — James: Agent History keeps every agent's record ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md) section 3)
 
 | # | Decision | Status |
