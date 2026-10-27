@@ -1,5 +1,9 @@
 # Decisions
 
+## Private-agent Incognito — implementation candidate
+
+Explicit Incognito creates a disposable RAM-only sibling using the private agent’s confidential model and read-only prompt seeds. Ordinary private chats stay durable. No conversation payload enters normal history, catalogs, queues, logs or browser recovery stores. Text-only v1 disables tools rather than hiding side effects; close/reload/lost leases discard the session. See [INCOGNITO](../spec/INCOGNITO.md). Implementation and publication are authorized by the current build brief; live activation remains separately gated on synthetic remote acceptance and owner review.
+
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
 ## 27 Oct 2026 — release source returns to main (James)

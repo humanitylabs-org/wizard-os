@@ -1,5 +1,7 @@
 # Wizard OS architecture
 
+Private-agent [Incognito chat](../spec/INCOGNITO.md) uses a disposable stock-Hermes sibling with an explicit ephemeral Service target; it does not patch Hermes or change the normal private runtime.
+
 **Version 1.0 · 9 Oct 2026.** Written from the Wizard Dev Council (James, Jan, Miguel, 9 Oct 2026) and the earlier architecture plan. Decisions are logged in [DECISIONS.md](DECISIONS.md).
 
 ## What it is
