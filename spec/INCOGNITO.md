@@ -4,7 +4,7 @@
 
 ## Owner experience
 
-- Private-agent Chats expose an **Incognito** action. The temporary thread has a persistent label, dashed frame, and warning that it is never saved.
+- Only a new private-agent chat before its first send exposes an **Incognito** toggle. Existing threads, the Chats list and standard-agent chats never expose it. The temporary thread has a persistent label, dashed frame, and warning that it is never saved.
 - Conversation and composer text live only in the current browser process. No durable outbox, automatic retry, draft recovery, session listing, title generation, search indexing, read state, pins, reminders, app actions, attachments or voice capture participate.
 - Back/Close or leaving the conversation asks whether to discard it. Reload/pagehide/BFCache and removed windows wipe it and request teardown. A dropped browser or service expires its lease; reopening cannot restore it.
 - v1 is text-only and tools are disabled, not merely hidden. A failed connection stays failed; no automatic ordinary-chat or public-provider fallback exists.
@@ -22,7 +22,7 @@ The Service reuses its existing secret-safe agent JSON/SSE proxy with an explici
 ## Lifetime and failure
 
 - At most one active Incognito session per private agent. No normal runtime start/stop/restart is part of the operation.
-- Browser heartbeats every 20 seconds; service and helper leases expire after 90 seconds, with a 30-minute absolute lifetime and periodic reaping.
+- Browser heartbeats every 20 seconds; service and helper leases expire after 90 seconds, with a two-hour owner-message idle limit and periodic reaping. Heartbeats do not count as owner activity; sending another message renews the idle deadline.
 - Closing forgets the service map before aborting streams and removing resources. Late start responses are destroyed, not reattached.
 - Every helper-created container/network is labeled `wizard.incognito=1`; recovery removes only those resources, never the ordinary agent. Startup orphan recovery completes before creating sessions; the normal helper is supervised with restart. No durable reconnect registry is written.
 - v1 rejects imported/restricted runtimes instead of falling back to a normal or less confined target. Supporting those runtimes requires separate acceptance, not weakening the boundary.
