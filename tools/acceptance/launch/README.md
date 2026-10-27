@@ -216,7 +216,12 @@ visible in accessibility XML. It exercises Back at nested thread and shell root
 Unpaired root Back is also exercised for generic APKs, but deliberately not for
 owner-default artifacts, where it would navigate to the old live server.
 
-Only bounded pass/fail checks + APK identity enter the phone receipt. UI XML,
+Only bounded pass/fail checks + APK identity enter a successful phone receipt.
+Failures retain completed checks and an allowlisted `failure_stage` (preflight,
+APK validation/install, lock/AVD/emulator, Connect, HTTPS, address entry/pairing,
+reply, Back, restart, crash or cleanup); a failed phone receipt fails the whole
+onboarding run. Exception text, command output, URLs and session data are never
+serialized. UI XML,
 transcripts and screenshots are never retained. Emulator disk and temporary XML
 are deleted, emulator stopped, and only the new HTTPS handler removed/read back
 in `finally`; existing Serve handlers must remain identical. **Address pairing is

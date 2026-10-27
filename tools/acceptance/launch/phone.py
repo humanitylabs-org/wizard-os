@@ -107,7 +107,29 @@ def worker_lock(work):
         yield
 
 
+PHONE_STAGES = frozenset({
+    'preflight', 'apk-validation', 'worker-lock', 'avd-create', 'emulator-start',
+    'emulator-boot', 'empty-install', 'apk-install', 'connect-ui', 'https-forward',
+    'address-entry', 'address-pairing', 'model-reply', 'nested-back', 'root-back',
+    'pairing-restart', 'crash-check', 'https-cleanup', 'emulator-cleanup',
+})
+
+
 def run_phone(vm, cli, evidence, config_path, chat):
+    """Return bounded progress even on failure; never serialize exception text."""
+    progress = {'stage': 'preflight', 'checks': {}}
+    try:
+        return _run_phone(vm, cli, evidence, config_path, chat, progress)
+    except Exception:
+        stage = progress.get('failure_stage', progress['stage'])
+        result = {'passed': False, 'checks': progress['checks'],
+                  'failure_stage': stage if stage in PHONE_STAGES else 'preflight'}
+        if progress.get('cleanup_failed'):
+            result['cleanup_failed'] = True
+        return result
+
+
+def _run_phone(vm, cli, evidence, config_path, chat, progress):
     if not vm.startswith('lc-'):
         raise RuntimeError('phone_disposable_required')
     config = json.loads(Path(config_path).read_text())
@@ -125,6 +147,7 @@ def run_phone(vm, cli, evidence, config_path, chat):
         if p.returncode:
             raise RuntimeError('phone_command_failed')
         return p.stdout
+    progress['stage'] = 'apk-validation'
     apk, feed, owner_default = validate_apk(config, sdk, call)
     port = config.get('emulator_port', 5682)
     serial = f'emulator-{port}'
@@ -153,21 +176,28 @@ def run_phone(vm, cli, evidence, config_path, chat):
         dump = shell('dumpsys', 'activity', 'activities')
         return any(PACKAGE + '/' in line for line in dump.splitlines() if 'topResumedActivity' in line or 'mResumedActivity' in line)
     em = None
-    checks = {}
+    checks = progress['checks']
+    progress['stage'] = 'worker-lock'
     # Match android-build-thales / emulator_qa_thales.py's shared exclusion lock.
     with worker_lock(work):
         assert serial not in call([adb, 'devices'])
         try:
+            progress['stage'] = 'avd-create'
             call([sdk / 'cmdline-tools/latest/bin/avdmanager', 'create', 'avd', '-n', 'launch_phone',
                   '-k', 'system-images;android-35;google_apis;arm64-v8a', '-d', 'pixel_7', '-p', evidence / 'device'], input='no\n')
             # Emulator stdout may contain URLs. Keep it private, never publish it.
+            progress['stage'] = 'emulator-start'
             with (evidence / 'private-emulator.log').open('w') as log:
                 em = subprocess.Popen([str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
                     '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect'], env=env, stdout=log, stderr=log)
+            progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'
+            progress['stage'] = 'empty-install'
             assert PACKAGE not in shell('pm', 'list', 'packages', PACKAGE)
+            progress['stage'] = 'apk-install'
             assert 'Success' in call([adb, '-s', serial, 'install', apk], timeout=120)
+            progress['stage'] = 'connect-ui'
             shell('logcat', '-c')
             shell('input', 'keyevent', 'KEYCODE_WAKEUP')
             shell('wm', 'dismiss-keyguard')
@@ -182,7 +212,9 @@ def run_phone(vm, cli, evidence, config_path, chat):
                 shell('input', 'keyevent', 'KEYCODE_BACK')
                 assert foreground() and title in labels(ui())
                 checks['unpaired_back_stays'] = True
+            progress['stage'] = 'https-forward'
             with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450)) as origin:
+                progress['stage'] = 'address-entry'
                 xml = ui()
                 edit = next(n for n in ET.fromstring(xml).iter('node') if n.get('class') == 'android.widget.EditText')
                 tap(edit)
@@ -197,9 +229,11 @@ def run_phone(vm, cli, evidence, config_path, chat):
                 assert paired_input.get('text') == origin
                 connect = next(n for n in ET.fromstring(ui()).iter('node')
                                if n.get('text') == 'Connect' or n.get('content-desc') == 'Connect')
+                progress['stage'] = 'address-pairing'
                 tap(connect)
                 wait_for(lambda: 'Connect to your Wizard' not in labels(ui()) and 'Chats' in labels(ui()), 90)
                 checks['address_pairing_shell'] = True
+                progress['stage'] = 'model-reply'
                 # Use the release's exported thread handoff, not WebView injection.
                 shell('am', 'start', '-W', '-n', PACKAGE + '/.MainActivity', '-a',
                       'ai.wizards.os.action.THREAD', '--es', 'ai.wizards.os.extra.THREAD', chat['session'])
@@ -208,21 +242,26 @@ def run_phone(vm, cli, evidence, config_path, chat):
                 checks['model_reply_visible'] = True
                 # The first Back must actually leave the nested chat, not merely
                 # be swallowed. Subsequent root Back must never finish the app.
+                progress['stage'] = 'nested-back'
                 assert 'Attach photos or files' in labels(ui())
                 shell('input', 'keyevent', 'KEYCODE_BACK')
                 wait_for(lambda: foreground() and 'Attach photos or files' not in labels(ui()), 20)
                 checks['nested_back_navigates'] = True
+                progress['stage'] = 'root-back'
                 for _ in range(3):
                     shell('input', 'keyevent', 'KEYCODE_BACK')
                     time.sleep(1)
                     assert foreground()
                 checks['nested_and_root_back_stay'] = True
                 # Saved choice survives process death; no new Connect prompt.
+                progress['stage'] = 'pairing-restart'
                 shell('am', 'force-stop', PACKAGE)
                 shell('am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
                 wait_for(lambda: 'Connect to your Wizard' not in labels(ui()) and 'Chats' in labels(ui()), 60)
                 checks['pairing_survives_restart'] = True
+                progress['stage'] = 'crash-check'
                 assert 'FATAL EXCEPTION' not in shell('logcat', '-d', '-b', 'crash')
+                progress['stage'] = 'https-cleanup'
             return {'passed': all(checks.values()), 'checks': checks, 'apk_version': feed['versionName'],
                     'apk_version_code': feed['versionCode'], 'apk_sha256': feed['sha256'],
                     'transport': 'address-https-to-disposable-box', 'api': 35,
@@ -230,14 +269,25 @@ def run_phone(vm, cli, evidence, config_path, chat):
                     'entry': 'exported-connect' if owner_default else 'generic-first-run',
                     'unpaired_back': 'not-tested-migration-default' if owner_default else 'passed',
                     'physical_device': 'not-tested', 'qr': 'not-tested'}
+        except Exception:
+            progress['failure_stage'] = progress['stage']
+            raise
         finally:
-            if em is not None:
-                subprocess.run([str(adb), '-s', serial, 'emu', 'kill'], env=env, capture_output=True, timeout=20)
-                try:
-                    em.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    em.terminate()
-                    em.wait(timeout=20)
-            # Remove emulator data and its temporary XML/transcript/cache copies.
-            shutil.rmtree(evidence / 'device', ignore_errors=True)
-            shutil.rmtree(evidence / 'avd', ignore_errors=True)
+            progress['stage'] = 'emulator-cleanup'
+            try:
+                if em is not None:
+                    # A broken adb must not skip stopping our owned process.
+                    with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+                        subprocess.run([str(adb), '-s', serial, 'emu', 'kill'], env=env, capture_output=True, timeout=20)
+                    try:
+                        em.wait(timeout=30)
+                    except subprocess.TimeoutExpired:
+                        em.terminate()
+                        em.wait(timeout=20)
+            except Exception:
+                progress['cleanup_failed'] = True
+                raise
+            finally:
+                # Remove temporary XML/transcript/cache copies even if stop fails.
+                shutil.rmtree(evidence / 'device', ignore_errors=True)
+                shutil.rmtree(evidence / 'avd', ignore_errors=True)

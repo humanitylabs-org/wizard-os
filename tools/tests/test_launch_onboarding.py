@@ -240,6 +240,91 @@ class OnboardingTests(unittest.TestCase):
                 phone.validate_apk({'apk': str(apk), 'feed': str(feed)}, d, run)
             run.assert_not_called()
 
+    def test_phone_failure_keeps_stage_and_completed_checks_without_private_text(self):
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            config = root / 'phone.json'
+            config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root),
+                'java_home': str(root)}))
+            def command(argv, **kwargs):
+                text = ' '.join(map(str, argv))
+                output = ''
+                if 'sys.boot_completed' in text:
+                    output = '1'
+                elif 'ro.build.version.sdk' in text:
+                    output = '35'
+                elif ' install ' in text:
+                    output = 'Success'
+                elif 'shell cat /sdcard/launch-ui.xml' in text:
+                    output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
+                return Mock(returncode=0, stdout=output)
+            em = Mock()
+            em.poll.return_value = None
+            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+                 patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone.subprocess, 'run', side_effect=command), \
+                 patch.object(phone.subprocess, 'Popen', return_value=em), \
+                 patch.object(phone, 'https_forward', side_effect=RuntimeError('private-url transcript-canary')):
+                result = phone.run_phone('lc-fresh', 'unused', root, config, {'output': 'private-reply'})
+            self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
+                                     'failure_stage': 'https-forward'})
+            self.assertNotIn('private', json.dumps(result))
+            em.wait.assert_called_once()
+            self.assertFalse((root / 'avd').exists())
+            self.assertFalse((root / 'device').exists())
+
+    def test_phone_receipt_allowlists_stages_and_preflight_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            result = phone.run_phone('owner-box', 'unused', root, 'not-read', {})
+            self.assertEqual(result, {'passed': False, 'checks': {}, 'failure_stage': 'preflight'})
+        def fail(*args):
+            progress = args[-1]
+            progress['stage'] = 'transcript-canary'
+            raise RuntimeError('private-url')
+        with patch.object(phone, '_run_phone', side_effect=fail):
+            result = phone.run_phone('lc-fresh', 'unused', None, None, {})
+        self.assertEqual(result['failure_stage'], 'preflight')
+        self.assertNotIn('canary', json.dumps(result))
+
+    def test_phone_failure_receipt_fails_the_whole_onboarding_run(self):
+        import run as launch_run
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            cli = work / 'wam/wizard-cli/wizard'
+            cli.parent.mkdir(parents=True)
+            cli.touch()
+            def command(argv, log, timeout=1800):
+                if 'capture.py' in ' '.join(map(str, argv)):
+                    target = Path(argv[argv.index(str(ROOT / 'capture.py')) + 1])
+                    target.write_text(json.dumps({'passed': True, 'release': '0.3.70',
+                                                 'contact': True, 'setup_route': True}))
+            failed = {'passed': False, 'failure_stage': 'https-forward',
+                      'checks': {'empty_install_connect': True}}
+            argv = ['run.py', '--root', str(work / 'run'), '--release', '0.3.70', '--cli', str(cli),
+                    '--first-chat-secret', str(work / 'secret/connection.json'),
+                    '--secrets-root', str(work / 'secret'), '--oauth-source', str(work / 'oauth'),
+                    '--phone-config', 'private-config', '--onboarding-only']
+            # Shorten only the synthetic socket check; real fixtures retain it.
+            with patch.object(sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=d), \
+                 patch.object(Path, 'is_mount', return_value=True), \
+                 patch.object(first_chat, 'private_file'), patch.object(first_chat, 'validate_oauth_source'), \
+                 patch.object(first_chat, 'credential_lease', return_value=contextlib.nullcontext('gpt-test')), \
+                 patch.object(first_chat, 'run_chat', return_value=({'passed': True}, {})), \
+                 patch.object(phone, 'run_phone', return_value=failed), \
+                 patch.object(launch_run, 'command', side_effect=command), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                status = launch_run.main()
+            self.assertEqual(status, 1)
+            receipts = list((work / 'run/runs').glob('*/receipt.json'))
+            self.assertEqual(len(receipts), 1)
+            receipt = json.loads(receipts[0].read_text())
+            self.assertFalse(receipt['passed'])
+            self.assertEqual(receipt['phone'], failed)
+            self.assertEqual(receipt['step'], 'second-owner-phone')
+
     def test_ui_xml_parses_escaped_text_and_bounds(self):
         xml = '<hierarchy><node text="Wizard &amp; ready" content-desc="Chat" bounds="[10,20][30,40]"/></hierarchy>'
         self.assertIn('Wizard & ready', phone.labels(xml))
