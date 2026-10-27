@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -239,6 +240,132 @@ class OnboardingTests(unittest.TestCase):
             with self.assertRaises(AssertionError), patch.object(phone.subprocess, 'run') as run:
                 phone.validate_apk({'apk': str(apk), 'feed': str(feed)}, d, run)
             run.assert_not_called()
+
+    # Documentation-range addresses and example names only: never a real tailnet.
+    SCUTIL = ('DNS configuration\n\nresolver #1\n  nameserver[0] : 192.0.2.1\n\n'
+              'resolver #2\n  domain   : other.example\n  nameserver[0] : 192.0.2.9\n\n'
+              'resolver #3\n  domain   : example.ts.net\n  nameserver[0] : 192.0.2.53\n')
+
+    def fake_device(self, unknown_host=False):
+        from unittest.mock import Mock
+        def command(argv, **kwargs):
+            text = ' '.join(map(str, argv))
+            output = ''
+            if text.startswith('tailscale status'):
+                output = json.dumps({'Self': {'DNSName': 'box.example.ts.net.'}})
+            elif text.startswith('scutil --dns'):
+                output = self.SCUTIL
+            elif 'sys.boot_completed' in text:
+                output = '1'
+            elif 'ro.build.version.sdk' in text:
+                output = '35'
+            elif ' install ' in text:
+                output = 'Success'
+            elif 'shell cat /sdcard/launch-ui.xml' in text:
+                output = '<hierarchy><node text="Change Wizard"/></hierarchy>'
+            elif ' ping ' in text and unknown_host:
+                return Mock(returncode=2, stdout='', stderr='ping: unknown host box.example.ts.net')
+            return Mock(returncode=0, stdout=output, stderr='')
+        return command
+
+    def test_tailnet_resolver_is_read_from_the_hosts_scoped_magicdns_entry(self):
+        self.assertEqual(phone.tailnet_resolver('box.example.ts.net.', self.SCUTIL), '192.0.2.53')
+        with self.assertRaisesRegex(RuntimeError, 'phone_tailnet_dns'):
+            phone.tailnet_resolver('box.missing.ts.net', self.SCUTIL)
+
+    def test_phone_failure_keeps_stage_and_completed_checks_without_private_text(self):
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            config = root / 'phone.json'
+            config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root),
+                'java_home': str(root)}))
+            em = Mock()
+            em.poll.return_value = None
+            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+                 patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone.subprocess, 'run', side_effect=self.fake_device()), \
+                 patch.object(phone.subprocess, 'Popen', return_value=em), \
+                 patch.object(phone, 'https_forward', side_effect=RuntimeError('private-url transcript-canary')):
+                result = phone.run_phone('lc-fresh', 'unused', root, config, {'output': 'private-reply'})
+            self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
+                                     'failure_stage': 'https-forward'})
+            self.assertNotIn('private', json.dumps(result))
+            em.wait.assert_called_once()
+            self.assertFalse((root / 'avd').exists())
+            self.assertFalse((root / 'device').exists())
+
+    def test_emulator_resolves_tailnet_names_like_a_phone_running_tailscale(self):
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            config = root / 'phone.json'
+            config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root), 'java_home': str(root)}))
+            em = Mock()
+            em.poll.return_value = None
+            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+                 patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone.subprocess, 'run', side_effect=self.fake_device(unknown_host=True)), \
+                 patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
+                 patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')), \
+                 patch.object(phone.time, 'sleep'), \
+                 patch.object(phone.time, 'monotonic', side_effect=itertools.count(0, 5)):
+                result = phone.run_phone('lc-fresh', 'unused', root, config, {})
+            argv = start.call_args.args[0]
+            self.assertEqual(argv[argv.index('-dns-server') + 1], '192.0.2.53')
+            self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
+                                     'failure_stage': 'tailnet-dns'})
+            self.assertNotIn('example', json.dumps(result))
+
+    def test_phone_receipt_allowlists_stages_and_preflight_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            result = phone.run_phone('owner-box', 'unused', root, 'not-read', {})
+            self.assertEqual(result, {'passed': False, 'checks': {}, 'failure_stage': 'preflight'})
+        def fail(*args):
+            progress = args[-1]
+            progress['stage'] = 'transcript-canary'
+            raise RuntimeError('private-url')
+        with patch.object(phone, '_run_phone', side_effect=fail):
+            result = phone.run_phone('lc-fresh', 'unused', None, None, {})
+        self.assertEqual(result['failure_stage'], 'preflight')
+        self.assertNotIn('canary', json.dumps(result))
+
+    def test_phone_failure_receipt_fails_the_whole_onboarding_run(self):
+        import run as launch_run
+        # macOS runner temp paths exceed Lima's socket limit; /tmp is short on both hosts.
+        with tempfile.TemporaryDirectory(dir='/tmp', prefix='lo') as d:
+            work = Path(d)
+            cli = work / 'wam/wizard-cli/wizard'
+            cli.parent.mkdir(parents=True)
+            cli.touch()
+            def command(argv, log, timeout=1800):
+                if 'capture.py' in ' '.join(map(str, argv)):
+                    target = Path(argv[argv.index(str(ROOT / 'capture.py')) + 1])
+                    target.write_text(json.dumps({'passed': True, 'release': '0.3.70',
+                                                 'contact': True, 'setup_route': True}))
+            failed = {'passed': False, 'failure_stage': 'https-forward',
+                      'checks': {'empty_install_connect': True}}
+            argv = ['run.py', '--root', str(work / 'run'), '--release', '0.3.70', '--cli', str(cli),
+                    '--first-chat-secret', str(work / 'secret/connection.json'),
+                    '--secrets-root', str(work / 'secret'), '--oauth-source', str(work / 'oauth'),
+                    '--phone-config', 'private-config', '--onboarding-only']
+            with patch.object(sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=d), \
+                 patch.object(Path, 'is_mount', return_value=True), \
+                 patch.object(first_chat, 'private_file'), patch.object(first_chat, 'validate_oauth_source'), \
+                 patch.object(first_chat, 'credential_lease', return_value=contextlib.nullcontext('gpt-test')), \
+                 patch.object(first_chat, 'run_chat', return_value=({'passed': True}, {})), \
+                 patch.object(phone, 'run_phone', return_value=failed), \
+                 patch.object(launch_run, 'command', side_effect=command), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                status = launch_run.main()
+            self.assertEqual(status, 1)
+            receipts = list((work / 'run/runs').glob('*/receipt.json'))
+            self.assertEqual(len(receipts), 1)
+            receipt = json.loads(receipts[0].read_text())
+            self.assertFalse(receipt['passed'])
+            self.assertEqual(receipt['phone'], failed)
+            self.assertEqual(receipt['step'], 'second-owner-phone')
 
     def test_ui_xml_parses_escaped_text_and_bounds(self):
         xml = '<hierarchy><node text="Wizard &amp; ready" content-desc="Chat" bounds="[10,20][30,40]"/></hierarchy>'

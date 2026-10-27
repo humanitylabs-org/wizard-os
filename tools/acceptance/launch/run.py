@@ -189,6 +189,8 @@ def main():
                         result['phone'] = {'passed': False}
                         result['phone'] = run_phone(name, args.cli, run / 'phone', args.phone_config, internal)
                         del internal
+                        if not result['phone']['passed']:
+                            raise RuntimeError('phone_failed')
             except Exception:
                 if not result['first_chat']['passed']:
                     result['first_chat']['latency_ms'] = round((time.monotonic() - started) * 1000)
