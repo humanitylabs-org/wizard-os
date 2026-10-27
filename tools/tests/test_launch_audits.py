@@ -37,6 +37,35 @@ class HarnessTests(unittest.TestCase):
         return [{'at': (start + dt.timedelta(days=d)).isoformat(), 'release': '0.3.33',
                  'passed': True, 'interventions': 0, 'overlays': []} for d in range(4)]
 
+    def test_upgraded_case_checks_every_installed_default_version_not_prepared_metadata(self):
+        with tempfile.TemporaryDirectory() as td:
+            home, rt = Path(td) / 'home', Path(td) / 'runtipi'
+            home.mkdir()
+            pins = {'default_apps': {app: {'app': app, 'index_version': '0.2.6', 'commit': 'b' * 40}
+                                     for app in ('wizard-claude', 'files')}}
+            (home / 'release-pins.json').write_text(json.dumps(pins))
+            for app in ('wizard-claude', 'files'):
+                for base in (rt / 'apps' / 'wizardapps', rt / 'repos' / 'wizardapps' / 'apps'):
+                    d = base / app
+                    d.mkdir(parents=True)
+                    (d / 'wizard.md').write_text('---\nversion: 0.2.6\n---\n')
+                    (d / '.wizard-commit').write_text('b' * 40)
+            self.assertEqual(journey.assert_installed_default_pins(home, rt), ['wizard-claude', 'files'])
+            live = rt / 'apps' / 'wizardapps' / 'wizard-claude'
+            (live / 'wizard.md').write_text('---\nversion: 0.1.2\n---\n')
+            with self.assertRaisesRegex(AssertionError, 'wizard-claude version 0.1.2'):
+                journey.assert_installed_default_pins(home, rt)
+            (live / 'wizard.md').write_text('---\nversion: 0.2.6\n---\n')
+            (live / '.wizard-commit').write_text('a' * 40)
+            with self.assertRaisesRegex(AssertionError, 'wizard-claude source'):
+                journey.assert_installed_default_pins(home, rt)
+            import shutil
+            shutil.rmtree(live)
+            with self.assertRaisesRegex(AssertionError, 'wizard-claude vanished'):
+                journey.assert_installed_default_pins(home, rt, ['wizard-claude'])
+        source = (ROOT / 'journey.py').read_text()
+        self.assertLess(source.index('installed_defaults = assert_installed_default_pins'), source.index('report = json.loads'))
+
     def test_clean_candidate_is_independent_of_previous_release_upgrade(self):
         events = []
         ops = {name: Mock(side_effect=lambda *a, n=name: events.append((n, *a)))
