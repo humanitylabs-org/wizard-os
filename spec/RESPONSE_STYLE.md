@@ -1,0 +1,14 @@
+# Owner Response style
+
+James approved this choice on 27 October 2026, preserving the Summary finish report alongside the Concise prose introduced by Oscar (@oscarhenrycollins) in Agent Service #210.
+
+- `response_style` is a box-wide owner setting: `summary` or `concise`. It is not a device preference, skin behaviour or model route.
+- Agent Service `GET /wizard/v1/settings`, `PUT /wizard/v1/settings` and bootstrap expose the setting to the owner. Non-owners cannot change it, and their projections omit it so a safe settings round-trip cannot overwrite it. Reject unknown values with 400; reject non-owner writes with 403. Unrelated partial writes preserve the choice.
+- Existing installations without a choice stay Summary. At production startup, a fresh Wizard install without settings or previous Wizard queue/read-state files receives one cryptographically random 50/50 assignment before stores are created. Persist it before serving requests. Never reassign on reads, restarts or upgrades. An existing stock Hermes alone is not evidence of previous Wizard use; never inspect its messages for this decision.
+- Retain only a bounded local assignment and per-style switch count in `response_style_experiment`. No message content, prompt text, user identifiers, timestamps or analytics transmission. Repeated saves of the same style do not increment counts. Experiment metadata is service-owned and cannot be supplied through settings PUT.
+- Summary restores the pre-#210 bold verdict and short labelled finish report: What was wrong / What I did / Does it work / What you need to do / Still open. Briefly restate what we are doing so the thread reads cold. Keep the short/conversational exception.
+- Concise preserves #210: lead with the result in plain prose; no fixed labelled template, no request recap. Lists and headings remain available when the content needs them.
+- Apply the selected contract at new-turn admission across main, profile, container and restricted routes and heavy continuations. Existing admitted work may finish with its original contract. Scheduled reporter notifications keep their explicit short-format override and shared status markers stay unchanged.
+- Wizard UX registers exactly one shared row in Settings > Chats & app screens: Response style, Summary / Concise, with one-line descriptions. It reads and writes the service API, reads back the exact saved value before claiming success, and retains the last verified selection on error. Old services show an explicit unavailable/update message. Both phone and desktop use the same registration and existing skin/material tokens.
+
+Implementation: [Agent Service #214](https://github.com/humanitylabs-org/wizard-agent-service/pull/214), paired Wizard UX PR. James's daily-driver deployment remains separately approved; merging a contract or preparing a live candidate never authorizes a deployment.
