@@ -1,6 +1,6 @@
 # Host hop: move a Wizard to another machine
 
-**Status:** proposed by Miguel, 26 Oct 2026. Proven once in production: Miguel's Wizard (Oscar) moved from a VPS (Ubuntu) to a mini PC (Debian 13, installed from `wizard-os-iso`) on 26 Oct 2026. Reference scripts: `tools/host-hop/`. Archimedes review applied ("Wizards" naming).
+**Status:** approved by James, 27 Oct 2026; proposed by Miguel, 26 Oct 2026 (Oscar). Proven once in production: Miguel's Wizard (Oscar) moved from a VPS (Ubuntu) to a mini PC (Debian 13, installed from `wizard-os-iso`) on 26 Oct 2026. Reference scripts: `tools/host-hop/`. Archimedes review applied ("Wizards" naming). Approval records the plan, not a new host move or completed implementation.
 
 A Wizard's **main** is the machine that runs its agent, apps and data. A **host hop** makes another machine on the owner's tailnet the main, with the same history, apps, schedules and address, and keeps the old main as a **standby**. It is how an owner moves off a full or rented server, upgrades hardware, or recovers from a failing box.
 
