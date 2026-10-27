@@ -17,8 +17,8 @@ HOST_PATH = re.compile(r"^/(etc|root|boot|proc|sys|dev|var/run|run|home|usr|lib|
 NEEDS = {"mic", "system-audio", "camera", "notifications", "files", "home-network"}
 # Connectors (owner rule, 27 Oct 2026): an app that signs in to or holds the key for an outside service is a
 # Connector and must say `type: external`, or shells and the App Store shelve it under Apps/Agent apps.
-CONNECTOR_SLOTS = {"ai-connection", "bank-connection", "cloudflare-connection", "music-source", "web-data", "x-search"}
-CONNECTOR_SLOT = re.compile(r"[a-z0-9-]+-(connection|connector|source)")
+CONNECTOR_SLOTS = {"ai-connection", "bank-connection", "cloudflare-connection", "web-data", "x-search"}
+CONNECTOR_SLOT = re.compile(r"[a-z0-9-]+-(connection|connector)")
 CONNECTOR_SUMMARY = re.compile(r"^\s*(connect|sign in to)\b", re.I)
 
 
