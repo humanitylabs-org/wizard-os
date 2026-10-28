@@ -541,7 +541,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str]) -> dict:
             f"{stable} → {V} passed: {evidence_rel}.\n\nRollback: `releases/stable` back to {stable}.")
     rep["promote_pr"] = open_and_merge(WOS, wt, branch_promo, f"Maintenance: promote {V} to stable (release train, {cls})",
                                        body, "tier: maintenance", need_checks=False)
-    sh(["git", "-C", str(wos), "fetch", "-q", "origin"])
+    clone(WOS, work)
+    clone(WAM, work)               # fetch both again: the cut and its mirror merged since the start of this run
     mwt = worktree(wam, work / "wt-wizard-app-manager")
     for f in ("stable", "latest", f"promotions/{V}.json"):
         (mwt / "releases" / f).parent.mkdir(parents=True, exist_ok=True)
