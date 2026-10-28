@@ -9,6 +9,17 @@ deliberately broken box is `tools/acceptance/repair/` (it lands with its first r
 
 Rules for everyone who uses this kit:
 
+- **Migrated or separated boxes use the thin `wam` client.** At the agent UID,
+  use `wam doctor`, app lifecycle/log commands, and repository backup/restore.
+  Docker, system-unit, Tailscale operator and root-repair commands below are for
+  the owner's separate administrator login, never a fallback when an agent
+  request is refused. A temporary server-access grant is root-equivalent and
+  appears red in Health; it is not permission to abandon the client boundary.
+  Existing-box migration is an explicit owner-run host step, never a nightly
+  update. `wam privilege rollback` is administrator-only and restores the frozen
+  pre-migration snapshot, discarding changes made since migration. See the App
+  Manager's `docs/PRIVILEGE_MIGRATION.md` before using it.
+
 - **Never print, paste, copy or move a secret.** Not in chat, not in an issue, not in a screenshot. This page says
   where each sign-in lives so you can leave it alone, not so you can read it.
 - **Never delete owner data.** That means chats, files, `media/`, app data folders and backups. A repair restarts
