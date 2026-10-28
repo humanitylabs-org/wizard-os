@@ -48,6 +48,7 @@ An audit on 27 Oct 2026 covered 22 installed apps. Kit apps capped their content
 ### 6. Shared basics
 - Colours and type come from the kit variables only, never hex values or fonts in app CSS. Intentional app typography, such as a reader's serif, is allowed through the type roles.
 - Buttons: `.wz-button` (44 px tall), with `.secondary` for the second choice. At most one accent button is visible per screen.
+- Status has its own colours: `--wz-success` (Connected, done) and `--wz-warning` (Needs attention), set per skin in `tokens.json`, with `-light` versions for light schemes, plus `--wz-danger` for errors. Status never borrows the accent: the accent means "act here".
 - Section headings: `.wz-sec-h`. Status: `.wz-pill`. Numbers that change: `.wz-meter`. Nothing new is invented when a kit class exists.
 - Touch targets are at least 44 px. Text is at least 13 px.
 
