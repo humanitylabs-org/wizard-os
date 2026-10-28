@@ -63,6 +63,8 @@ POST            /wizard/v1/setup/phone/reset                       stable       
 GET             /wizard/v1/apps                                   stable       ux  -
 GET,HEAD        /wizard/v1/chats-views/{id}/{hash}.js               stable       -   -
 POST            /wizard/v1/route                                  stable       ux  -
+GET,PUT,PATCH   /wizard/v1/ui-preferences                         stable       ux  -
+POST            /wizard/v1/ui-preferences/seed                    stable       ux  -
 GET,POST        /wizard/v1/schedules                              proposed     -   -
 PATCH,DELETE    /wizard/v1/schedules/{id}                         proposed     -   -
 POST            /wizard/v1/schedules/{id}/run                     proposed     -   -
@@ -176,6 +178,9 @@ integrity failed, and other methods return `405`. No API proxy or redirect.
 
 ### `POST /wizard/v1/route`
 Sorts one orb utterance into a phone command, an agent request or a view action, using the configured fast model (not the agent). Body ≤ 8 KB: `{"text":"…","force":"command"|"","view":{"name":"…","kind":"…"},"apps":["Notes"]}`. `200 {"cmd":{"route":"agent","summary":"water the plants"},"ms":12,"model":"<router model>"}`; `cmd.route` is always `command`, `agent` or `view`. Errors: `404 router_not_configured`, `400 invalid_request` (bad JSON or empty text), `502 router_unavailable`.
+
+### `GET|PUT|PATCH /wizard/v1/ui-preferences`, `POST /wizard/v1/ui-preferences/seed`
+Box-wide shell preferences (owner access; full contract: wizard-agent-service `docs/ui-preferences.md`). `GET` → the flat preferences object. `PUT` merges the given top-level keys (a list key is replaced whole: last write wins). `PATCH {"ops":[…]}` (1–100 item operations) changes single items of the shared lists inside the same atomic write, so a device that has not pulled cannot erase another device's or an agent's edit: `add`/`remove` an `item` of `pinnedChats` or `subjectOrder`, `front` (`items` first, the rest after) on `subjectOrder`, `add` a Space record / `remove` a Space id on `spaces`, `add`/`remove` a thread on `spaces/<id>/threads`, `set` on `spaces/<id>/name`. Operations are idempotent; a gone Space is a no-op; malformed operations are `400` and write nothing. All three answer the full preferences. Services older than PATCH answer `405`; clients then read, replay their operations, `PUT` and read back. `seed` fills absent `launcher` keys once per marker.
 
 ## Voice
 
