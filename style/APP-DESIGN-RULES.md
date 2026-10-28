@@ -50,7 +50,7 @@ An audit on 27 Oct 2026 covered 22 installed apps. Kit apps capped their content
 - Buttons: `.wz-button` (44 px tall), with `.secondary` for the second choice. At most one accent button is visible per screen.
 - Status has its own colours: `--wz-success` (Connected, done) and `--wz-warning` (Needs attention), set per skin in `tokens.json`, with `-light` versions for light schemes, plus `--wz-danger` for errors. Status never borrows the accent: the accent means "act here".
 - Section headings: `.wz-sec-h`. Status: `.wz-pill`. Numbers that change: `.wz-meter`. Nothing new is invented when a kit class exists.
-- Touch targets are at least 44 px. Text is at least 13 px.
+- Touch targets are at least 44 px. Text is at least 13 px. The one exception is short uppercase labels and counters (`.wz-sec-h`, `.wz-count`), which may go down to 11 px.
 
 ### 7. Shell surfaces follow the same idea
 These are the shell's job (wizard-ux) and proposed there, not in apps:
