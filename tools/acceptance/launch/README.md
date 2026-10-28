@@ -110,7 +110,13 @@ Implementation/reuse plan:
   no new production auth, chat, pairing or UI implementation.
 
 Keep the running daily stage and its retained VM **unchanged**. Stage a new pushed
-wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Use a new,
+wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Set
+`--oauth-source` to the exact directory containing `codex.py`, not its archive
+wrapper. Inspect archive member paths rather than assuming every archive has one
+leading directory. The runner rejects a missing helper before starting any VM;
+`first_chat.validate_oauth_source` performs the same metadata-only preflight without
+reading credentials, importing the helper, renewing OAuth or contacting a provider.
+Use a new,
 short acceptance root, outside the directory holding host secrets. An onboarding
 receipt is labelled `launch-onboarding-87-88` and can never satisfy the daily soak.
 The default daily invocation still does not require a credential or emulator.
@@ -172,7 +178,9 @@ additional containment layer, not a substitute for lease cleanup.
 
 Failures append `first_chat_failure` to the **private** run log: fixed snippet
 `install`/`chat`/`remove`, guest return code (null on timeout), and an allowlisted
-stderr exception class. Nested Docker failures use the same class-only projection.
+stderr exception class. Host catalog/access failures use fixed `catalog`/`access`
+stages, a null return code and the same class allowlist. Nested Docker failures use
+the same class-only projection.
 Raw stderr, argv, HTTP bodies, credential values, session IDs and response text are
 never copied into that diagnostic or the public receipt. An install failure and a
 subsequent cleanup failure each retain a separate diagnostic row.
@@ -208,7 +216,16 @@ visible in accessibility XML. It exercises Back at nested thread and shell root
 Unpaired root Back is also exercised for generic APKs, but deliberately not for
 owner-default artifacts, where it would navigate to the old live server.
 
-Only bounded pass/fail checks + APK identity enter the phone receipt. UI XML,
+Only bounded pass/fail checks + APK identity enter a successful phone receipt.
+The emulator uses the host's scoped MagicDNS resolver for the box's tailnet
+suffix (read from `scutil --dns`, or `dns_server` in the phone config), as a
+real phone running Tailscale would; otherwise it sees only the host's primary
+resolver and cannot resolve the box address.
+Failures retain completed checks and an allowlisted `failure_stage` (preflight,
+APK validation/install, lock/AVD/emulator, Connect, HTTPS, address entry/pairing,
+reply, Back, restart, crash or cleanup); a failed phone receipt fails the whole
+onboarding run. Exception text, command output, URLs and session data are never
+serialized. UI XML,
 transcripts and screenshots are never retained. Emulator disk and temporary XML
 are deleted, emulator stopped, and only the new HTTPS handler removed/read back
 in `finally`; existing Serve handlers must remain identical. **Address pairing is

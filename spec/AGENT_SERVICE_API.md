@@ -176,7 +176,10 @@ The launcher list: installed apps from the App Manager's `apps.json` (the shell 
   {"id":"notes","name":"Notes","url":"https://notes.example.com/","source":"launcher.json"}]}
 ```
 
-Installed apps additionally expose their safe `provides` list. Valid owner-installed
+Installed apps additionally expose their safe `provides` list, and their declared `type`
+(`view`, `service`, `agent` or `external`, from `wizard.md`) and `category` (`agent`,
+`interface`, `app` or `system`) when `apps.json` carries one of those exact values; any
+other value is omitted, and shells then fall back to their own sorting. Valid owner-installed
 Chats providers expose the versioned `chats_view` descriptor (module URL, SHA-256,
 bytes, pinned commit), and the response includes `slots.chats` and the Chats parking
 row. The built-in fallback is `wizard-chats`. See [SKINS_AND_VIEWS.md §3](SKINS_AND_VIEWS.md#3-swappable-views-chats-first)
