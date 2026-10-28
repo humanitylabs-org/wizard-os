@@ -49,7 +49,7 @@ An audit on 27 Oct 2026 covered 22 installed apps. Kit apps capped their content
 - Colours and type come from the kit variables only, never hex values or fonts in app CSS. Intentional app typography, such as a reader's serif, is allowed through the type roles.
 - Buttons: `.wz-button` (44 px tall), with `.secondary` for the second choice. At most one accent button is visible per screen.
 - Section headings: `.wz-sec-h`. Status: `.wz-pill`. Numbers that change: `.wz-meter`. Nothing new is invented when a kit class exists.
-- Touch targets are at least 44 px. Text is at least 13 px.
+- Touch targets are at least 44 px. Text is at least 13 px. The one exception is short uppercase labels and counters (`.wz-sec-h`, `.wz-count`), which may go down to 11 px.
 
 ### 7. Shell surfaces follow the same idea
 These are the shell's job (wizard-ux) and proposed there, not in apps:
