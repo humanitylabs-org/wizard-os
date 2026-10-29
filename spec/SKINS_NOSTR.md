@@ -41,7 +41,7 @@ Owner-only, same-origin, like `/my-skin`. Errors are `{ error: "<code>", detail?
 | `GET /skins/store` | `?refresh=1` optional, `?authors=<hex,…>` optional | `{ items: [StoreItem], featured: [a], fetched_at, relays: [{ url, ok }] }` |
 | `GET /skins/store/blob/<sha256>` | | the verified bytes (from the box cache), correct `Content-Type`, `Cache-Control: immutable` |
 | `POST /skins/store/add` | `{ a }` | `{ id }`: copies the verified bundle into a new folder, writes `forked_from`, makes it active |
-| `POST /skins/store/report` | `{ a, reason }` | `{ ok: true }` (NIP-56 kind 1984, signed by the box's upload key, sent to the AI Wizards relay) |
+| `POST /skins/store/report` | `{ a, reason }` (`reason`: one NIP-56 report type, else `400 bad_reason`) | `{ ok: true }` (public NIP-56 kind 1984, signed by the box's upload key, sent to the AI Wizards relay; see Curation) |
 | `POST /skins/<id>/pack` | `{ preview_webp_b64?, slug?, summary? }` | `{ unsigned: <event template without pubkey/id/sig>, slug }` after uploading every file to Blossom |
 | `POST /skins/<id>/publish` | `{ event }` (signed by the owner) | `{ event_id, a, relays: [{ url, ok, message }] }` after verifying signature, kind, tags and that every file hash is on a Blossom server; writes `published` to `skin.json` |
 
@@ -101,7 +101,7 @@ The **AI Wizards curator key** (pubkey `9f6deaf1a019f9393e3a044f873e508b1ac6cfa0
 - `d = wizard-skins-featured`: `a` tags of featured skins, in order.
 - `d = wizard-skins-blocked`: `a` tags (or `p` tags for a whole author) hidden in every client.
 
-The curator pubkey is pinned in the Agent Service config (`WIZARD_SKINS_CURATOR`, with a built-in default). Reports are kind `1984` events addressed to the listing (`a`, `p`, `["report", "other"]`); only the curator reads them.
+The curator pubkey is pinned in the Agent Service config (`WIZARD_SKINS_CURATOR`, with a built-in default). Reports are **public** NIP-56 kind `1984` events addressed to the listing (`a`, `p`, `["report", <reason>]`), published to the AI Wizards relay. Nostr has no private reports: anyone reading that relay can see them. So a report carries only a fixed NIP-56 reason (`nudity`, `malware`, `profanity`, `illegal`, `spam`, `impersonation`, `other`) and no free text, and it is signed by the box's upload key, never the owner's Wizard ID (#94), so it does not name the reporter. The curator reads the reports on that relay and decides what goes in the Blocked set.
 
 Store order: featured (in set order), then by `updated_at` descending. Each card shows name, author name and photo, npub head…tail, first published, last updated, and fork count (listings whose `fork` tag points at it).
 
@@ -110,7 +110,7 @@ Store order: featured (in set order), then by `updated_at` descending. Each card
 - **REUSE/EXTEND, not NEW:** `relay.aiwizards.com` and `blossom.aiwizards.com` are served by the existing Wizard Store relay service, extended for skins. It keeps the app catalog publisher-only and opens kinds 0, 5 (own events), 1984, 30004 (`d = wizard-skins-*`) and 30117 (`t = wizard-skin`) to any signer, with per-key caps.
 - Default relays: `wss://relay.aiwizards.com` (ours, the archive), `wss://nos.lol`, `wss://relay.damus.io`. Config: `WIZARD_SKINS_RELAYS`.
 - Blossom: `https://blossom.aiwizards.com` (ours). Accepts `text/css`, `image/webp`, `application/json` up to 1 MB per blob from any signer, 60 uploads per key per hour. BUD-01 GET/HEAD, BUD-02 PUT `/upload` with a kind 24242 auth event.
-- The box uploads with its own **upload key** (generated on first use, stored in Agent Service state, never shown). Integrity comes from the hashes in the owner-signed listing, not from the uploader.
+- The box uploads with its own **upload key** (generated on first use, stored in Agent Service state, never shown). It is neither the owner's Wizard ID nor the box key of #94, and it signs only Blossom auth (kind 24242) and reports. Integrity comes from the hashes in the owner-signed listing, not from the uploader.
 - Every blob fetched is hashed before it is cached or served. A mismatch drops the listing.
 
 ## Signing (Wizard ID)
@@ -125,7 +125,7 @@ The Look screen renders a fixed demo scene (home plus a short canned thread, no 
 
 ## Not in v1
 
-skin.js in Store skins; follows, groups or "who uses this"; creator-uploaded images or video; publishing from desktop/Mac; NIP-46/55/05; comments, reactions, zaps; release-history events. Reserved for later: an attestation event linking a Messenger key to a Wizard ID (#90).
+skin.js in Store skins; follows, groups or "who uses this"; creator-uploaded images or video; publishing from desktop/Mac; NIP-46/55/05; comments, reactions, zaps; release-history events. (No Messenger-key attestation is needed: #94 makes Messenger use the owner `npub` itself.)
 
 ## Tests
 

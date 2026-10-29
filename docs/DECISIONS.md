@@ -98,7 +98,7 @@ slots and offline-only scheduler/AI-login limitations:
 | 87 | **AI Wizards runs its own relay and Blossom server** as the archive, beside public relays: `wss://relay.aiwizards.com` and `https://blossom.aiwizards.com`, served by the existing Wizard Store relay service extended to carry skins rather than a second server. Curation is two NIP-51 sets signed by the AI Wizards curator key: Featured and Blocked. | Approved by James |
 | 88 | **Store skins are CSS only and always sit on Nebula.** `skin.js` stays local and device-approved. No new built-in skins land in `wizard-ux`; the other built-ins move to the Store as curator-published skins. | Approved by James |
 | 89 | **Previews are captured from a fixed demo scene** with the skin applied. Creator images and video come later. | Approved by James |
-| 90 | **Wizard ID is the one public identity.** The Messenger key is a transport key that gets linked to the Wizard ID by a Wizard-ID-signed attestation, never the reverse. No feature uses the Messenger pubkey as an identity. | Approved by James |
+| 90 | **Wizard ID is the one public identity.** The Messenger key is a transport key that gets linked to the Wizard ID by a Wizard-ID-signed attestation, never the reverse. No feature uses the Messenger pubkey as an identity. **Amended by #94 (24 Oct):** Messenger uses the owner `npub` itself, so no attestation is needed. | Approved by James; amended by #94 |
 
 ## 23 Oct 2026 — James + Miguel: "agent apps", not "Wizard apps" (launch-prep call)
 
