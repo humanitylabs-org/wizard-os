@@ -42,6 +42,10 @@
       "sha256": "dd3f01c7c9f02f19a5d9f342c7a33b11ada5e029c8c54f9d7d34f81eada2caa9"
     }
   },
+  "skin_layers": [
+    "web/skins/",
+    "web/tweaks/"
+  ],
   "exceptions": [
     {
       "path": "web/core/skins.css",
