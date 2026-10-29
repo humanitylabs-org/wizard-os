@@ -3,11 +3,11 @@
   "assets": {
     "ui.css": {
       "source": "style/ui.css",
-      "sha256": "5551214c889918e90f7939b695b9434d71407221505d3dce7dacd7b07ebe445f"
+      "sha256": "ba3ad8c73da43b0a2a25517168f9a021429e1087f5338d54fd8c8bc0425dc24d"
     },
     "wizard-ui.css": {
       "source": "style/ui.css",
-      "sha256": "5551214c889918e90f7939b695b9434d71407221505d3dce7dacd7b07ebe445f"
+      "sha256": "ba3ad8c73da43b0a2a25517168f9a021429e1087f5338d54fd8c8bc0425dc24d"
     },
     "tokens.css": {
       "source": "style/tokens.css",
