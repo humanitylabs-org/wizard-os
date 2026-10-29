@@ -164,3 +164,6 @@ html[data-color-scheme="light"] .wz-pill.warn { color: var(--wz-warning-light, v
 .wz-icon-button.ghost { background: none; }
 .wz-icon-button.caption { display: inline-flex; flex-direction: column; justify-content: center; gap: var(--wz-space-1); white-space: nowrap; font-size: var(--wz-text-sm); }
 .wz-icon-button.caption :is(span, small) { font-size: var(--wz-text-sm); white-space: nowrap; }
+
+/* Native hidden state must beat authored display rules on shared controls. */
+.wz-button[hidden], .wz-row[hidden], .wz-icon-button[hidden], .wz-input[hidden] { display: none !important; }

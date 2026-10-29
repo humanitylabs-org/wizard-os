@@ -1,6 +1,6 @@
 # Wizard app style audit
 
-Source snapshot: 29 Oct 2026. Scope: **45 organization repositories plus one local Mizel UI source snapshot, 1,263 source files**, default branches pinned in [style-audit.json](style-audit.json). This is lexical debt, **not a visual compliance certificate**. Product data, account state, content directories, tests, dependencies and generated builds were not read. Zero fetch errors; no truncated source trees.
+Source snapshot: 29 Oct 2026. Scope: **68 organization repositories (including platform/services/history mirrors) plus one local Mizel UI source snapshot, 1,688 source files**, default branches pinned in [style-audit.json](style-audit.json). This is lexical debt, **not a visual compliance certificate**. Product data, account state, content directories, tests, dependencies and generated builds were not read. Zero fetch errors; no truncated source trees.
 
 C = literal colour expressions, F = literal font-family declarations, P = px type declarations, B = non-kit `<button>` candidates. Counts exclude exact approved kit bytes and locked shell palette definitions; comments/tests are excluded. B is a review lead (dynamic templates can overcount), not a lint failure. Kit “stale” means not byte-identical to the canonical snapshot; no semantic version is advertised by these files. The OS guide/token additions change the current kit hash in this PR.
 
@@ -39,8 +39,8 @@ C = literal colour expressions, F = literal font-family declarations, P = px typ
 | wizard-app-index | 69 | 0 | 33 | 12 | No vendored kit found |
 | cinequeue | 154 | 1 | 54 | 22 | No vendored kit found |
 | wizard-calendar | 28 | 0 | 43 | 18 | No vendored kit found |
-| wizard-shopping | 236 | 31 | 141 | 42 | No vendored kit found |
-| wizard-files | 118 | 2 | 114 | 9 | No vendored kit found |
+| wizard-shopping | 235 | 31 | 141 | 42 | No vendored kit found |
+| wizard-files | 114 | 2 | 114 | 9 | No vendored kit found |
 | wizard-food-app | 70 | 0 | 28 | 11 | No vendored kit found |
 | wizard-notes | 0 | 3 | 33 | 13 | stale 4fb7e73b |
 | android-apps | 48 | 0 | 14 | 13 | No vendored kit found |
@@ -52,6 +52,29 @@ C = literal colour expressions, F = literal font-family declarations, P = px typ
 | wizard-local-model | 0 | 0 | 0 | 0 | No vendored kit found |
 | wizard-archive | 55 | 3 | 28 | 10 | No vendored kit found |
 | mizel-owner-local | 89 | 3 | 115 | 8 | No vendored kit found |
+| wizard-shopping-history | 235 | 31 | 141 | 42 | No vendored kit found |
+| wizard-agent-service-container-owner-live | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-scroll-diagnostics | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-link-owner-live | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-mobile-owner-live | 161 | 8 | 164 | 73 | No vendored kit found |
+| wizard-voice-service-history | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-signal | 92 | 0 | 61 | 32 | No vendored kit found |
+| wizard-topics-preview | 56 | 0 | 46 | 25 | No vendored kit found |
+| wizard-youtube-music | 11 | 0 | 11 | 1 | stale 4d055229 / stale dce078a3 |
+| wizard-photos | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-staging | 2 | 0 | 1 | 0 | No vendored kit found |
+| wizard-voice-service-owner-live | 79 | 7 | 48 | 6 | No vendored kit found |
+| wizard-dev-pipeline | 3 | 0 | 1 | 0 | No vendored kit found |
+| wizard-signin | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-projects | 38 | 0 | 15 | 3 | No vendored kit found |
+| wizard-stt | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-music-owner-live | 39 | 2 | 24 | 20 | No vendored kit found |
+| wizard-os-iso | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-alpha | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-agent-history | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-supervisor | 2 | 0 | 14 | 1 | stale 4fb7e73b |
+| wizard-windows | 0 | 0 | 0 | 0 | No vendored kit found |
+| wizard-mobile | 213 | 8 | 188 | 101 | No vendored kit found |
 
 ## Shell screens
 
@@ -68,9 +91,9 @@ C = literal colour expressions, F = literal font-family declarations, P = px typ
 
 - **wizard-ux**: 1969 colours, 6 fonts, 1039 px type, 456 button candidates.
 - **wisdom**: 271 colours, 7 fonts, 254 px type, 47 button candidates.
-- **wizard-shopping**: 236 colours, 31 fonts, 141 px type, 42 button candidates.
+- **wizard-shopping**: 235 colours, 31 fonts, 141 px type, 42 button candidates.
 - **wizard-app-manager**: 123 colours, 1 fonts, 66 px type, 142 button candidates.
-- **wizard-files**: 118 colours, 2 fonts, 114 px type, 9 button candidates.
+- **wizard-files**: 114 colours, 2 fonts, 114 px type, 9 button candidates.
 
 Wisdom, Shopping and Files are the three independent end-user apps selected for the first repair batch; WAM is handled by the template/builder gate and shell Setup/Settings by the shell PR. No live deployment is part of this work. The shell dynamically replaces hosted kit CSS, so a stale vendored copy can look fine today and still break standalone/offline builds.
 

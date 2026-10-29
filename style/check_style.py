@@ -73,6 +73,14 @@ def scan(root, policy, *, base=None, strict=False):
         text = re.sub(r'/\*[\s\S]*?\*/|<!--[\s\S]*?-->', lambda m: '\n' * m[0].count('\n'), text)
         for rule, pattern in RULES.items():
             for m in pattern.finditer(text):
+                if rule == 'literal-colour' and m[0].startswith('#'):
+                    before = text[max(0, m.start() - 160):m.start()]
+                    after = text[m.end():m.end() + 60]
+                    # Hex-like DOM IDs / fragment links are not colour values.
+                    if (re.search(r'''(?:querySelector(?:All)?|closest|matches|\$)\(\s*['"]$''', before)
+                            or re.search(r'''href\s*=\s*['"]$''', before)
+                            or re.match(r'\s*(?:\{|::?[\w-]|\[)', after)):
+                        continue
                 line = text.count('\n', 0, m.start()) + 1
                 findings.append(dict(path=rel, line=line, rule=rule, error=strict or line in changed.get(rel, set())))
     return findings

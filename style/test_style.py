@@ -59,4 +59,24 @@ class StyleCheck(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError): style.scan(self.root, {}, base='missing-base')
 
 
+    def test_hex_like_dom_ids_are_not_colours(self):
+        self.write('#feed { color:var(--wz-text) }')
+        (self.root / 'app.js').write_text("$('#feed'); document.querySelector('#bad');")
+        (self.root / 'index.html').write_text('<a href="#abc">Go</a>')
+        self.assertEqual(style.scan(self.root, {}, strict=True), [])
+        self.write('a{color:#feed}')
+        self.assertEqual(len(style.scan(self.root, {}, strict=True)), 1)
+
+    def test_shell_export_has_no_global_resets_or_alias_cycles(self):
+        import runpy
+        source = Path(__file__).parent
+        generated = runpy.run_path(str(source / 'generate_shell.py'))['outputs']()
+        controls = generated['controls.css']
+        self.assertNotIn(':root', controls)
+        self.assertNotRegex(controls, r'(?m)^button\s*\{')
+        self.assertIn('.wz-button[hidden]', controls)
+        self.assertIn('--wz-text: var(--ink)', generated['shell-tokens.css'])
+        self.assertNotIn('--ink:', generated['shell-tokens.css'])
+
+
 if __name__ == '__main__': unittest.main()

@@ -3,11 +3,11 @@
   "assets": {
     "ui.css": {
       "source": "style/ui.css",
-      "sha256": "840beebc08fe870fbf85d3e15220f9d84a6a7b4fbd1c2e9bbf35175f447a1f87"
+      "sha256": "0a7e47b30b5b97978b65bbcfa5f36407dcb7e09c7acddb3fed11bb28f48558e5"
     },
     "wizard-ui.css": {
       "source": "style/ui.css",
-      "sha256": "840beebc08fe870fbf85d3e15220f9d84a6a7b4fbd1c2e9bbf35175f447a1f87"
+      "sha256": "0a7e47b30b5b97978b65bbcfa5f36407dcb7e09c7acddb3fed11bb28f48558e5"
     },
     "tokens.css": {
       "source": "style/tokens.css",
@@ -35,11 +35,11 @@
     },
     "wizard-controls.css": {
       "source": "style/controls.css",
-      "sha256": "5feb0a887ffdba16797e34554df7f7a81c50f96a526c55165a6d99b193afb1cd"
+      "sha256": "062891df963228b68b8390b98dd67b860948cd8213b53b00cdde2c4466202865"
     },
     "controls.css": {
       "source": "style/controls.css",
-      "sha256": "5feb0a887ffdba16797e34554df7f7a81c50f96a526c55165a6d99b193afb1cd"
+      "sha256": "062891df963228b68b8390b98dd67b860948cd8213b53b00cdde2c4466202865"
     }
   },
   "exceptions": [

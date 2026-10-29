@@ -25,3 +25,4 @@
 .wz-pill.error { color: var(--wz-danger); }
 .wz-icon-button.ghost { background: none; }
 .wz-icon-button.caption { display: inline-flex; flex-direction: column; justify-content: center; gap: var(--wz-space-1); white-space: nowrap; font-size: var(--wz-text-sm); }
+.wz-button[hidden], .wz-row[hidden], .wz-icon-button[hidden], .wz-input[hidden] { display: none !important; }
