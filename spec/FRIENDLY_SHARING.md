@@ -1,10 +1,20 @@
-# Friendly sharing
+# My Changes
 
 **Status: proposal (Miguel, 29 Oct 2026). Needs James's decision.** Builds on tweaks and the Standard / Early access names ([wizard-ux #673](https://github.com/humanitylabs-org/wizard-ux/pull/673)), the release channels and fast track ([releases/README.md](../releases/README.md), DECISIONS #82), and owner app-update protection (#311).
 
 ![Desktop: tester card, change card with Undo / Keep / Share, My changes panel](img/friendly-sharing-desktop.png)
 
 ![Phone: try it, share, watch it spread](img/friendly-sharing-mobile.png)
+
+## My Changes, a system app
+
+**My Changes** is the system app that holds all of this. It replaces the "My Tweaks" naming from wizard-ux #673 (tweaks stay the mechanism underneath). It lists every change a person has kept, where each one sits (Mine, Testers or Everyone), and what needs attention, such as a change paused by an update. The chat card and the share sheet open from the agent's reply; My Changes is where the person goes back to them.
+
+Scope: front-end changes first (looks, layouts, parts of screens, the things tweaks can replace). Back-end changes keep the normal PR route until the front-end flow is proven.
+
+## One flow for the team and for everyone
+
+The team uses exactly the same flow as the public. The only difference is a **maintainer** permission, which today is Miguel, James and Jan. Maintainers also see the list of shared ideas, decide on changes in the areas that always need a maintainer (see point 6 below), and can move a change forward or back by hand. This is a normal open-source project flow with git hidden behind three buttons: a share is a pull request, Testers is Early access, Everyone is Standard, and maintainers are the people who can merge.
 
 ## Goal
 
@@ -53,6 +63,8 @@ People get a note when their change moves up ("Your change reached everyone"), p
 | Testers / Everyone channels, 72h soak, fix fast track | live (releases/README.md) |
 | Protection for owner-modified code during updates | spec, #311 |
 | Undo / Keep / Share buttons in chat | new |
+| My Changes system app | new (replaces the My Tweaks naming) |
+| Maintainer permission (Miguel, James, Jan) | new; today it's GitHub merge rights |
 | Agent packaging a share (cleaning out personal data, labelling it, adding a test) | new |
 | Grouping duplicate shares into ideas | new |
 | Gradual percentage rollout with automatic step-back | new; channels are all-or-nothing today |
