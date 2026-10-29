@@ -18,6 +18,7 @@ SKIP = {'.git', 'node_modules', '.venv', 'venv', '__pycache__', 'dist', 'build',
 RULES = {
     'literal-colour': re.compile(r'(?i)(?<![\w/#])#(?:[\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})\b|\b(?:rgba?|hsla?)\s*\('),
     'literal-font': re.compile(r'(?i)font-family\s*:\s*(?!\s*var\(--wz-)[^;}\n]+'),
+    'cyclic-token': re.compile(r'(?P<token>--wz-[\w-]+)\s*:[^;}\n]*var\(\s*(?P=token)\s*[,)]'),
     'px-type': re.compile(r'(?i)font-size\s*:\s*[^;}\n]*?\b\d*\.?\d+px|\bfont\s*:\s*[^;}\n]*?\b\d*\.?\d+px'),
 }
 KIT_NAMES = {'wizard-ui.css': 'ui.css', 'wizard-tokens.css': 'tokens.css', 'wizard-sheet.js': 'sheet.js'}

@@ -59,6 +59,12 @@ class StyleCheck(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError): style.scan(self.root, {}, base='missing-base')
 
 
+    def test_no_self_referential_skin_alias(self):
+        self.write('.st-root { --wz-text: var(--wz-text); }')
+        self.assertEqual(style.scan(self.root, {}, strict=True)[0]['rule'], 'cyclic-token')
+        self.write('.st-root { color: var(--wz-text); }')
+        self.assertEqual(style.scan(self.root, {}, strict=True), [])
+
     def test_hex_like_dom_ids_are_not_colours(self):
         self.write('#feed { color:var(--wz-text) }')
         (self.root / 'app.js').write_text("$('#feed'); document.querySelector('#bad');")
