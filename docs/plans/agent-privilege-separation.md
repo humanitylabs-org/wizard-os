@@ -84,13 +84,13 @@ Policy in the service:
   and a test proves a root host-network container posting the owner header is refused.
 
 **Full server access (developer mode only):** owner turns on developer mode (#97), then "Give the agent full server
-access", approved on the wam-served Approve page. Root helper writes `/etc/sudoers.d/91-wizard-agent-access`
+access", confirmed on the separate approval origin (spec/PRIVILEGE.md). Root helper writes `/etc/sudoers.d/91-wizard-agent-access`
 (`<agent> ALL=(root) NOPASSWD: ALL`, expiry in a comment) and a root timer deletes it at expiry (default 7 days,
 or "until I turn it off"). Sudo re-reads per call, so new calls stop at expiry; every use is in the sudo log; the helper
 checksums `/etc/sudoers.d` and the libexec helpers at grant start and Health warns on drift after. Health shows a red
 row while on, and logs developer-mode source changes made during a grant. It's root and the UI says so. Turning
-developer mode off deletes the grant. Migration grandfathers today's docker members into a 7-day grant shown on
-Health; it can only be extended once developer mode is on. Humans keep SSH as root/`wizard` regardless.
+developer mode off deletes the grant. Migration removes today's docker membership with no automatic grant (superseded after the
+privilege audit); a developer grants access explicitly inside developer mode. Humans keep SSH as root/`wizard` regardless.
 
 ## Slices (order: 0 → 1 → 2 → 3 → 4 → 5 → 6)
 
