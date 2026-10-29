@@ -3,11 +3,11 @@
   "assets": {
     "ui.css": {
       "source": "style/ui.css",
-      "sha256": "0a7e47b30b5b97978b65bbcfa5f36407dcb7e09c7acddb3fed11bb28f48558e5"
+      "sha256": "5551214c889918e90f7939b695b9434d71407221505d3dce7dacd7b07ebe445f"
     },
     "wizard-ui.css": {
       "source": "style/ui.css",
-      "sha256": "0a7e47b30b5b97978b65bbcfa5f36407dcb7e09c7acddb3fed11bb28f48558e5"
+      "sha256": "5551214c889918e90f7939b695b9434d71407221505d3dce7dacd7b07ebe445f"
     },
     "tokens.css": {
       "source": "style/tokens.css",
@@ -35,11 +35,11 @@
     },
     "wizard-controls.css": {
       "source": "style/controls.css",
-      "sha256": "ae80dedcfdbcd1cf8c97d182cc5bbbc19806f937153d4ae6c6c9c37f59afbca5"
+      "sha256": "dd3f01c7c9f02f19a5d9f342c7a33b11ada5e029c8c54f9d7d34f81eada2caa9"
     },
     "controls.css": {
       "source": "style/controls.css",
-      "sha256": "ae80dedcfdbcd1cf8c97d182cc5bbbc19806f937153d4ae6c6c9c37f59afbca5"
+      "sha256": "dd3f01c7c9f02f19a5d9f342c7a33b11ada5e029c8c54f9d7d34f81eada2caa9"
     }
   },
   "exceptions": [

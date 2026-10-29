@@ -111,8 +111,8 @@ html.wz-hosted #wiz-staging-tag { display: none !important; }
 .wz-card > :first-child { margin-top: 0; } .wz-card > :last-child { margin-bottom: 0; }
 .wz-chip { display: inline-flex; align-items: center; gap: var(--wz-space-2); padding: 4px 10px; border-radius: var(--r-pill); background: var(--fill); color: var(--ink-2); font-size: 13px; }
 .wz-bar { display: flex; align-items: center; gap: var(--wz-space-2); padding: 8px 10px; background: var(--wz-chrome); border-bottom: 1px solid var(--line); backdrop-filter: blur(16px); }
-.wz-button { min-height: 44px; padding: 8px 16px; border-radius: var(--r-tile); background: var(--accent); color: var(--on-accent); font-weight: 600; }
-.wz-button.secondary { background: var(--fill); color: var(--ink); border: 1px solid var(--line-2); }
+.wz-button { display: inline-flex; align-items: center; justify-content: center; border: 0; font: inherit; text-decoration: none; cursor: pointer; box-sizing: border-box; min-height: 44px; padding: 8px 16px; border-radius: var(--r-tile); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.wz-button.secondary, .wz-button.quiet { background: var(--fill); color: var(--ink); border: 1px solid var(--line-2); }
 .wz-button:disabled { opacity: .45; cursor: default; }
 /* ---------- layout helpers (rules 1, 2, 5) ---------- */
 .wz-grid { display: grid; gap: var(--wz-space-3); grid-template-columns: 1fr; }
