@@ -28,9 +28,16 @@ stay outside this app updater. Supported custom views and My skin remain separat
 layers and retain their existing merge/conflict behaviour.
 
 Source/build packages receive a recorded file inventory when copied from a pinned release.
-Before applying an update, verify the installed copy still matches that inventory. A changed,
-unreadable or older unrecorded source copy is held for owner review, including on a manual
-bulk run: the word Update is not permission to erase modifications. Recheck before mutation.
+Before applying an update, verify the installed copy still matches that inventory. For an older
+copy missing its inventory, fetch trusted upstream at the **exact installed full commit**, not
+the next prepared recipe, branch HEAD or a reused local cache. Only an exact file/directory/link
+comparison may establish the baseline; persist the trusted expected inventory, never bless
+unknown local bytes. Same-commit paths must not skip verification. An unavailable upstream or
+missing/unreadable evidence means **cannot confirm this app is unchanged**, not **you changed it**.
+Known differences remain held, including on a manual bulk run: Update is not permission to
+erase modifications. Recheck before mutation. Installer reruns report held apps separately from
+failed installs and do not mutate their prepared recipe/config. Reject raw update passthroughs
+that cannot enforce the same checks.
 Do not replace an existing source directory with different bytes. Cleanup may delete only
 source copies that still match their recorded inventory; keep modified or unrecorded copies.
 This is accidental-change protection, not a security attestation against a hostile owner.
@@ -48,10 +55,16 @@ own package or supported custom view, not edits inside a disposable container.
   app after the owner switches to Manual. Manual Update now still works without changing mode.
 - Invalid/foreign browser writes cannot change policy or trigger updates; failed readback is
   never presented as a successful saved setting.
-- Changed, added, deleted and symlink-modified source, missing inventories, local selections
-  and custom views are protected. Cleanup and same-commit preparation do not erase them.
+- Pristine legacy installs migrate only after exact installed-commit verification; changed,
+  added, deleted and symlink-modified legacy source never receives a baseline. Unavailable
+  upstream stays unverified, not owner-modified. Installer reruns and same-commit source
+  preparation verify too. Local selections, cleanup and custom views remain protected.
+- A pre-write status response cannot overwrite confirmed policy; Update apps now stays busy
+  until status refresh completes, and failed refresh cannot enable a duplicate start.
 - Phone and desktop show both scopes; two skins retain their appearance and state. Browser
-  acceptance runs on the configured worker, not the control-plane host.
+  acceptance boots the real shells on the configured worker, not the control-plane host.
+  James already ordered preserving Miguel's explicit skin overrides and My skin, including
+  transparency: base defaults only; do not reask or force opacity on those layers (#703/#658).
 
 Reuse:
 - settings: EXTEND WosUpdates through WosSettings.register.
