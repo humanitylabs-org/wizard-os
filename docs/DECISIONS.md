@@ -1,10 +1,12 @@
 # Decisions
 
-## Private-agent Incognito — implementation candidate
-
-Explicit Incognito creates a disposable RAM-only sibling using the private agent’s full bounded working-home seed in RAM, preserving tools, MCP and provider routes. Ordinary private chats stay durable. No conversation payload enters normal history, catalogs, queues, logs or browser recovery stores. Text-only v1 reuses shared run streaming; memory edits stay temporary, durable orchestration is disabled and external app changes require James’s explicit yes. Close/reload/lost leases discard the session. See [INCOGNITO](../spec/INCOGNITO.md). Implementation and publication are authorized by the current build brief; live activation remains separately gated on synthetic remote acceptance and owner review.
-
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
+
+## 27 Oct 2026 — Private-agent Incognito ([spec/INCOGNITO.md](../spec/INCOGNITO.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 105 | **Incognito private-agent chat.** Explicit Incognito creates a disposable RAM-only sibling using the private agent’s full bounded working-home seed in RAM, preserving tools, MCP and provider routes. Ordinary private chats stay durable. No conversation payload enters normal history, catalogs, queues, logs or browser recovery stores. Text-only v1 reuses shared run streaming; memory edits stay temporary, durable orchestration is disabled and external app changes require the owner’s explicit yes in the chat. Close/reload/lost leases discard the session. See [INCOGNITO](../spec/INCOGNITO.md). Implementation and publication are authorized by the current build brief; live activation remains separately gated on synthetic remote acceptance and owner review. | **Proposed** (implementation candidate). James approved the isolated preview for shipping (“Seems to work great. Please ship it.”); merge needs a non-author admin review and passing live acceptance. |
 
 ## 27 Oct 2026 — release source returns to main (James)
 
