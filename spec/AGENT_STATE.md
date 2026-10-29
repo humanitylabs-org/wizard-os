@@ -1,6 +1,6 @@
 # Agent state: what each agent learns, and who can read it
 
-**Status: proposed (James, 11 Oct 2026; DECISIONS #43–#49). #43 (one folder per agent) and #48 (agent adapter) approved 14 Oct; the MVP contract is [AGENTS.md](AGENTS.md).** Builds on the agent bridge (#40, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) in PR #12) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md) in PR #6).
+**Status: proposed (James, 11 Oct 2026; DECISIONS #43–#49; section 3 amended by #102, 18, 21 and 25 Oct). #43 (one folder per agent) and #48 (agent adapter) approved 14 Oct; the MVP contract is [AGENTS.md](AGENTS.md).** Builds on the agent bridge (#40, [AGENT_BRIDGE.md](AGENT_BRIDGE.md) in PR #12) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md) in PR #6).
 
 Hermes is the agent today. A box will often run more than one agent: a frontier Hermes for building, a lean private agent on a Tinfoil model, a Pi or Claude Code agent someone is trying out. Each agent learns as it works. It writes skills, keeps memories, and builds up session history.
 
@@ -30,7 +30,7 @@ Every installed agent gets one folder. Its id is the **instance**, not the harne
 ```
 
 - **Bind mount, not symlink.** The agent's container mounts `agents/<id>/home` read-write as its own home. A symlink pointing out of a container doesn't resolve inside it.
-- **Outside the user files root.** `media/` is mounted into every app (SYSTEM_APPS "one file root"), so agent state there would be readable by DeFleur, the browser or any other app. `~/.wizard-os/agents/` is mounted only into its own agent and into Agent Search (section 3).
+- **Outside the user files root.** `media/` is mounted into every app (SYSTEM_APPS "one file root"), so agent state there would be readable by DeFleur, the browser or any other app. `~/.wizard-os/agents/` is mounted only into its own agent and, read-only, into Agent History (section 3). The trimmer that shortens an agent's store runs with that agent's own access, not History's.
 - **Survives uninstall and moves with the box.** Uninstalling an agent keeps its folder ("user data outlives apps"). Backups and the one-button host move include `~/.wizard-os/agents/`.
 - **Harness layout stays native.** Hermes keeps `skills/`, `state.db` and its memory store where Hermes expects them, inside `home/`. `agent.json` tells Wizard where they are, so nothing in Hermes changes:
 
@@ -56,16 +56,45 @@ Every installed agent gets one folder. Its id is the **instance**, not the harne
 
 - **Each agent writes only its own skills.** Skills are written for one harness's tools (`skill_view`, `delegate_task`, `~/.hermes/...`). A skill shared by every agent would be wrong for most of them.
 - **Wizard system skills** stay in `~/.wizard-os/skills/` (#40): app skills from the App Manager plus pointer skills from the Agent Service. Every agent reads them, read-only (Hermes through `skills.external_dirs`). We call them **system skills**, not "shared", because Wizard writes them and no agent edits them.
-- **Other agents' skills are looked up, never injected.** No agent's skills list ever includes another agent's skills by default. Under section 4 permissions, an agent can use the Agent Service gateway for skills and memory. Session retrieval belongs to Agent History (#45/#77, PR #70):
+- **Other agents' skills are looked up, never injected.** No agent's skills list ever includes another agent's skills by default. Under section 4 permissions, an agent can use the Agent Service gateway for skills and memory. Session retrieval belongs to Agent History (#45/#102):
   - `skills_search(query, agents?)` returns names, descriptions and which agent and harness wrote each.
   - `skill_read(agent, name)` returns the skill. It starts with: "Written by *agent* for the *harness* harness. Tools and paths it names may not exist for you. Adapt it into your own skill before relying on it."
 - **Adapting is the agent's job.** If the skill is useful, the reading agent writes its own version with its own skill tooling and records `adapted_from: <agent>/<skill>` in the frontmatter. The original is never edited.
 
 When and how often agents should look up another agent's skills is left to usage. This spec only provides the ability.
 
-## 3. Agent History: sessions and history
+## 3. Agent History: every agent's permanent record and its session search
 
-**Agent History** (#45/#77, [PR #70](https://github.com/humanitylabs-org/wizard-os/pull/70)) owns session/history search and reading. Sessions arrive through it under the same `permissions.other_agents` level and source seals in section 4. This is separate from the Agent Service's bounded memory/skills/notes reads. Do not expose raw `state.db` files or add a second session reader here.
+**Agent History** (`wizard-agent-history`, slot `agent-history`, `system: true`) is a headless system app with two jobs. Renamed from Agent Search (James, 18 Oct, #102: "clear rather than clever"); "archive" already means a closed thread in Chats, so it is not used for this app.
+
+1. **Keep.** It holds a permanent copy of every agent's full history, so each agent's own store stays bounded.
+2. **Look up.** It owns session search and reading, for an agent's own history and, under section 4, other standard agents'. Memory, skills and notes are read through the Agent Service gateway (section 4); there is no second session reader and no raw `state.db` access.
+
+**The promise to the owner: your history is never lost, and your Wizard never fills itself up.** Without a rule, an agent's store grows without limit (on James's box, about 11 GB a month). Backups and restores slow down, search gets slower and cluttered with machine output, big-store maintenance gets riskier, and eventually the disk fills. The harness's own fix, a timed prune, deletes history. History is how a Wizard box avoids both outcomes.
+
+### 3.1 Keeping
+
+- **Copies each agent's sessions into its own store, daily, after the box backup.** Hourly is not needed until something reads History often; the backup already bounds the loss window. A small reader per harness reads the agent's store read-only and adds only what changed since the last pass. First readers: `hermes-state-db` (sessions), Hermes skills folder, `hermes-holographic` (facts), `pi-jsonl` (sessions), Pi skills folder.
+- **Keeps everything readable:** the owner's messages, replies, reasoning, tool calls and tool output. A year of an agent's work, including how it reasoned and which tools it used, is the record an owner would use to tune or train an agent on their own workflows. Provider-encrypted reasoning (opaque blobs only the provider can decrypt) is left out; it stays in the box backup.
+- **Monthly files per agent:** `~/.wizard-os/agent-history/<agent>/<YYYY-MM>.db`, each with its own search index. A month is **sealed** once it is past and fully copied; sealed months never change, so the box backup uploads each one once. A row the agent writes later with an old date, or a newer version of a sealed row, goes into the current month; the sealed copy stays as the earlier version. `storage_path` (owner setting) can put them on a second disk.
+- **Conversation export:** `~/.wizard-os/agent-history/<agent>/conversation.jsonl`, the owner's messages and the agent's final replies only, all time. It is small, and it is what moves to a new box, seeds an imported agent, or feeds training.
+- **What leaves the agent's store, and when.** One owner setting for every agent, `live_days`, default 30.
+  - **Machine sessions** (scheduled jobs, helper agents, recovery and maintenance runs) leave the agent's store once they are older than `live_days`. History first **releases** each session: it checks every row against its own copy and records that it keeps the session. The harness's own prune command then removes exactly those sessions, at a quiet moment in the maintenance window, and History's next copy must report no deletions. A helper session is released only when no owner thread still links to it.
+  - **The owner's conversations stay in the agent's store at every age** until Chats reads old threads from History (section 3.2). Then they follow the same rule, so the store stops growing for good.
+  - **Nothing leaves without a verified History copy.** The harness's built-in timed auto-prune stays off on a Wizard box, because it deletes.
+  - **No store rewrites.** History does not rebuild an agent's store to strip old tool output or reasoning from threads that are still visible. Measured on James's box, that saved about a quarter of the file once, needed the agent stopped every time, and changed how old replies display. The bulk is the harness's own compaction leftovers, which belong upstream.
+- **Disk forecast.** History reports the agent store's growth and the days of disk left, and alerts the owner when that forecast drops below four months.
+- **Private agents:** History keeps a private agent's record for that agent and its owner. It never serves it to another agent (#59), and never sends it off the box except inside the encrypted box backup.
+
+### 3.2 Looking up
+
+- **Search covers the conversation by default** (owner messages and agent replies). `deep: true` also searches reasoning, tool calls and tool output, for questions like "how did we fix this last month?".
+- **Search method:** the same ones Hermes uses today. Its session search is SQLite full-text search, and its fact memory is the holographic provider (both MIT). We vendor them so every agent gets Hermes-quality recall without running Hermes.
+- **MCP tools** (through the `wizard` gateway, #40): `sessions_search` (with `deep`, `after`, `before`) and `session_read`. Every result names the source agent and month. Memory, skills and notes use the gateway's `wizard_agents__*` tools (section 4).
+- **How an agent uses it.** An agent searches its own live store first, as it does today. A Wizard system skill tells it to call History for anything older than `live_days` or from another agent. **Own data is always allowed** without a grant (useful for harnesses with no session search of their own, such as Pi).
+- **The Wizard thread list reads from here too.** The Agent Service's thread list, archive and status checks move from reading Hermes' `state.db` directly to the agent adapter (#47) and Agent History, so a second agent's threads, and threads older than the live window, can appear in the same list.
+
+Why not give agents each other's database files: SQLite with a write-ahead log across containers risks corruption. The formats are each harness's private schema and change with updates. And a file grant is all-or-nothing and invisible. Why not each harness's own MCP: Hermes has one (`hermes mcp serve`), Pi has none, the shapes differ, and the private agent's own endpoint would be a second door to guard. Why not let each harness prune on its own clock: a harness prune deletes, and History would lose whatever it had not yet copied.
 
 ## 4. Sharing: the owner decides who reads what
 
@@ -82,8 +111,8 @@ When and how often agents should look up another agent's skills is left to usage
 
 - **Each agent keeps its own memory engine.** Memory is wired into the harness's turn loop (what gets recalled into the prompt, when facts are written), so we don't replace it. The gateway reads only the always-loaded files listed in section 4. Other memory engines are not exposed by these tools.
 - **One opinionated default.** The Wizard OS Hermes app ships with the holographic fact store turned on (`memory.provider: holographic`), the setup we run ourselves and install for clients. Owners can change it, but nobody has to choose among Hermes' eight memory backends to get started.
-- **Same engine at Wizard level.** Agent Search uses that same holographic method for facts, so a lean agent with no memory of its own still gets good recall through Agent Search.
-- **Later, optional:** a `wizard` memory provider plugin (stock Hermes plugin API) could point Hermes' memory at Agent Search instead of its own store. Only if usage shows one shared memory beats per-agent memory.
+- **Same engine at Wizard level.** Agent History uses that same holographic method for facts, so a lean agent with no memory of its own still gets good recall through Agent History.
+- **Later, optional:** a `wizard` memory provider plugin (stock Hermes plugin API) could point Hermes' memory at Agent History instead of its own store. Only if usage shows one shared memory beats per-agent memory.
 
 ## 6. Schedules: one Wizard scheduler
 
@@ -96,7 +125,7 @@ When and how often agents should look up another agent's skills is left to usage
 
 The Agent Service talks to each agent through one small call set: **run, events, steer, approve, stop, list threads, read thread, run status**.
 
-- **Hermes** implements it over its HTTP API (`/v1/runs`, `/api/sessions`). Today the Agent Service still reads Hermes' `state.db` directly for six things: the thread list, the archive, the "is a turn running" check, abandoned-run outcomes, active sessions and helper follow-through. Moving those onto the adapter is owned by the agent-bridge work (#40). Anything Hermes' API doesn't expose falls back to Agent Search.
+- **Hermes** implements it over its HTTP API (`/v1/runs`, `/api/sessions`). Today the Agent Service still reads Hermes' `state.db` directly for six things: the thread list, the archive, the "is a turn running" check, abandoned-run outcomes, active sessions and helper follow-through. Moving those onto the adapter is owned by the agent-bridge work (#40). Anything Hermes' API doesn't expose falls back to Agent History.
 - **Pi** would implement it over its RPC mode (JSON over stdin/stdout).
 - **Agent-specific runs** carry `agent: <id>`, so a thread and a schedule can each name the agent they use.
 
@@ -154,3 +183,4 @@ Stock Hermes backup covers its home, not its whole working environment. Begin wi
 3. B adapts one of A's skills into its own skills folder with `adapted_from`, and A's skill is unchanged.
 4. A schedule created in the Wizard UX runs on the agent it names and posts to its thread; `hermes cron list` on that box is empty.
 5. The Wizard thread list shows both agents' threads, with no direct `state.db` read left in the Agent Service.
+6. Agent History holds every Hermes session; machine sessions older than `live_days` are gone from the Hermes store with History's next copy reporting no deletions; every owner conversation still opens in Chats; a search for something said three months ago returns it through `sessions_search`; and restoring the box backup brings back both.

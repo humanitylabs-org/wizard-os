@@ -5,7 +5,7 @@ permissions:
 jobs:
   contracts:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, macOS, ARM64, wizard-os]
+    runs-on: [self-hosted, Linux, X64, forum, wizard-os]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
