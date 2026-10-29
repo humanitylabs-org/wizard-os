@@ -23,7 +23,7 @@
 <script defer src="appearance-client.js"></script>
 ```
 
-Hosted `html` and `body` are transparent; the shell supplies the same window glass as Chats. Standalone paints `--wz-base`. Bars use `--wz-chrome`, sheets `--wz-overlay`, cards/chips `--wz-surface`. The shell marks a frame transparent after acknowledgement; older hosts retain their own safety fill. A skin update changes variables without reloading the document, preserving input, scroll and playback.
+Hosted `html` and `body` are transparent; the shell supplies the same window glass as Chats. Standalone paints `--wz-base`. Bars use `--wz-chrome`, opaque text-bearing sheets use `--wz-panel`, cards/chips `--wz-surface`. The shell marks a frame transparent after acknowledgement; older hosts retain their own safety fill. A skin update changes variables without reloading the document, preserving input, scroll and playback.
 
 Type roles are opt-in: controls take `--wz-font-ui`; an app may use `--wz-font-reading`, `--wz-font-display` or `--wz-font-mono`. Reading/display defaults are existing system/Georgia fallbacks. Fonts and intentional app typography are never overwritten. Layout/type/motion roles stay CSS defaults: the approved v1 message carries colours only. Signal's existing square kit shape is selected by `data-skin`; unknown future skins retain the defaults and accept host colours. Generic light-scheme transport remains supported; no retired skin is reintroduced.
 

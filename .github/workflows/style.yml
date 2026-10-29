@@ -1,0 +1,23 @@
+name: Wizard style ratchet
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  style:
+    name: Wizard style (changed lines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Regression tests and generated token parity
+        run: |
+          python3 -m unittest discover -s style -p test_style.py -v
+          python3 style/generate_tokens.py --check
+      - name: Existing debt warns; new violations fail
+        env:
+          STYLE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: python3 style/check_style.py . --policy style/style-policy.json --base "$STYLE_BASE"
