@@ -66,7 +66,7 @@ def scan(root, policy, *, base=None, strict=False):
         if any(e['path'] == rel and e['sha256'] == digest for e in exceptions): continue
         approved = policy.get('assets', {}).get(p.name)
         if approved and digest == approved['sha256']: continue
-        if p.name in KIT_NAMES:
+        if approved or p.name in KIT_NAMES:
             findings.append(dict(path=rel, line=1, rule='kit-drift', error=strict or rel in changed)); continue
         # Strip comments while retaining line numbers; quoted CSS/inline HTML in JS/Python is intentionally scanned.
         text = data.decode('utf-8', errors='replace')
