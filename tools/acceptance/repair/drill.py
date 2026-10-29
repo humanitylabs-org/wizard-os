@@ -18,6 +18,7 @@ import datetime
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,14 @@ from pathlib import Path
 UBUNTU_URL = ("https://cloud-images.ubuntu.com/releases/noble/release-20260615/"
               "ubuntu-24.04-server-cloudimg-arm64.img")
 UBUNTU_SHA256 = "cafa1a965b591b7c4184b484ffd8e625981a79d48f9b4ae8a4adf7b4c5ade927"
+if (platform.system(), platform.machine()) == ('Linux', 'x86_64'):
+    VM_TYPE, VM_ARCH, IMAGE_ARCH = 'qemu', 'x86_64', 'amd64'
+    UBUNTU_URL = UBUNTU_URL.replace('arm64.img', 'amd64.img')
+    UBUNTU_SHA256 = '5fa5b05e5ec239858c4531485d6023b0896448c2df7c63b34f8dae6ea6051a44'
+elif (platform.system(), platform.machine()) == ('Darwin', 'arm64'):
+    VM_TYPE, VM_ARCH, IMAGE_ARCH = 'vz', 'aarch64', 'arm64'
+else:
+    raise RuntimeError('unsupported native acceptance host')
 OS_SH = "https://aiwizards.com/os.sh"
 OWNER = "wizard"
 
@@ -173,7 +182,7 @@ class Drill:
 
     # ---- the run --------------------------------------------------------------------------------------------
     def image(self):
-        img = self.cache / "ubuntu-24.04-arm64.img"
+        img = self.cache / f"ubuntu-24.04-{IMAGE_ARCH}.img"
         if self.dry:
             self.plan.append({"step": "ubuntu-image", "seed": str(self.seed) if self.seed else None,
                               "url": UBUNTU_URL, "sha256": UBUNTU_SHA256, "dest": str(img)})
@@ -194,10 +203,11 @@ class Drill:
         return img
 
     def vm_yaml(self, img):
-        return (f"vmType: vz\narch: aarch64\ncpus: 4\nmemory: 6GiB\ndisk: 40GiB\nimages:\n"
-                f"- location: {json.dumps(str(img))}\n  arch: aarch64\n  digest: sha256:{UBUNTU_SHA256}\n"
+        return (f"vmType: {VM_TYPE}\narch: {VM_ARCH}\ncpus: 4\nmemory: 6GiB\ndisk: 40GiB\nimages:\n"
+                f"- location: {json.dumps(str(img))}\n  arch: {VM_ARCH}\n  digest: sha256:{UBUNTU_SHA256}\n"
                 "mounts: []\ncontainerd:\n  system: false\n  user: false\n"
-                "portForwards:\n- guestPortRange: [1, 65535]\n  ignore: true\n")
+                "portForwards:\n- guestIP: 127.0.0.1\n  guestPortRange: [1, 65535]\n  ignore: true\n"
+                "- guestIP: 0.0.0.0\n  guestPortRange: [1, 65535]\n  ignore: true\n")
 
     def main(self):
         for d in (self.lima, self.cache, self.ev):
@@ -207,7 +217,8 @@ class Drill:
                           PATH="/opt/homebrew/bin:/usr/local/bin:" + os.environ.get("PATH", ""))
         created = False
         try:
-            self.run("host-preflight", ["bash", "-lc", "df -h /; df -h \"$LIMA_HOME\"; sysctl hw.memsize; "
+            self.run("host-preflight", ["bash", "-lc", "df -h /; df -h \"$LIMA_HOME\"; "
+                                        + ("free -m; " if VM_TYPE == "qemu" else "sysctl hw.memsize; ") +
                                         "limactl --version; limactl list"], 60)
             if (self.lima / self.vm).exists():
                 raise RuntimeError(f"{self.vm} already exists; inspect it, then delete it or pick a new RUN_ID")
@@ -299,9 +310,10 @@ echo "final: $st"; {RECIPE_A_STATUS}; grep -o '"version": *"[^"]*"' ~/.wizard-os
             self.receipt["state"] = "failed"
             self.receipt["error"] = traceback.format_exc()[-2000:]
         finally:
-            if created and not self.keep:
-                self.run("vm-stop", ["limactl", "stop", self.vm], 300, False)
-                self.run("vm-delete", ["limactl", "delete", "--force", self.vm], 300, False)
+            if created:
+                self.run("vm-stop", ["limactl", "stop", "--force", self.vm], 300, False)
+                if not self.keep:
+                    self.run("vm-delete", ["limactl", "delete", "--force", self.vm], 300, False)
             self.receipt["finished"] = now()
             if self.dry:
                 self.receipt["state"] = "dry-run"
