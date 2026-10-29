@@ -302,7 +302,7 @@ limited to 128 KiB. Cross-site browser requests are rejected.
 | `PATCH /wizard/v1/schedules/{id}` | Edit, `200 job`; `enabled:false/true` pauses/resumes |
 | `DELETE /wizard/v1/schedules/{id}` | `200 {"deleted":true}` |
 | `POST /wizard/v1/schedules/{id}/run` | `202 occurrence`, durable request receipt, not completion proof |
-| `POST /wizard/v1/schedules/import-hermes` | `{ "dryRun": true/false }` → `200 {"dryRun":...,"results":[...]}` |
+| `POST /wizard/v1/schedules/import-hermes` | `{ "dryRun": true/false, "threads": {"source-job-id":"thread-id"} }` (both optional) → `200 {"dryRun":...,"results":[...]}` |
 
 Create/edit fields: `name`, `when`, `timezone`, `agent`, optional `model`,
 `prompt` and/or `skill`, optional `thread`, `enabled`. `when` has exactly one of
@@ -384,13 +384,57 @@ Hermes transcript or marking the whole thread seen. Scheduled text streaming
 waits for terminal completion so a trailing sentinel cannot flash on screen;
 interactive chat streaming is unchanged.
 
-Import reads `<HERMES_HOME>/cron/jobs.json` **read-only** and always creates
-**paused** copies of supported cron/interval/once, name, prompt/skills and model
-fields. `dryRun` defaults true and changes neither store. Source job IDs are
-remembered durably, so repeat import returns `already imported` even after
-restart/deleting a copy. Script/no-agent rows return
-`not imported: script job`; unsupported rows are reported individually.
-Import never disables Hermes cron or silently activates migrated copies.
+Import reads `<HERMES_HOME>/cron/jobs.json` and optional `config.yaml`
+**read-only** and always creates **paused** (`enabled:false`) copies of supported
+cron/interval/once, name, prompt/skills and model fields. The first skill maps to
+`skill`; remaining skills become “Also load and follow…” prompt lines. All source
+rows are considered, including disabled/completed ones. `dryRun` defaults true
+and changes neither store. Imported timezone is the row's `timezone`, otherwise
+the top-level Hermes config `timezone`, otherwise `UTC` — not the owner clock.
+Missing config is allowed; unreadable/malformed config or invalid configured
+timezone is a `400`, not a silent clock substitution.
+
+Optional `threads` maps Hermes job IDs to existing Wizard thread IDs. Both keys
+and values use the existing identifier validator (`[A-Za-z0-9_.:-]`, 1–200
+characters); a non-object, null, array or invalid entry is `400` before writes.
+Without a mapping, normal first-occurrence thread creation is unchanged. Source
+job IDs are remembered durably, so repeat import returns `already imported`
+even after restart/deleting a copy; it never rewrites or retargets that copy.
+
+Every result includes `status`, `timezone`, `nextRun`, `thread`, `promptLength`.
+`nextRun` is the candidate UTC ISO cursor **if enabled**, even though the import
+is paused (unlike ordinary schedule GET's paused `nextRun:null`). `promptLength`
+is the final stored prompt's JavaScript string length. Rejected rows have null
+`nextRun`/`promptLength`, and null other unavailable fields. Existing imports
+show saved copy fields, all null when the copy has been deleted. Supported rows
+also retain the existing `schedule` preview; written copies and already-imported
+rows retain `scheduleId`.
+
+Agent jobs with a `script` prefix the prompt with instructions to run its exact,
+shell-quoted absolute command under `<HERMES_HOME>/scripts/` first in the terminal
+and use full stdout as context. Shell extensions `.sh`/`.bash` use `bash`; other
+extensions use the row's absolute Python `interpreter`, otherwise `python3`;
+existing interpreter symlink targets must also have a Python executable name.
+An existing absolute row workdir is also established for the rest of the agent
+turn by instructions to resolve relative paths there, explicitly cd in subsequent
+commands, and load applicable project AGENTS.md instructions (not a persistent
+runtime cwd change). The command uses that workdir, otherwise the script parent,
+and requests `cron.script_timeout_seconds` (default 3600). Script errors should
+be reported; empty stdout or a final JSON `{"wakeAgent":false}` should be silent.
+This is an agent instruction, not a pre-agent host executor: the execution
+runtime/dependencies, output limits, env/redaction and hard timeout/cancellation
+are not guaranteed to match Hermes; even a silent gate starts an agent turn.
+The file-based timezone rule does not read Hermes process env, managed overlays
+or server-local timezone. Hermes repeat counts and runtime context/notepads are
+not migrated.
+
+Every imported prompt ends with a delivery override: this Wizard chat posts the
+final reply; do not publish the same report through another chat-posting
+script/tool; `[SILENT]` only when there is genuinely nothing to report. Pure
+`no_agent` rows return
+`not imported: script-only system job (no agent turn) — move to a host timer or Supervisor health check`;
+unsupported/malformed rows are reported individually. Import executes no scripts,
+never writes its source, disables Hermes cron or activates migrated copies.
 
 `WIZARD_SCHEDULER=1` is required to start the loop; off by default. State is
 configurable with `WIZARD_SCHEDULER_STATE_PATH`, normally alongside the service
