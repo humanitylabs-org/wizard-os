@@ -40,6 +40,16 @@ A grant is one direction: **consumer app → provider**. The consumer may open c
 - An app never needs a grant to itself. Uninstalling an app removes its grants as consumer and as provider; reinstalling proposes them again unless they are in `denied`.
 - **Grants carry no agent authority.** A grant lets app A call app B's own API. It never lets A act as an agent, reach the gateway, read agent data, or read a private agent (#59). An app bound to a private agent (#60) delivers through the Agent Service endpoint, not through a grant to the agent.
 
+## Connection policy (as built)
+
+The App Manager keeps the owner's connection decisions in the same grants file:
+
+- **Mode.** `declared` (the default): apps reach each other only through grants. `open` (owner's choice): every app reaches every app except a pair the owner disconnected (either direction, because networks are two-way) and unapproved connections to sensitive apps. Open mode marks those reachability-only pairs as `approved: open` grants, which carry no key and link nothing in declared mode.
+- **Declared connections are approved quietly.** A `uses:`/`requires` grant is approved at install, or when an update adds it (with a notice to the owner). When an update drops the declaration, the automatic grant goes too.
+- **Runtime requests.** Every Wizard app service also gets its own read-write `${APP_DATA_DIR}/wizard-requests:/wizard-requests` and `WIZARD_CONNECTION_REQUESTS=/wizard-requests/connections.json`. An app asks for a new connection by writing a list of app IDs or slots there (`["wizard-connectors"]` or `{"connections":[{"to":"slot:transcription"}]}`; max 16 KiB, 32 entries, read without following links). The folder is the app's own, so the requester is the app. A request is approved like a declaration (`reason: request`).
+- **Sensitive apps.** A connection to an app the owner marked `sensitive` (and, in open mode, a sensitive app's new connection outwards) is never approved automatically: it waits in `pending` and the owner approves or denies it in App Manager → Connections.
+- **Disconnect is sticky.** The owner's Disconnect or Deny writes a `denied` row, by the app it reaches; no update, slot alias or runtime request adds it back. Only the owner (the authenticated App Manager API or `wam`) changes `mode`, `sensitive`, `pending` and `denied`.
+
 ## Share grants
 
 A `share` grant lets a consumer mount a folder a provider exports ([WIZARD_MD.md](WIZARD_MD.md#shared-folders)): `{"kind": "share", "from": "hermes-agent", "to": "wizard-claude", "share": "claude-login", "reason": "mounts", "approved": "install", "created_at": …}`. It is proposed at install for each `mounts:` entry whose provider is installed (and again when the provider is installed later), shown on the install sheet as "Hermes Agent will be able to use: Claude sign-in", and revocable like any grant. The App Manager adds the bind mount when it compiles the consumer and restarts the consumer when a share grant is added or revoked. A share grant carries no network access and no key; it is only the mount.
@@ -105,11 +115,12 @@ would let two consumers of the same provider reach each other.
 
 The network says "this container may connect"; the key says "this caller is that app". The key works on stock Runtipi too.
 
-- On each grant the App Manager mints a random 32-byte key and writes one file per app, `<app-data>/<id>/wizard/grants.json`, mounted read-only into the app; `WIZARD_GRANTS_FILE` names the path inside the container:
+- On each grant the App Manager mints a random 32-byte key and writes one file per app, `<app-data>/<id>/wizard/grants.json`. Every service of the app mounts the directory `${APP_DATA_DIR}/wizard:/wizard:ro` (a directory, so an atomic replace is visible without a restart); `WIZARD_GRANTS_FILE` names the path inside the container:
   `{"outgoing": {"slot:connection-router": "<key>"}, "incoming": [{"from": "wisdom", "sha256": "<hex>"}], "provider_endpoints": {"wizard-claude": "http://wizard-claude:8080"}, "enforce": true}`
   - `outgoing`: keys keyed by the grant's `to` (app id or `slot:<name>`).
   - `incoming`: SHA-256 of each key a caller may present, and who it belongs to. The provider never holds callers' keys.
-  - `provider_endpoints` (optional): where each granted provider answers, so a consumer never guesses addresses.
+  - `provider_endpoints` (optional): where each granted provider answers, so a consumer never guesses addresses. Derivation and `api.endpoint`: [WIZARD_MD.md](WIZARD_MD.md#app-to-app-endpoints).
+  - Adopting an existing hand-written file keeps its keys, extra fields and `enforce`. If an old `incoming` caller name differs from the canonical app ID, both rows are kept with the same hash, so old and updated providers accept the unchanged key; revocation removes both.
 - The consumer sends `X-Wizard-Grant: <key>` on every call to the provider (MCP and plain HTTP). `Authorization` is left alone, because some apps already use it.
 - The provider hashes the header, looks it up in `incoming`, and takes the caller's identity from the match, never from the request. It re-reads the file when it changes, so a revoke takes effect without a restart. With `enforce: false` it logs unknown callers and serves them; with `enforce: true` it answers 403. A configured file that is missing or malformed fails closed.
 - The shared MCP front (`mcp/front.py`) does this check for every app built on it. Apps with their own server do the same check to be listed as enforce-ready. The Connection Router already does ([wizard-connection-router](https://github.com/humanitylabs-org/wizard-connection-router) `server.py`).

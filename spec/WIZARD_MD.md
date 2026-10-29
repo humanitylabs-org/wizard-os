@@ -112,6 +112,21 @@ app names belong in the shell's alias table.
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
+## App-to-app endpoints
+
+`uses:` and `requires.models`/`requires.services` are connection proposals, never addresses. Grants, keys, connection modes and owner decisions are in [PERMISSIONS.md](PERMISSIONS.md). A consumer reads where a granted provider answers from `provider_endpoints[<app-id or slot:name>]` in its own `WIZARD_GRANTS_FILE`; it never guesses service names or scrapes owner-facing `apps.json` URLs. Slot grants keep the `slot:` key, not the selected provider's app ID. With no advertised endpoint the consumer reports the provider unavailable rather than inventing a fallback.
+
+The App Manager derives the endpoint from the provider's sole `x-runtipi.is_main` compose service and its `x-runtipi.internal_port`: the first network alias if present, otherwise the service name. Give shared ingress services a unique alias (`wizard-connectors-calendar`), not a generic `ingress`. If the main service is also attached to Runtipi's main network under another logical name, Compose keeps only the injected `tipi_main_network` attachment and can drop the recipe's aliases; the App Manager then advertises the unique container name (`<app>_<store>-<service>-1`, or an explicit `container_name`). With no single main service, a `network_mode` main service, or an invalid port, nothing is derived. A provider that needs another address declares it:
+
+```yaml
+api:
+  port: 8799
+  path: /api
+  endpoint: http://wizard-connectors-calendar:8799
+```
+
+`api.endpoint` is the advertised app-to-app base URL, not an owner-facing URL: absolute `http`/`https`, no user info, query, fragment, whitespace or `$` interpolation; a fixed path prefix is allowed and a trailing `/` is dropped. An invalid value fails the grants reconcile. An endpoint the owner wrote by hand into a consumer's grants file (for example a host-network Router) is kept.
+
 ## Packaging: source, build or image
 
 An app says how its containers come to exist with `runtime.package`. Nobody should have to build images for two kinds of CPU to publish a small app, and an owner should be able to read what their box runs. Source is the canonical artifact; a prebuilt image is a cache.
