@@ -25,7 +25,6 @@ A screen alone never makes an app.
 
 ```
 media/Pages/
-  .git/                     one repo for every page (history, diff, restore)
   <slug>/
     page.json               title, kind, source thread, project, status
     index.html              a built page   ─┐ at least one
@@ -53,6 +52,7 @@ media/Pages/
 - `status`: `draft | ready | archived`. Archived pages drop out of the list but stay on disk and in git.
 - `data` is only there for pages whose data changes. A page with changing data is still a page: same folder, same serving. The only difference is that a scheduled job rewrites its `data.json`.
 - Big media (video, DMG, APK) stays in Files and is linked from the page, so the git history stays small.
+- **History lives with the Agent Service, not in the folder.** One git repository holds every page's history (diff, restore), with `media/Pages/` as its work tree and the repository itself in the Agent Service's state (`<state>/pages-history.git`). The agent can write anywhere in `media/Pages/`, and git runs hooks, filters and commands named in its own config, so a `.git` the agent could edit would let a page plant code that the Agent Service then runs. Dot files in `media/Pages/` are ignored and never served.
 
 The agent sees this as `/files/Pages/` (the one user-files convention, [SYSTEM_APPS.md](../docs/SYSTEM_APPS.md#files)). On a Mac it's a real Mac folder and survives uninstalling Wizard.
 
