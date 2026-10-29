@@ -2,7 +2,9 @@
 
 **Status: proposal (Miguel, 29 Oct 2026). Needs James's decision.** Builds on tweaks and the Standard / Early access names ([wizard-ux #673](https://github.com/humanitylabs-org/wizard-ux/pull/673)), the release channels and fast track ([releases/README.md](../releases/README.md), DECISIONS #82), and owner app-update protection (#311).
 
-![Try it, check what's shared, a tester sees it, watch it spread, hear back](img/friendly-sharing.png)
+![Desktop: tester card, change card with Undo / Keep / Share, My changes panel](img/friendly-sharing-desktop.png)
+
+![Phone: try it, share, watch it spread](img/friendly-sharing-mobile.png)
 
 ## Goal
 
