@@ -45,6 +45,7 @@ runtime:                    # how the App Manager installs it (Runtipi today)
   kind: runtipi
   config: runtipi/config.json
   compose: runtipi/docker-compose.yml
+  package: source           # source | build | image (see "Packaging"); recommended
 
 mcp:                        # required for agent, service, external; optional for view
   path: /mcp
@@ -72,15 +73,56 @@ agent_binding:              # optional; the app sends work (recaps, reports) to 
   required: true            # agent the owner picks; default = the main agent
   purpose: Where your recaps go   # (spec/AGENTS.md section 7)
 uses: [transcriber, browser, files]   # other app ids or slots it calls
+shares:                     # optional: folders in this app's app-data that other
+  - id: claude-login        # apps may mount once the owner grants it
+    path: claude            # relative to ${APP_DATA_DIR}/data
+mounts:                     # optional: another app's share this app needs
+  - app: wizard-claude
+    share: claude-login
+    path: /claude           # where it appears inside this app's main service
 needs: []                   # device capabilities: mic, system-audio, camera,
-                            # notifications, files, credentials:<provider>
+                            # notifications, files, credentials:<provider>,
+                            # home-network (only works on a home internet
+                            # connection; the Store says so on the app page)
 health: /healthz
 ---
 ```
 
+## State storage
+
+Everything an app must keep lives under `${APP_DATA_DIR}`, so the App Manager's backup and a box move carry it. Docker named volumes are not backed up. The App Manager therefore rewrites each top-level named volume in an app's compose to a bind mount at `${APP_DATA_DIR}/volumes/<name>`; on the first start after the rewrite it copies the old volume's contents there once (ownership and modes kept) and leaves the old volume in place for the owner to delete. A volume with a fixed `name:` is refused by the checker (rule 15); apps that need to give another app a folder use `shares`.
+
+## Shared folders
+
+A share is the one way two apps see the same files. The provider lists it under `shares` (a folder relative to its `${APP_DATA_DIR}/data`); the consumer lists it under `mounts`. Installing the consumer proposes a `share` grant on the install sheet ([PERMISSIONS.md](PERMISSIONS.md#share-grants)). While the grant exists the App Manager bind-mounts the folder into the consumer's main service at `path`; revoking it removes the mount on the next restart. The files stay in the provider's app-data, so the provider's backup holds them and uninstalling the consumer never deletes them. Use a share only when an official client must run on both sides (Claude's login); everything else goes through the provider's API.
+
+## Spoken names
+
+Optional `voice_names: ["example name", "another name"]` declares **spoken names that open this app**.
+It is a list of at most 8 nonblank strings, each at most 40 Unicode characters, without control characters.
+Omitting it (or using an empty list) adds no alternative names; the app's display name still works.
+Names are case-insensitive and spacing-insensitive in the shell. They are launch names, not voice-input
+commands or an agent/model selection. Keep them short and app-specific, not an owner's topics or agents.
+The App Manager validates and copies the list unchanged to `apps.json`; the Agent Service carries it
+through to the shell. Shell-owned navigation words take precedence, then exact display names, then
+these declared alternatives (first app in registry order for duplicate alternatives). No installable
+app names belong in the shell's alias table.
+
 ## Receives voice input
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
+
+## Packaging: source, build or image
+
+An app says how its containers come to exist with `runtime.package`. Nobody should have to build images for two kinds of CPU to publish a small app, and an owner should be able to read what their box runs. Source is the canonical artifact; a prebuilt image is a cache.
+
+1. **`source` (the default for new apps).** No custom image. Every service uses an official, digest-pinned, multi-arch image (`python:3.12-alpine@sha256:…`) and runs the app's own code, which the App Manager mounts read-only from the pinned commit at `${APP_SOURCE_DIR}` (the whole repo, without `.git`). Mount a subfolder with `${APP_SOURCE_DIR}/app:/app:ro`. Dependencies are vendored in the repo or there are none. Works on Intel and Apple Silicon with nothing to build.
+2. **`build`.** The repo has a Dockerfile and the box builds it from the pinned commit. `build.context` is a path relative to the repo root and `dockerfile` is relative to the context, as in Compose; the App Manager points them at its pinned copy and names the result `wizard-local/<app>-<service>:<commit12>`. Every `FROM` is digest-pinned, every `pip install` uses `--require-hashes` (or `-r` a file whose lines carry `--hash=`), and nothing compiles or bundles: no `npm run build`, `cargo`, `go build`, `make` or `gcc`. Distro packages (`apk add`, `apt-get install`) from the pinned base are allowed.
+3. **`image`.** A prebuilt multi-arch image (linux/amd64 + linux/arm64), required for anything heavy or compiled (ffmpeg builds, speech models, Rust, JS bundles). Publish it with the shared workflow (`humanitylabs-org/wizard-app-index/.github/workflows/app-image.yml`), which builds both architectures from the commit and tags `sha-<commit>`. The compose names it by digest.
+
+For every package type, every `image:` in the compose (after `${VAR:-default}` resolves to its default) is pinned by digest, and no image uses `latest` or a bare version tag. On install the App Manager uses the published image when the type is `image`, builds locally when it is `build`, and mounts the source when it is `source` or `build`.
+
+Apps without `runtime.package` still install as before. New apps declare it; the checker applies the packaging rules whenever it is present.
 
 ## Rules the checker enforces
 
@@ -90,7 +132,8 @@ Optional `receives_voice_input: true` opts a declared app view into shell-delive
 4. `runtime.config` and `runtime.compose` exist in the repo.
 5. `mcp` present for agent, service and external; `skill` present for every non-view; the skill file exists and has `name` + `description` front matter.
 6. `view` present for type view.
-7. Every `needs` entry is from the known capability list.
+7. Every `needs` entry is a known device permission (including `home-network`), `credentials:<provider>`, a non-null default app ID, or an explicit `provides` capability from the source defaults. The spec/index checkers carry an offline snapshot of `wizard-app-manager/wam/defaults.json` (app IDs and explicit `provides` only). Slot aliases, null placeholders and a candidate's own `provides` do not extend that vocabulary. This is manifest validation, not proof a provider is installed or permission to install it.
+8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
@@ -98,6 +141,8 @@ Optional `receives_voice_input: true` opts a declared app view into shell-delive
 11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
 12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
 13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
+14. Packaging (when `runtime.package` is present): it is `source`, `build` or `image`; every compose image is digest-pinned; `source` has no `build:` and mounts `${APP_SOURCE_DIR}` read-only; `build` has a `build:` whose context stays inside the repo and a Dockerfile with digest-pinned `FROM`s, hash-locked `pip install`s and no compile or bundle steps; `image` has no `build:`.
+15. Storage: no top-level volume sets `name:`; every `shares[].path` is relative and stays inside the app-data folder; every `mounts[]` names an app id, a share id and an absolute container path.
 
 ## Skills: shipped skill + pointer skill
 

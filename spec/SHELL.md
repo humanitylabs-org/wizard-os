@@ -11,7 +11,7 @@ It owns what every screen relies on:
 - the orb, voice and the side-button/hotkey hooks
 - Back (Back never exits; see `wizard-ux`)
 - notifications and the Ready/Working attention model
-- Chats (the one built-in view)
+- Chats (the one built-in view today; moving to a swappable `chats` slot, [SKINS_AND_VIEWS.md](SKINS_AND_VIEWS.md))
 - the [native bridge](NATIVE_BRIDGE.md) to Android and Mac
 - hosting other apps' views and the agent's [pages](PAGES.md)
 
@@ -33,7 +33,7 @@ Everything else is a **view**: a normal Wizard app with a screen (`view:` in `wi
 | 1. Settings | name, agent name, timezone, voice vocabulary, router | `~/.wizard-os/settings.json` | live |
 | 2. Layout | which apps sit on the dock and home screen, in what order, plus own links | `~/.wizard-os/launcher.json` | live |
 | 3. Theme / skin | colours, window material, type roles, spacing, radius, motion, wallpaper, orb; every app re-dresses through [Appearance v1](APPEARANCE.md) | `~/.wizard-os/theme.json` over the shared [style tokens](../style/) | preview built; persistence to build |
-| 4. Overlay | small user CSS/JS and per-view overrides, loaded last by the shell | `~/.wizard-os/shell/overlay/` (user data volume) | to build |
+| 4. Overlay (My skin) | the owner's own CSS, then `skin.js` on the skin hook API, loaded last ([SKINS_AND_VIEWS.md](SKINS_AND_VIEWS.md) §2) | `Skins/My skin/` in Files | CSS live; `skin.js` to build |
 | 5. Fork | the shell's own behaviour | a new repo that `provides: [shell]` | always possible, last resort |
 
 Rules:

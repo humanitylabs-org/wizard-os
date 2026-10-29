@@ -1,0 +1,39 @@
+{
+  "object": "hermes.run",
+  "run_id": "wizardq_e59f85001d3f4e808b6cc36d8962c821",
+  "status": "completed",
+  "updated_at": 1792631247.333148,
+  "created_at": 1792631247.2224405,
+  "session_id": "wizard_1792631247200_51d32b0fa49e",
+  "model": "hs-fake",
+  "last_event": "run.completed",
+  "output": "HELPER-DISPATCHED",
+  "usage": {
+    "input_tokens": 32155,
+    "output_tokens": 40,
+    "total_tokens": 32195,
+    "runtime": {
+      "provider": "custom",
+      "model": "hs-fake",
+      "route_source": "raw_request",
+      "requested": {
+        "provider": "custom",
+        "model": "hs-fake"
+      },
+      "model_lock": "confirmed"
+    }
+  },
+  "completed": true,
+  "partial": false,
+  "interrupted": false,
+  "runtime": {
+    "provider": "custom",
+    "model": "hs-fake",
+    "route_source": "raw_request",
+    "requested": {
+      "provider": "custom",
+      "model": "hs-fake"
+    },
+    "model_lock": "confirmed"
+  }
+}

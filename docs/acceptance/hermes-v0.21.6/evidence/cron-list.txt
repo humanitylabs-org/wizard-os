@@ -1,0 +1,15 @@
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Scheduled Jobs (profile: default)               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  766aef336bde [active]
+    Name:      hs-cron
+    Schedule:  every 1m
+    Repeat:    ∞
+    Next run:  2026-10-22T01:11:27.749706+00:00
+    Deliver:   local
+    Last run:  2026-10-22T01:10:27.749706+00:00  ok
+    Dispatch:  on time (scheduled 2026-10-22T01:09:30.356430+00:00)
+    Execution: completed  cd617d3c97634d06878e0a8ea835fe89
+

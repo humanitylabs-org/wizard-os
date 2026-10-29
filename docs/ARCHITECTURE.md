@@ -40,7 +40,7 @@ Wizard UX is the **shell**: a system app filling the `shell` slot, always exactl
 - It also keeps one short **pointer skill** per job type, for example "short-form video → DeFleur Video". The app's full skill stays with the app.
 - It owns the versioned `/wizard/...` API.
 
-**Agent.** Hermes today. Any harness that speaks MCP can sit here later. It gets its abilities from apps and its standing instructions from the Agent Service. Its skills, sessions and memory live in its own folder under `~/.wizard-os/agents/<id>/`; other agents reach them only through Agent Search under owner grants ([AGENT_STATE.md](../spec/AGENT_STATE.md)).
+**Agent.** Hermes today. Any harness that speaks MCP can sit here later. It gets its abilities from apps and its standing instructions from the Agent Service. Its skills, sessions and memory live in its own folder under `~/.wizard-os/agents/<id>/`; Agent History keeps the permanent copy of every agent's history, and other agents reach that state only through it, under owner grants ([AGENT_STATE.md](../spec/AGENT_STATE.md)).
 
 **Apps.** One repo each. Every app has:
 - a root `wizard.md` ([spec](../spec/WIZARD_MD.md))
@@ -48,7 +48,7 @@ Wizard UX is the **shell**: a system app filling the `shell` slot, always exactl
 - an MCP endpoint
 - a skill telling the agent when and how to use it
 
-Apps come in four types: view, service, agent and external. An app can declare:
+Apps come in four types: view, service, agent and external. Owners see them under four names, the same in the Store, the Apps sheet and an agent's page: **Apps** (view: has a screen), **Agent apps** (service: no screen, used by agents), **Agents** and **Connections** (external). Never say "Wizard apps" to an owner: "wizard" already names the box, the agent and the phone app (#84). An app can declare:
 - what it **provides**, as capability slots like `transcription` or `video-editing`
 - what it **uses**, meaning other apps it depends on
 - what it **needs**, meaning device permissions
@@ -67,6 +67,10 @@ Its API listens on the box only and needs a token to install or remove apps.
 A tag gets a repo **found**; only a passing `wizard.md` gets it **listed**.
 
 **Runtipi.** A thin fork (DECISIONS #32): upstream Runtipi plus a small backend patch (index-backed store, Wizard categories, and later permission-aware networking). Its own screens stay stock and serve as admin/break-glass. The image is a drop-in for `runtipi/runtipi`, so any box can go back to stock by changing one image tag. Fixes go upstream wherever possible.
+
+## Core path and launch evidence
+
+The [core agent path](CORE_AGENT_PATH.md) labels the existing person → shell → Agent Service → stock agent → reply path, distinguishes extensions without dropping their launch gates, and supplies the weekly evidence template for launch audit #132. The API specification below remains authoritative; the map is not an implementation or acceptance receipt.
 
 ## Contracts
 

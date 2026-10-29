@@ -1,0 +1,37 @@
+name: Release acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Published candidate version
+        required: true
+        type: string
+      manifest_sha256:
+        description: Exact published candidate manifest SHA256
+        required: true
+        type: string
+      preflight_only:
+        description: Read-only capacity and admission checks; do not submit work
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: release-acceptance
+  cancel-in-progress: false
+jobs:
+  acceptance:
+    if: github.repository == 'humanitylabs-org/wizard-os' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, wizard-os]
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          clean: true
+      - name: Check existing worker admission or submit exact released-source acceptance
+        env:
+          ACCEPT_RELEASE: ${{ inputs.release }}
+          ACCEPT_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          ACCEPT_PREFLIGHT_ONLY: ${{ inputs.preflight_only }}
+        run: python3 tools/acceptance/launch/ci.py

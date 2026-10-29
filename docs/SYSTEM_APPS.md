@@ -2,7 +2,7 @@
 
 ## The rule: slots are parking spots
 
-A **slot** is a job every Wizard needs done (a shell, an agent, files, transcription …). Think of it as a **parking spot**: the spot is part of Wizard OS, the app parked in it is not. Any app whose `wizard.md` says `provides: [<slot>]` can park there, and the owner can swap it at any time. A **system app** is just a normal Wizard app (`system: true`) that we publish as the **default** for a spot.
+A **slot** is a job every Wizard needs done (a shell, an agent, files, transcription …). Think of it as a **parking spot**: the spot is part of Wizard OS, the app parked in it is not. Any app whose `wizard.md` says `provides: [<slot>]` can park there, and the owner can swap it at any time. A **system app** is just a normal app (`system: true`) that we publish as the **default** for a spot.
 
 This holds for every spot, **including the shell**: Wizard UX is the default shell, not the only one. `hermes-frontend-3` or a community shell can fill the same spot.
 
@@ -17,13 +17,19 @@ This holds for every spot, **including the shell**: Wizard UX is the default she
 | `transcription` | `transcriber` today; Wizard STT as its front later (below) | no | OpenAI-compatible `/v1/audio/transcriptions` |
 | `browser` | `browser` (headless Chromium) | no | |
 | `secrets` | `secret-drop` | no | One-time credential handoff |
+| `web-search` | `wizard-search` (Search) | no | Works on install: a bundled SearXNG sidecar gives free private web and image results, no account. Optional AI overviews through the Tinfoil app (owner switch on the Search page) |
 | `private-access` | Tailscale (native host integration) | no | Preinstalled by the installer; the owner joins their own tailnet. Cloudflare Tunnel + Access is the alternative ([PRIVATE_ACCESS.md](../spec/PRIVATE_ACCESS.md)). Not yet an ordinary store app |
-| `notifications` | none yet | no | Spot exists; default to build |
+| `notifications` | `notifications` (ntfy, `oscarhenrycollins/notifications`) | no | Bell beside Chats search + phone push. Agents send one-way alerts with its `notify` tool; scheduled-job delivery to Notifications (`deliver: notification`, falling back to the thread when the slot is empty) is a candidate in [wizard-agent-service#130](https://github.com/humanitylabs-org/wizard-agent-service/pull/130), not shipped yet. Chats stay for conversations |
+| `cloudflare-connection` | `wizard-cloudflare` (on demand) | no | Recommended in Setup; never installed by bootstrap |
+| `connected-accounts` | `wizard-connectors` (on demand) | no | Recommended in Setup; unavailable until a reviewed pullable release is indexed |
 | `microphone` | native shell (Android, Mac) | no | Through the native bridge, not a container |
 
 **How it works on a box** (built in `wizard-app-manager`, `wam/defaults.json`):
+- **System apps are exactly the spot defaults.** WAM writes `system: true` on each such app in `apps.json` (on a pinned box the release's `default_apps` decide), the Agent Service passes it on, and every shell draws the system ring from that flag rather than its own id list. The same set is what a Wizard OS update brings to the release's pinned commits (installed defaults are upgraded with the release).
 - `wam slots` lists every spot: which app fills it, or that it's empty / has no default yet. `apps.json` carries the same list as `parking`, so the UX can show empty spots as placeholders.
-- `wam bootstrap` installs the default app for every empty spot that has one. A spot already filled by another provider is left alone.
+- `wam bootstrap` installs the default app for every empty spot that has one, except `install: on-demand` slots. A spot already filled by another provider is left alone. ChatGPT and Claude connection apps stay preinstalled because they hold the agent's own sign-in.
+- Setup has one **Recommended next** list. One tap selects the indexed immutable release through the existing owner-only Store/WAM route, waits for installation, then opens the connector's sign-in. Unpublished recommendations are visibly unavailable, never installed from an unchecked branch.
+- After Setup first records `/wizard/v1/setup/seen`, it requests WAM's pull-only background prefetch. `recommended: true`, `prefetch: true` on an on-demand slot opt it in. WAM pulls the indexed recipe's images sequentially with idle I/O / nice priority; this lowers client priority, not Docker daemon bandwidth. It creates no containers, app records or credentials, and adds no Apps tiles. An interrupted request resumes when WAM restarts; `wam prefetch` retries downloads explicitly. Normal installation still works if caching fails.
 - `wam uninstall` refuses to empty a **required** spot; install another provider first.
 - `apps.json` `slots` records the owner's chosen default per spot when several apps provide it. Apps call the **slot**, never a named app (`TRANSCRIPTION_URL`, not `http://transcriber:8000`).
 - Swapping a spot's default changes `defaults.json` (for new boxes) or the owner's choice (on one box). It never needs a new OS release.

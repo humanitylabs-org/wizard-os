@@ -36,6 +36,8 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
 - [`AGENTS.md`](spec/AGENTS.md): more than one agent on a box — agent folder, harness / model provider / permissions, the `/wizard/v1/agents` API, per-agent chats (MVP, approved 14 Oct).
 - [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the Wizard OS kernel text and app skills; install alongside an existing Hermes (proposed).
+- [`HOST_HOP.md`](spec/HOST_HOP.md): Machines roles (main, standby, helper), moving a Wizard to another machine, and the client Wizards list (proposed).
+- [`CONNECTORS.md`](spec/CONNECTORS.md): account custody, Contains private data labels, preferred privacy-model routing and prompt-injection containment (direction approved, contract proposed); [YouTube Music + simulated-chat MVP and release gates](docs/CONNECTORS_MVP.md).
 - [`WIZARD_CLI.md`](spec/WIZARD_CLI.md): the generic `wizard` CLI (`apps list`, `tools`, `call`) for people and scripts; `--json` output and exit codes.
 - [`SHELL.md`](spec/SHELL.md): the shell slot (Wizard UX as the system front end) and how owners customize it without forking (proposed).
 - [`PAGES.md`](spec/PAGES.md): pages, the agent-made reports, dashboards and shared docs that live in Files and need no container (proposed).
@@ -44,5 +46,6 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 
 - `tools/check_wizard_md.py <repo> [--github owner/repo]`: pass/fail check for an app. The App Manager and each app's CI run copies of it; the rules must stay identical.
 - `tools/wizard`: the generic Wizard CLI; install with `sh tools/install_wizard_cli.sh`. Tests: `python3 -m unittest discover -s tools/tests`.
+- `tools/host-hop/`: reference scripts that move a Wizard to another machine (spec/HOST_HOP.md). Box values live in one `hosts.env`; tests: `python3 tools/host-hop/test-runner.py`, `python3 tools/host-hop/test-teardown.py`.
 - `tools/build_store.py`: compiles passing app repos into a stock Runtipi store (the App Manager does this live).
 - `examples/defleur-video/`: DeFleur Video as a v0.2 app.
