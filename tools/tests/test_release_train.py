@@ -126,6 +126,15 @@ class Gate(unittest.TestCase):
         self.assertIn('"--fast-track",\n        "--classification", cls', src)
         self.assertIn("promotion record's classification does not match", src)
 
+    def test_a_feature_candidate_stays_on_latest_unless_asked(self):
+        """Owner rule: fixes fast-track to Stable; features stop on Latest (no upgrade rig, no promotion)."""
+        src = (HERE.parent / "release_train.py").read_text()
+        i_gate = src.index('if cls != "fix" and not feature_fast_track:')
+        self.assertLess(i_gate, src.index("cmd = [sys.executable, str(RIG)"))
+        self.assertLess(i_gate, src.index('"promote", V, "--from", stable'))
+        self.assertIn("return rep", src[i_gate:src.index("cmd = [sys.executable, str(RIG)")])
+        self.assertIn("a.feature_fast_track", src)
+
 
 if __name__ == "__main__":
     unittest.main()
