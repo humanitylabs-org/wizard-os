@@ -2,7 +2,7 @@
 
 **Status: proposal (Miguel, 29 Oct 2026). Needs James's decision.** Builds on tweaks and the Standard / Early access names ([wizard-ux #673](https://github.com/humanitylabs-org/wizard-ux/pull/673)), the release channels and fast track ([releases/README.md](../releases/README.md), DECISIONS #82), and owner app-update protection (#311).
 
-![Try it, it spreads on its own, credit](img/friendly-sharing.png)
+![Try it, check what's shared, a tester sees it, watch it spread, hear back](img/friendly-sharing.png)
 
 ## Goal
 
@@ -19,6 +19,14 @@ The whole system shows three words and three buttons.
 | **Everyone** | every Wizard | Standard (`stable`) |
 
 After any change the agent makes, the chat shows **Undo**, **Keep** and **Share with everyone**. Undo reverts it. Keep keeps it on the person's personal layer, where updates never overwrite it: if an update clashes with it, the layer pauses and the agent offers to redo it. Share hands the change to the sharing pipeline below. After that, the person only sees where the change is (Mine, Testers or Everyone) and how many people use it.
+
+## The five moments
+
+1. **Try it.** The agent makes the change, and the chat shows Undo, Keep and Share with everyone. It is only on this Wizard.
+2. **Check what's shared.** Share opens a sheet showing what leaves the Wizard (the change and its test) and what never does (chats, names, files, keys, skin, personal tweaks). The person confirms whether it's a new idea or a fix, and whether to show their name or share anonymously.
+3. **A tester sees it.** Testers get a small card where the change appears: "New from the community," with Undo and Keep. Their taps are the signal the rollout runs on.
+4. **Watch it spread.** "My changes" shows where each shared change sits (Mine, Testers, Everyone), how many people use it, how many undid it, how many asked for the same thing, and roughly when Everyone gets it. Stop sharing is always available.
+5. **Hear back.** People get a notification for each outcome: the change reached everyone; it paused because an update changed that screen (Redo it or Leave it off); or it stepped back, with the testers' reason in plain words (Improve it or Keep mine).
 
 ## Why it scales: real use decides, not reviewers
 
