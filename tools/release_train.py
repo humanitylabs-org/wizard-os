@@ -21,6 +21,9 @@ What `run` does, in order, and where it stops:
 4. Classify honestly: `fix` only when every change between Stable and the candidate is a Recommended fix or
    maintenance; any feature, strong suggestion, opinionated or unlabelled PR, or any other moved pin (default apps,
    App Manager, Hermes) makes it `feature` (launch-phase fast-track, DECISIONS #93) and is listed in --notes.
+   Owner rule (Miguel, 29 Oct 2026): only a `fix` candidate is fast-tracked. A `feature` candidate stops here, on
+   Latest (early testers first), and goes to Stable by the normal 72h soak (`promote_stable.py promote` without
+   --fast-track). `--feature-fast-track` restores the launch-phase path (DECISIONS #93) for one run.
 5. Promote with `promote_stable.py promote --fast-track` plus the evidence doc, open and merge the promotion PR,
    then mirror `stable` + `promotions/<v>.json` into wizard-app-manager and merge after its CI.
 
@@ -392,7 +395,7 @@ def sha(path: Path) -> str:
 # ---------------------------------------------------------------- run
 
 
-def run(work: Path, dry: bool, force: bool, rig_args: list[str]) -> dict:
+def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False) -> dict:
     rep: dict = {"started": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "dry_run": dry, "force": force,
                  "steps": []}
     step = lambda s: (rep["steps"].append(s), say(s))   # noqa: E731
@@ -478,6 +481,12 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str]) -> dict:
                                               "tier: maintenance", need_checks=True)
             step(f"cut merged {rep['cut_pr']}, mirror merged {rep['mirror_pr']}")
             wait_public(f"{V}.json", sha(rel_json))
+    # Features go to early testers first: a feature candidate stays on Latest for the normal soak (owner rule).
+    if cls != "fix" and not feature_fast_track:
+        rep["outcome"] = (f"ON LATEST ONLY: {V} carries features, so it soaks 72h on Latest before Stable "
+                          f"(promote_stable.py promote {V} --from {stable} after the soak and an upgrade test). "
+                          f"Stable stays {stable}.")
+        return rep
     # The upgrade test from the CURRENT stable, on a disposable guest, with the public command.
     out = work / f"rig-{V}.json"
     cmd = [sys.executable, str(RIG), "run", "--from", stable, "--to", V, "--out", str(out), *rig_args]
@@ -589,6 +598,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
     r.add_argument("--force", action="store_true", help="go on even when no fix is waiting (proof runs)")
     r.add_argument("--keep-guest", action="store_true")
+    r.add_argument("--feature-fast-track", action="store_true",
+                   help="also fast-track a feature candidate to Stable (launch-phase DECISIONS #93); default: Latest only")
     ap.add_argument("--work", type=Path, default=STATE / "work")
     a = ap.parse_args(argv)
     if a.cmd == "run" and a.force and not a.dry_run:
@@ -608,7 +619,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({k: v for k, v in p.items() if k != "components"}, indent=2, default=str))
         return 0
     try:
-        rep = run(a.work, a.dry_run, a.force, ["--keep"] if a.keep_guest else [])
+        rep = run(a.work, a.dry_run, a.force, ["--keep"] if a.keep_guest else [], a.feature_fast_track)
         code = 0 if not str(rep.get("outcome", "")).startswith("STOPPED") else 1
     except Stop as e:
         rep, code = {"outcome": f"STOPPED: {e}", "dry_run": a.dry_run}, 1
