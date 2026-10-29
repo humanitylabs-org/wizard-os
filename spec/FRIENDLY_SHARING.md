@@ -8,9 +8,26 @@
 
 ## My Changes, a system app
 
-**My Changes** is the system app that holds all of this. It replaces the "My Tweaks" naming from wizard-ux #673 (tweaks stay the mechanism underneath). It lists every change a person has kept, where each one sits (Mine, Testers or Everyone), and what needs attention, such as a change paused by an update. The chat card and the share sheet open from the agent's reply; My Changes is where the person goes back to them.
+**My Changes** is the place that holds all of this (a Settings tab, see below). It replaces the "My Tweaks" naming from wizard-ux #673 (tweaks stay the mechanism underneath). It lists every change a person has kept, where each one sits (Mine, Testers or Everyone), and what needs attention, such as a change paused by an update. The chat card and the share sheet open from the agent's reply; My Changes is where the person goes back to them.
 
 Scope: front-end changes first (looks, layouts, parts of screens, the things tweaks can replace). Back-end changes keep the normal PR route until the front-end flow is proven.
+
+## Where it lives and what it's built on
+
+My Changes is a tab in Settings, not a separate app. Each change is a GitHub pull request underneath, and the tab is a clean wrapper over it: title, plain-words status (Mine, Testers, Everyone, Paused, Stepped back) and the three buttons. We don't build a new version-control system. We use GitHub pull requests, labels, Actions checks and the existing Early access and Standard channels, the way most open-source projects already work. The wrapper only translates.
+
+## Two tiers
+
+| | Who | Can change | Safety |
+|---|---|---|---|
+| **Normal** | everyone | front end only (looks, layouts, parts of screens) | changes sit on top of tweaks and pause on clash; nothing can break the box |
+| **Developer mode** | anyone who turns it on | front end and back end (apps, services) | the person accepts that things may break; Undo and the update rollback remain |
+
+Maintainer is a separate permission on top of either tier (see below).
+
+## We use it first
+
+The team adopts My Changes for its own work before anyone else does: every tweak any of us makes on our own box is a change (a PR), visible in our own My Changes tab, and reaches everyone once a maintainer approves it. This replaces today's mix of box-only branches, ad hoc PRs and handoffs. Once it works smoothly for us, the same flow opens to everyone else.
 
 ## One flow for the team and for everyone
 
@@ -63,7 +80,8 @@ People get a note when their change moves up ("Your change reached everyone"), p
 | Testers / Everyone channels, 72h soak, fix fast track | live (releases/README.md) |
 | Protection for owner-modified code during updates | spec, #311 |
 | Undo / Keep / Share buttons in chat | new |
-| My Changes system app | new (replaces the My Tweaks naming) |
+| My Changes tab in Settings | new (replaces the My Tweaks naming) |
+| Developer mode tier (front + back end) | exists today as My release; becomes the second tier |
 | Maintainer permission (Miguel, James, Jan) | new; today it's GitHub merge rights |
 | Agent packaging a share (cleaning out personal data, labelling it, adding a test) | new |
 | Grouping duplicate shares into ideas | new |
