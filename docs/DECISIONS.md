@@ -90,6 +90,16 @@ slots and offline-only scheduler/AI-login limitations:
 |---|---|---|
 | 85 | **Protected connectors with a Contains private data designation.** Real-account sessions stay behind isolated credential boundaries; agents receive scoped capabilities. Private payloads and their derivatives route to the owner's preferred eligible private provider (#66) before any ordinary model; public-only content may use the ordinary route; no private-to-public fallback. This is what #65's `private_data: true` enforces. MVP: real YouTube Music plus a simulated private-chat stream; a chat app is the first real private-content integration. Separate service connectors over one Google account/authorization broker, a tool-less summary lane and protected output rendering are proposed mechanisms. Connectors install on demand (#78). Originally drafted as #63 in [PR #49](https://github.com/humanitylabs-org/wizard-os/pull/49); that number is now the app-model rule. | **Direction approved by James (15 Oct); mechanism proposed. Jan to confirm the account-broker seam, Miguel/Oscar the App Manager seam. No live account authorization or implementation claimed.** |
 
+## 23 Oct 2026 (night) — James: skins on Nostr ([spec/SKINS_NOSTR.md](../spec/SKINS_NOSTR.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 86 | **Skins are published on Nostr, never through a repo.** A skin is one owner-signed addressable event (kind 30117) whose files sit on Blossom by SHA-256. Settings > Look has three levels: Default, My skins (one folder each in Files, one active) and Store. "Add to my skins" makes an editable copy that keeps a `fork` link. The Store follows release one; publishing turns on when Wizard ID lands. | Approved by James |
+| 87 | **AI Wizards runs its own relay and Blossom server** as the archive, beside public relays: `wss://relay.aiwizards.com` and `https://blossom.aiwizards.com`, served by the existing Wizard Store relay service extended to carry skins rather than a second server. Curation is two NIP-51 sets signed by the AI Wizards curator key: Featured and Blocked. | Approved by James |
+| 88 | **Store skins are CSS only and always sit on Nebula.** `skin.js` stays local and device-approved. No new built-in skins land in `wizard-ux`; the other built-ins move to the Store as curator-published skins. | Approved by James |
+| 89 | **Previews are captured from a fixed demo scene** with the skin applied. Creator images and video come later. | Approved by James |
+| 90 | **Wizard ID is the one public identity.** The Messenger key is a transport key that gets linked to the Wizard ID by a Wizard-ID-signed attestation, never the reverse. No feature uses the Messenger pubkey as an identity. **Amended by #94 (24 Oct):** Messenger uses the owner `npub` itself, so no attestation is needed. | Approved by James; amended by #94 |
+
 ## 23 Oct 2026 — James + Miguel: "agent apps", not "Wizard apps" (launch-prep call)
 
 | # | Decision | Status |
