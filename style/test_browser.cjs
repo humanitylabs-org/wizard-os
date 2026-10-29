@@ -30,7 +30,7 @@ function serve(port, hostPage) {
 }
 
 (async () => {
-  const A = 47191, B = 47192;
+  const A = Number(process.env.QA_PORT || 47191), B = Number(process.env.QA_FOREIGN_PORT || 47192);
   const hostPage = `<!doctype html><meta charset=utf-8><body style="margin:0;background:#123">
 <iframe id=same src="http://127.0.0.1:${A}/demo.html" style="width:412px;height:700px;border:0"></iframe>
 <iframe id=sib src="http://127.0.0.1:${A}/demo.html" style="width:10px;height:10px;border:0"></iframe>
