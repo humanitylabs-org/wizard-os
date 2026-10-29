@@ -35,11 +35,11 @@
     },
     "wizard-controls.css": {
       "source": "style/controls.css",
-      "sha256": "062891df963228b68b8390b98dd67b860948cd8213b53b00cdde2c4466202865"
+      "sha256": "ae80dedcfdbcd1cf8c97d182cc5bbbc19806f937153d4ae6c6c9c37f59afbca5"
     },
     "controls.css": {
       "source": "style/controls.css",
-      "sha256": "062891df963228b68b8390b98dd67b860948cd8213b53b00cdde2c4466202865"
+      "sha256": "ae80dedcfdbcd1cf8c97d182cc5bbbc19806f937153d4ae6c6c9c37f59afbca5"
     }
   },
   "exceptions": [
