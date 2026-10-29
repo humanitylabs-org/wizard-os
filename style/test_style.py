@@ -105,5 +105,12 @@ class StyleCheck(unittest.TestCase):
         self.assertIn('--wz-text: var(--ink)', generated['shell-tokens.css'])
         self.assertNotIn('--ink:', generated['shell-tokens.css'])
 
+    def test_sticky_sheet_close_is_opaque(self):
+        # Sheet text scrolls under the sticky close control; a translucent fill lets it show through.
+        import re
+        css = Path(__file__).with_name('ui.css').read_text()
+        rule = re.search(r'\.wz-sheet-x \{([^}]*)\}', css)[1]
+        self.assertRegex(rule, r'background:[^;]*var\(--wz-panel\)')
+
 
 if __name__ == '__main__': unittest.main()
