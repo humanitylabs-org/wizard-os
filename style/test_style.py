@@ -46,6 +46,27 @@ class StyleCheck(unittest.TestCase):
         policy['exceptions'][0]['reason'] = ''
         with self.assertRaises(ValueError): style.scan(self.root, policy)
 
+    def test_skin_layers_warn_but_structural_rules_fail(self):
+        skin = self.root / 'web/skins/obsidian'; skin.mkdir(parents=True)
+        (skin / 'skin.css').write_text('html[data-skin="obsidian"] .x{color:#e8e4ff;font-family:Inter;font-size:13px}\n')
+        tweak = self.root / 'web/tweaks/owner'; tweak.mkdir(parents=True)
+        (tweak / 'tweak.css').write_text('.y{background:rgba(0,0,0,.4)}\n')
+        policy = {'skin_layers': ['web/skins/', 'web/tweaks/']}
+        rows = style.scan(self.root, policy, strict=True)
+        self.assertEqual(len(rows), 4)
+        self.assertFalse(any(r['error'] for r in rows))
+        # Without the reviewed scope the same files fail like app chrome.
+        self.assertTrue(all(r['error'] for r in style.scan(self.root, {}, strict=True)))
+        # Cyclic tokens are still bugs inside a skin layer.
+        (skin / 'skin.css').write_text('html{--wz-accent: var(--wz-accent, #fff)}\n')
+        rows = style.scan(self.root, policy, strict=True)
+        self.assertTrue(any(r['rule'] == 'cyclic-token' and r['error'] for r in rows))
+        # App chrome outside the layers is unaffected.
+        self.write('a{color:#fff}')
+        self.assertTrue(any(r['path'] == 'app.css' and r['error'] for r in style.scan(self.root, policy, strict=True)))
+        for bad in (['web/skins'], ['/abs/'], ['**/skins/'], ['./web/']):
+            with self.assertRaises(ValueError): style.scan(self.root, {'skin_layers': bad})
+
     def test_change_line_ratchet_and_untracked(self):
         def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
         git('init'); git('config','user.name','Fixture'); git('config','user.email','fixture@example.invalid')
