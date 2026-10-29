@@ -24,6 +24,10 @@
     "wizard-sheet.js": {
       "source": "style/sheet.js",
       "sha256": "fbec58efa89921d2aed824b75c617c38c67e8f767e06ed8dd3b65b2e1f06178a"
+    },
+    "standalone-tokens.css": {
+      "source": "style/standalone-tokens.css",
+      "sha256": "5e1c57ca8338052e066bd487054ef85e0693fc64ecbf7589335b85bae63353de"
     }
   },
   "exceptions": [

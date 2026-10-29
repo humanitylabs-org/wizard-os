@@ -1,6 +1,6 @@
 # Wizard app style audit
 
-Source snapshot: 29 Oct 2026. Scope: **45 repositories, 1,257 source files**, default branches pinned in [style-audit.json](style-audit.json). This is lexical debt, **not a visual compliance certificate**. Product data, account state, content directories, tests, dependencies and generated builds were not read. Zero fetch errors; no truncated source trees.
+Source snapshot: 29 Oct 2026. Scope: **45 organization repositories plus one local Mizel UI source snapshot, 1,263 source files**, default branches pinned in [style-audit.json](style-audit.json). This is lexical debt, **not a visual compliance certificate**. Product data, account state, content directories, tests, dependencies and generated builds were not read. Zero fetch errors; no truncated source trees.
 
 C = literal colour expressions, F = literal font-family declarations, P = px type declarations, B = non-kit `<button>` candidates. Counts exclude exact approved kit bytes and locked shell palette definitions; comments/tests are excluded. B is a review lead (dynamic templates can overcount), not a lint failure. Kit “stale” means not byte-identical to the canonical snapshot; no semantic version is advertised by these files. The OS guide/token additions change the current kit hash in this PR.
 
@@ -51,6 +51,7 @@ C = literal colour expressions, F = literal font-family declarations, P = px typ
 | wizard-home-relay | 0 | 0 | 0 | 0 | No vendored kit found |
 | wizard-local-model | 0 | 0 | 0 | 0 | No vendored kit found |
 | wizard-archive | 55 | 3 | 28 | 10 | No vendored kit found |
+| mizel-owner-local | 89 | 3 | 115 | 8 | No vendored kit found |
 
 ## Shell screens
 
@@ -77,7 +78,7 @@ Wisdom, Shopping and Files are the three independent end-user apps selected for 
 
 - `wizard-app-store` is archived historical mirrored application source; reported separately from current authoritative products. `reader`, owner-custody forks and live-reference repositories are listed explicitly rather than silently dropped.
 - Repositories with zero findings may be headless, wrappers or contain no front-end source; zero means no lexical matches, not certified appearance. Service repositories were included to catch embedded HTML (App Manager/Notifications are shell/service-owned surfaces, not standalone repos).
-- Mizel has no standalone repository in the organization inventory. Its owner-local UI source and the app-store wrapper need a separate provenance check; this audit does **not** claim a complete Mizel code audit.
+- Mizel has no standalone repository in the organization inventory. Six CSS/HTML/JS files from the owner-local UI checkout (recorded commit, no remote) are source-audited separately as `mizel-owner-local`; no backend, private recordings or account data was read. Remote origin provenance still needs confirmation.
 - Thin native hosts (`wizard-desktop-shell`, `wizard-shell-mac`, `wizard-status`) and stock third-party `runtipi` are outside this web-kit lint. Corporate sites, unrelated services, substrate, and custody duplicates are not Wizard UI products. No private account or content payload was inspected.
 - Reproducibility: per-repository immutable SHA, path/line findings and kit SHA256 values are in the JSON. The table describes **before**, not a claim that every app has already been repaired.
 

@@ -25,6 +25,10 @@
     "wizard-sheet.js": {
       "source": "style/sheet.js",
       "sha256": "fbec58efa89921d2aed824b75c617c38c67e8f767e06ed8dd3b65b2e1f06178a"
+    },
+    "standalone-tokens.css": {
+      "source": "style/standalone-tokens.css",
+      "sha256": "5e1c57ca8338052e066bd487054ef85e0693fc64ecbf7589335b85bae63353de"
     }
   },
   "repositories": [
@@ -42601,6 +42605,1265 @@
         {
           "path": "site/styles.css",
           "line": 403,
+          "rule": "px-type",
+          "error": false
+        }
+      ]
+    },
+    {
+      "repo": "mizel-owner-local",
+      "branch": "local-source-only/no-origin",
+      "sha": "215eee587cae70e3c105773698b29c42cdcf8a5b",
+      "files": 6,
+      "errors": [],
+      "truncated": false,
+      "counts": {
+        "literal-colour": 89,
+        "literal-font": 3,
+        "px-type": 115
+      },
+      "nonkit_button_candidates": 8,
+      "kit_copies": [],
+      "findings": [
+        {
+          "path": "web/index.html",
+          "line": 10,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 27,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 28,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 28,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 28,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 29,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 29,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 44,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 78,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 79,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 180,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 180,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 180,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 187,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 187,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 207,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 220,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 276,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 306,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 307,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 324,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 325,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 396,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 396,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 430,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 480,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 484,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 488,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 488,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 490,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 502,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 529,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 538,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 539,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 542,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 542,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 544,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 544,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 544,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 573,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 593,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 616,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 616,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 616,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 616,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 616,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 47,
+          "rule": "literal-font",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 607,
+          "rule": "literal-font",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 33,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 34,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 44,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 47,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 52,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 59,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 60,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 63,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 64,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 73,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 74,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 75,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 94,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 96,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 102,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 111,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 125,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 138,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 144,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 150,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 154,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 159,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 166,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 168,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 173,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 177,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 179,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 191,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 192,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 197,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 202,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 205,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 206,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 211,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 226,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 228,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 231,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 246,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 256,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 258,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 260,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 261,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 269,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 270,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 280,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 281,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 283,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 284,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 285,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 286,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 288,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 293,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 294,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 296,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 300,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 314,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 317,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 324,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 328,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 331,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 332,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 334,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 340,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 346,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 358,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 361,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 366,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 367,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 371,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 372,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 379,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 380,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 406,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 407,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 418,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 422,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 425,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 437,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 456,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 464,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 467,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 469,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 486,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 493,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 494,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 496,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 505,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 508,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 512,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 513,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 519,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 530,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 532,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 541,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 542,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 553,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 554,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 556,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 558,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 561,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 562,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 564,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 578,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 582,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 583,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 586,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 589,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 591,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 607,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/styles.css",
+          "line": 615,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 19,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 20,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 21,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 22,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 23,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 24,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 25,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 28,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 29,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 32,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 33,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 34,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 35,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 38,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 39,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 40,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 41,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 42,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 43,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 44,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 44,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 47,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 48,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 49,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 50,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 51,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 52,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 53,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 74,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 74,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 75,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 75,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 107,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 133,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 133,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 136,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 140,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 140,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 141,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 159,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 220,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 221,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 254,
+          "rule": "literal-colour",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 268,
+          "rule": "literal-font",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 131,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 166,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 170,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 173,
+          "rule": "px-type",
+          "error": false
+        },
+        {
+          "path": "web/wizard-style.css",
+          "line": 180,
           "rule": "px-type",
           "error": false
         }
