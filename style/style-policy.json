@@ -28,6 +28,18 @@
     "standalone-tokens.css": {
       "source": "style/standalone-tokens.css",
       "sha256": "5e1c57ca8338052e066bd487054ef85e0693fc64ecbf7589335b85bae63353de"
+    },
+    "shell-tokens.css": {
+      "source": "style/shell-tokens.css",
+      "sha256": "7a646df6a033334bc9901247a407bafcc028674f8c182a3945411954e114bd2c"
+    },
+    "wizard-controls.css": {
+      "source": "style/controls.css",
+      "sha256": "8f0759624a5663137146eb6e409372e506ad6da0269d096c7761e1524a0258c9"
+    },
+    "controls.css": {
+      "source": "style/controls.css",
+      "sha256": "8f0759624a5663137146eb6e409372e506ad6da0269d096c7761e1524a0258c9"
     }
   },
   "exceptions": [

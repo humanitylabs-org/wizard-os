@@ -18,6 +18,7 @@ jobs:
         run: |
           python3 -m unittest discover -s style -p test_style.py -v
           python3 style/generate_tokens.py --check
+          python3 style/generate_shell.py --check
       - name: Existing debt warns; new violations fail
         env:
           STYLE_BASE: ${{ github.event.pull_request.base.sha }}

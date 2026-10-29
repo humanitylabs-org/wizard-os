@@ -11,6 +11,7 @@
 - `appearance-client.js`: framework-neutral, exact parent + same-origin + version/schema validation, strictly advancing revisions, revision acknowledgements, `wizard:theme` events. Only fourteen validated colour values are applied; no agent or app-data authority.
 - `boot.js`: marks a hosted document before first paint.
 - `ui.css`: the existing Chats-derived builder kit plus card, chip, bar, sheet, list row, button and empty state. The kit references the tokens above, rather than maintaining another palette.
+- `controls.css` and `shell-tokens.css`: generated reset-free shell control export and bridge from the existing skin variables. Run `python3 style/generate_shell.py --check`; the shell never loads the app kit’s global resets/alias block.
 - `sheet.js`: the one pop-up's behaviour (×, Esc, outside tap, Back, swipe down) for `.wz-sheet`.
 - `demo.html`: executable component gallery, with a nested sheet handled by `__wizardCloseOverlay()`. Serve this directory with any static HTTP server to inspect it.
 
