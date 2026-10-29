@@ -2,6 +2,88 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 27 Oct 2026 — release source returns to main (James)
+
+| # | Decision | Status |
+|---|---|---|
+| 104 | **The next Latest is cut from main again; Stable follows.** Return the next Latest snapshot to main-derived component pins, then promote Stable from that tested Latest through the existing acceptance and promotion rules. The one-off onboarding backport was not an evergreen maintenance release lane. This records the release source decision only: no release is cut or published by this change, and no test, upgrade, rollback or promotion gate is waived. See #135. | **Approved by James, 27 Oct 2026** (“Ship everything you recommend”). Release cuts: Oscar for Miguel. |
+
+## 27 Oct 2026 — Miguel: shared app design rules ([style/APP-DESIGN-RULES.md](../style/APP-DESIGN-RULES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 103 | **Apps share one design baseline, with named owners.** Every Wizard app follows `style/APP-DESIGN-RULES.md`: the window is the page (no max-width app frame), layout follows the window's width rather than the device, no duplicate title in a window, one pop-up (`.wz-sheet`: bottom sheet when narrow, centred card when wide, closes with ×, Esc, outside tap, Back and swipe), one connector-app pattern, and kit components before custom ones. **Robert owns the design** (rules and values in `style/`), **Jan owns the process** (how rules are checked, reviewed and rolled out), James and Archimedes keep `style/` and the shell copy in step, and anyone proposes changes by PR. The rules are a v0 foundation from a 27 Oct audit (22 apps, six different content widths, five different pop-ups), meant to be reshaped by Robert. Shell-side surfaces (Settings as a window on desktop, previews) are proposed separately in wizard-ux. | **Proposed by Miguel, 27 Oct 2026.** Robert, Jan, James to confirm |
+
+## 25 Oct 2026 — James: Agent History keeps every agent's record ([spec/AGENT_STATE.md](../spec/AGENT_STATE.md) section 3)
+
+| # | Decision | Status |
+|---|---|---|
+| 102 | **Agent History** (`wizard-agent-history`, slot `agent-history`) replaces Agent Search (#45) and adds a second job: it keeps the permanent copy of every agent's full history (messages, reasoning, tool calls and output; provider-encrypted reasoning excluded) in sealed monthly files per agent, plus a conversation-only export, copied daily after the box backup. The promise: **your history is never lost, and your Wizard never fills itself up.** Machine sessions (scheduled jobs, helpers) leave the agent's store after `live_days` (owner setting, default 30), only after History has released them row by row, through the harness's own prune. The owner's conversations stay in the agent's store until Chats reads old threads from History. No store rewrites; harness auto-prune stays off. Session search covers the conversation by default and reasoning and tool output with `deep`; memory, skills and notes go through the Agent Service gateway (#95). Private agents stay sealed (#59). Named for clarity: "archive" already means a closed thread in Chats. James, 18 Oct: "let's be clear rather than clever." | **Approved by James (18 Oct; storage rule 21 Oct; first prune verified 25 Oct)**; Jan and Miguel to confirm |
+
+## 25 Oct 2026 — James: Supervisor and Reporter
+
+| # | Decision | Status |
+|---|---|---|
+| 99 | **Supervisor** (Agent Service): the spell *"report this to supervisor and continue"* makes the worker file a complete report (what happened, owner's words verbatim, evidence) and carry on without fixing the process itself. A fresh Supervisor session per report checks past lessons, designs the durable fix, hands the build to a fresh worker thread and closes with one line back in the original thread. It acts only as broadly as the owner's words; anything wider, cross-agent, private, paid, external or editing the owner's own rules waits for the owner. Spec: `~/context/projects/ai-wizards/SUPERVISOR_REPORTER_SPEC.md` (consulted with Fable). | Approved (James, 25 Oct) |
+| 100 | **Reporter**: every scheduled task ends in one short plain-words report (bold point, What happened, What you need to do, Still open, status line) checked automatically by the Agent Service; a failing report gets one rewrite. Digest jobs keep their body. It is a contract plus a checker, not an agent. | Approved (James, 25 Oct) |
+| 101 | The 16 Oct self-repair prototype (`wizard-supervisor` package) is removed: uninstalled and its repo archived. Troubleshooter owns repair and the nightly maintenance run (#91) owns upkeep; nothing in it was worth porting. "Supervisor" means #99. | Approved (James, 25 Oct; removal confirmed same day) |
+
+## 25 Oct 2026 — James: Tuesday small-group backup/restore release; explicit soak override
+
+James explicitly directed a new build containing the finished backup/restore now,
+ready for the first small test group by **Tuesday 27 October 2026**, and explicitly
+said not to wait 72 hours on latest. This is his **release-specific policy override
+of the 72-hour soak**, dated **25 October 2026**, not an inferred urgency waiver
+and not a mass rollout. Version **0.3.42** is reserved for this lane because
+0.3.41 is already owned by #206/#211; carry the published 0.3.40 bundle forward
+with reviewed WAM backup/report/retry/recovery changes only. It does not supersede
+that defaults/UI candidate. Review, official attested image provenance, release
+validation and real fresh-install, 0.3.39/0.3.40 upgrade and new-version backup /
+restore evidence remain mandatory. Record this authority in the eventual
+promotion's `fast_track.reason` using the existing feature fast-track gate;
+stable moves only in its later evidence-backed promotion PR. Preparation/evidence
+slots and offline-only scheduler/AI-login limitations:
+[0.3.42 admission](acceptance/release-0.3.42-backup.md).
+
+
+## 24 Oct 2026 — James: agent templates, an idea for later ([spec/AGENT_TEMPLATES.md](../spec/AGENT_TEMPLATES.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 98 | **Agent templates (idea, not on the roadmap).** A shareable shape for an agent: soul, starting skills, model recommendation, tool preset and an empty memory layout, with no memory, history or sign-ins. Installing one creates a fresh agent on a harness the box already runs, through the existing create API, so it isn't a `type: agent` runtime app. Example roles: Philosopher/thinking partner, Tutor/study, Builder, Assistant. Templates are offered once real use shows a pattern, and never as a setup question. They also seed #95 split proposals. Why: an agent that arrives shaped for a job fits it better than a blank one, and James's Philosopher agent already shows the shape. | Idea (James, 24 Oct 2026); revisit after more use |
+
+## 24 Oct 2026 — James: developer mode, not personal builds ([releases/README.md](../releases/README.md#developer-mode))
+
+| # | Decision | Status |
+|---|---|---|
+| 97 | **Personal builds are a developer mode, not a Wizard feature or a third channel.** Owners change Wizard through their skin, settings and apps, which never drift from `main`; there is no "my build" for ordinary owners. A box may instead turn on **developer mode**: it installs and updates from a git branch or fork the owner names, instead of `releases/latest` or `releases/stable`. (1) **Off by default; open to anyone** behind a confirmation screen that states the trade-off: Automatic updates and the stable guarantees (#75, #82, #93) stop while it is on. (2) **Drift stays visible:** the box shows "Developer build: `<branch>` @ `<commit>`, N commits behind `main`". (3) **One step back** to latest or stable, through the same upgrade path a release uses. (4) **It is the bench before a PR:** a change that has run there carries the `from: <owner> dev build` label (AGENTS.md), which counts as daily-use evidence when it is reviewed and merged. Everyone else has two public routes: propose a fix (`tier: recommended fix`, ships under #96 and #82) or propose a feature (any other tier, reviewed under #96). Why: Miguel's three-lane proposal ("my build / propose to main / propose a fix") would make every owner's build a fork that drifts and that we then support; only developers (James, Archimedes, Jan, Miguel, Oscar) actually run one. | **Approved by James, 24 Oct 2026**; mechanism (App Manager source setting, banner, return path) proposed, not built. Miguel to confirm. |
+
+## 24 Oct 2026 — Miguel: humans are the only admins; agents ship verified fixes on Write
+
+| # | Decision | Status |
+|---|---|---|
+| 96 | **Amends the merging rule in AGENTS.md (James, 23 Oct): admin is for humans only, and any agent may merge its own verified fix.** (1) **Humans are the only admins** on every Wizard OS repo (James, Jan, Miguel). Agent accounts (`defleur-agents`, `oscarhenrycollins`) hold **Write**, not admin: they cannot change branch rules, collaborators or repository settings. (2) **Agents get two narrow exceptions on `main`, set by a human admin:** a place on the pull-request review bypass list and, where pushes are restricted, a place on the push list. Required status checks and "conversations resolved" still apply. Verify these entries before removing any agent admin access, so no agent loses its merge path. (3) **Fixes ship immediately:** a PR titled and labelled `tier: recommended fix`, with a regression test that fails on `main` before the fix, green required checks and every review thread resolved (Codex findings fixed or answered), may be merged by its author, human or agent, without waiting for another review; the release carrying it goes to stable the same day under #82. (4) **Every other change needs review by someone other than its author. That reviewer may be an agent** (the automatic agent reviewer or another collaborator's agent), including features, maintenance, taste/default changes and the high-risk list in AGENTS.md. A human is never required to visit GitHub or click merge; the agent merges once the review, required checks and resolved-conversation conditions hold. Owner decisions still apply, but are not a required human GitHub approval. **No required-approval count and no `review-gate` CI check:** keep `main` at **0 required approvals**, **non-strict** status checks, and its existing required contexts (`gitleaks`/`validate` on wizard-ux; `test`/`gitleaks`/`validate` on wizard-agent-service). Keep the review-bypass entries. Why: Miguel's proposal followed the cached `notif-bell.js` boot failure (wizard-ux #426/#428); agents must ship verified repairs without holding an owner hostage to a human merge click, while humans retain control of access. Clauses 1–3 retain Miguel's proposal; James amends clause 4 to permit a non-author agent reviewer and rejects the optional review-gate mechanism. | Proposed by Miguel (Oscar, wizard-os #190); **approved by James, 24 Oct 2026, as amended by Archimedes**. Miguel to confirm the amended review mechanism. |
+
+## 24 Oct 2026 — James: two keys per person, the phone key is the person ([spec/WIZARD_ID.md](../spec/WIZARD_ID.md#your-wizards-own-key-decisions-94))
+
+| # | Decision | Status |
+|---|---|---|
+| 95 | **Standard agents share read-only memory on demand by default:** `other_agents: read`, `shared_with_agents: true`; false silos a source from every reader and grant. Private agents remain sealed (#59), always false. Read covers MEMORY.md, USER.md, labelled SOUL.md, skills and declared notes, never secrets or raw databases; sessions belong to Agent History (#45/#102, PR #70). No prompt injection or cross-agent writes: adapt into your own note with source attribution. **One agent per identity, skills per task:** split only for a different model/fallback AND narrower tools AND conflicting always-loaded memory register. Start with one; recommend at most three, a fourth retires/merges one. Owner approves a split/merge diff; retain original transcripts, archive rather than delete merged homes. [Agent state](../spec/AGENT_STATE.md), [split/merge procedure](../spec/AGENT_SPLIT.md). | Approved by James 24 Oct 2026 |
+| 94 | **The phone Wizard ID is the only identity anyone sees, and the box key is that person's Wizard (a device), listed in a phone-signed device list (kind 30078, `d=wizard-devices`).** The owner key signs, with a fresh biometric each time: identity and follows, friend adds and accepts, publishing, and the device list (attest or revoke). The box key is the inbox: it decrypts unattended, re-shares profile parts, and signs the agent's labelled posts. Messenger uses the owner `npub` as its Marmot account through MDK's external signer. MLS leaf keys on the box sign each message, and the phone handles proofs, KeyPackages and Welcomes under a short-timeout key. There are no per-app identities. Box-only users start as an unclaimed Wizard that their phone ID later claims, without anyone re-adding them. Profiles (Miguel's app) adopts the resolution rule through our PR. Why: a box compromise must be revocable without losing the person. Reviewed with Fable over two rounds (transcripts in agent context sources). | Approved by James, 24 Oct 2026. Miguel to confirm (Profiles). |
+
+
+## 24 Oct 2026 — Miguel: launch phase ships the latest release
+
+| # | Decision | Status |
+|---|---|---|
+| 93 | **Amends #82 for the launch phase: tested feature releases skip the soak too.** A release that adds functionality (`--classification feature`) may go to stable the same day once the upgrade test from the current stable passed; the promotion record still keeps the classification, reason and `upgrade_test` evidence, and the App Manager gate (`wam/updates.py`) accepts exactly the same records. Why: stable 0.3.32 shipped a shell 356 merges behind main to the first private-launch testers, with chat fixes (stale "Sent / Dismiss" bubble) already merged. Revert: set `FAST_TRACK_CLASSES = ("fix",)` in both gates. | Miguel, 24 Oct 2026, for the private launch; peer review and the 72h soak return once the foundation is stable. |
+
+## 23 Oct 2026 — James: apps own their spoken launch names
+
+| # | Decision | Status |
+|---|---|---|
+| 92 | **Apps declare the spoken names that open them in `wizard.md` (`voice_names`).** The App Manager validates and carries these into `apps.json`; every shell resolves them from installed metadata, alongside the app's own display name. Only shell-owned navigation words stay in the shell. Shared app code selects agents and models from installation settings, never a specific owner's setup. | Approved by James |
+
 ## 15 Oct 2026, re-landed 23 Oct — James: account connectors and private-data routing ([spec/CONNECTORS.md](../spec/CONNECTORS.md))
 
 | # | Decision | Status |
@@ -23,6 +105,11 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | # | Decision | Status |
 |---|---|---|
 | 84 | **Owners never see "Wizard apps".** "Wizard" already names the box, the agent and the phone app. Screenless apps that agents use are **Agent apps**, and apps with a screen are plain **Apps**. Together with **Agents** and **Connections**, these are the four names the Store, the Apps sheet and an agent's page share ([ARCHITECTURE.md](ARCHITECTURE.md)). Copy only: `wizard.md`, package ids, APIs, `apps.json` fields (`permissions.wizard_apps`) and code identifiers keep their names, and so do proper names (Wizard App Store, Index, Manager). | Locked (James + Miguel) |
+## 23 Oct 2026 — James: system maintenance is a core Wizard OS component ([spec/MAINTENANCE.md](../spec/MAINTENANCE.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 91 | **One nightly maintenance run per box, owned by the App Manager (`wam maintain`), not by Hermes cron jobs or agent skills.** It covers OS security patches, backup scheduling and verification, the Wizard OS, Hermes and app updates, and Health history; the Troubleshooter guardian keeps repair, and the Supervisor may later judge exceptions. OS patches work on any Linux through that system's own package manager and security channel, as one backend per family. They never restart a service or reboot. Default is `check` (report only). `patch` and automatic restarts become defaults only after the restart gates in the spec pass on Thales. | Approved by James |
 
 ## 22 Oct 2026 — James: default-app custody by signed lists and mirrors ([#136](https://github.com/humanitylabs-org/wizard-os/issues/136))
 
@@ -142,7 +229,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | # | Decision | Status |
 |---|---|---|
 | 58 | **The owner picks which agents can use an app when installing it.** The install screen lists every agent with a tick box: standard agents start ticked, private agents start unticked. Editable later from the app or from the agent. No agent gains an app silently. Replaces the draft default in PR #6 (every agent gets every app at install). Apps that produce work for an agent also show where their work goes (app → agent binding, separate setting). | **Approved by James (14 Oct)** |
-| 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent Search never indexes it for another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
+| 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent History never serves it to another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
 
 Deferred by James (14 Oct), brought back when due: whether apps that can run an agent need a separate warning at install (due before apps from other publishers are installable), and whether network isolation between apps is required before the stable release (due before any box installs another person's app).
 
@@ -172,12 +259,12 @@ Deferred by James (14 Oct), brought back when due: whether apps that can run an 
 | # | Decision | Status |
 |---|---|---|
 | 43 | **One folder per agent instance:** `~/.wizard-os/agents/<id>/home`, bind-mounted into that agent's container as its home, with an `agent.json` saying where its skills, sessions and memory sit. Harness layouts stay native; nothing in Hermes changes. Outside `media/`, so other apps can't read it. Survives uninstall and host moves. | **Approved (James, 14 Oct)** |
-| 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent Search, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
-| 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
-| 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James); **amended by #59** for private agents |
+| 44 | **Skills: each agent keeps its own.** Wizard system skills (app + pointer skills, #40) stay in `~/.wizard-os/skills/` and every agent reads them. Another agent's skills are never injected; with a grant an agent can search and read them through Agent History, labelled with the source harness, then adapts its own copy (`adapted_from`). | Proposed (James) |
+| 45 | **Agent Search** (`wizard-agent-search`, system app, slot `agent-search`; **renamed Agent History and given the keeping job by #102**): reads every agent's own store read-only through per-harness readers, keeps its own index per agent, serves `sessions_search`, `session_read`, `facts_search`, `skills_search`, `skill_read` over the `wizard` gateway. Uses Hermes' own search methods (FTS + holographic), vendored. No agent reads another agent's files. | Proposed (James) |
+| 46 | **Grants for agent data:** reader → source, scope per kind (`none`/`titles`/`search`/`read`), optional subject filter, stored in `wizard-grants.json` as `kind: agent-data`. Default none. `privacy: private` is a label that triggers a warning, never a hard wall, so two private agents (or a migration) can share. Every cross-agent read is logged. | Proposed (James); **amended by #59** for private agents and **#95** for standard-agent defaults |
 | 47 | **One Wizard scheduler** in the Agent Service: each job names its agent, model, prompt/skill and thread. One list in the UX. Agents' own cron is off on a Wizard box; alongside mode imports existing Hermes jobs once. Hermes blueprints become Wizard schedule templates. | Approved (James, 21 Oct) |
 | 48 | **Agent adapter:** the Agent Service reaches every agent through one call set (run, events, steer, approve, stop, list, read, status). Hermes over HTTP; Pi over RPC. The six direct `state.db` reads in the Agent Service move onto it (agent-bridge lane). | **Approved (James, 14 Oct)** |
-| 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent Search uses the same method across agents. | Proposed (James) |
+| 49 | **Opinionated memory default:** the Wizard OS Hermes app ships with the holographic fact store on; each agent keeps its own memory engine; Agent History uses the same method across agents. | Proposed (James) |
 
 ## 11 Oct 2026 — James: Archimedes owns the Agent Service; agent bridge; install alongside Hermes
 

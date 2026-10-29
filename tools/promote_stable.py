@@ -15,8 +15,8 @@ with that evidence and then moves stable; it refuses when the soak or the test i
 
 DECISIONS #82 (Miguel, 22 Oct 2026, amends #75): a release that only fixes things skips the soak with
 `--fast-track --classification fix --reason ...` once the same upgrade test passed (plus a fresh install where a
-box allows it). Features, data-format changes and big UX changes keep the 72h soak; `--classification feature`
-is refused. The record keeps the classification and reason, so the waiver is visible and auditable.
+box allows it). DECISIONS #93 (Miguel, 24 Oct 2026, launch phase): additive feature releases may fast-track too, with
+`--classification feature`; the passed upgrade test and the recorded reason are still required. The record keeps the classification and reason, so the waiver is visible and auditable.
 
 The App Manager mirror (wizard-app-manager/releases) carries the same three things (latest, stable, promotions/)
 and its updater applies the same gate (wam/updates.py promotion_problems): Automatic never installs a stable
@@ -35,7 +35,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,40}")
 SOAK_HOURS = 72
-FAST_TRACK_CLASSES = ("fix",)        # DECISIONS #82: verified fixes skip the soak; nothing else does
+FAST_TRACK_CLASSES = ("fix", "feature")   # DECISIONS #82 + #93: any release with a passed upgrade test may skip the soak
 GRANDFATHERED_THROUGH = "0.3.25"   # stable when the channels split; every later promotion passes the full gate
 
 
@@ -69,7 +69,7 @@ def promotion_problems(rec, version: str) -> list[str]:
         ft = rec.get("fast_track")
         if ft is None:
             out.append(f"soaked {(at - since) / 3600:.1f}h on latest; stable needs {SOAK_HOURS}h "
-                       "(a verified fix may fast-track: DECISIONS #82)")
+                       "(a release with a passed upgrade test may fast-track: DECISIONS #82, #93)")
         else:
             out += fast_track_problems(ft)
     t = rec.get("upgrade_test")
@@ -85,8 +85,8 @@ def promotion_problems(rec, version: str) -> list[str]:
 
 
 def fast_track_problems(ft) -> list[str]:
-    """Why a `fast_track` block does not waive the soak ([] = it does). DECISIONS #82: only a release classified as
-    fixes, with the reason recorded, skips the soak; it still needs the passed upgrade test. Same as the other repo."""
+    """Why a `fast_track` block does not waive the soak ([] = it does). DECISIONS #82 and #93: a release classified as
+    fix or feature, with the reason recorded, skips the soak; it still needs the passed upgrade test. Same as the other repo."""
     if not isinstance(ft, dict):
         return ["fast_track must be an object"]
     out = []
@@ -170,9 +170,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--evidence", required=True, help="link or repo path to the passed upgrade-test run")
     p.add_argument("--latest-since", help="ISO time the release went to latest (default: from git history)")
     p.add_argument("--fast-track", action="store_true",
-                   help="skip the soak for a fix-only release (DECISIONS #82); needs --classification fix and --reason")
+                   help="skip the soak once the upgrade test passed (DECISIONS #82, #93); needs --classification and --reason")
     p.add_argument("--classification", choices=("fix", "feature"),
-                   help="what the release changes: fix (may fast-track) or feature (always soaks)")
+                   help="what the release changes: fix or feature (both may fast-track during launch, DECISIONS #93)")
     p.add_argument("--reason", help="why this fix cannot wait for the soak, and what was verified")
     p.add_argument("--notes", help="optional: ride-along changes and their risk, kept in the record")
     p.add_argument("--now", help=argparse.SUPPRESS)

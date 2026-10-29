@@ -44,7 +44,8 @@ agents/<id>/
     "files": "own",
     "wizard_apps": [],
     "agent_apps": [],
-    "other_agents": "none"
+    "other_agents": "none",
+    "shared_with_agents": false
   },
   "runtime": {"kind": "container", "app_id": "agent-private", "api": "http://agent-private:8642", "port": 18650},
   "created_at": 1792000000
@@ -57,7 +58,9 @@ agents/<id>/
 - `permissions.files`: `none` | `own` (only `home/`) | `shared-read` | `shared-write` (the box's user files root).
 - `permissions.outside_tools`: the outside toolsets this agent may use; every other outside toolset is disabled in the harness config.
 - `permissions.wizard_apps` / `agent_apps`: app ids from `apps.json` (apps with a window; the field keeps its old name) and agent-app ids. Stored here and enforced by the gateway. They are not app-to-app grants: [PERMISSIONS.md](PERMISSIONS.md) (#76) covers app → app calls only, and the Apps screen shows both side by side.
-- `permissions.other_agents`: `none` | `titles` | `search` | `read` (AGENT_STATE #46; MVP stores it, Agent Search enforces it later). This is what *this* agent may read of standard agents. No agent may ever read a private agent (#59): a grant naming a private agent as its source is rejected.
+- `permissions.other_agents`: `none` | `titles` | `search` | `read`. Defaults to `read` for new standard agents and the main agent, `none` for private agents. Existing stored levels stay unchanged. This is what *this* agent may read of shared standard agents, on demand, never injected (AGENT_STATE section 4).
+- `permissions.shared_with_agents`: boolean; defaults true for standard agents, false for private agents, including older records without the field. False silos this source from all readers, even explicit grants (`409 check: "agent.not_shared"`). Independent of its own `other_agents`. Private agents cannot set true (`409 check: "agent.private_sealed"`).
+- `notes_dir`: optional owner-visible notes folder relative to the harness home, for example `wiki`. Absent means no notes exposed. The gateway permits only safe bounded files under the source home, never secrets or dotfiles.
 - `runtime.kind`: `container` (own container) | `external` (the host Hermes, alongside mode). `api` is the address from inside the box network; `port` is the loopback port on the host (`127.0.0.1:<port>`) for an Agent Service that runs on the host.
 - The **main agent** is always listed as `id: "hermes"`, `runtime.kind: "external"`, `is_default: true`, served from the Agent Service's configured Hermes. Its state is never moved.
 
@@ -68,7 +71,7 @@ agents/<id>/
 | `private` | none | `own` | none | confidential provider only (`tinfoil`, `local`), `fallback: false` |
 | `standard` | harness defaults | `shared-write` | owner's choice | any provider; fallback allowed |
 
-Apps column at install (#58): a standard agent's box starts ticked, a private agent's starts unticked.
+Apps column at install (#58, revised 23 Oct 2026): a new app starts on the main agent only; an app tagged `privacy: private` starts on private agents only. Every other box starts unticked.
 
 A preset sets the starting values; the owner adjusts any field afterwards. `preset` keeps the name it was created with.
 
@@ -89,7 +92,7 @@ All under `/wizard/v1`, same access rules as the rest of the Service (owner acce
 | GET | `/agents` | `{agents:[Agent]}` |
 | POST | `/agents` | body `{label, harness:"hermes", model:{provider,model}, permissions:{preset,...overrides}, appearance?}` → 201 `{agent}`. Creates the folder, writes config, starts the container. `Idempotency-Key` honoured (same key + same body → same agent, 200). |
 | GET | `/agents/<id>` | `{agent}` |
-| PATCH | `/agents/<id>` | edit `label`, `appearance`, `permissions`, `model`. → `{agent}` |
+| PATCH | `/agents/<id>` | edit `label`, `appearance`, `permissions`, `model`, `notes_dir`. → `{agent}` |
 | POST | `/agents/<id>/start`, `/agents/<id>/stop` | → 202 `{agent}` |
 | GET | `/agent-options` | `{harnesses, providers, presets, wizard_apps, agent_apps, outside_tools, binding_apps}` (`binding_apps` = every Binding, section 7) |
 | GET | `/app-bindings` | `{bindings:[Binding]}` (section 7) |
@@ -117,16 +120,18 @@ A recording app (the Meeting Recorder, or any app that turns recordings into rec
 
 ## 5. Which agents can use an app (#58)
 
-Installing an app shows one tick box per agent: **"Which agents can use *App*?"** Standard agents start ticked, private agents start unticked. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
+Installing an app shows one tick box per agent: **"Which agents can use *App*?"** A new app starts ticked for the main agent only; every other agent starts unticked and the owner ticks it (James, 23 Oct 2026: "the user should have to enable things manually").
+
+**Optional private tag.** An app's `wizard.md` may say `privacy: private` (James, 23 Oct 2026: "Rather than each app needing to declare itself, let's just make an optional one that tags it as private"). Untagged apps are standard. A private app starts ticked for private agents only, never the main agent, and every new private agent gets it. Apps installed before the tag that provide `meeting-transcripts`, `meeting-recording` or `transcript-redaction` (Mizel, Airlock) count as private. `GET /wizard/v1/apps/<id>/agents` reports `privacy` and, for a private app, `needs_private_agent`. When no private agent exists, the install sheet says the app is meant to be privacy first and offers **Set up private agent** (the Agents app's New agent flow with Private chosen) or **Choose an agent** (this tick list); ticking a non-private agent is the owner's choice and the sheet says what it reveals. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
 
 Apps that produce work for an agent also show **"Sends its work to: [agent]"** (the app → agent binding). That decides where the app's output lands; it gives the app no right to run the agent or read its history.
 
 ## 6. Private agents are sealed (#59)
 
-- No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent Search does not index private agents for other readers.
+- `shared_with_agents` is always false, even in forged stored records. No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent History does not index private agents for other readers.
 - Sharing goes outward only, as a copy: the owner asks the private agent to share something; it shows the exact item and its destination (another agent's thread, or Files); it publishes only after the owner approves that item. The destination receives a copy; it never gets a way back in. Each publish is logged (item, destination, time, no content in the log).
 - Moving to a new harness works the same way: the private agent publishes what the owner approves into the new agent.
-- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent Search enforce it.
+- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent History enforce it.
 
 ## 7. App → agent binding (#60, proposed)
 
@@ -201,4 +206,4 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 
 ## Not in this spec
 
-Agent Search and cross-agent grants (#45, #46), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.
+Agent History session retrieval (#45/#102), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.

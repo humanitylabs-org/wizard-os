@@ -14,7 +14,37 @@ TYPES = {"agent", "service", "view", "external"}
 CATEGORIES = {"agent", "interface", "app", "system"}
 BAD_CAPS = {"ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "NET_ADMIN", "DAC_READ_SEARCH", "BPF", "PERFMON"}
 HOST_PATH = re.compile(r"^/(etc|root|boot|proc|sys|dev|var/run|run|home|usr|lib|bin|sbin)(/|$)")
-NEEDS = {"mic", "system-audio", "camera", "notifications", "files"}
+NEEDS = {"mic", "system-audio", "camera", "notifications", "files", "home-network"}
+# Connectors (owner rule, 27 Oct 2026): an app that signs in to or holds the key for an outside service is a
+# Connector and must say `type: external`, or shells and the App Store shelve it under Apps/Agent apps.
+CONNECTOR_SLOTS = {"ai-connection", "bank-connection", "cloudflare-connection", "web-data", "x-search"}
+CONNECTOR_SLOT = re.compile(r"[a-z0-9-]+-(connection|connector)")
+CONNECTOR_SUMMARY = re.compile(r"^\s*(connect|sign in to)\b", re.I)
+
+
+def connector_signals(d: dict) -> list[str]:
+    """Why this manifest looks like a connector (empty when it does not)."""
+    why = []
+    if str(d.get("id", "")).endswith("-connector"):
+        why.append("id ends in -connector")
+    pv = d.get("provides") if isinstance(d.get("provides"), list) else []
+    slots = [str(p) for p in pv if str(p) in CONNECTOR_SLOTS or CONNECTOR_SLOT.fullmatch(str(p))]
+    if slots:
+        why.append("provides " + ", ".join(slots))
+    if CONNECTOR_SUMMARY.match(str(d.get("summary", ""))):
+        why.append("summary starts with Connect/Sign in to")
+    return why
+
+
+def known_dependencies() -> set[str]:
+    """Match WAM: source app IDs and explicit provides, never slot aliases."""
+    known = set(NEEDS)
+    for app in json.loads(Path(__file__).with_name("known_dependencies.json").read_text())["apps"]:
+        if app.get("app"):
+            known.add(app["app"])
+            known.update(app.get("provides") or [])
+    return known
+
 SPECS = {0.1, 0.2}
 SLOT = re.compile(r"[a-z0-9][a-z0-9-]{1,40}")
 NPUB = re.compile(r"npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}")
@@ -212,6 +242,16 @@ def storage_problems(manifest: dict, compose: dict) -> list[str]:
     return bad
 
 
+def voice_names(manifest: dict) -> list[str]:
+    """Spoken names that open this app; absence is backward compatible."""
+    names = manifest.get("voice_names", [])
+    if (not isinstance(names, list) or len(names) > 8 or
+            any(not isinstance(n, str) or not n.strip() or len(n) > 40 or
+                any(ord(c) < 32 or ord(c) == 127 for c in n) for n in names)):
+        raise ValueError("voice_names must be a list of at most 8 nonblank strings, each at most 40 characters, without controls")
+    return list(names)
+
+
 def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     out: list[tuple[str, bool, str]] = []
 
@@ -229,10 +269,19 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
         rule("front matter parses", False, str(e))
         return out
     rule("front matter parses", True)
+    if "voice_names" in d:
+        try:
+            voice_names(d)
+            rule("voice_names valid", True)
+        except ValueError as e:
+            rule("voice_names valid", False, str(e))
     rule("spec version known", d.get("wizard") in SPECS, str(d.get("wizard")))
     rule("id valid", bool(re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", str(d.get("id", "")))), str(d.get("id")))
     t = d.get("type")
     rule("type valid", t in TYPES, str(t))
+    why = connector_signals(d)
+    if why:
+        rule("connector apps are type external", t == "external", f"type {t}; " + "; ".join(why))
     rule("version valid", bool(re.fullmatch(r"\d+\.\d+\.\d+([-+.][\w.]+)?", str(d.get("version", "")))), str(d.get("version")))
     s = str(d.get("summary", ""))
     rule("summary 1-140 chars", 0 < len(s) <= 140, f"{len(s)} chars")
@@ -269,7 +318,7 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     if t == "view":
         v = d.get("view") or {}
         rule("view declared", bool(v.get("path")) and bool(v.get("port")), json.dumps(v))
-    bad = [n for n in d.get("needs") or [] if n not in NEEDS and not str(n).startswith("credentials:")]
+    bad = [n for n in d.get("needs") or [] if n not in known_dependencies() and not str(n).startswith("credentials:")]
     rule("needs known", not bad, ", ".join(map(str, bad)))
     if "receives_voice_input" in d:
         rv = d["receives_voice_input"]

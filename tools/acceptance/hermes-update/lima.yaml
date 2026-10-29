@@ -1,0 +1,24 @@
+# Disposable VM for the `wizard hermes update --stable` acceptance (Thales). Created fresh by run.sh and deleted at
+# the end of each run. Same shape as tools/acceptance/hermes/lima.yaml (PR #149), without Docker: an alongside box
+# runs a source-installed Hermes from the stock installer.
+vmType: vz
+arch: aarch64
+cpus: 4
+memory: 6GiB
+disk: 30GiB
+images:
+  - location: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img
+    arch: aarch64
+mounts:
+  - location: __ACCEPT_ROOT_JSON__
+    writable: true
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    script: |
+      set -eux
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y git curl sqlite3 python3 python3-venv python3-yaml build-essential ca-certificates

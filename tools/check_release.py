@@ -24,6 +24,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+import hermes_lock
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -65,6 +66,13 @@ def hermes_shape(rel: dict) -> list[str]:
             errs.append(f"hermes.image: ref tag {m.group(1)} differs from hermes.tag {h.get('tag')}")
         if not isinstance(im, dict) or not DIGEST.fullmatch(str(im.get("digest", ""))):
             errs.append("hermes.image: digest is not sha256:<64 hex>")
+        # Historical carried-over pins stay readable; a newly tested pin must name the image's source too.
+        image_commit = im.get("commit") if isinstance(im, dict) else None
+        if image_commit is not None or not str(h.get("test_record", "")).startswith("none: "):
+            if not SHA.fullmatch(str(image_commit or "")):
+                errs.append("hermes.image: commit must record the 40-char image source commit for a tested pin")
+            elif image_commit != h.get("commit"):
+                errs.append("hermes.image: commit differs from the upstream tag commit; do not promote this image")
     agent = (rel.get("default_apps") or {}).get("agent")
     if im is None and isinstance(agent, dict) and agent.get("app") == "hermes-agent":
         errs.append("hermes.image: fresh installs run the hermes-agent container, so the pin needs an image")
@@ -82,6 +90,11 @@ def hermes_shape(rel: dict) -> list[str]:
         errs.append("hermes.rollback: needs a final tag and a 40-char commit")
     elif isinstance(rb, dict) and rb.get("tag") == h.get("tag"):
         errs.append("hermes.rollback: must be a different release from hermes.tag")
+    if VERSION.fullmatch(version) and _vtuple(version) >= (0, 3, 40):
+        try:
+            hermes_lock.check_release(rel)
+        except (ValueError, OSError) as exc:
+            errs.append(str(exc))
     return errs
 
 
@@ -391,6 +404,52 @@ def dockerhub_digest_exists(digest: str) -> tuple[bool, str]:
         return False, str(e)[:160]
 
 
+def dockerhub_image_revision(digest: str) -> tuple[str | None, str]:
+    """Prove the digest's revision on BOTH install architectures, without downloading image layers.
+
+    No inferred revision from a tag, build date, or another architecture. Missing metadata blocks promotion.
+    """
+    import hashlib
+    accept = ", ".join(["application/vnd.oci.image.index.v1+json",
+                        "application/vnd.docker.distribution.manifest.list.v2+json",
+                        "application/vnd.oci.image.manifest.v1+json",
+                        "application/vnd.docker.distribution.manifest.v2+json"])
+    try:
+        tok = json.load(urllib.request.urlopen(
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:nousresearch/hermes-agent:pull",
+            timeout=20))["token"]
+
+        def get(path: str, expected: str) -> dict:
+            req = urllib.request.Request(f"https://registry-1.docker.io/v2/nousresearch/hermes-agent/{path}",
+                                         headers={"Authorization": f"Bearer {tok}", "Accept": accept})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = r.read()
+            if "sha256:" + hashlib.sha256(raw).hexdigest() != expected:
+                raise ValueError("registry content differs from its digest")
+            return json.loads(raw)
+
+        top = get(f"manifests/{digest}", digest)
+        revisions = set()
+        for arch in ("amd64", "arm64"):
+            matches = [m for m in top.get("manifests", []) if m.get("platform", {}).get("os") == "linux"
+                       and m.get("platform", {}).get("architecture") == arch]
+            if len(matches) != 1:
+                return None, f"expected one linux/{arch} manifest"
+            md = matches[0]["digest"]
+            man = get(f"manifests/{md}", md)
+            cd = man["config"]["digest"]
+            cfg = get(f"blobs/{cd}", cd)
+            rev = ((cfg.get("config") or {}).get("Labels") or {}).get("org.opencontainers.image.revision")
+            if not SHA.fullmatch(str(rev or "")):
+                return None, f"linux/{arch} has no full OCI revision label; image/tag agreement is unproven"
+            revisions.add(rev)
+        if len(revisions) != 1:
+            return None, "Linux architectures carry different source revisions"
+        return revisions.pop(), ""
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return None, str(e)[:160]
+
+
 def app_dockerfile(repo: str, commit: str) -> str | None:
     r = subprocess.run(["gh", "api", f"repos/{repo}/contents/image/Dockerfile?ref={commit}", "-q", ".content"],
                        capture_output=True, text=True)
@@ -418,6 +477,14 @@ def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
     if im:
         found, why = dockerhub_digest_exists(im["digest"])
         (ok if found else errs).append(f"hermes.image: {im['digest'][:19]}" + ("" if found else f" missing ({why})"))
+        if found:
+            rev, why = dockerhub_image_revision(im["digest"])
+            expected = im.get("commit", h["commit"])
+            if rev is not None and rev == expected == h["commit"]:
+                ok.append(f"hermes.image: linux/amd64 + linux/arm64 built from tag commit {rev[:12]}")
+            else:
+                errs.append(f"hermes.image: built from {(rev or '?')[:12]}, tag pins {h['commit'][:12]}, "
+                            f"image pin says {expected[:12]}" + (f" ({why})" if why else ""))
         agent = (rel.get("default_apps") or {}).get("agent") or {}
         if agent.get("app") == "hermes-agent" and agent.get("repo") and agent.get("commit"):
             df = app_dockerfile(agent["repo"], agent["commit"])
