@@ -11,13 +11,12 @@ ROOT = Path(__file__).resolve().parent
 
 def generate():
     source = (ROOT / 'ui.css').read_text()
-    rules = [line for line in source.splitlines(True) if re.match(r'^\.wz-(?:button|card|row|actions)(?:[ .:{#]|$)', line)]
+    rules = [line for line in source.splitlines(True) if re.match(r'^\.wz-(?:button|card|row|actions|icon-button|pill|field|input|list|tile|main)(?:[ .:{#\[]|$)', line)]
     controls = ''.join(rules)
     aliases = {'var(--r-tile)':'var(--wz-radius-tile, 13px)', 'var(--r)':'var(--wz-radius, 16px)', 'var(--font)':'var(--wz-font-ui, system-ui, sans-serif)', 'var(--accent)':'var(--wz-accent)', 'var(--on-accent)':'var(--wz-on-accent)', 'var(--ink-2)':'var(--wz-text-secondary)', 'var(--ink-3)':'var(--wz-text-muted)', 'var(--ink)':'var(--wz-text)', 'var(--line-2)':'var(--wz-border)', 'var(--line)':'color-mix(in srgb, var(--wz-border) 55%, transparent)', 'var(--fill)':'var(--wz-surface)', 'var(--wz-space-4)':'var(--wz-space-4, 16px)', 'var(--wz-space-3)':'var(--wz-space-3, 12px)', 'var(--wz-space-2)':'var(--wz-space-2, 8px)'}
     for old, new in aliases.items():
         controls = controls.replace(old, new)
-    # Standalone subset supplies the button-local reset that the full kit provides globally.
-    return '/* Shared controls from wizard-ui.css: no root aliases or global reset, safe inside the shell. */\n' + controls + '\n.wz-button { display:inline-flex; align-items:center; justify-content:center; border:0; font:inherit; font-weight:600; text-decoration:none; cursor:pointer; box-sizing:border-box; }\n.wz-button.quiet { background:var(--wz-surface); color:var(--wz-text); }\n'
+    return '/* Shared controls from ui.css: no root aliases or global reset, safe inside the shell. */\n' + controls
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
