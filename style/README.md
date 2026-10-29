@@ -10,7 +10,8 @@
 - `tokens.css`: generated CSS custom properties, including all five skin defaults. Run `python3 style/generate_tokens.py` after a source edit; `--check` fails if JSON and CSS drift.
 - `appearance-client.js`: framework-neutral, exact parent + same-origin + version/schema validation, strictly advancing revisions, revision acknowledgements, `wizard:theme` events. Only fourteen validated colour values are applied; no agent or app-data authority.
 - `boot.js`: marks a hosted document before first paint.
-- `ui.css`: the existing Chats-derived builder kit plus card, chip, bar, sheet, list row, button and empty state. The kit references the tokens above, rather than maintaining another palette.
+- `ui.css`: the existing Chats-derived builder kit plus card, chip, bar, sheet, list row, button and empty state. The kit references the tokens above, rather than maintaining another palette. It stays self-contained for immutable/offline app builders.
+- `controls.css`: generated no-global-reset row/card/button/action subset for shell-embedded components. Run `python3 style/generate_controls.py` after changing those primitives in `ui.css`; `--check` catches drift. This is a generated distribution of the one kit, not a second authored implementation.
 - `sheet.js`: the one pop-up's behaviour (×, Esc, outside tap, Back, swipe down) for `.wz-sheet`.
 - `demo.html`: executable component gallery, with a nested sheet handled by `__wizardCloseOverlay()`. Serve this directory with any static HTTP server to inspect it.
 
