@@ -128,10 +128,10 @@ Apps that produce work for an agent also show **"Sends its work to: [agent]"** (
 
 ## 6. Private agents are sealed (#59)
 
-- `shared_with_agents` is always false, even in forged stored records. No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent Search does not index private agents for other readers.
+- `shared_with_agents` is always false, even in forged stored records. No other agent, standard or private, can read a private agent's chats, memory, skills or files. The Agent Service rejects any `agent-data` grant whose source is a private agent (`409 check: "agent.private_sealed"`), and Agent History does not index private agents for other readers.
 - Sharing goes outward only, as a copy: the owner asks the private agent to share something; it shows the exact item and its destination (another agent's thread, or Files); it publishes only after the owner approves that item. The destination receives a copy; it never gets a way back in. Each publish is logged (item, destination, time, no content in the log).
 - Moving to a new harness works the same way: the private agent publishes what the owner approves into the new agent.
-- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent Search enforce it.
+- On an alongside box the main Hermes runs on the host and can reach the files under `~/.wizard-os/agents/`. The wall is complete once the main agent also runs in its own container; until then the Agent Service, the gateway and Agent History enforce it.
 
 ## 7. App → agent binding (#60, proposed)
 
@@ -206,4 +206,4 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 
 ## Not in this spec
 
-Agent History session retrieval (#45/#77, PR #70), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.
+Agent History session retrieval (#45/#102), the Wizard scheduler (#47), workspace objects, container hardening of the main Hermes, export/move UI.

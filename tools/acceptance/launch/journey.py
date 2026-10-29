@@ -30,6 +30,26 @@ def run(*argv, timeout=120):
     return p.stdout.strip()
 
 
+def install_wisdom(wam, case):
+    # Capture the backend's reason before a retry can replace it, and before the
+    # disposable VM is deleted. Never repair/prefetch/change the installed release.
+    for attempt in range(2 if case == 'upgrade-baseline' else 1):
+        try:
+            run(wam, 'install', 'wisdom', timeout=900)
+            return
+        except (RuntimeError, subprocess.TimeoutExpired) as error:
+            try:
+                subprocess.run(['python3', str(Path(__file__).with_name('diagnostics.py'))],
+                               stdout=sys.stderr, stderr=sys.stderr, timeout=130, check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                sys.stderr.write('install diagnostics unavailable\n')
+            # Preserve the existing single old-baseline retry, not timeouts or
+            # candidate failures. A diagnostic failure never replaces this error.
+            if not isinstance(error, RuntimeError) or attempt or case != 'upgrade-baseline':
+                raise
+            sys.stderr.write('baseline wisdom install: retrying once\n')
+
+
 def request(url, value=None, raw=None):
     headers = {}
     if value is not None:
@@ -77,6 +97,32 @@ def first_contact(registry, cli, case):
     return {'contact': True, 'setup_route': True, 'first_contact': 'passed'}
 
 
+def assert_installed_default_pins(home, runtipi, expected=()):
+    """Read installed recipes, never the prepared store/registry projection."""
+    import yaml
+    pins = json.loads((home / 'release-pins.json').read_text())
+    checked = []
+    for slot, row in pins.get('default_apps', {}).items():
+        if not row or not row.get('app'):
+            continue
+        app = row['app']
+        live = runtipi / 'apps' / 'wizardapps' / app
+        # Optional, absent defaults need not be installed by an upgrade.
+        if not live.exists():
+            assert app not in expected, f'installed default app {app} vanished'
+            continue
+        text = (live / 'wizard.md').read_text()
+        assert text.startswith('---\n'), f'installed default app {app} has no manifest'
+        meta = yaml.safe_load(text.split('---\n', 2)[1])
+        version = str(meta.get('version', ''))
+        assert version == row['index_version'], f'installed default app {app} version {version} != release pin {row["index_version"]}'
+        if row.get('commit'):
+            assert (live / '.wizard-commit').read_text().strip() == row['commit'], f'installed default app {app} source != release pin'
+        checked.append(app)
+    assert checked, 'no installed default apps checked'
+    return checked
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--state', required=True, type=Path)
@@ -89,6 +135,9 @@ def main():
     release = json.loads((home / 'release.json').read_text())
     assert release.get('status') in ('pinned', 'drift'), 'public install pin failure'
     assert not any(c.get('core') and not c.get('ok') for c in release.get('checks', [])), 'core pin mismatch'
+    previous = json.loads(args.state.read_text()) if args.state.exists() else {}
+    expected = {a['id'] for a in registry['apps']} | set(previous.get('installed_default_pins', []))
+    installed_defaults = assert_installed_default_pins(home, Path(os.environ.get('RUNTIPI_ROOT', Path.home() / 'runtipi')), expected)
     # Probe frozen code without modifying the shipped profile or installers.
     report = json.loads(run('python3', str(args.cli), 'report', '--json'))
     assert report['schema'] == 'wizard-report-v1'
@@ -96,7 +145,8 @@ def main():
     # No automatic repairs: missing catalog app/install or private content is a failing journey.
     if not any(a['id'] == 'wisdom' for a in registry['apps']):
         assert args.case == 'clean' or not args.state.exists(), 'installed app vanished'
-        run(str(Path.home() / '.local/bin/wam'), 'install', 'wisdom', timeout=900)
+        wam = str(Path.home() / '.local/bin/wam')
+        install_wisdom(wam, args.case)
         registry = json.loads((home / 'apps.json').read_text())
     wisdom = next(a for a in registry['apps'] if a['id'] == 'wisdom')
     endpoint = wisdom['mcp']['url'].removesuffix('/mcp')
@@ -160,9 +210,10 @@ def main():
     restart()
     assert entry()['progress'] == progress, 'restore did not restore the older reading position'
     args.state.parent.mkdir(parents=True, exist_ok=True)
-    args.state.write_text(json.dumps({'progress': progress}))
+    args.state.write_text(json.dumps({'progress': progress, 'installed_default_pins': installed_defaults}))
     receipt = {'fixture': 'launch-audits-8-9', 'case': args.case, 'release': release['release'],
                'architecture': run('uname', '-m'), 'public_install': True, 'overlays': [],
+               'installed_default_pins': installed_defaults,
                'diagnostics': 'frozen-source-probe-not-installed-release', **contact_result,
                'public_reading_sha256': hashlib.sha256(BODY.encode()).hexdigest(),
                'retained_readback': old is not None, 'progress': progress, 'restore': True, 'passed': True}

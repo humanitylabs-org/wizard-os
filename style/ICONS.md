@@ -75,6 +75,7 @@ python3 -m venv .venv && .venv/bin/pip install skia-pathops fonttools resvg-py
 | `v-week` | `week` | Seven days cut into one wheel: the week, one level up. | `#D6A0FE` (310°) |
 | `social` | `social` | Two wizards, the smaller one cut free of the larger: a network of people. | `#EF90FE` (322°) |
 | `wizard-music` | `music` | An eighth note whose flag is the curl of the hat’s hook. | `#FF8FD3` (344°) |
+| `notes` | `notes` | A page with a pencil cut in from its corner: you write here, and it keeps. | `#FF94BD` (356°) |
 | `iching` | `iching` | A casting coin with its square hole: cast and read. | `#E5C9A3` (75°, quiet) |
 | `console` | `console` | A terminal window with its prompt cut out. | `#A9B6C4` (250°, quiet) |
 | `legacy-wizard` | `wizard` | The mother mark: the hat, with its door joined to the ground line. | `#BDB5D8` (296°, quiet) |
