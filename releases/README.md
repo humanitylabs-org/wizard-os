@@ -212,6 +212,42 @@ new release stay on it; the next promoted release moves them on. To drop the pol
 itself, remove the `fast_track` branch from both gates (fast-tracked records then fail
 `check`, so move `stable` back first).
 
+## Developer mode
+
+DECISIONS #97 (James, 24 Oct 2026). Not a channel. A box in developer mode installs and
+updates from a git branch or fork its owner names, instead of following `releases/latest`
+or `releases/stable`. It exists for people who change Wizard itself and want to run their
+change daily before proposing it.
+
+- **Off by default.** Anyone may turn it on after a confirmation that says what stops:
+  Automatic updates and the promotion gates above no longer protect the box.
+- **Visible drift.** The box shows `Developer build: <branch> @ <commit>, N behind main`.
+- **Way back.** Switching back to latest or stable uses the normal upgrade path and its
+  upgrade test, so the box lands on a promoted or cut release.
+- **Into a PR.** A change that has run there is proposed as a fix or a feature, labelled
+  `from: <owner> dev build`, and merges under the rules in AGENTS.md (DECISIONS #96).
+
+Owners who only want Wizard to look or behave differently use their skin, settings or
+apps; none of those need developer mode.
+
+Status: decided, not built. The App Manager source setting, banner and return path are
+still to implement.
+## PR pipeline board
+
+[Wizard OS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
+only) shows every pull request in the repos a release pins, plus wizard-os and try-wizard,
+in one of six columns: **Draft → In review → Merged → On Latest → On Stable**, or
+**Dropped**. Each card carries its **Tier** (from the `tier:` label) and **Opened by**, so
+the board can be filtered to open fixes or one person's PRs.
+
+`tools/pr_board.py` keeps it in sync every 15 minutes (a timer on the Archimedes VPS). A
+merged PR moves to On Latest or On Stable once the commit that `releases/latest` or
+`releases/stable` pins for its repo contains it, so the board follows
+`tools/promote_stable.py` with no extra step. Repos no release pins stop at Merged.
+Finished cards are archived two days after merge or close. Run it by hand with
+`python3 tools/pr_board.py` (`--dry-run` prints the counts only); it needs `gh` with the
+`project` scope.
+
 ## Publication is a separate gate
 
 `get.sh` defaults to the anonymous raw GitHub URL for `releases/stable`, followed

@@ -69,7 +69,7 @@ def promotion_problems(rec, version: str) -> list[str]:
         ft = rec.get("fast_track")
         if ft is None:
             out.append(f"soaked {(at - since) / 3600:.1f}h on latest; stable needs {SOAK_HOURS}h "
-                       "(a verified fix may fast-track: DECISIONS #82)")
+                       "(a release with a passed upgrade test may fast-track: DECISIONS #82, #93)")
         else:
             out += fast_track_problems(ft)
     t = rec.get("upgrade_test")
@@ -85,8 +85,8 @@ def promotion_problems(rec, version: str) -> list[str]:
 
 
 def fast_track_problems(ft) -> list[str]:
-    """Why a `fast_track` block does not waive the soak ([] = it does). DECISIONS #82: only a release classified as
-    fixes, with the reason recorded, skips the soak; it still needs the passed upgrade test. Same as the other repo."""
+    """Why a `fast_track` block does not waive the soak ([] = it does). DECISIONS #82 and #93: a release classified as
+    fix or feature, with the reason recorded, skips the soak; it still needs the passed upgrade test. Same as the other repo."""
     if not isinstance(ft, dict):
         return ["fast_track must be an object"]
     out = []

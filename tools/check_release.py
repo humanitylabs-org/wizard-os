@@ -24,6 +24,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+import hermes_lock
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -89,6 +90,11 @@ def hermes_shape(rel: dict) -> list[str]:
         errs.append("hermes.rollback: needs a final tag and a 40-char commit")
     elif isinstance(rb, dict) and rb.get("tag") == h.get("tag"):
         errs.append("hermes.rollback: must be a different release from hermes.tag")
+    if VERSION.fullmatch(version) and _vtuple(version) >= (0, 3, 40):
+        try:
+            hermes_lock.check_release(rel)
+        except (ValueError, OSError) as exc:
+            errs.append(str(exc))
     return errs
 
 

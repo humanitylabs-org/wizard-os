@@ -67,7 +67,7 @@ class ImageRevision(unittest.TestCase):
         h = {"tag": "v0.21.6", "commit": TAG, "image": {
             "ref": "docker.io/nousresearch/hermes-agent:v0.21.6", "digest": "sha256:" + "1" * 64},
             "test_record": "docs/acceptance/hermes-v0.21.6.md", "rollback": None}
-        rel = {"version": "0.3.99", "hermes": h}
+        rel = {"version": "0.3.39", "hermes": h}  # provenance shape independent of the new shared-lock gate
         self.assertTrue(any("commit must record" in e for e in cr.hermes_shape(rel)))
         h["image"]["commit"] = OLD
         self.assertTrue(any("differs from the upstream tag" in e for e in cr.hermes_shape(rel)))

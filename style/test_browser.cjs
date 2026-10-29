@@ -30,7 +30,7 @@ function serve(port, hostPage) {
 }
 
 (async () => {
-  const A = 47191, B = 47192;
+  const A = Number(process.env.QA_PORT || 47191), B = Number(process.env.QA_FOREIGN_PORT || 47192);
   const hostPage = `<!doctype html><meta charset=utf-8><body style="margin:0;background:#123">
 <iframe id=same src="http://127.0.0.1:${A}/demo.html" style="width:412px;height:700px;border:0"></iframe>
 <iframe id=sib src="http://127.0.0.1:${A}/demo.html" style="width:10px;height:10px;border:0"></iframe>
@@ -60,7 +60,7 @@ window.send=(id,a,origin)=>document.getElementById(id).contentWindow.postMessage
     const readies = await page.evaluate(() => readies.map(r => r.origin));
     mark('foreign frame ready never reaches a different-origin parent', readies.filter(o => o === `http://127.0.0.1:${A}`).length === 2 && !readies.includes(`http://127.0.0.1:${B}`));
     // Preservation markers before any theme change.
-    await fr.evaluate(() => { window.__identity = {}; document.querySelector('.wz-input').value = 'unsent idea'; const sc = document.querySelector('.wz-scroll'); sc.style.height = '120px'; sc.scrollTop = 40; document.getElementById('sheet').showModal(); window.__events = 0; addEventListener('wizard:theme', () => __events++); });
+    await fr.evaluate(() => { window.__identity = {}; document.querySelector('.wz-field, .wz-input').value = 'unsent idea'; const sc = document.querySelector('.wz-scroll'); sc.style.height = '120px'; sc.scrollTop = 40; document.getElementById('sheet').showModal(); window.__events = 0; addEventListener('wizard:theme', () => __events++); });
     const scroll0 = await fr.evaluate(() => document.querySelector('.wz-scroll').scrollTop);
     let rev = 0;
     for (const skin of Object.keys(tokens.skins)) {
@@ -69,7 +69,7 @@ window.send=(id,a,origin)=>document.getElementById(id).contentWindow.postMessage
       await page.waitForFunction(r => acks.some(a => a.src === 'same' && a.revision === r), rev);
       const o = await fr.evaluate(() => ({ cur: WizardTheme.current, html: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor,
         vars: Object.fromEntries(['text','accent','base','border'].map(k => [k, document.documentElement.style.getPropertyValue('--wz-' + k)])), radius: getComputedStyle(document.querySelector('.wz-card')).borderTopLeftRadius,
-        ink: getComputedStyle(document.querySelector('.wz-card h2')).color, id: !!window.__identity, input: document.querySelector('.wz-input').value, sheet: document.getElementById('sheet').open, scroll: document.querySelector('.wz-scroll').scrollTop }));
+        ink: getComputedStyle(document.querySelector('.wz-card h2')).color, id: !!window.__identity, input: document.querySelector('.wz-field, .wz-input').value, sheet: document.getElementById('sheet').open, scroll: document.querySelector('.wz-scroll').scrollTop }));
       mark(`${skin}: applied revision ${rev}`, o.cur.skin === skin && o.cur.revision === rev);
       mark(`${skin}: exact colour roles`, ['text','accent','base','border'].every(k => o.vars[k] === tokens.skins[skin].tokens[k]));
       mark(`${skin}: transparent hosted canvas`, o.html === transparent && o.body === transparent);
