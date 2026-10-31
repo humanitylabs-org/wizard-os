@@ -135,6 +135,25 @@ class Gate(unittest.TestCase):
         self.assertIn("return rep", src[i_gate:src.index("cmd = [sys.executable, str(RIG)")])
         self.assertIn("a.feature_fast_track", src)
 
+    def test_an_unmirrored_latest_is_blocked_before_the_rig(self):
+        """A latest cut by an earlier run whose mirror PR is unmerged: no 404 upgrade test, a BLOCKED outcome."""
+        src = (HERE.parent / "release_train.py").read_text()
+        i_gate = src.index('if not served(f"{V}.json", sha(rel_json)):')
+        i_rig = src.index("cmd = [sys.executable, str(RIG)")
+        self.assertLess(i_gate, i_rig)
+        self.assertIn("return rep", src[i_gate:i_rig])
+        self.assertIn('rep["outcome"] = (f"BLOCKED:', src[i_gate:i_rig])
+
+    def test_served_compares_the_exact_bytes(self):
+        body = b'{"version": "0.0.1"}\n'
+        resp = mock.MagicMock()
+        resp.__enter__.return_value.read.return_value = body
+        with mock.patch.object(rt.urllib.request, "urlopen", return_value=resp):
+            self.assertTrue(rt.served("0.0.1.json", rt.hashlib.sha256(body).hexdigest()))
+            self.assertFalse(rt.served("0.0.1.json", "0" * 64))
+        with mock.patch.object(rt.urllib.request, "urlopen", side_effect=OSError("404")):
+            self.assertFalse(rt.served("0.0.1.json", rt.hashlib.sha256(body).hexdigest()))
+
 
 if __name__ == "__main__":
     unittest.main()

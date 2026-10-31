@@ -358,16 +358,21 @@ def codex_state(repo: str, n: str) -> dict | None:
     return None
 
 
+def served(name: str, sha256: str) -> bool:
+    """Does the public installer mirror serve releases/<name> with exactly this content?"""
+    try:
+        req = urllib.request.Request(f"{PUBLIC_MIRROR}/{name}", headers={"User-Agent": "curl/8 wizard-release-train"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return hashlib.sha256(r.read()).hexdigest() == sha256
+    except OSError:
+        return False
+
+
 def wait_public(name: str, sha256: str, timeout: float = 900) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
-        try:
-            req = urllib.request.Request(f"{PUBLIC_MIRROR}/{name}", headers={"User-Agent": "curl/8 wizard-release-train"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                if hashlib.sha256(r.read()).hexdigest() == sha256:
-                    return
-        except OSError:
-            pass
+        if served(name, sha256):
+            return
         time.sleep(30)
     raise Stop(f"the public mirror does not serve releases/{name} ({sha256[:12]}) after {timeout // 60:.0f} min")
 
@@ -487,6 +492,14 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                           f"(promote_stable.py promote {V} --from {stable} after the soak and an upgrade test). "
                           f"Stable stays {stable}.")
         return rep
+    # A candidate that was cut by an earlier run (latest itself) may still be unmirrored, e.g. its mirror PR waits
+    # for a review. The installer would 404 on it, so don't spend the rig on it: report the blocker instead.
+    if not dry and not p["cut"]:
+        if not served(f"{V}.json", sha(rel_json)):
+            rep["outcome"] = (f"BLOCKED: {V} is latest but the public installer mirror ({PUBLIC_MIRROR}/{V}.json) does not "
+                              f"serve it yet; merge its {WAM} mirror PR after review. No upgrade test run. "
+                              f"Stable stays {stable}.")
+            return rep
     # The upgrade test from the CURRENT stable, on a disposable guest, with the public command.
     out = work / f"rig-{V}.json"
     cmd = [sys.executable, str(RIG), "run", "--from", stable, "--to", V, "--out", str(out), *rig_args]
