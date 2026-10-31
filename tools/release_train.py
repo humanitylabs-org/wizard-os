@@ -91,6 +91,24 @@ class Stop(Exception):
     """The train stops here; the message is the report's reason."""
 
 
+# The scheduler wraps a run in `timeout 3600`; a run killed from outside writes no report. Every wait stops itself
+# with a Stop (and so a report) before this budget runs out. Override with WIZARD_TRAIN_BUDGET_S.
+RUN_BUDGET_S = float(os.environ.get("WIZARD_TRAIN_BUDGET_S", "3300"))
+RUN_STARTED = time.time()
+CODEX_OUT_OF_CREDITS = "usage limits have been reached"
+
+
+def run_deadline() -> float:
+    return RUN_STARTED + RUN_BUDGET_S
+
+
+def codex_out_of_credits(repo: str, n: str, since: str) -> bool:
+    """Did the Codex connector answer on this PR, after `since` (ISO time), that it has no review credits left?"""
+    comments = gh_json(["api", f"repos/{repo}/issues/{n}/comments", "--paginate"]) or []
+    return any("codex" in (c.get("user") or {}).get("login", "") and c.get("created_at", "") >= since
+               and CODEX_OUT_OF_CREDITS in c.get("body", "") for c in comments)
+
+
 # ---------------------------------------------------------------- repos
 
 
@@ -311,7 +329,8 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
     n = url.rstrip("/").rsplit("/", 1)[1]
     sh(["gh", "api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={label}"], check=False)
     head = sh(["git", "-C", str(wt), "rev-parse", "HEAD"]).strip()
-    deadline, opened, nudged = time.time() + timeout, time.time(), False
+    deadline, opened, nudged = min(time.time() + timeout, run_deadline()), time.time(), False
+    opened_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     while need_checks:
         time.sleep(30)
         checks = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup"])["statusCheckRollup"]
@@ -330,6 +349,9 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
             # On the App Manager mirror that is Codex: wait for its review of this exact head, clean.
             state = codex_state(repo, n)
             if state is None or state.get("commit_sha") != head or state.get("status") != "completed":
+                if codex_out_of_credits(repo, n, opened_iso):
+                    raise Stop(f"{url}: Codex is out of review credits, so no non-author review of {head[:8]} "
+                               f"(DECISIONS #96); a person or another agent must review it, then merge")
                 if time.time() - opened > 600 and not nudged:
                     sh(["gh", "pr", "comment", n, "-R", repo, "-b", "@codex review"], check=False)
                     nudged = True
@@ -358,16 +380,21 @@ def codex_state(repo: str, n: str) -> dict | None:
     return None
 
 
+def served(name: str, sha256: str) -> bool:
+    """Does the public installer mirror serve releases/<name> with exactly this content?"""
+    try:
+        req = urllib.request.Request(f"{PUBLIC_MIRROR}/{name}", headers={"User-Agent": "curl/8 wizard-release-train"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return hashlib.sha256(r.read()).hexdigest() == sha256
+    except OSError:
+        return False
+
+
 def wait_public(name: str, sha256: str, timeout: float = 900) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
-        try:
-            req = urllib.request.Request(f"{PUBLIC_MIRROR}/{name}", headers={"User-Agent": "curl/8 wizard-release-train"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                if hashlib.sha256(r.read()).hexdigest() == sha256:
-                    return
-        except OSError:
-            pass
+        if served(name, sha256):
+            return
         time.sleep(30)
     raise Stop(f"the public mirror does not serve releases/{name} ({sha256[:12]}) after {timeout // 60:.0f} min")
 
@@ -487,6 +514,14 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                           f"(promote_stable.py promote {V} --from {stable} after the soak and an upgrade test). "
                           f"Stable stays {stable}.")
         return rep
+    # A candidate that was cut by an earlier run (latest itself) may still be unmirrored, e.g. its mirror PR waits
+    # for a review. The installer would 404 on it, so don't spend the rig on it: report the blocker instead.
+    if not dry and not p["cut"]:
+        if not served(f"{V}.json", sha(rel_json)):
+            rep["outcome"] = (f"BLOCKED: {V} is latest but the public installer mirror ({PUBLIC_MIRROR}/{V}.json) does not "
+                              f"serve it yet; merge its {WAM} mirror PR after review. No upgrade test run. "
+                              f"Stable stays {stable}.")
+            return rep
     # The upgrade test from the CURRENT stable, on a disposable guest, with the public command.
     out = work / f"rig-{V}.json"
     cmd = [sys.executable, str(RIG), "run", "--from", stable, "--to", V, "--out", str(out), *rig_args]
