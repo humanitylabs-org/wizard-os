@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -14,6 +15,9 @@ HERE = Path(__file__).resolve().parent
 
 
 def command(argv, log, timeout=1800):
+    cleanup = argv[:3] in (['limactl', 'stop', '-f'], ['limactl', 'delete', '-f'])
+    if not cleanup and shutil.disk_usage(Path(os.environ['WIZARD_WORK_ROOT'])).free < 250 * (1 << 30):
+        raise RuntimeError('disk_reserve')
     with log.open('a') as out:
         p = subprocess.run(argv, stdout=out, stderr=subprocess.STDOUT, timeout=timeout)
     if p.returncode:
@@ -84,6 +88,7 @@ def main():
     p.add_argument('--secrets-root', type=Path)
     p.add_argument('--oauth-source', type=Path, help='pushed ChatGPT connection source, for host-only OAuth renewal')
     p.add_argument('--phone-config', type=Path, help='private host paths to the published feed/APK and Android tools')
+    p.add_argument('--check-only', action='store_true', help='validate host inputs without creating a VM')
     p.add_argument('--onboarding-only', action='store_true', help='fresh install + chat + phone; never touches the retained soak VM')
     args = p.parse_args()
     if args.first_chat_secret and not (args.secrets_root and args.oauth_source):
@@ -97,8 +102,12 @@ def main():
     if not work_value:
         p.error('WIZARD_WORK_ROOT must name the mounted work volume')
     work = Path(work_value).resolve()
-    if not work.is_mount() or not root.is_relative_to(work) or root == work or not args.cli.is_file():
-        p.error('root must be below the mounted work volume; staged CLI required')
+    from release_gate import admitted_work_root, native_vm_config
+    native = native_vm_config()
+    if not admitted_work_root(work) or not root.is_relative_to(work) or root == work or not args.cli.is_file():
+        p.error('root must be below the admitted work root; staged CLI required')
+    if sys.flags.optimize:
+        p.error('assertions may not be optimized away')
     import re
     if not all(re.fullmatch(r'\d+\.\d+\.\d+', v) for v in (args.release, args.previous_release)):
         p.error('numeric released versions required')
@@ -123,10 +132,18 @@ def main():
             old = json.loads(config.read_text())
             if any(secret.is_relative_to(Path(m['location']).resolve()) for m in old.get('mounts', [])):
                 p.error('credential is visible through an existing guest mount')
+    # Keep 250 GiB untouched in addition to the bounded 50 GiB guest.
+    if shutil.disk_usage(work).free < 301 * (1 << 30):
+        p.error('250 GiB reserve plus 50 GiB guest and metadata required')
+    if args.check_only:
+        print(json.dumps({'preflight': True, 'executed': False, 'release': args.release,
+                          'architecture': native['arch'], 'vm_type': native['vmType']}))
+        return 0
     os.umask(0o077)
     os.environ['LIMA_HOME'] = str(root / 'lima')
     os.environ['LIMA_CACHE_HOME'] = str(root / 'cache')
-    os.environ['PATH'] = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+    if native['vmType'] == 'vz':
+        os.environ['PATH'] = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
     root.mkdir(parents=True, exist_ok=True)
     run_id = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     run = root / 'runs' / run_id
@@ -139,18 +156,17 @@ def main():
         if len(str(sock)) >= 104:
             p.error(f'Lima socket path too long for instance {name!r} ({len(str(sock))} chars); use a shorter --root')
     result = {'fixture': 'launch-audits-8-9', 'at': dt.datetime.now(dt.timezone.utc).isoformat(),
-              'release': args.release, 'architecture': 'aarch64', 'passed': False, 'interventions': 0,
+              'release': args.release, 'architecture': native['arch'], 'passed': False, 'interventions': 0,
               'overlays': [], 'cases': [], 'step': 'start'}
     log = run / 'private-run.log'
     def shell(name, argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', name, '--'] + argv, log, timeout)
     def create(name):
-        config = {'vmType': 'vz', 'arch': 'aarch64', 'cpus': 4, 'memory': '6GiB', 'disk': '50GiB',
-                  'images': [{'location': 'https://cloud-images.ubuntu.com/releases/noble/release-20261017/ubuntu-24.04-server-cloudimg-arm64.img',
-                              'arch': 'aarch64', 'digest': 'sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e'}],
+        config = {**native, 'cpus': 4, 'memory': '6GiB', 'disk': '50GiB',
                   'mounts': [{'location': str(m), 'writable': m == root} for m in dict.fromkeys(mounts)],
                   'containerd': {'system': False, 'user': False},
-                  'portForwards': [{'guestPortRange': [1, 65535], 'ignore': True}],
+                  'portForwards': [{'guestIP': ip, 'guestPortRange': [1, 65535], 'ignore': True}
+                                   for ip in ('127.0.0.1', '0.0.0.0')],
                   'provision': [{'mode': 'system', 'script': '#!/bin/sh\nset -eu\napt-get update\napt-get install -y curl git python3\n'}]}
         config_path = run / (name + '.json')
         config_path.write_text(json.dumps(config))

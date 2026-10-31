@@ -40,6 +40,11 @@ def native_vm_config():
     raise RuntimeError('unsupported native acceptance host: ' + repr(host))
 
 
+def admitted_work_root(work):
+    """Mac requires a volume; Linux permits reserved worker directories."""
+    return work.is_mount() or (platform.system() == 'Linux' and work.is_dir())
+
+
 def capture_failure_diagnostics(vm, log):
     """Read the guest before cleanup; best effort must never hide the real failure."""
     try:
@@ -68,7 +73,7 @@ def main():
     # Linux workers may use a reserved directory on the root filesystem. The
     # same disk reserve and containment checks still apply. Mac keeps its
     # external-volume admission requirement.
-    assert work.is_mount() or (platform.system() == 'Linux' and work.is_dir())
+    assert admitted_work_root(work)
     assert root.is_relative_to(work) and root != work
     assert not root.exists(), 'use a fresh isolated acceptance root'
     assert a.cli.is_file()
