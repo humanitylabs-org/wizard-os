@@ -57,12 +57,20 @@ These are the shell's job (wizard-ux) and proposed there, not in apps:
 - **Settings** opens as a normal window on desktop and as the same full-height sheet on phone. It closes like everything else: the ×, Esc, Back and ⌥W.
 - **Previews** (files, links, images) open as a window on desktop and as a full-screen sheet on phone, with the same close gestures.
 
+### 8. Thumb-first in narrow windows
+Miguel, 31 Oct 2026. In narrow windows (below 600 px) the things you act on most sit nearest the thumb, like Chats.
+- **Arriving-over-time lists flip:** feeds, inboxes, notifications and message threads put the newest item at the **bottom**, open scrolled to it, and stay pinned there when new items arrive or items are dismissed. Date headers run oldest at the top to Today at the bottom.
+- **Primary controls go to the bottom:** the screen's filter chips, its main actions and its one input (search box, composer) sit in one bottom bar above the safe-area inset. A mini player or progress bar stacks directly above it. Toasts appear above the bar, never over it. Sheets already open from the bottom.
+- **Do not flip** content that is read from the top or ranked: settings, documents, reports, articles, forms, grids such as the launcher, and search results ranked best-first. Ranked results next to a bottom input put the best match nearest the input.
+- **Wide windows stay top-down:** newest first, controls at the top. Use the same container query as rule 2, never device detection.
+
 ## App checklist (for app PRs)
 - [ ] Loads `wizard-ui.css`, and the app frame has no `max-width`.
 - [ ] Looks right at 360, 700 and 1200 px window widths, in at least two skins, one of them light.
 - [ ] Every pop-up is a `.wz-sheet` that closes with ×, Esc, outside tap, Back and swipe-down.
 - [ ] Connector apps follow pattern 5: status card, accounts, one primary action, details collapsed.
 - [ ] No own title header in a window. No hex colours in app CSS.
+- [ ] Narrow windows follow rule 8: feeds and inboxes have newest at the bottom, and primary controls sit in a bottom bar; read-from-top and ranked screens are not flipped.
 
 ## Component contract (normative)
 
