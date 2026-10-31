@@ -88,6 +88,38 @@ health: /healthz
 ---
 ```
 
+## App names and renames
+
+The internal `id` is the display `name` in kebab-case: **Movies → `movies`**, **Food → `food`**,
+**Outline → `outline`**, **Connected accounts → `connected-accounts`**, **Meditate → `meditate`**.
+Do not give an app an unrelated codename or retain one merely because it used to be its name.
+An existing `wizard-` prefix is allowed when the rest matches the name (`wizard-calendar` for Calendar).
+Staging labels are not new products: `movies-next` / Movies (test) and `search-preview` / Search (preview)
+are allowed. The checker carries a frozen transition list for already-published exceptions; never add new codenames.
+The repository slug, a native class name, an MCP method prefix, or a registered OAuth callback is not the app ID:
+keep those compatibility contracts when changing them would lose data or break installed callers.
+
+Publish a rename in the app's own source, changing both `wizard.md` and the Runtipi configuration:
+
+```yaml
+id: connected-accounts
+name: Connected accounts
+renamed_from: [wizard-connectors]
+```
+
+`renamed_from` is a nonempty list of earlier valid app IDs, never the current ID. Existing owners move through
+`wam app-rename <old-id> <new-id>` (or the normal app updater); they do not install an unrelated fresh copy.
+App Manager stops the old app, copies its data and settings, carries grants and Connection Router references,
+starts and verifies the new app, and only then removes the old installation. Retained old data and the
+`~/.wizard-os/renames/` receipt support rollback. A failed verification restores the old app.
+
+Host-managed gateways must also publish the canonical view URL and retain old bookmark/deep-link redirects.
+Keep a registered OAuth callback reachable at its exact old URL until the provider registration is intentionally
+changed; blindly redirecting its callback can break token exchange. Read-only health/MCP checks, record counts,
+and content-free credential counts must match before and after. Do not reauthorize, re-import, delete data, or
+replace the running app with an older default-branch runtime just to rename it. Regenerate `apps.json` after
+changing host view overrides. Third-party app migrations belong to their publishers, not an unrelated repository.
+
 ## State storage
 
 Everything an app must keep lives under `${APP_DATA_DIR}`, so the App Manager's backup and a box move carry it. Docker named volumes are not backed up. The App Manager therefore rewrites each top-level named volume in an app's compose to a bind mount at `${APP_DATA_DIR}/volumes/<name>`; on the first start after the rewrite it copies the old volume's contents there once (ownership and modes kept) and leaves the old volume in place for the owner to delete. A volume with a fixed `name:` is refused by the checker (rule 15); apps that need to give another app a folder use `shares`.
