@@ -55,6 +55,8 @@ from pathlib import Path
 
 ORG = "humanitylabs-org"
 WOS, WAM = f"{ORG}/wizard-os", f"{ORG}/wizard-app-manager"
+# Non-author reviewers asked when Codex cannot review, so the PR lands in their GitHub review queue.
+FALLBACK_REVIEWERS = [r for r in os.environ.get("WIZARD_TRAIN_REVIEWERS", "defleur-agents").split(",") if r.strip()]
 # image component -> (repo, default_apps slot that pins the same commit)
 IMAGE_COMPONENTS = {"wizard-ux": (f"{ORG}/wizard-ux", "shell"),
                     "wizard-agent-service": (f"{ORG}/wizard-agent-service", "agent-service")}
@@ -350,8 +352,9 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
             state = codex_state(repo, n)
             if state is None or state.get("commit_sha") != head or state.get("status") != "completed":
                 if codex_out_of_credits(repo, n, opened_iso):
+                    request_reviewers(repo, n)
                     raise Stop(f"{url}: Codex is out of review credits, so no non-author review of {head[:8]} "
-                               f"(DECISIONS #96); a person or another agent must review it, then merge")
+                               f"(DECISIONS #96); review requested from {', '.join(FALLBACK_REVIEWERS)}; they review and merge")
                 if time.time() - opened > 600 and not nudged:
                     sh(["gh", "pr", "comment", n, "-R", repo, "-b", "@codex review"], check=False)
                     nudged = True
@@ -365,6 +368,12 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
             raise Stop(f"{url}: checks still running after {timeout // 60:.0f} min")
     sh(["gh", "pr", "merge", n, "-R", repo, "--merge", "--match-head-commit", head])
     return url
+
+
+def request_reviewers(repo: str, n: str) -> None:
+    """Put the PR in a teammate's review queue instead of leaving it for someone to notice."""
+    for r in FALLBACK_REVIEWERS:
+        sh(["gh", "pr", "edit", n, "-R", repo, "--add-reviewer", r.strip()], check=False)
 
 
 def codex_state(repo: str, n: str) -> dict | None:
