@@ -155,5 +155,28 @@ class Gate(unittest.TestCase):
             self.assertFalse(rt.served("0.0.1.json", rt.hashlib.sha256(body).hexdigest()))
 
 
+class CodexWait(unittest.TestCase):
+    def test_out_of_credits_is_detected_only_from_codex_after_the_pr_opened(self):
+        comments = [
+            {"user": {"login": "chatgpt-codex-connector[bot]"}, "created_at": "2026-10-31T03:02:48Z",
+             "body": "Codex usage limits have been reached for code reviews."},
+            {"user": {"login": "someone"}, "created_at": "2026-10-31T04:00:00Z",
+             "body": "Codex usage limits have been reached for code reviews."},
+        ]
+        with mock.patch.object(rt, "gh_json", return_value=comments):
+            self.assertTrue(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:00:00Z"))
+            self.assertFalse(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:30:00Z"))
+        with mock.patch.object(rt, "gh_json", return_value=None):
+            self.assertFalse(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:00:00Z"))
+
+    def test_every_merge_wait_ends_inside_the_run_budget(self):
+        """A wrapper `timeout 3600` kills the run with no report; waits must raise Stop before that."""
+        self.assertLess(rt.RUN_BUDGET_S, 3600)
+        src = (HERE.parent / "release_train.py").read_text()
+        body = src[src.index("def open_and_merge("):src.index("def codex_state(")]
+        self.assertIn("min(time.time() + timeout, run_deadline())", body)
+        self.assertIn("codex_out_of_credits(repo, n, opened_iso)", body)
+
+
 if __name__ == "__main__":
     unittest.main()
