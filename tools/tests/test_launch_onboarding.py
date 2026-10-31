@@ -6,6 +6,7 @@ import io
 import itertools
 import json
 import os
+import platform
 from pathlib import Path
 import sys
 import tempfile
@@ -282,7 +283,9 @@ class OnboardingTests(unittest.TestCase):
                 'java_home': str(root)}))
             em = Mock()
             em.poll.return_value = None
-            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+            with patch.object(platform, 'system', return_value='Darwin'), \
+                 patch.object(platform, 'machine', return_value='arm64'), \
+                 patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
                  patch.object(phone.subprocess, 'run', side_effect=self.fake_device()), \
                  patch.object(phone.subprocess, 'Popen', return_value=em), \
@@ -303,7 +306,9 @@ class OnboardingTests(unittest.TestCase):
             config.write_text(json.dumps({'sdk': str(root), 'work_root': str(root), 'java_home': str(root)}))
             em = Mock()
             em.poll.return_value = None
-            with patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
+            with patch.object(platform, 'system', return_value='Darwin'), \
+                 patch.object(platform, 'machine', return_value='arm64'), \
+                 patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
                  patch.object(phone.subprocess, 'run', side_effect=self.fake_device(unknown_host=True)), \
                  patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
@@ -356,6 +361,7 @@ class OnboardingTests(unittest.TestCase):
                  patch.object(first_chat, 'credential_lease', return_value=contextlib.nullcontext('gpt-test')), \
                  patch.object(first_chat, 'run_chat', return_value=({'passed': True}, {})), \
                  patch.object(phone, 'run_phone', return_value=failed), \
+                 patch.object(launch_run.shutil, 'disk_usage', return_value=type('Disk', (), {'free': 400 << 30})()), \
                  patch.object(launch_run, 'command', side_effect=command), \
                  contextlib.redirect_stdout(io.StringIO()):
                 status = launch_run.main()
@@ -366,6 +372,14 @@ class OnboardingTests(unittest.TestCase):
             self.assertFalse(receipt['passed'])
             self.assertEqual(receipt['phone'], failed)
             self.assertEqual(receipt['step'], 'second-owner-phone')
+            import release_gate
+            native = release_gate.native_vm_config()
+            config = json.loads(next((work / 'run/runs').glob('*/lc-*.json')).read_text())
+            self.assertEqual(receipt['architecture'], native['arch'])
+            self.assertEqual(config['disk'], '50GiB' if native['vmType'] == 'vz' else '24GiB')
+            self.assertTrue(all(config[key] == value for key, value in native.items()))
+            self.assertEqual([m for m in config['mounts'] if m['writable']],
+                             [{'location': str(work / 'run'), 'writable': True}])
 
     def test_ui_xml_parses_escaped_text_and_bounds(self):
         xml = '<hierarchy><node text="Wizard &amp; ready" content-desc="Chat" bounds="[10,20][30,40]"/></hierarchy>'
@@ -391,6 +405,121 @@ class OnboardingTests(unittest.TestCase):
             with other.open('a') as wrong, patch.dict(os.environ, {'WIZARD_HEAVY_LOCK_FD': str(wrong.fileno())}):
                 with self.assertRaises(RuntimeError), phone.worker_lock(d):
                     pass
+
+class NativeLinuxTests(unittest.TestCase):
+    RESOLV = ('# Generated resolver\nnameserver 192.0.2.53\n'
+              'nameserver 2001:db8::53\nsearch example.ts.net\n')
+
+    def test_vm_and_android_image_share_native_admission(self):
+        import release_gate
+        for system, machine, vm, arch, abi in (
+                ('Linux', 'x86_64', 'qemu', 'x86_64', 'x86_64'),
+                ('Darwin', 'arm64', 'vz', 'aarch64', 'arm64-v8a')):
+            with patch.object(platform, 'system', return_value=system), \
+                 patch.object(platform, 'machine', return_value=machine):
+                config = release_gate.native_vm_config()
+                self.assertEqual((config['vmType'], config['arch']), (vm, arch))
+                self.assertEqual(config['images'][0]['arch'], arch)
+                self.assertRegex(config['images'][0]['digest'], r'^sha256:[0-9a-f]{64}$')
+                self.assertEqual(phone.native_system_image(), 'system-images;android-35;google_apis;' + abi)
+                if system == 'Linux':
+                    self.assertEqual(config['mountType'], '9p')
+        for system, machine in (('Linux', 'aarch64'), ('Darwin', 'x86_64')):
+            with patch.object(platform, 'system', return_value=system), \
+                 patch.object(platform, 'machine', return_value=machine):
+                with self.assertRaises(RuntimeError):
+                    phone.native_system_image()
+
+    def test_linux_resolver_uses_host_file_not_scutil(self):
+        from unittest.mock import Mock
+        call = Mock()
+        with patch.object(platform, 'system', return_value='Linux'), \
+             patch.object(Path, 'read_text', return_value=self.RESOLV) as read:
+            self.assertEqual(phone.host_resolver('box.example.ts.net.', call), '192.0.2.53')
+        read.assert_called_once_with()
+        call.assert_not_called()
+        for text in ('search other.example\nnameserver 192.0.2.53',
+                     'search example.ts.net\nnameserver 127.0.0.53',
+                     'search example.ts.net\nnameserver invalid'):
+            with self.assertRaisesRegex(RuntimeError, '^phone_tailnet_dns$'):
+                phone.tailnet_resolver('box.example.ts.net', text, 'Linux')
+
+    def test_linux_directory_admission_keeps_mac_mount_requirement(self):
+        import release_gate
+        with tempfile.TemporaryDirectory() as d, patch.object(Path, 'is_mount', return_value=False):
+            with patch.object(platform, 'system', return_value='Linux'):
+                self.assertTrue(release_gate.admitted_work_root(Path(d)))
+                self.assertFalse(release_gate.admitted_work_root(Path(d) / 'absent'))
+            with patch.object(platform, 'system', return_value='Darwin'):
+                self.assertFalse(release_gate.admitted_work_root(Path(d)))
+
+    def test_linux_check_only_preserves_containment_reserve_and_no_vm(self):
+        import run as launch_run
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            cli = work / 'wam/wizard-cli/wizard'
+            cli.parent.mkdir(parents=True)
+            cli.touch()
+            argv = ['run.py', '--root', str(work / 'run'), '--release', '0.3.94',
+                    '--cli', str(cli), '--check-only']
+            with patch.object(sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=d), \
+                 patch.object(Path, 'is_mount', return_value=False), \
+                 patch.object(platform, 'system', return_value='Linux'), \
+                 patch.object(platform, 'machine', return_value='x86_64'), \
+                 patch.object(launch_run.shutil, 'disk_usage') as disk, \
+                 patch.object(launch_run, 'command') as command, \
+                 contextlib.redirect_stdout(io.StringIO()) as out, \
+                 contextlib.redirect_stderr(io.StringIO()):
+                disk.return_value.free = 400 << 30
+                self.assertEqual(launch_run.main(), 0)
+                self.assertEqual(json.loads(out.getvalue())['architecture'], 'x86_64')
+                disk.return_value.free = 274 << 30
+                with self.assertRaises(SystemExit):
+                    launch_run.main()
+                disk.return_value.free = 400 << 30
+                for root in (work, work.parent / 'outside'):
+                    argv[2] = str(root)
+                    with self.assertRaises(SystemExit):
+                        launch_run.main()
+                command.assert_not_called()
+            self.assertFalse((work / 'run').exists())
+
+    def test_linux_worker_lock_uses_production_inode_not_android_build_root(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            production = work / 'heavy/production'
+            android = work / 'AndroidBuilds'
+            production.mkdir(parents=True)
+            android.mkdir()
+            (android / 'worker.lock').touch()
+            with (production / 'worker.lock').open('a') as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with patch.dict(os.environ, WIZARD_HEAVY_LOCK_FD=str(lock.fileno())):
+                    with phone.worker_lock(production):
+                        pass
+                    with self.assertRaisesRegex(RuntimeError, 'inherited_lock_mismatch'), phone.worker_lock(android):
+                        pass
+                # The context must never unlock or close the heavy worker's FD.
+                with (production / 'worker.lock').open('a') as competitor:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(competitor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def test_optional_sudo_serve_changes_only_dedicated_port(self):
+        before = {'TCP': {'443': {'HTTPS': True}}, 'Web': {'box.example.ts.net:443': {'Handlers': {'/': {'Text': 'keep'}}}}}
+        after = json.loads(json.dumps(before))
+        after['TCP']['9450'] = {'HTTPS': True}
+        after['Web']['box.example.ts.net:9450'] = {'Handlers': {'/': {'Proxy': 'http://127.0.0.1:18795'}}}
+        responses = [before, {'Self': {'DNSName': 'box.example.ts.net.'}}, {}, after, {}, before]
+        for sudo in (False, True):
+            with patch.object(phone.subprocess, 'check_output', side_effect=[json.dumps(r) for r in responses]) as call, \
+                 patch.object(phone, 'open_forward', return_value=contextlib.nullcontext()):
+                with phone.https_forward('lc-fresh', 'unused', Path('unused'), 9450, sudo=sudo):
+                    pass
+            prefix = ['sudo', '-n'] if sudo else []
+            self.assertTrue(all(c.args[0][:len(prefix) + 1] == prefix + ['tailscale'] for c in call.call_args_list))
+            self.assertEqual(call.call_args_list[-2].args[0], prefix + ['tailscale', 'serve', '--https=9450', 'off'])
+
 
 if __name__ == '__main__':
     unittest.main()

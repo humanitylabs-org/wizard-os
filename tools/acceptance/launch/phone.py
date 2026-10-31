@@ -7,7 +7,9 @@ endpoint. UI XML/transcript stay in memory. Receipts contain only bounded checks
 import contextlib
 import fcntl
 import hashlib
+import ipaddress
 import json
+import platform
 import os
 from pathlib import Path
 import re
@@ -22,7 +24,7 @@ PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
 
 
-def tailnet_resolver(dns_name, resolvers):
+def tailnet_resolver(dns_name, resolvers, system='Darwin'):
     """Return the host's scoped resolver for the box's tailnet DNS suffix.
 
     A real phone runs Tailscale and resolves the box's tailnet name itself. The
@@ -32,12 +34,41 @@ def tailnet_resolver(dns_name, resolvers):
     `scutil --dns` instead of hardcoding an address.
     """
     suffix = dns_name.rstrip('.').split('.', 1)[-1].lower()
+    if system == 'Linux':
+        entries = [line.split('#', 1)[0].split() for line in resolvers.splitlines()]
+        domains = [v.rstrip('.').lower() for e in entries if e and e[0] in ('search', 'domain') for v in e[1:]]
+        if suffix in domains:
+            for e in entries:
+                if len(e) == 2 and e[0] == 'nameserver':
+                    try:
+                        address = ipaddress.ip_address(e[1])
+                    except ValueError:
+                        continue
+                    if address.version == 4 and not address.is_loopback and not address.is_unspecified:
+                        return str(address)
+        raise RuntimeError('phone_tailnet_dns')
+    if system != 'Darwin':
+        raise RuntimeError('phone_tailnet_dns')
     for block in re.split(r'\n(?=resolver #)', resolvers):
         domain = re.search(r'^\s*domain\s*:\s*(\S+)', block, re.M)
         server = re.search(r'^\s*nameserver\[0\]\s*:\s*([0-9.]+)\s*$', block, re.M)
         if domain and server and domain.group(1).rstrip('.').lower() == suffix:
             return server.group(1)
     raise RuntimeError('phone_tailnet_dns')
+
+
+def native_system_image():
+    # Share native host admission with the VM; never fall back to CPU emulation.
+    from release_gate import native_vm_config
+    arch = native_vm_config()['arch']
+    abi = {'x86_64': 'x86_64', 'aarch64': 'arm64-v8a'}[arch]
+    return 'system-images;android-35;google_apis;' + abi
+
+
+def host_resolver(dns_name, call):
+    system = platform.system()
+    resolvers = Path('/etc/resolv.conf').read_text() if system == 'Linux' else call(['scutil', '--dns'])
+    return tailnet_resolver(dns_name, resolvers, system)
 
 
 def validate_apk(config, sdk, call):
@@ -76,11 +107,12 @@ def center(node):
 
 
 @contextlib.contextmanager
-def https_forward(vm, cli, evidence, port):
+def https_forward(vm, cli, evidence, port, sudo=False):
     # Only a new dedicated Serve port; never reset, replace or re-route existing
     # Serve handlers. This is a transport to the real box, not a substitute shell.
     def ts(*argv):
-        return subprocess.check_output(['tailscale', *map(str, argv)], text=True, stderr=subprocess.DEVNULL, timeout=20)
+        prefix = ['sudo', '-n'] if sudo else []
+        return subprocess.check_output(prefix + ['tailscale', *map(str, argv)], text=True, stderr=subprocess.DEVNULL, timeout=20)
     before = json.loads(ts('serve', 'status', '--json'))
     assert str(port) not in before.get('TCP', {}), 'phone_serve_port_busy'
     status = json.loads(ts('status', '--json'))
@@ -106,10 +138,12 @@ def https_forward(vm, cli, evidence, port):
 def worker_lock(work):
     """Hold the shared Android/VM lock, reusing the heavy worker's lease.
 
-    The Thales heavy worker already holds worker.lock and passes that open file
+    Both workers already hold worker.lock and pass that open file
     description as WIZARD_HEAVY_LOCK_FD; opening the file again would conflict
     with our own parent and fail with BlockingIOError.
     """
+    # work_root must be the worker's lock directory, not its Android SDK/build
+    # directory. The inherited descriptor must identify this exact file.
     path = Path(work) / 'worker.lock'
     inherited = os.environ.get('WIZARD_HEAVY_LOCK_FD')
     if inherited:
@@ -156,7 +190,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     work.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env['JAVA_HOME'] = config['java_home']
-    env['PATH'] = config['java_home'] + '/bin:/opt/homebrew/bin:' + env['PATH']
+    brew = '/opt/homebrew/bin:' if platform.system() == 'Darwin' else ''
+    env['PATH'] = config['java_home'] + '/bin:' + brew + env['PATH']
     env['ANDROID_HOME'] = env['ANDROID_SDK_ROOT'] = str(sdk)
     env['ANDROID_AVD_HOME'] = str(evidence / 'avd')
     Path(env['ANDROID_AVD_HOME']).mkdir(parents=True)
@@ -196,16 +231,17 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     em = None
     checks = progress['checks']
     progress['stage'] = 'tailnet-dns'
-    dns_server = config.get('dns_server') or tailnet_resolver(
-        json.loads(call(['tailscale', 'status', '--json']))['Self']['DNSName'], call(['scutil', '--dns']))
+    image = native_system_image()
+    dns_server = config.get('dns_server') or host_resolver(
+        json.loads(call(['tailscale', 'status', '--json']))['Self']['DNSName'], call)
     progress['stage'] = 'worker-lock'
-    # Match android-build-thales / emulator_qa_thales.py's shared exclusion lock.
+    # Match the selected worker's shared Android/VM exclusion lock.
     with worker_lock(work):
         assert serial not in call([adb, 'devices'])
         try:
             progress['stage'] = 'avd-create'
             call([sdk / 'cmdline-tools/latest/bin/avdmanager', 'create', 'avd', '-n', 'launch_phone',
-                  '-k', 'system-images;android-35;google_apis;arm64-v8a', '-d', 'pixel_7', '-p', evidence / 'device'], input='no\n')
+                  '-k', image, '-d', 'pixel_7', '-p', evidence / 'device'], input='no\n')
             # Emulator stdout may contain URLs. Keep it private, never publish it.
             progress['stage'] = 'emulator-start'
             with (evidence / 'private-emulator.log').open('w') as log:
@@ -235,7 +271,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 assert foreground() and title in labels(ui())
                 checks['unpaired_back_stays'] = True
             progress['stage'] = 'https-forward'
-            with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450)) as origin:
+            with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450),
+                               sudo=config.get('tailscale_sudo', False)) as origin:
                 progress['stage'] = 'tailnet-dns'
                 # Name resolution only: ICMP may be filtered, so rc/reply are ignored.
                 # The emulator's resolver can need a few seconds to settle after boot.

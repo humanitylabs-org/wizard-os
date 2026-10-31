@@ -177,6 +177,13 @@ class CodexWait(unittest.TestCase):
         self.assertIn("min(time.time() + timeout, run_deadline())", body)
         self.assertIn("codex_out_of_credits(repo, n, opened_iso)", body)
 
+    def test_out_of_credits_requests_a_non_author_reviewer(self):
+        """No Codex credits must not leave the PR invisible: it goes into a teammate's review queue."""
+        src = (HERE.parent / "release_train.py").read_text()
+        body = src[src.index("def open_and_merge("):src.index("def codex_state(")]
+        self.assertIn("request_reviewers(repo, n)", body)
+        self.assertTrue(rt.FALLBACK_REVIEWERS)
+
 
 if __name__ == "__main__":
     unittest.main()
