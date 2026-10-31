@@ -12,9 +12,11 @@ and cwd using `wizard_heavy_submit`; receipt is the turn boundary. Set the worke
 `WIZARD_WORK_ROOT` to the mounted work volume on macOS, or an existing reserved
 work directory on Linux. The acceptance directory must be strictly below it.
 The runner admits native macOS/arm64 (VZ) and Linux/x86_64 (QEMU/KVM) only, reusing
-`release_gate.native_vm_config` and its digest-pinned image. It requires 301 GiB
-free before starting (250 GiB reserve, 50 GiB guest, metadata); host commands
-refuse a depleted reserve, but forced stop/delete always remain available.
+`release_gate.native_vm_config` and its digest-pinned image. Linux also reuses
+the release gate's 24 GiB guest disk budget; Mac keeps its 50 GiB guest. Preflight
+requires 250 GiB reserve plus guest disk, 1 GiB metadata and (when enabled)
+9 GiB phone scratch: 284 GiB for Linux onboarding. Host commands refuse a
+depleted reserve, but forced stop/delete always remain available.
 
 The runner accepts `--root`, `--release`, `--previous-release`, and `--cli` (the
 frozen WAM CLI source mounted into the guest). Both VM installs use the **public**

@@ -102,8 +102,9 @@ def main():
     if not work_value:
         p.error('WIZARD_WORK_ROOT must name the mounted work volume')
     work = Path(work_value).resolve()
-    from release_gate import admitted_work_root, native_vm_config
+    from release_gate import admitted_work_root, native_vm_config, GUEST_DISK_GIB
     native = native_vm_config()
+    disk_gib = 50 if native['vmType'] == 'vz' else GUEST_DISK_GIB
     if not admitted_work_root(work) or not root.is_relative_to(work) or root == work or not args.cli.is_file():
         p.error('root must be below the admitted work root; staged CLI required')
     if sys.flags.optimize:
@@ -132,9 +133,10 @@ def main():
             old = json.loads(config.read_text())
             if any(secret.is_relative_to(Path(m['location']).resolve()) for m in old.get('mounts', [])):
                 p.error('credential is visible through an existing guest mount')
-    # Keep 250 GiB untouched in addition to the bounded 50 GiB guest.
-    if shutil.disk_usage(work).free < 301 * (1 << 30):
-        p.error('250 GiB reserve plus 50 GiB guest and metadata required')
+    # Linux reuses the release gate's guest budget; retain the Mac disk size.
+    required_gib = 250 + disk_gib + 1 + (9 if args.phone_config else 0)
+    if shutil.disk_usage(work).free < required_gib * (1 << 30):
+        p.error(f'250 GiB reserve plus guest/phone/metadata required ({required_gib} GiB)')
     if args.check_only:
         print(json.dumps({'preflight': True, 'executed': False, 'release': args.release,
                           'architecture': native['arch'], 'vm_type': native['vmType']}))
@@ -162,7 +164,7 @@ def main():
     def shell(name, argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', name, '--'] + argv, log, timeout)
     def create(name):
-        config = {**native, 'cpus': 4, 'memory': '6GiB', 'disk': '50GiB',
+        config = {**native, 'cpus': 4, 'memory': '6GiB', 'disk': f'{disk_gib}GiB',
                   'mounts': [{'location': str(m), 'writable': m == root} for m in dict.fromkeys(mounts)],
                   'containerd': {'system': False, 'user': False},
                   'portForwards': [{'guestIP': ip, 'guestPortRange': [1, 65535], 'ignore': True}
