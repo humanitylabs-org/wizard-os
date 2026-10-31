@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 31 Oct 2026 — James: speed and reliability come first
+
+| # | Decision | Status |
+|---|---|---|
+| 105 | **Speed, load time and reliability are the top optimization priority.** James, 31 Oct: "the user experience is getting worse as we ship more features. Every tenth of a second spent waiting significantly reduces the quality of the user experience." Every user-facing path gets a speed target (SLO), a minute-by-minute meter and a release benchmark. A change that makes a hot path slower (Chats list, thread open, send, run status, shell load, voice) does not ship until it is at least as fast as live. Starting targets (to be tuned against real data): health p95 ≤ 300 ms; Chats list page 1 p95 ≤ 500 ms; thread open p95 ≤ 400 ms; run status p95 ≤ 200 ms; shell page p95 ≤ 500 ms; event-loop delay p99 ≤ 100 ms; Wizard answers in under 2 s in ≥ 99.9% of minutes. Background work never competes with the owner's path for CPU (priority guard, 31 Oct). | **Approved by James (31 Oct)**; Jan and Miguel to confirm |
+
 ## 27 Oct 2026 — release source returns to main (James)
 
 | # | Decision | Status |
