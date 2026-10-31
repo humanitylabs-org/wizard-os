@@ -91,6 +91,24 @@ class Stop(Exception):
     """The train stops here; the message is the report's reason."""
 
 
+# The scheduler wraps a run in `timeout 3600`; a run killed from outside writes no report. Every wait stops itself
+# with a Stop (and so a report) before this budget runs out. Override with WIZARD_TRAIN_BUDGET_S.
+RUN_BUDGET_S = float(os.environ.get("WIZARD_TRAIN_BUDGET_S", "3300"))
+RUN_STARTED = time.time()
+CODEX_OUT_OF_CREDITS = "usage limits have been reached"
+
+
+def run_deadline() -> float:
+    return RUN_STARTED + RUN_BUDGET_S
+
+
+def codex_out_of_credits(repo: str, n: str, since: str) -> bool:
+    """Did the Codex connector answer on this PR, after `since` (ISO time), that it has no review credits left?"""
+    comments = gh_json(["api", f"repos/{repo}/issues/{n}/comments", "--paginate"]) or []
+    return any("codex" in (c.get("user") or {}).get("login", "") and c.get("created_at", "") >= since
+               and CODEX_OUT_OF_CREDITS in c.get("body", "") for c in comments)
+
+
 # ---------------------------------------------------------------- repos
 
 
@@ -311,7 +329,8 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
     n = url.rstrip("/").rsplit("/", 1)[1]
     sh(["gh", "api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={label}"], check=False)
     head = sh(["git", "-C", str(wt), "rev-parse", "HEAD"]).strip()
-    deadline, opened, nudged = time.time() + timeout, time.time(), False
+    deadline, opened, nudged = min(time.time() + timeout, run_deadline()), time.time(), False
+    opened_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     while need_checks:
         time.sleep(30)
         checks = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup"])["statusCheckRollup"]
@@ -330,6 +349,9 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
             # On the App Manager mirror that is Codex: wait for its review of this exact head, clean.
             state = codex_state(repo, n)
             if state is None or state.get("commit_sha") != head or state.get("status") != "completed":
+                if codex_out_of_credits(repo, n, opened_iso):
+                    raise Stop(f"{url}: Codex is out of review credits, so no non-author review of {head[:8]} "
+                               f"(DECISIONS #96); a person or another agent must review it, then merge")
                 if time.time() - opened > 600 and not nudged:
                     sh(["gh", "pr", "comment", n, "-R", repo, "-b", "@codex review"], check=False)
                     nudged = True
