@@ -699,3 +699,16 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ShellForwardReadinessTest(unittest.TestCase):
+    def test_forward_waits_by_deadline_not_try_count(self):
+        # A refused connection returns instantly, so a try count gave a busy
+        # Linux worker only ~10 s for the shell to come up after install.
+        source = (ROOT / 'tunnel.py').read_text()
+        self.assertNotIn('for _ in range(40)', source)
+        self.assertIn('ready_deadline = time.monotonic() + FORWARD_READY_SECONDS', source)
+        spec = importlib.util.spec_from_file_location('launch_tunnel', ROOT / 'tunnel.py')
+        tunnel = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tunnel)
+        self.assertGreaterEqual(tunnel.FORWARD_READY_SECONDS, 120)

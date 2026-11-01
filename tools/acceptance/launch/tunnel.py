@@ -13,6 +13,9 @@ import urllib.parse
 import urllib.request
 
 
+FORWARD_READY_SECONDS = 180
+
+
 @contextlib.contextmanager
 def open_forward(vm, cli, evidence):
     lima = Path(os.environ['LIMA_HOME'])
@@ -48,7 +51,10 @@ def open_forward(vm, cli, evidence):
         try:
             ready = False
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-            for _ in range(40):
+            # A deadline, not a try count: a refused connection returns at once,
+            # so 40 tries was ~10 s on a busy host while the shell was still starting.
+            ready_deadline = time.monotonic() + FORWARD_READY_SECONDS
+            while time.monotonic() < ready_deadline:
                 if proc.poll() is not None:
                     raise RuntimeError('fixture_forward_exited')
                 try:
@@ -57,7 +63,8 @@ def open_forward(vm, cli, evidence):
                     if ready:
                         break
                 except OSError:
-                    time.sleep(.25)
+                    pass
+                time.sleep(.5)
             assert ready, 'printed shell forward never became ready'
             setup_url = urllib.parse.urljoin(contact['url'], '/wizard/v1/setup')
             with opener.open(setup_url, timeout=5) as response:
