@@ -217,6 +217,47 @@ Raw stderr, argv, HTTP bodies, credential values, session IDs and response text 
 never copied into that diagnostic or the public receipt. An install failure and a
 subsequent cleanup failure each retain a separate diagnostic row.
 
+### Linux emulator transport and failure evidence
+
+REUSE: the real release APK, real guest shell, tailnet HTTPS name/certificate,
+existing SSH forward and dedicated Serve port. EXTEND: Linux-only emulator proxy
+flags and private failure capture. NEW: a loopback, destination-pinned CONNECT
+relay; no product pairing endpoint or global network/firewall change.
+
+A Linux worker probe found Serve listening on `TAILNET_IP%tailscale0`, while a
+host-local HTTPS request returned 200 and a Docker-bridge request to the same
+name/port received TCP connection refused. The bridge request succeeded with
+normal certificate verification through the host-side CONNECT relay. This is a
+transport reachability problem, not a changed shell probe: the 0.3.70 and 0.3.94
+UX pins have the same `WizardProbe` request (`/wizard-os-home/`) and shell marker
+checks. The `ts-input` anti-spoof rule matches **source**, not destination, so do
+not attribute the refused connection to a destination drop or disable that rule.
+
+Linux passes an ephemeral loopback proxy explicitly with emulator `-http-proxy`.
+Only CONNECT for this test's HTTPS port and its own tailnet name/addresses is
+accepted; dialing is always pinned to that host. TLS is opaque end-to-end: no
+certificate bypass, alternate hostname, shell response, or authentication is
+introduced. The relay exits with the emulator scope, including failure. macOS
+keeps its existing direct transport. This probe reproduces the network boundary,
+not an emulator pairing pass; a new queued onboarding run is still required.
+
+On phone failure, capture runs before the owned emulator is stopped, and failures
+inside the HTTPS scope are captured before Serve teardown. Under `phone/failure/`:
+
+- `labels.json`: bounded UI label list; only fixed UI/error labels survive.
+- `screen.png`: bounded `screencap -p` PNG, with unknown/dynamic text regions
+  blacked out and PNG metadata stripped. Missing/unusable XML blacks the whole
+  image; unsupported image formats are recorded as unavailable, never retained raw.
+- `activity-top.txt`: component/lifecycle excerpt only; no Intent extras or view text.
+- `serve.json`: dedicated port configuration/HTTPS booleans and handler count,
+  not raw Serve configuration, tokens, or proxy URLs.
+- `diagnostics.json`: fixed stage and saved/unavailable class for each probe.
+
+Files are 0600 under a 0700 directory. Each command has an eight-second deadline;
+text/PNG retention is bounded. Missing/failed adb cannot suppress the host Serve
+note or replace the original stage. Failures before an emulator is owned do not
+probe an unrelated device. Private artifacts are not public receipts or uploads.
+
 ### Android input and assertions
 
 The private phone config contains host paths/settings, never provider credentials:

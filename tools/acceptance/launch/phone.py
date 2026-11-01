@@ -2,7 +2,7 @@
 """Published release APK + empty API35 emulator + a never-seen disposable box.
 
 No debug APK, CDP, fake shell, TLS bypass, pre-seeded preferences or live owner
-endpoint. UI XML/transcript stay in memory. Receipts contain only bounded checks.
+endpoint. Raw UI XML/transcript stay in memory; failure evidence is redacted.
 """
 import contextlib
 import fcntl
@@ -19,6 +19,29 @@ import time
 import xml.etree.ElementTree as ET
 
 from tunnel import open_forward
+from phone_diagnostics import capture_failure
+from phone_transport import connect_proxy
+
+
+@contextlib.contextmanager
+def failure_boundary(capture):
+    try:
+        yield
+    except Exception:
+        # Diagnostics must not replace the original failure or skip teardown.
+        with contextlib.suppress(Exception):
+            capture()
+        raise
+
+
+@contextlib.contextmanager
+def emulator_network(status, port):
+    if platform.system() != 'Linux':
+        yield []
+        return
+    own = status['Self']
+    with connect_proxy(own['DNSName'].rstrip('.'), own['TailscaleIPs'], port) as proxy:
+        yield ['-http-proxy', proxy]
 
 PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
@@ -174,6 +197,9 @@ def run_phone(vm, cli, evidence, config_path, chat):
         return _run_phone(vm, cli, evidence, config_path, chat, progress)
     except Exception:
         stage = progress.get('failure_stage', progress['stage'])
+        if evidence is not None and not (Path(evidence) / 'failure/diagnostics.json').exists():
+            with contextlib.suppress(Exception):
+                capture_failure(evidence, stage if stage in PHONE_STAGES else 'preflight')
         result = {'passed': False, 'checks': progress['checks'],
                   'failure_stage': stage if stage in PHONE_STAGES else 'preflight'}
         if progress.get('cleanup_failed'):
@@ -232,11 +258,15 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     checks = progress['checks']
     progress['stage'] = 'tailnet-dns'
     image = native_system_image()
-    dns_server = config.get('dns_server') or host_resolver(
-        json.loads(call(['tailscale', 'status', '--json']))['Self']['DNSName'], call)
+    tailnet = json.loads(call(['tailscale', 'status', '--json']))
+    dns_server = config.get('dns_server') or host_resolver(tailnet['Self']['DNSName'], call)
+    def diagnose():
+        capture_failure(evidence, progress['stage'], adb=adb if em is not None else None,
+                        serial=serial, env=env, sudo=config.get('tailscale_sudo', False),
+                        port=config.get('https_port', 9450))
     progress['stage'] = 'worker-lock'
     # Match the selected worker's shared Android/VM exclusion lock.
-    with worker_lock(work):
+    with worker_lock(work), emulator_network(tailnet, config.get('https_port', 9450)) as network_args:
         assert serial not in call([adb, 'devices'])
         try:
             progress['stage'] = 'avd-create'
@@ -247,7 +277,7 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
             with (evidence / 'private-emulator.log').open('w') as log:
                 em = subprocess.Popen([str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
                     '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
-                    '-dns-server', dns_server], env=env, stdout=log, stderr=log)
+                    '-dns-server', dns_server, *network_args], env=env, stdout=log, stderr=log)
             progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'
@@ -272,7 +302,7 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 checks['unpaired_back_stays'] = True
             progress['stage'] = 'https-forward'
             with https_forward(vm, cli, evidence / 'forward', config.get('https_port', 9450),
-                               sudo=config.get('tailscale_sudo', False)) as origin:
+                               sudo=config.get('tailscale_sudo', False)) as origin, failure_boundary(diagnose):
                 progress['stage'] = 'tailnet-dns'
                 # Name resolution only: ICMP may be filtered, so rc/reply are ignored.
                 # The emulator's resolver can need a few seconds to settle after boot.
@@ -343,6 +373,9 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                     'physical_device': 'not-tested', 'qr': 'not-tested'}
         except Exception:
             progress['failure_stage'] = progress['stage']
+            if not (evidence / 'failure/diagnostics.json').exists():
+                with contextlib.suppress(Exception):
+                    diagnose()
             raise
         finally:
             progress['stage'] = 'emulator-cleanup'
@@ -358,6 +391,9 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                         em.wait(timeout=20)
             except Exception:
                 progress['cleanup_failed'] = True
+                if not (evidence / 'failure/diagnostics.json').exists():
+                    with contextlib.suppress(Exception):
+                        diagnose()
                 raise
             finally:
                 # Remove temporary XML/transcript/cache copies even if stop fails.
