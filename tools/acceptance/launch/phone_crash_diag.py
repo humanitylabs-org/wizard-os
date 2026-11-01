@@ -193,6 +193,7 @@ def run_mode(config, root, origin, status):
                 shutil.rmtree(root / 'device', ignore_errors=True)
                 shutil.rmtree(root / 'avd', ignore_errors=True)
     result['logcat'] = logcat.summary()
+    checks['logcat_writer_healthy'] = not result['logcat']['writer_failed']
     checks['no_fatal_crash'] = not any(result['logcat']['counts'][k] for k in
         ('fatal_exception', 'fatal_signal', 'anr', 'chromium_crash'))
     if not checks['no_fatal_crash'] and 'failure' not in result:
