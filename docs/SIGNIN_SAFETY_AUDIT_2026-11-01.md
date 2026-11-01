@@ -1,25 +1,25 @@
 # Sign-in safety audit — leading gaps
 
-**1 Nov 2026 · read-only review.** This is the shareable summary of the three leading gaps against the [sign-in safety decision](DECISIONS.md#1-nov-2026--james-sign-in-safety-for-every-app-and-connector). The detailed per-item evidence stays on the audited installation; no credentials, account identities, private content, personal paths or browser histories belong in this repository.
+**1 Nov 2026 · read-only baseline, corrected for account ownership.** This shareable summary follows the [sign-in safety decision](DECISIONS.md#1-nov-2026--james-sign-in-safety-for-every-app-and-connector). Installation evidence stays private; no credentials, account identities, personal paths or browser histories belong here.
 
-## Gap 1 — retained shared browsers
+## Gap 1 — retained profiles need ownership evidence
 
-Setup/browser profiles retain state across providers rather than proving a clean throwaway lifecycle. Retained site state does not prove an active sign-in or identify the account owner.
+Retained site state proves neither active login nor account ownership. A provider domain or profile name cannot establish a personal-policy violation.
 
-**Fix · medium:** make setup use a fresh profile; the owner completes sign-in privately with inspection paused. Afterwards sign out, stop the browser, remove the profile and verify each step. Do not delete existing live profiles without the owner's approval.
+**Fix · medium:** classify from explicit account/session ownership records first. Verified agent-operated accounts may retain isolated persistent sessions. Personal setup requires owner-only entry with inspection paused, then provider logout, session stop and verified local deletion; record these as separate outcomes. Retire only verified obsolete personal sessions after checking active task/handoff ownership. Preserve unknown/mixed profiles pending classification and explicit personal exceptions.
 
-## Gap 2 — automated sign-in and conflicting instructions
+## Gap 2 — instructions must distinguish account classes
 
-Some existing helpers and agent instructions still automate passwords or two-step codes, preserve provider profiles, or collect signed-in page text/screenshots. Keeping a password out of a transcript does not make agent entry compliant.
+Autonomous login is not inherently a violation. Verified agent-operated accounts may use approved model-blind vault login and agent-controlled verification routes. Working agent-owned helpers must not be disabled merely for being automated.
 
-**Fix · medium:** replace those paths with paused owner takeover or one-time secret intake, reconcile conflicting setup guidance, and return allowlisted status codes only.
+**Fix · medium:** remove guidance that would automate personal-account passwords or codes. Personal accounts require paused owner takeover or approved one-time intake. Both classes keep secret values out of model context, browser dumps, screenshots, logs and exceptions, and report allowlisted status only. Unknown ownership follows personal rules until verified.
 
-## Gap 3 — credential custody and scopes
+## Gap 3 — credential custody and authority
 
-Reviewed connection implementations include credential-bearing JSON files without app-layer encryption. Host-level credential/environment stores also remain outside the owning app boundary, and legacy Google grants include write permissions beyond the read-only default. File permissions are not encryption.
+Reviewed source includes plaintext credential-bearing JSON and native CLI credential files. Host auth/environment stores remain tool-accessible. Source behavior is not proof of actual deployed storage; deployment provenance and service-UID access must be checked separately. File mode 0600 is not encryption or isolation from same-user model tools or the host administrator.
 
-**Fix · large overall, medium per store:** keep credentials encrypted in the owning app with separated keys; give agents narrow local grants, not provider credentials. Have the owner approve reduced scopes and any migration/revocation. Recheck the pinned release without reading private data.
+**Fix · large overall, medium per store:** migrate canonical custody to an approved encrypted vault/broker with separately controlled keys, deliver narrow runtime grants to the consumer, prove a real canary and rollback, then remove plaintext duplicates. Native CLI-required files may need controlled read-only per-process delivery rather than incompatible encryption. Never put a key beside an encrypted file and call the host/model boundary solved. Read-only defaults do not cancel existing authorised write permissions, including Calendar writes; scope reduction or revocation requires specific approval. Master-password/canonical-custody changes require a preannounced migration plan.
 
 ## What this does not claim
 
-The audit did not alter sign-ins, accounts, grants or retained profiles. Private-agent and recording/message data were excluded; unknowns remain unknown. This documentation change records the rule and priorities, not implementation or release acceptance. Release checks still need to assert each of the four rules.
+The baseline audit changed no sign-ins, grants or profiles. Its earlier blanket condemnation of autonomous login and write scopes is superseded by this ownership distinction. Private-agent, message and recording data remain excluded. Local permission tightening, where separately authorised and verified, does not establish encrypted custody or completed migration. This docs PR is not implementation or release acceptance; owner-classification, real consumer canaries and teardown receipts remain required.

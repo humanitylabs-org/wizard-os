@@ -4,14 +4,14 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 
 ## 1 Nov 2026 — James: sign-in safety for every app and connector
 
-**Approved by James, 1 Nov 2026.** Every setup sign-in follows these four rules:
+**Approved by James, 1 Nov 2026.** Classify the account before choosing the sign-in path. A person's personal account and a verified agent-operated service account have different entry and session rules. Unknown or mixed ownership takes the personal-account path until verified; cookie domains and profile names alone prove neither ownership nor active login.
 
-1. **Only the owner enters passwords and two-step codes.** Use a private browser takeover with all agent inspection paused, or a one-time secret link. Never ask for them in chat, put them in model context, or have the agent type them into the provider's page.
-2. **Use a throwaway browser for each setup sign-in.** When setup finishes, sign out of the provider, stop the browser and delete its profile. Verify that the sign-out and deletion happened; closing a tab is not enough.
-3. **Keep only the permission the app needs.** Read-only is the default. Keep credentials encrypted inside the app, never expose them to agents or model context, and move secrets directly from the setup script to the app's store.
-4. **Show the model status, not signed-in pages.** Setup automation returns allowlisted status codes, not account-page screenshots, page text, cookies or credentials.
+1. **Personal accounts: only the owner enters passwords and two-step codes.** Use private browser takeover with all agent inspection paused, or an approved one-time secret link. Never ask for secrets in chat or have the agent or a vault-fill tool enter them into the person's provider page. **Verified agent-operated accounts may sign in autonomously through approved model-blind vault tools**, including agent-controlled factors; genuinely human-only gates still require takeover.
+2. **Personal setup uses a throwaway browser.** Afterwards sign out of the provider, stop the session and verify profile deletion. Report provider logout separately from local deletion; neither closing a tab nor deleting cookies proves upstream logout. Persistent personal sessions require explicit per-account approval. **Verified agent-operated accounts may retain isolated persistent sessions**; do not disable their working login helpers or delete unknown/mixed profiles indiscriminately.
+3. **Both classes need protected secret custody.** Keep canonical credentials in approved encrypted vault/broker custody with separately controlled keys; deliver only scoped runtime material to the required consumer, directly script-to-store and outside model context. Read-only is the default for new grants, **not an instruction to revoke previously authorised writes**. Preserve existing authorised Calendar write scope. Native CLI-required credential files need compatible narrow per-process delivery, not incompatible file encryption. Mode 0600 reduces other-user access; it is neither encryption nor a boundary against model tools or the host administrator.
+4. **Show the model status, not secrets.** Return allowlisted sign-in status, never passwords, codes, cookies, tokens or signed URLs. Pause all inspection during personal entry; avoid personal signed-in page dumps. Agent-account automation must likewise keep secret values out of screenshots, logs and tool results.
 
-Applies to: every app, connector and agent sign-in; release checks assert each rule.
+Applies to every app, connector and agent sign-in according to account ownership; release checks assert classification, secret custody, appropriate entry/session lifecycle and status-only results.
 
 The [audit's three leading gaps](SIGNIN_SAFETY_AUDIT_2026-11-01.md) describe the work still needed. This decision records the rule; it does not claim existing sign-ins comply or authorize revoking accounts or deleting live profiles.
 
