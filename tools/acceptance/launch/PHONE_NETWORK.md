@@ -1,5 +1,8 @@
 # Phone transport evidence and short queued proof
 
+For emulator disappearance, persistent crash evidence, GPU/RAM options and the
+APK/WebView two-mode diagnostic, see [PHONE_CRASH.md](PHONE_CRASH.md).
+
 ## What failed, and what we can establish without another boot
 
 The previous capture command used one `ValueError('diagnostic_unavailable')`
@@ -19,7 +22,9 @@ unchanged, records fixed error classes, rc and stdout byte counts, probes
 XML using `exec-out cat`. Screenshot, activity, logcat and Serve probes remain
 independent. Missing sensitive bounds retain redacted labels and force a fully
 black screenshot. An absent app pid does not prevent Chromium error capture.
-No stderr, raw logcat, URL, query string, payload, IP or tailnet name is retained.
+These failure-probe summaries retain no stderr, raw logcat, URL, query string,
+payload, IP or tailnet name (the separate private persistent crash log is
+described in PHONE_CRASH.md).
 Activity evidence projects component/lifecycle lines only. Network errors are
 projected onto error enums and the host class `box`/`other`, capped at 80 rows.
 The relay's locked counters retain accepted/allowed/denied, upstream ok/failed,

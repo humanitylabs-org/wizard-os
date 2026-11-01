@@ -21,6 +21,8 @@ import xml.etree.ElementTree as ET
 from tunnel import open_forward
 from phone_diagnostics import capture_failure, private_write
 from phone_transport import Relay, connect_proxy
+from phone_runtime import (GPU_MODES, PersistentLogcat, checkpoint, configure_avd,
+                           exception_note, runtime_note, stop_emulator)
 
 
 @contextlib.contextmanager
@@ -59,10 +61,14 @@ def emulator_network(status, port):
         yield args
 
 
-def emulator_argv(sdk, port, dns_server, network_args):
+def emulator_argv(sdk, port, dns_server, network_args, config=None, logcat_args=()):
+    config = config or {}
+    mode = config.get('gpu_mode', 'swangle' if platform.system() == 'Linux' else 'swiftshader_indirect')
+    if mode not in GPU_MODES:
+        raise ValueError('phone_gpu_mode')
     return [str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
-            '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
-            '-dns-server', dns_server, *network_args]
+            '-no-window', '-no-snapshot', '-no-audio', '-gpu', mode,
+            '-dns-server', dns_server, *network_args, *logcat_args]
 
 PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
@@ -212,17 +218,26 @@ PHONE_STAGES = frozenset({
 
 
 def run_phone(vm, cli, evidence, config_path, chat):
-    """Return bounded progress even on failure; never serialize exception text."""
+    """Return bounded progress and fixed crash enums; never raw exception text."""
     progress = {'stage': 'preflight', 'checks': {}}
     try:
+        if evidence is not None:
+            Path(evidence).mkdir(mode=0o700, parents=True, exist_ok=True)
+            Path(evidence).chmod(0o700)
         return _run_phone(vm, cli, evidence, config_path, chat, progress)
-    except Exception:
+    except Exception as exc:
         stage = progress.get('failure_stage', progress['stage'])
         if evidence is not None and not (Path(evidence) / 'failure/diagnostics.json').exists():
             with contextlib.suppress(Exception):
                 capture_failure(evidence, stage if stage in PHONE_STAGES else 'preflight')
         result = {'passed': False, 'checks': progress['checks'],
-                  'failure_stage': stage if stage in PHONE_STAGES else 'preflight'}
+                  'failure_stage': stage if stage in PHONE_STAGES else 'preflight',
+                  'failure': progress.get('failure', exception_note(exc))}
+        if evidence is not None:
+            with contextlib.suppress(OSError, ValueError):
+                result['failure']['logcat'] = json.loads((Path(evidence) / 'logcat-summary.json').read_text())
+        if progress.get('cleanup_failure'):
+            result['cleanup_failure'] = progress['cleanup_failure']
         if progress.get('cleanup_failed'):
             result['cleanup_failed'] = True
         return result
@@ -247,7 +262,7 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     def call(argv, **kw):
         p = subprocess.run(list(map(str, argv)), env=env, capture_output=True, text=True, timeout=kw.pop('timeout', 60), **kw)
         if p.returncode:
-            raise RuntimeError('phone_command_failed')
+            raise subprocess.CalledProcessError(p.returncode, list(map(str, argv)))
         return p.stdout
     progress['stage'] = 'apk-validation'
     apk, feed, owner_default = validate_apk(config, sdk, call)
@@ -268,7 +283,7 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 value = predicate()
                 if value:
                     return value
-            except (RuntimeError, ET.ParseError):
+            except (RuntimeError, subprocess.CalledProcessError, ET.ParseError):
                 pass
             time.sleep(1)
         raise RuntimeError('phone_ui_timeout')
@@ -278,31 +293,41 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
         dump = shell('dumpsys', 'activity', 'activities')
         return any(PACKAGE + '/' in line for line in dump.splitlines() if 'topResumedActivity' in line or 'mResumedActivity' in line)
     em = None
+    clocks = {}
+    persistent = None
     checks = progress['checks']
     progress['stage'] = 'tailnet-dns'
     image = native_system_image()
     tailnet = json.loads(call(['tailscale', 'status', '--json']))
     dns_server = config.get('dns_server') or host_resolver(tailnet['Self']['DNSName'], call)
     def diagnose():
+        # Freeze liveness before any slow diagnostic or cleanup changes the facts.
+        if 'failure' not in progress:
+            progress['failure'] = runtime_note(em, adb, serial, env, clocks)
         capture_failure(evidence, progress['stage'], adb=adb if em is not None else None,
                         serial=serial, env=env, sudo=config.get('tailscale_sudo', False),
                         port=config.get('https_port', 9450),
                         relay=network_args.relay, box_host=tailnet['Self']['DNSName'].rstrip('.'))
     progress['stage'] = 'worker-lock'
     # Match the selected worker's shared Android/VM exclusion lock.
-    with worker_lock(work), emulator_network(tailnet, config.get('https_port', 9450)) as network_args:
+    with worker_lock(work), emulator_network(tailnet, config.get('https_port', 9450)) as network_args, \
+            PersistentLogcat(evidence) as persistent:
         assert serial not in call([adb, 'devices'])
         try:
             progress['stage'] = 'avd-create'
             call([sdk / 'cmdline-tools/latest/bin/avdmanager', 'create', 'avd', '-n', 'launch_phone',
                   '-k', image, '-d', 'pixel_7', '-p', evidence / 'device'], input='no\n')
+            configure_avd(evidence / 'device/config.ini', config)
             # Emulator stdout may contain URLs. Keep it private, never publish it.
             progress['stage'] = 'emulator-start'
-            with (evidence / 'private-emulator.log').open('w') as log:
-                em = subprocess.Popen(emulator_argv(sdk, port, dns_server, network_args),
+            fd = os.open(evidence / 'private-emulator.log', os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, 'w') as log:
+                clocks['start'] = time.monotonic()
+                em = subprocess.Popen(emulator_argv(sdk, port, dns_server, network_args, config, persistent.argv),
                                       env=env, stdout=log, stderr=log)
             progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
+            clocks['boot'] = time.monotonic()
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'
             network_args.configure(shell)
             progress['stage'] = 'empty-install'
@@ -357,7 +382,12 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 connect = next(n for n in ET.fromstring(ui()).iter('node')
                                if n.get('text') == 'Connect' or n.get('content-desc') == 'Connect')
                 progress['stage'] = 'address-pairing'
+                progress['before_connect_screenshot'] = checkpoint(evidence, 'before-connect', adb, serial, env)
+                clocks['connect'] = time.monotonic()
                 tap(connect)
+                time.sleep(max(0, 5 - (time.monotonic() - clocks['connect'])))
+                # Dynamic WebView/canvas content is entirely masked, not guessed safe.
+                progress['after_connect_screenshot'] = checkpoint(evidence, 'after-connect-5s', adb, serial, env, full_mask=True)
                 wait_for(lambda: 'Connect to your Wizard' not in labels(ui()) and 'Chats' in labels(ui()), 90)
                 checks['address_pairing_shell'] = True
                 progress['stage'] = 'model-reply'
@@ -396,8 +426,14 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                     'entry': 'exported-connect' if owner_default else 'generic-first-run',
                     'unpaired_back': 'not-tested-migration-default' if owner_default else 'passed',
                     'physical_device': 'not-tested', 'qr': 'not-tested'}
-        except Exception:
+        except Exception as exc:
             progress['failure_stage'] = progress['stage']
+            if 'failure' not in progress:
+                progress['failure'] = runtime_note(em, adb, serial, env, clocks)
+            progress['failure'].update(exception_note(exc))
+            progress['failure']['logcat'] = persistent.summary()
+            progress['failure']['screenshots'] = {k: progress[k] for k in
+                ('before_connect_screenshot', 'after_connect_screenshot') if k in progress}
             if not (evidence / 'failure/diagnostics.json').exists():
                 with contextlib.suppress(Exception):
                     diagnose()
@@ -408,17 +444,10 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                     private_write(evidence / 'relay.json', json.dumps(network_args.relay.snapshot()).encode())
             progress['stage'] = 'emulator-cleanup'
             try:
-                if em is not None:
-                    # A broken adb must not skip stopping our owned process.
-                    with contextlib.suppress(OSError, subprocess.TimeoutExpired):
-                        subprocess.run([str(adb), '-s', serial, 'emu', 'kill'], env=env, capture_output=True, timeout=20)
-                    try:
-                        em.wait(timeout=30)
-                    except subprocess.TimeoutExpired:
-                        em.terminate()
-                        em.wait(timeout=20)
-            except Exception:
+                stop_emulator(em, adb, serial, env)
+            except Exception as exc:
                 progress['cleanup_failed'] = True
+                progress['cleanup_failure'] = exception_note(exc)
                 if not (evidence / 'failure/diagnostics.json').exists():
                     with contextlib.suppress(Exception):
                         diagnose()
