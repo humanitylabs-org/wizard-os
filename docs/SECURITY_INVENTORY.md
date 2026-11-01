@@ -65,6 +65,7 @@ From the Architecture check-ins on #138. Each needs a row here once it ships.
 
 | Item | What it grants | Status |
 |---|---|---|
+| **Sign-in safety** | [1 Nov decision](DECISIONS.md#1-nov-2026--james-sign-in-safety-for-every-app-and-connector): owner-only secret entry, throwaway setup browsers, encrypted least-permission app custody, status-only model output. | Release checks must assert all four rules. Audit priorities: [retained browsers](SIGNIN_SAFETY_AUDIT_2026-11-01.md#gap-1--retained-shared-browsers), [automated sign-in](SIGNIN_SAFETY_AUDIT_2026-11-01.md#gap-2--automated-sign-in-and-conflicting-instructions), [credential custody and scopes](SIGNIN_SAFETY_AUDIT_2026-11-01.md#gap-3--credential-custody-and-scopes). Not yet a compliance claim. |
 | Share grants (#80, PERMISSIONS "Share grants") | The Claude login folder becomes a bind mount into Hermes: a file path, not an API. | Within the rule (agent + its connection app). Ships with wizard-app-manager#159. |
 | ChatGPT gateway (#79) | `wizard-chatgpt:8801/v1` injects the real token for **any caller holding the per-install local key**. | Who gets that key is the boundary. Before launch it must be only the agent. |
 | Heavy relay (wizard-agent-service#87) | The worker drives a Docker daemon; job containers get open internet and no CPU quota. | Off by default. Must stay off on launch builds, or ship with egress limits. |

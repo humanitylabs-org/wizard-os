@@ -2,6 +2,19 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 1 Nov 2026 — James: sign-in safety for every app and connector
+
+**Approved by James, 1 Nov 2026.** Every setup sign-in follows these four rules:
+
+1. **Only the owner enters passwords and two-step codes.** Use a private browser takeover with all agent inspection paused, or a one-time secret link. Never ask for them in chat, put them in model context, or have the agent type them into the provider's page.
+2. **Use a throwaway browser for each setup sign-in.** When setup finishes, sign out of the provider, stop the browser and delete its profile. Verify that the sign-out and deletion happened; closing a tab is not enough.
+3. **Keep only the permission the app needs.** Read-only is the default. Keep credentials encrypted inside the app, never expose them to agents or model context, and move secrets directly from the setup script to the app's store.
+4. **Show the model status, not signed-in pages.** Setup automation returns allowlisted status codes, not account-page screenshots, page text, cookies or credentials.
+
+Applies to: every app, connector and agent sign-in; release checks assert each rule.
+
+The [audit's three leading gaps](SIGNIN_SAFETY_AUDIT_2026-11-01.md) describe the work still needed. This decision records the rule; it does not claim existing sign-ins comply or authorize revoking accounts or deleting live profiles.
+
 ## 27 Oct 2026 — release source returns to main (James)
 
 | # | Decision | Status |
