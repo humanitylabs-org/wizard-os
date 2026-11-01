@@ -31,12 +31,16 @@ def preserved(before, after):
 
 
 @contextlib.contextmanager
-def served_page(port, sudo, checks):
+def served_page(port, sudo, checks, body=None):
     def ts(*args):
         return json.loads(subprocess.check_output(
             (['sudo', '-n'] if sudo else []) + ['tailscale', *map(str, args)],
             stderr=subprocess.DEVNULL, timeout=20))
 
+    # Reused by the crash fixture: never accept a live/shared Serve port.
+    if port != 9453:
+        raise ValueError('diagnostic_port')
+    page_body = body if body is not None else ('<!doctype html><title>Network diagnostic</title><h1>' + MARKER + '</h1>').encode()
     before = ts('serve', 'status', '--json')
     if str(port) in before.get('TCP', {}) or any(k.endswith(':' + str(port)) for k in before.get('Web', {})):
         raise RuntimeError('serve_port_busy')
@@ -47,7 +51,7 @@ def served_page(port, sudo, checks):
 
     class Page(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            body = ('<!doctype html><title>Network diagnostic</title><h1>' + MARKER + '</h1>').encode()
+            body = page_body
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Content-Length', str(len(body)))

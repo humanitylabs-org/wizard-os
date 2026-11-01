@@ -287,10 +287,14 @@ class OnboardingTests(unittest.TestCase):
                  patch.object(platform, 'machine', return_value='arm64'), \
                  patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone, 'configure_avd'), \
                  patch.object(phone.subprocess, 'run', side_effect=self.fake_device()), \
                  patch.object(phone.subprocess, 'Popen', return_value=em), \
                  patch.object(phone, 'https_forward', side_effect=RuntimeError('private-url transcript-canary')):
                 result = phone.run_phone('lc-fresh', 'unused', root, config, {'output': 'private-reply'})
+            self.assertEqual(result['failure']['exception_class'], 'RuntimeError')
+            self.assertEqual(result['failure']['message_code'], 'unclassified')
+            self.assertIn('adb_devices', result.pop('failure'))
             self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
                                      'failure_stage': 'https-forward'})
             self.assertNotIn('private', json.dumps(result))
@@ -310,6 +314,7 @@ class OnboardingTests(unittest.TestCase):
                  patch.object(platform, 'machine', return_value='arm64'), \
                  patch.object(phone, 'validate_apk', return_value=(root / 'published.apk', {}, True)), \
                  patch.object(phone, 'worker_lock', return_value=contextlib.nullcontext()), \
+                 patch.object(phone, 'configure_avd'), \
                  patch.object(phone.subprocess, 'run', side_effect=self.fake_device(unknown_host=True)), \
                  patch.object(phone.subprocess, 'Popen', return_value=em) as start, \
                  patch.object(phone, 'https_forward', return_value=contextlib.nullcontext('https://box.example.ts.net:9450')), \
@@ -318,6 +323,7 @@ class OnboardingTests(unittest.TestCase):
                 result = phone.run_phone('lc-fresh', 'unused', root, config, {})
             argv = start.call_args.args[0]
             self.assertEqual(argv[argv.index('-dns-server') + 1], '192.0.2.53')
+            self.assertEqual(result.pop('failure')['message_code'], 'phone_tailnet_dns')
             self.assertEqual(result, {'passed': False, 'checks': {'empty_install_connect': True},
                                      'failure_stage': 'tailnet-dns'})
             self.assertNotIn('example', json.dumps(result))
@@ -326,6 +332,7 @@ class OnboardingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             result = phone.run_phone('owner-box', 'unused', root, 'not-read', {})
+            self.assertEqual(result.pop('failure')['message_code'], 'phone_disposable_required')
             self.assertEqual(result, {'passed': False, 'checks': {}, 'failure_stage': 'preflight'})
         def fail(*args):
             progress = args[-1]
