@@ -13,10 +13,36 @@ and cwd using `wizard_heavy_submit`; receipt is the turn boundary. Set the worke
 work directory on Linux. The acceptance directory must be strictly below it.
 The runner admits native macOS/arm64 (VZ) and Linux/x86_64 (QEMU/KVM) only, reusing
 `release_gate.native_vm_config` and its digest-pinned image. Linux also reuses
-the release gate's 24 GiB guest disk budget; Mac keeps its 50 GiB guest. Preflight
+the release gate's 40 GiB guest disk budget; Mac keeps its 50 GiB guest. Preflight
 requires 250 GiB reserve plus guest disk, 1 GiB metadata and (when enabled)
-9 GiB phone scratch: 284 GiB for Linux onboarding. Host commands refuse a
+9 GiB phone scratch: 300 GiB for Linux onboarding. Host commands refuse a
 depleted reserve, but forced stop/delete always remain available.
+
+### Backup capacity measurement (0.3.94)
+
+The failed 24 GiB upgrade guest retained 24 image references, whose reported
+unpacked image sizes sum to 14,677,800,000 bytes (shared layers mean this is
+**not** a disk-usage measurement). It exhausted space while archiving transcriber's
+Undo copy. Registry linux/amd64 manifests for the 14 default/manager image refs
+sum to 2,975,733,264 compressed bytes on 0.3.69 and 2,983,893,615 on 0.3.94;
+deduplicated compressed layers total 2,906,156,389 and 2,918,166,478 respectively.
+The default app IDs are identical, including voice and connection-router: the
+manifests do not support attributing this failure to newly added default apps.
+Compressed transfer size alone does not predict the restore peak.
+
+At the 0.3.94 WAM pin, the encrypted bundle remains on disk while `stage_stream`
+writes its contents. `_snapshot_app` retains a gzip Undo archive for **every**
+replaced app, including app-data, installed package, user-config and named volumes.
+`AppData.restore` then expands each bundled app archive into adjacent swap staging;
+stock Hermes import also expands agent ZIPs. Wizard home, agent home and Files
+set-aside use same-filesystem renames, not full duplicate copies. The ~1 GiB
+bundle therefore is not a ~1 GiB restore budget. With no surviving guest filesystem
+for an exact peak measurement, use the observed 24 GiB exhaustion as a lower bound
+and add 16 GiB (40 GiB total) for expanded data, accumulated Undo and growth, rather
+than claim a precise peak. The release gate requires 291 GiB host free; onboarding
+with phone requires 300 GiB, within the reserved Linux worker budget. This changes
+only harness capacity, not public installation minimums or export refusal logic;
+WAM's low-space export/import tests still exercise explicit insufficient budgets.
 
 The runner accepts `--root`, `--release`, `--previous-release`, and `--cli` (the
 frozen WAM CLI source mounted into the guest). Both VM installs use the **public**

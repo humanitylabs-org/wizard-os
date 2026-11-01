@@ -376,7 +376,7 @@ class OnboardingTests(unittest.TestCase):
             native = release_gate.native_vm_config()
             config = json.loads(next((work / 'run/runs').glob('*/lc-*.json')).read_text())
             self.assertEqual(receipt['architecture'], native['arch'])
-            self.assertEqual(config['disk'], '50GiB' if native['vmType'] == 'vz' else '24GiB')
+            self.assertEqual(config['disk'], '50GiB' if native['vmType'] == 'vz' else '40GiB')
             self.assertTrue(all(config[key] == value for key, value in native.items()))
             self.assertEqual([m for m in config['mounts'] if m['writable']],
                              [{'location': str(work / 'run'), 'writable': True}])

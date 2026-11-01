@@ -74,8 +74,8 @@ class ReleaseAcceptanceCITests(unittest.TestCase):
                    'WIZARD_CI_WORKER_LOCK': str(lock)}
             with patch.object(Path, 'is_mount', return_value=True), patch.object(ci.shutil, 'which', return_value='/bin/tool'), \
                     patch.object(ci.shutil, 'disk_usage') as usage:
-                usage.return_value.free = 275 * ci.GIB - 1
-                with self.assertRaisesRegex(RuntimeError, '275_GiB_free_required'):
+                usage.return_value.free = 291 * ci.GIB - 1
+                with self.assertRaisesRegex(RuntimeError, '291_GiB_free_required'):
                     ci.placement(env)
                 usage.return_value.free += 1
                 self.assertEqual((root, work, lock), ci.placement(env))
