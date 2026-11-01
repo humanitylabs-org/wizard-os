@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 1 Nov 2026 — Miguel: every box runs the standard build
+
+| # | Decision | Status |
+|---|---|---|
+| 105 | **One path for every app: merge → GitHub-hosted CI builds amd64 + arm64 → the Store lists it → every box installs that release, the owner's included.** No hand-loaded images (`pull_policy: never`, bare image ids), no self-hosted image runners, no user-config overrides that swap images or replace commands, no box-only services. A change that a box needs ships as a PR to the app repo and reaches that box through the normal update. Allowed exceptions: wam's own override blocks (networks, alongside wiring, digest-pinned release pins), the owner's unpublished own apps, and the owner's personal shell build (my-release, big UX changes live in the owner's own layer). `wam standard` (wizard-app-manager#401) names each drift; the index lists only apps every box can pull (spec rule 16, wizard-os#380). | Proposed by Miguel, confirm |
+
 ## 27 Oct 2026 — release source returns to main (James)
 
 | # | Decision | Status |
