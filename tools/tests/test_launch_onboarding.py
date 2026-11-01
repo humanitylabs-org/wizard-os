@@ -521,5 +521,162 @@ class NativeLinuxTests(unittest.TestCase):
             self.assertEqual(call.call_args_list[-2].args[0], prefix + ['tailscale', 'serve', '--https=9450', 'off'])
 
 
+class PhoneTransportDiagnosticsTests(unittest.TestCase):
+    def test_linux_proxy_is_explicit_and_darwin_is_unchanged(self):
+        status = {'Self': {'DNSName': 'box.example.ts.net.', 'TailscaleIPs': ['100.64.0.2']}}
+        with patch.object(platform, 'system', return_value='Linux'), \
+             patch.object(phone, 'connect_proxy', return_value=contextlib.nullcontext('http://127.0.0.1:1234')) as proxy:
+            with phone.emulator_network(status, 9450) as args:
+                self.assertEqual(args, ['-http-proxy', 'http://127.0.0.1:1234'])
+            proxy.assert_called_once_with('box.example.ts.net', ['100.64.0.2'], 9450)
+        with patch.object(platform, 'system', return_value='Darwin'), patch.object(phone, 'connect_proxy') as proxy:
+            with phone.emulator_network({}, 9450) as args:
+                self.assertEqual(args, [])
+            proxy.assert_not_called()
+
+    def test_proxy_only_connects_to_fixed_authority_and_is_removed_on_failure(self):
+        import socket
+        import socketserver
+        import threading
+        from urllib.parse import urlsplit
+        from phone_transport import connect_proxy
+        class Echo(socketserver.BaseRequestHandler):
+            def handle(self):
+                while data := self.request.recv(4096):
+                    self.request.sendall(data)
+        with socketserver.ThreadingTCPServer(('127.0.0.1', 0), Echo) as upstream:
+            upstream.daemon_threads = True
+            thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+            thread.start()
+            port = upstream.server_address[1]
+            try:
+                with self.assertRaisesRegex(RuntimeError, '^test$'):
+                    with connect_proxy('127.0.0.1', ['100.64.0.2', 'fd7a::1'], port) as address:
+                        endpoint = urlsplit(address)
+                        for authority in (f'127.0.0.1:{port}', f'100.64.0.2:{port}', f'[fd7a::1]:{port}'):
+                            with socket.create_connection((endpoint.hostname, endpoint.port), timeout=3) as client:
+                                client.sendall(f'CONNECT {authority} HTTP/1.1\r\n\r\n'.encode())
+                                self.assertIn(b'200 Connection Established', client.recv(4096))
+                                client.sendall(b'opaque-tls-test-bytes')
+                                self.assertEqual(client.recv(4096), b'opaque-tls-test-bytes')
+                        for request in ('CONNECT other.example:443 HTTP/1.1',
+                                        f'CONNECT 127.0.0.1:{port + 1} HTTP/1.1',
+                                        f'GET https://127.0.0.1:{port}/ HTTP/1.1', 'X' * 4096):
+                            with socket.create_connection((endpoint.hostname, endpoint.port), timeout=3) as client:
+                                client.sendall((request + '\r\n\r\n').encode())
+                                self.assertIn(b'403 Forbidden', client.recv(4096))
+                        raise RuntimeError('test')
+                with self.assertRaises(OSError):
+                    socket.create_connection((endpoint.hostname, endpoint.port), timeout=1)
+            finally:
+                upstream.shutdown()
+                thread.join(timeout=2)
+
+    @staticmethod
+    def png(raw=b'\x00\xff\x00\x00\xff\xff\x00\x00\xff'):
+        import struct, zlib
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 1, 8, 6, 0, 0, 0))
+                + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'tEXt', b'secret-metadata') + chunk(b'IEND', b''))
+
+    @staticmethod
+    def pixels(png):
+        import struct, zlib
+        offset, content = 8, b''
+        while offset + 12 <= len(png):
+            size = struct.unpack('>I', png[offset:offset + 4])[0]
+            if png[offset + 4:offset + 8] == b'IDAT':
+                content += png[offset + 8:offset + 8 + size]
+            offset += size + 12
+        return zlib.decompress(content)
+
+    def test_png_masks_private_text_and_strips_metadata_for_every_filter(self):
+        from phone_diagnostics import masked_png
+        # First pixel stays red; second private pixel is black and opaque.
+        for mode, pixel in ((0, b'\xff\x00\x00\xff\xff\x00\x00\xff'),
+                            (1, b'\xff\x00\x00\xff\x00\x00\x00\x00'),
+                            (2, b'\xff\x00\x00\xff\xff\x00\x00\xff'),
+                            (3, b'\xff\x00\x00\xff\x80\x00\x00\x80'),
+                            (4, b'\xff\x00\x00\xff\x00\x00\x00\x00')):
+            png = self.png(bytes([mode]) + pixel)
+            masked = masked_png(png, [(1, 0, 2, 1)])
+            self.assertNotIn(b'secret', masked)
+            self.assertEqual(self.pixels(masked), b'\x00\xff\x00\x00\xff\x00\x00\x00\xff')
+        self.assertEqual(self.pixels(masked_png(self.png(), None)), b'\x00' + b'\x00\x00\x00\xff' * 2)
+        for invalid in (b'not-a-png', self.png(b'invalid')):
+            with self.assertRaises(ValueError):
+                masked_png(invalid, [])
+
+    def test_failure_diagnostics_are_bounded_private_and_exclude_tokens(self):
+        from types import SimpleNamespace
+        import phone_diagnostics as diagnostics
+        canary = 'access-secret-canary'
+        xml = ('<hierarchy><node text="Connect to your Wizard" bounds="[0,0][1,1]"/>'
+               f'<node text="{canary}" bounds="[1,0][2,1]"/></hierarchy>')
+        calls = []
+        def run(argv, **kw):
+            calls.append(argv)
+            self.assertEqual(kw['timeout'], 8)
+            if 'uiautomator' in argv:
+                output = b'UI dumped'
+            elif 'cat' in argv:
+                output = xml.encode()
+            elif 'screencap' in argv:
+                output = self.png()
+            elif 'dumpsys' in argv:
+                output = f'ACTIVITY ai.wizards.os/.ConnectActivity aab123 pid=123\n Intent extras: {canary}\n'.encode()
+            else:
+                output = json.dumps({'TCP': {'9450': {'HTTPS': True}}, 'Web': {
+                    'box.example:9450': {'Handlers': {'/': {'Proxy': canary}}}}}).encode()
+            return SimpleNamespace(returncode=0, stdout=output)
+        with tempfile.TemporaryDirectory() as d, patch.object(diagnostics.subprocess, 'run', side_effect=run):
+            root = Path(d)
+            diagnostics.capture_failure(root, 'address-pairing', adb='adb', serial='emulator-5682', sudo=True)
+            files = list((root / 'failure').iterdir())
+            self.assertEqual({p.name for p in files}, {'labels.json', 'screen.png', 'activity-top.txt', 'serve.json', 'diagnostics.json'})
+            for p in files:
+                self.assertEqual(p.stat().st_mode & 0o777, 0o600)
+                self.assertNotIn(canary.encode(), p.read_bytes())
+                self.assertLess(p.stat().st_size, diagnostics.MAX_PNG)
+            self.assertEqual(json.loads((root / 'failure/labels.json').read_text()), [['Connect to your Wizard'], ['[redacted]']])
+            self.assertIn('ConnectActivity', (root / 'failure/activity-top.txt').read_text())
+            self.assertTrue(json.loads((root / 'failure/serve.json').read_text())['https'])
+            self.assertEqual(calls[-1][:3], ['sudo', '-n', 'tailscale'])
+            self.assertEqual(self.pixels((root / 'failure/screen.png').read_bytes()), b'\x00\xff\x00\x00\xff\x00\x00\x00\xff')
+
+    def test_dead_adb_does_not_skip_serve_note_or_replace_stage(self):
+        from types import SimpleNamespace
+        import phone_diagnostics as diagnostics
+        def run(argv, **kw):
+            if 'tailscale' in argv:
+                return SimpleNamespace(returncode=0, stdout=b'{}')
+            raise diagnostics.subprocess.TimeoutExpired('private-command', 8, output=b'secret-canary')
+        with tempfile.TemporaryDirectory() as d, patch.object(diagnostics.subprocess, 'run', side_effect=run):
+            diagnostics.capture_failure(d, 'emulator-boot', adb='adb', serial='emulator-5682')
+            status = json.loads((Path(d) / 'failure/diagnostics.json').read_text())
+            self.assertEqual(status, {'stage': 'emulator-boot', 'labels': 'TimeoutExpired', 'screenshot': 'TimeoutExpired',
+                                      'activity': 'TimeoutExpired', 'serve': 'saved'})
+            self.assertNotIn('canary', json.dumps(status))
+
+    def test_boundary_captures_before_transport_cleanup_and_survives_capture_failure(self):
+        events = []
+        @contextlib.contextmanager
+        def transport():
+            try:
+                yield
+            finally:
+                events.append('transport-cleanup')
+        with self.assertRaisesRegex(RuntimeError, '^original$'):
+            with transport(), phone.failure_boundary(lambda: events.append('capture')):
+                raise RuntimeError('original')
+        self.assertEqual(events, ['capture', 'transport-cleanup'])
+        def broken_capture():
+            raise ValueError('capture')
+        with self.assertRaisesRegex(RuntimeError, '^original$'):
+            with phone.failure_boundary(broken_capture):
+                raise RuntimeError('original')
+
+
 if __name__ == '__main__':
     unittest.main()
