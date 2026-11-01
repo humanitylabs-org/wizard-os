@@ -1,10 +1,25 @@
 """Test-scoped Linux emulator transport; no TLS termination or host reconfiguration."""
 import contextlib
+from _thread import LockType
 import select
 import socket
 import socketserver
 import threading
 import time
+
+
+class Relay(str):
+    """String-compatible endpoint with address/payload-free evidence."""
+    lock: LockType
+    counts: dict
+    def snapshot(self):
+        with self.lock:
+            return dict(self.counts)
+
+    @property
+    def android_proxy(self):
+        # Android Emulator's documented alias for host loopback (also virtio WiFi).
+        return '10.0.2.2:' + self.rsplit(':', 1)[1]
 
 
 @contextlib.contextmanager
@@ -22,10 +37,18 @@ def connect_proxy(host, addresses, port):
     active = set()
     lock = threading.Lock()
     stopping = threading.Event()
+    counts = dict.fromkeys(('accepted', 'connect_allowed', 'connect_denied',
+                            'upstream_ok', 'upstream_failed', 'bytes_to_box', 'bytes_to_android'), 0)
+
+    def count(name, amount=1):
+        with lock:
+            counts[name] += amount
 
     class Handler(socketserver.BaseRequestHandler):
         def handle(self):
+            count('accepted')
             if not slots.acquire(blocking=False):
+                count('connect_denied')
                 return
             upstream = None
             try:
@@ -42,11 +65,18 @@ def connect_proxy(host, addresses, port):
                 parts = line.split(' ')
                 if (not header.endswith(b'\r\n\r\n') or len(parts) != 3 or parts[0] != 'CONNECT'
                         or parts[1] not in authorities or parts[2] not in ('HTTP/1.0', 'HTTP/1.1')):
+                    count('connect_denied')
                     self.request.sendall(b'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n')
                     return
+                count('connect_allowed')
                 # Never use the request's destination for dialing. Even numeric
                 # CONNECT targets are pinned to the host's real HTTPS name.
-                upstream = socket.create_connection((host, port), timeout=10)
+                try:
+                    upstream = socket.create_connection((host, port), timeout=10)
+                except OSError:
+                    count('upstream_failed')
+                    return
+                count('upstream_ok')
                 with lock:
                     active.add(upstream)
                 self.request.sendall(b'HTTP/1.1 200 Connection Established\r\n\r\n')
@@ -59,6 +89,7 @@ def connect_proxy(host, addresses, port):
                         if not data:
                             return
                         (upstream if source is self.request else self.request).sendall(data)
+                        count('bytes_to_box' if source is self.request else 'bytes_to_android', len(data))
             except (OSError, UnicodeError, ValueError):
                 # Exception strings can contain addresses or HTTP data.
                 pass
@@ -81,7 +112,9 @@ def connect_proxy(host, addresses, port):
         thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .1}, daemon=True)
         thread.start()
         try:
-            yield f'http://127.0.0.1:{server.server_address[1]}'
+            relay = Relay(f'http://127.0.0.1:{server.server_address[1]}')
+            relay.lock, relay.counts = lock, counts
+            yield relay
         finally:
             stopping.set()
             server.shutdown()

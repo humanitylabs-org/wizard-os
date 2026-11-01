@@ -19,8 +19,8 @@ import time
 import xml.etree.ElementTree as ET
 
 from tunnel import open_forward
-from phone_diagnostics import capture_failure
-from phone_transport import connect_proxy
+from phone_diagnostics import capture_failure, private_write
+from phone_transport import Relay, connect_proxy
 
 
 @contextlib.contextmanager
@@ -34,14 +34,35 @@ def failure_boundary(capture):
         raise
 
 
+class NetworkArgs(list):
+    relay: Relay | None = None
+
+    def configure(self, shell):
+        if self.relay is not None:
+            value = self.relay.android_proxy
+            shell('settings', 'put', 'global', 'http_proxy', value)
+            if shell('settings', 'get', 'global', 'http_proxy').strip() != value:
+                raise RuntimeError('phone_android_proxy')
+
+
 @contextlib.contextmanager
 def emulator_network(status, port):
+    args = NetworkArgs()
     if platform.system() != 'Linux':
-        yield []
+        yield args
         return
     own = status['Self']
     with connect_proxy(own['DNSName'].rstrip('.'), own['TailscaleIPs'], port) as proxy:
-        yield ['-http-proxy', proxy]
+        # Configure Android's HTTP stack, not emulator-level TCP interception.
+        # Never combine the two proxy layers. The disposable AVD owns the setting.
+        args.relay = proxy
+        yield args
+
+
+def emulator_argv(sdk, port, dns_server, network_args):
+    return [str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
+            '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
+            '-dns-server', dns_server, *network_args]
 
 PACKAGE = 'ai.wizards.os'
 SIGNER = '3bf74d0b597bc170761079909d3692428702ba057f753ee1ffd62da3c76ed1fd'
@@ -218,6 +239,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     env['JAVA_HOME'] = config['java_home']
     brew = '/opt/homebrew/bin:' if platform.system() == 'Darwin' else ''
     env['PATH'] = config['java_home'] + '/bin:' + brew + env['PATH']
+    if platform.system() == 'Linux':
+        env.pop('http_proxy', None)  # Don't silently re-enable emulator TCP proxy.
     env['ANDROID_HOME'] = env['ANDROID_SDK_ROOT'] = str(sdk)
     env['ANDROID_AVD_HOME'] = str(evidence / 'avd')
     Path(env['ANDROID_AVD_HOME']).mkdir(parents=True)
@@ -263,7 +286,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
     def diagnose():
         capture_failure(evidence, progress['stage'], adb=adb if em is not None else None,
                         serial=serial, env=env, sudo=config.get('tailscale_sudo', False),
-                        port=config.get('https_port', 9450))
+                        port=config.get('https_port', 9450),
+                        relay=network_args.relay, box_host=tailnet['Self']['DNSName'].rstrip('.'))
     progress['stage'] = 'worker-lock'
     # Match the selected worker's shared Android/VM exclusion lock.
     with worker_lock(work), emulator_network(tailnet, config.get('https_port', 9450)) as network_args:
@@ -275,12 +299,12 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
             # Emulator stdout may contain URLs. Keep it private, never publish it.
             progress['stage'] = 'emulator-start'
             with (evidence / 'private-emulator.log').open('w') as log:
-                em = subprocess.Popen([str(sdk / 'emulator/emulator'), '-avd', 'launch_phone', '-port', str(port),
-                    '-no-window', '-no-snapshot', '-no-audio', '-gpu', 'swiftshader_indirect',
-                    '-dns-server', dns_server, *network_args], env=env, stdout=log, stderr=log)
+                em = subprocess.Popen(emulator_argv(sdk, port, dns_server, network_args),
+                                      env=env, stdout=log, stderr=log)
             progress['stage'] = 'emulator-boot'
             wait_for(lambda: shell('getprop', 'sys.boot_completed').strip() == '1', 240)
             assert shell('getprop', 'ro.build.version.sdk').strip() == '35'
+            network_args.configure(shell)
             progress['stage'] = 'empty-install'
             assert PACKAGE not in shell('pm', 'list', 'packages', PACKAGE)
             progress['stage'] = 'apk-install'
@@ -310,7 +334,8 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                 def resolves():
                     lookup = subprocess.run([str(adb), '-s', serial, 'shell', 'ping', '-c', '1', '-W', '3', host],
                                             env=env, capture_output=True, text=True, timeout=30)
-                    return 'unknown host' not in (lookup.stdout + lookup.stderr).lower()
+                    # ADB rc=1/device missing is NOT a successful DNS lookup.
+                    return bool(re.search(r'^PING .*\([0-9a-fA-F:.]+\)', lookup.stdout, re.M))
                 try:
                     wait_for(resolves, 60)
                 except RuntimeError:
@@ -378,6 +403,9 @@ def _run_phone(vm, cli, evidence, config_path, chat, progress):
                     diagnose()
             raise
         finally:
+            if network_args.relay is not None:
+                with contextlib.suppress(Exception):
+                    private_write(evidence / 'relay.json', json.dumps(network_args.relay.snapshot()).encode())
             progress['stage'] = 'emulator-cleanup'
             try:
                 if em is not None:
