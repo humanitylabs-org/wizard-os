@@ -6,9 +6,9 @@ Implementation drafts that follow this spec (all draft, all default-off, stacked
 
 | Repo | Draft | Stacked on |
 |---|---|---|
-| App Manager | `feature/browser-trust-production-admission` | WAM #168 `247cc12a` |
-| Agent Service | `feature/browser-trust-production-admission` | Service #303 `51008d11` (on #100) |
-| Wizard UX | `feature/browser-trust-production-admission` | UX #822 `6c8903fa` (on #327) |
+| App Manager | [WAM #405](https://github.com/humanitylabs-org/wizard-app-manager/pull/405) `feature/browser-trust-production-admission` | WAM #168 `247cc12a` |
+| Agent Service | [Service #306](https://github.com/humanitylabs-org/wizard-agent-service/pull/306) `feature/browser-trust-production-admission` | Service #303 `51008d11` (on #100) |
+| Wizard UX | [UX #831](https://github.com/humanitylabs-org/wizard-ux/pull/831) `feature/browser-trust-production-admission` | UX #822 `6c8903fa` (on #327) |
 
 The exact heads, commands and results are in the PR bodies and in the #384 evidence comment.
 
