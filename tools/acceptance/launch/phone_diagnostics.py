@@ -39,8 +39,9 @@ def ui_evidence(xml):
         if any(v and v not in SAFE_LABELS for v in values):
             match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
             if not match:
-                raise ValueError('unbounded_sensitive_label')
-            masks.append(tuple(map(int, match.groups())))
+                masks = None  # Keep redacted labels, black out the entire image.
+            elif masks is not None:
+                masks.append(tuple(map(int, match.groups())))
     return rows, masks
 
 
@@ -113,54 +114,139 @@ def masked_png(png, masks):
     return result
 
 
-def capture_failure(evidence, stage, *, adb=None, serial=None, env=None, sudo=False, port=9450):
-    """Best effort, independent probes; unavailable devices never hide the failure.
+class DiagnosticError(ValueError):
+    def __init__(self, reason):
+        self.reason = reason
+        super().__init__(reason)
 
-    Commands are deadline-bounded, retained files are size-bounded, and failure
-    reasons are class-only. Capture before emulator teardown; Serve is separately
-    noted inside its context, before the dedicated handler is removed.
+
+def network_errors(raw, box_host='', app_pids=()):
+    """Project logcat onto error enums only; never redact-and-forward lines."""
+    rows = []
+    for line in raw.splitlines():
+        # threadtime format: date time pid tid priority tag: message.
+        fields = line.split(None, 5)
+        if len(fields) != 6:
+            continue
+        pid = fields[2]
+        if pid not in app_pids and not re.search(r'\b(?:chromium|cr_\w+|NetworkSecurityConfig)\s*:', fields[5], re.I):
+            continue
+        errors = re.findall(r'net::ERR_[A-Z_0-9]{1,64}\b|\bSSL(?:HandshakeException|PeerUnverifiedException|Exception)?\b|\bCLEARTEXT\b', fields[5])
+        for error in errors[:8]:
+            urls = re.findall(r'https?://([^/\s:?#]+)', fields[5])
+            host_class = 'box' if box_host and any(h.lower() == box_host.lower() for h in urls) else 'other'
+            rows.append({'error': error, 'host': host_class})
+            if len(rows) >= 80:
+                return rows
+    return rows
+
+
+def capture_failure(evidence, stage, *, adb=None, serial=None, env=None, sudo=False, port=9450,
+                    relay=None, box_host=''):
+    """Independent bounded probes; fixed reasons, rc and byte counts, never stderr.
+
+    The old implementation collapsed adb nonzero, oversize output and XML masking
+    failures into ValueError. That discarded the evidence needed to tell a lost
+    device from an unsupported UI/PNG. Preserve these distinctions and retry the
+    UI dump independently; don't rely on a stale XML file from the UI wait loop.
     """
     target = Path(evidence) / 'failure'
     target.mkdir(mode=0o700, parents=True, exist_ok=True)
     target.chmod(0o700)
     statuses = {'stage': stage, 'labels': 'no_owned_device',
-                'screenshot': 'no_owned_device', 'activity': 'no_owned_device'}
-    def command(argv, limit):
-        result = subprocess.run(list(map(str, argv)), env=env, capture_output=True, timeout=8)
-        if result.returncode or not isinstance(result.stdout, bytes) or len(result.stdout) > limit:
-            raise ValueError('diagnostic_unavailable')
-        return result.stdout
+                'screenshot': 'no_owned_device', 'activity': 'no_owned_device',
+                'logcat': 'no_owned_device', 'commands': {}}
+
+    def command(name, argv, limit, timeout=8):
+        try:
+            result = subprocess.run(list(map(str, argv)), env=env, capture_output=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            statuses['commands'][name] = {'rc': None, 'stdout_bytes': None, 'timeout': True}
+            raise
+        stdout = result.stdout
+        note = {'rc': result.returncode, 'stdout_bytes': len(stdout) if isinstance(stdout, bytes) else None}
+        statuses['commands'][name] = note
+        if result.returncode:
+            # Recognize only fixed ADB error classes; never retain its message.
+            stderr = getattr(result, 'stderr', b'') or b''
+            note['adb'] = next((v for k, v in ((b'device offline', 'offline'),
+                               (b'not found', 'missing'), (b'no devices', 'missing'),
+                               (b'unauthorized', 'unauthorized')) if k in stderr), 'command_failed')
+            raise DiagnosticError('nonzero')
+        if not isinstance(stdout, bytes):
+            raise DiagnosticError('output_type')
+        if len(stdout) > limit:
+            raise DiagnosticError('output_limit')
+        return stdout
+
     def attempt(name, fn):
         try:
             fn()
             statuses[name] = 'saved'
+        except DiagnosticError as exc:
+            statuses[name] = exc.reason
         except Exception as exc:
-            statuses[name] = type(exc).__name__ if type(exc) in (ValueError, OSError, subprocess.TimeoutExpired) else 'unavailable'
+            statuses[name] = type(exc).__name__ if type(exc) in (ValueError, OSError, subprocess.TimeoutExpired, ET.ParseError) else 'unavailable'
+
     masks = None
     if adb is not None and serial is not None:
-        prefix = [adb, '-s', serial]
+        adb_prefix = [str(adb), '-s', str(serial)]
+        attempt('device', lambda: command('device', adb_prefix + ['get-state'], 4096))
+
         def ui():
             nonlocal masks
-            command(prefix + ['shell', 'uiautomator', 'dump', '/sdcard/launch-ui.xml'], 4096)
-            xml = command(prefix + ['shell', 'cat', '/sdcard/launch-ui.xml'], 262144).decode()
-            rows, masks = ui_evidence(xml)
-            while len(json.dumps(rows).encode()) > MAX_TEXT:
-                rows.pop()
-            private_write(target / 'labels.json', json.dumps(rows).encode())
+            for retry in range(2):
+                try:
+                    # API35 may fail to become idle; compressed output also avoids
+                    # enormous WebView trees. Use the same owned serial/env.
+                    command('ui_dump', adb_prefix + ['shell', 'uiautomator', 'dump', '--compressed',
+                                                    '/sdcard/launch-failure.xml'], 4096, timeout=20)
+                    xml = command('ui_xml', adb_prefix + ['exec-out', 'cat', '/sdcard/launch-failure.xml'], 1024 * 1024).decode()
+                    rows, masks = ui_evidence(xml)
+                    while len(json.dumps(rows).encode()) > MAX_TEXT:
+                        rows.pop()
+                    private_write(target / 'labels.json', json.dumps(rows).encode())
+                    return
+                except (DiagnosticError, subprocess.TimeoutExpired):
+                    if retry:
+                        raise
         attempt('labels', ui)
         attempt('screenshot', lambda: private_write(target / 'screen.png', masked_png(
-            command(prefix + ['exec-out', 'screencap', '-p'], MAX_PNG), masks)))
+            command('screenshot', adb_prefix + ['exec-out', 'screencap', '-p'], MAX_PNG), masks)))
+
         def activity():
-            raw = command(prefix + ['shell', 'dumpsys', 'activity', 'top'], 2 * 1024 * 1024).decode(errors='replace')
-            # Retain component/lifecycle evidence, never Intent extras, view text,
-            # saved instance state, URLs, thread IDs, or binder/application data.
-            lines = [line for line in raw.splitlines() if re.fullmatch(
-                r'\s*(?:ACTIVITY [a-zA-Z0-9_.$/]+ [a-f0-9]+ pid=\d+|m(?:Resumed|Stopped|Finished|Destroyed)=(?:true|false))\s*', line)]
+            # 'activities' avoids top's unbounded app view dump; retain components
+            # and lifecycle booleans only, never Intent extras or task descriptions.
+            raw = command('activity', adb_prefix + ['shell', 'dumpsys', 'activity', 'activities'], 2 * 1024 * 1024).decode(errors='replace')
+            lines = []
+            for line in raw.splitlines():
+                if re.fullmatch(r'\s*(?:ACTIVITY [a-zA-Z0-9_.$/]+ [a-f0-9]+ pid=\d+|m(?:Resumed|Stopped|Finished|Destroyed)=(?:true|false))\s*', line):
+                    lines.append(line.strip())
+                elif 'topResumedActivity' in line or 'mResumedActivity' in line:
+                    match = re.search(r'\bai\.wizards\.os/[a-zA-Z0-9_.$]+\b', line)
+                    if match:
+                        lines.append('resumed ' + match[0])
             private_write(target / 'activity-top.txt', ('\n'.join(lines[:80]) + '\n').encode()[:MAX_TEXT])
         attempt('activity', activity)
-    prefix = ['sudo', '-n'] if sudo else []
+
+        def logcat():
+            # A stopped/crashed app (and the browser-only network fixture) has no
+            # pid. Still retain Chromium's filtered network errors in that case.
+            pids = []
+            try:
+                pid = command('pid', adb_prefix + ['shell', 'pidof', 'ai.wizards.os'], 1024).decode().split()
+                pids = [p for p in pid if p.isdecimal()][:8]
+            except DiagnosticError:
+                pass
+            raw = command('logcat', adb_prefix + ['logcat', '-d', '-t', '800', '-v', 'threadtime'], 2 * 1024 * 1024).decode(errors='replace')
+            private_write(target / 'network-errors.json', json.dumps(network_errors(raw, box_host, pids)).encode())
+        attempt('logcat', logcat)
+    if relay is not None:
+        attempt('relay', lambda: private_write(target / 'relay.json', json.dumps(relay.snapshot()).encode()))
+    ts_prefix = ['sudo', '-n'] if sudo else []
+
     def serve():
-        value = json.loads(command(prefix + ['tailscale', 'serve', 'status', '--json'], 262144))
+        value = json.loads(command('serve', ts_prefix + ['tailscale', 'serve', 'status', '--json'], 262144))
         note = {'port': port, 'configured': str(port) in value.get('TCP', {}),
                 'https': value.get('TCP', {}).get(str(port), {}).get('HTTPS') is True,
                 'handler_count': sum(len(v.get('Handlers', {})) for v in value.get('Web', {}).values())}

@@ -524,10 +524,21 @@ class NativeLinuxTests(unittest.TestCase):
 class PhoneTransportDiagnosticsTests(unittest.TestCase):
     def test_linux_proxy_is_explicit_and_darwin_is_unchanged(self):
         status = {'Self': {'DNSName': 'box.example.ts.net.', 'TailscaleIPs': ['192.0.2.2']}}
+        from phone_transport import Relay
+        import threading
+        relay = Relay('http://127.0.0.1:1234')
+        relay.lock, relay.counts = threading.Lock(), {}
         with patch.object(platform, 'system', return_value='Linux'), \
-             patch.object(phone, 'connect_proxy', return_value=contextlib.nullcontext('http://127.0.0.1:1234')) as proxy:
+             patch.object(phone, 'connect_proxy', return_value=contextlib.nullcontext(relay)) as proxy:
             with phone.emulator_network(status, 9450) as args:
-                self.assertEqual(args, ['-http-proxy', 'http://127.0.0.1:1234'])
+                self.assertEqual(args, [])  # No emulator-level proxy/double proxy.
+                calls = []
+                def shell(*argv):
+                    calls.append(argv)
+                    return '10.0.2.2:1234\n'
+                args.configure(shell)
+                self.assertEqual(calls[0], ('settings', 'put', 'global', 'http_proxy', '10.0.2.2:1234'))
+                self.assertIs(args.relay, relay)
             proxy.assert_called_once_with('box.example.ts.net', ['192.0.2.2'], 9450)
         with patch.object(platform, 'system', return_value='Darwin'), patch.object(phone, 'connect_proxy') as proxy:
             with phone.emulator_network({}, 9450) as args:
@@ -565,6 +576,12 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
                             with socket.create_connection((endpoint.hostname, endpoint.port), timeout=3) as client:
                                 client.sendall((request + '\r\n\r\n').encode())
                                 self.assertIn(b'403 Forbidden', client.recv(4096))
+                        counts = address.snapshot()
+                        self.assertEqual(counts['connect_allowed'], 3)
+                        self.assertGreater(counts['bytes_to_box'], 0)
+                        self.assertGreater(counts['bytes_to_android'], 0)
+                        self.assertEqual(counts['connect_denied'], 4)
+                        self.assertEqual(counts['upstream_failed'], 0)
                         raise RuntimeError('test')
                 with self.assertRaises(OSError):
                     socket.create_connection((endpoint.hostname, endpoint.port), timeout=1)
@@ -617,7 +634,7 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
         calls = []
         def run(argv, **kw):
             calls.append(argv)
-            self.assertEqual(kw['timeout'], 8)
+            self.assertEqual(kw['timeout'], 20 if 'uiautomator' in argv else 8)
             if 'uiautomator' in argv:
                 output = b'UI dumped'
             elif 'cat' in argv:
@@ -634,7 +651,7 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
             root = Path(d)
             diagnostics.capture_failure(root, 'address-pairing', adb='adb', serial='emulator-5682', sudo=True)
             files = list((root / 'failure').iterdir())
-            self.assertEqual({p.name for p in files}, {'labels.json', 'screen.png', 'activity-top.txt', 'serve.json', 'diagnostics.json'})
+            self.assertEqual({p.name for p in files}, {'labels.json', 'screen.png', 'activity-top.txt', 'serve.json', 'diagnostics.json', 'network-errors.json'})
             for p in files:
                 self.assertEqual(p.stat().st_mode & 0o777, 0o600)
                 self.assertNotIn(canary.encode(), p.read_bytes())
@@ -655,8 +672,10 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d, patch.object(diagnostics.subprocess, 'run', side_effect=run):
             diagnostics.capture_failure(d, 'emulator-boot', adb='adb', serial='emulator-5682')
             status = json.loads((Path(d) / 'failure/diagnostics.json').read_text())
-            self.assertEqual(status, {'stage': 'emulator-boot', 'labels': 'TimeoutExpired', 'screenshot': 'TimeoutExpired',
-                                      'activity': 'TimeoutExpired', 'serve': 'saved'})
+            for key in ('labels', 'screenshot', 'activity', 'device', 'logcat'):
+                self.assertEqual(status[key], 'TimeoutExpired')
+            self.assertEqual(status['stage'], 'emulator-boot')
+            self.assertEqual(status['serve'], 'saved')
             self.assertNotIn('canary', json.dumps(status))
 
     def test_boundary_captures_before_transport_cleanup_and_survives_capture_failure(self):

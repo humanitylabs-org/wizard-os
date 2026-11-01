@@ -233,13 +233,15 @@ UX pins have the same `WizardProbe` request (`/wizard-os-home/`) and shell marke
 checks. The `ts-input` anti-spoof rule matches **source**, not destination, so do
 not attribute the refused connection to a destination drop or disable that rule.
 
-Linux passes an ephemeral loopback proxy explicitly with emulator `-http-proxy`.
-Only CONNECT for this test's HTTPS port and its own tailnet name/addresses is
-accepted; dialing is always pinned to that host. TLS is opaque end-to-end: no
-certificate bypass, alternate hostname, shell response, or authentication is
-introduced. The relay exits with the emulator scope, including failure. macOS
-keeps its existing direct transport. This probe reproduces the network boundary,
-not an emulator pairing pass; a new queued onboarding run is still required.
+Linux uses the ephemeral allowlisted CONNECT relay through **Android's global
+HTTP proxy**, set and read back after boot at `10.0.2.2:<relay-port>`. It does not
+combine this with emulator `-http-proxy`. Only this test's HTTPS authority is
+accepted; upstream dialing is pinned to that host. TLS stays opaque end-to-end:
+no certificate bypass, alternate hostname, shell response, or authentication.
+The relay exits with the emulator scope, including failure. macOS remains direct.
+See [PHONE_NETWORK.md](PHONE_NETWORK.md) for source evidence and the network-only
+queued diagnostic. Neither unit tests nor source inspection prove pairing:
+a new queued onboarding run is still required.
 
 On phone failure, capture runs before the owned emulator is stopped, and failures
 inside the HTTPS scope are captured before Serve teardown. Under `phone/failure/`:
