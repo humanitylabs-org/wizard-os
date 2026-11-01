@@ -712,3 +712,41 @@ class ShellForwardReadinessTest(unittest.TestCase):
         tunnel = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(tunnel)
         self.assertGreaterEqual(tunnel.FORWARD_READY_SECONDS, 120)
+
+
+class ShellForwardTimeoutTest(unittest.TestCase):
+    def test_callers_outlive_the_forward_deadline_and_failure_keeps_guest_state(self):
+        # The callers killed tunnel.py at 120 s, before its 180 s deadline,
+        # so a slow guest left no evidence at all.
+        spec = importlib.util.spec_from_file_location('launch_tunnel2', ROOT / 'tunnel.py')
+        tunnel = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tunnel)
+        snapshot = 30 * len(tunnel.GUEST_STATE_COMMANDS)
+        for name in ('run.py', 'release_gate.py'):
+            source = (ROOT / name).read_text()
+            self.assertNotIn("], log, 120)", source)
+            self.assertNotIn("('contact-' + case)], 120)", source)
+            value = int(source.split('TUNNEL_TIMEOUT_SECONDS = ')[1].split()[0])
+            self.assertGreater(value, tunnel.FORWARD_READY_SECONDS + snapshot)
+        self.assertIn('save_guest_state(vm, evidence)', (ROOT / 'tunnel.py').read_text())
+
+    def test_guest_state_is_bounded_and_survives_command_failures(self):
+        spec = importlib.util.spec_from_file_location('launch_tunnel3', ROOT / 'tunnel.py')
+        tunnel = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tunnel)
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            if len(calls) == 2:
+                raise tunnel.subprocess.TimeoutExpired(argv, 30)
+            class Done:
+                returncode = 0
+                stdout = b'x' * (tunnel.GUEST_STATE_BYTES * 3)
+                stderr = b''
+            return Done()
+        with tempfile.TemporaryDirectory() as d, patch.object(tunnel.subprocess, 'run', fake_run):
+            tunnel.save_guest_state('vm', Path(d))
+            text = (Path(d) / 'private-guest-state.txt').read_text()
+        self.assertEqual(len(calls), len(tunnel.GUEST_STATE_COMMANDS))
+        self.assertIn('[TimeoutExpired]', text)
+        self.assertLess(len(text), len(tunnel.GUEST_STATE_COMMANDS) * (tunnel.GUEST_STATE_BYTES + 400))

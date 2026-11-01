@@ -27,6 +27,9 @@ GIB = 1 << 30
 # This is harness capacity, not the product's minimum disk requirement.
 GUEST_DISK_GIB = 40
 
+# Outlives tunnel.py's own readiness deadline plus its guest snapshot.
+TUNNEL_TIMEOUT_SECONDS = 600
+
 
 def native_vm_config():
     """Select a native guest; never silently run amd64 under CPU emulation."""
@@ -126,7 +129,7 @@ def main():
         command(['limactl', 'delete', '-f', vm])
     def journey(name, case, state, expected_release):
         if case != 'upgrade-baseline':
-            command(['python3', HERE / 'tunnel.py', vm, a.cli, evidence / ('contact-' + case)], 120)
+            command(['python3', HERE / 'tunnel.py', vm, a.cli, evidence / ('contact-' + case)], TUNNEL_TIMEOUT_SECONDS)
         output = evidence / (case + '.json')
         shell(['env', 'WIZARD_LAUNCH_FIXTURE=launch-audits-8-9', 'python3', str(HERE / 'capture.py'),
                str(output), str(HERE / 'journey.py'), '--state', str(state), '--case', case, '--cli', str(a.cli)])
