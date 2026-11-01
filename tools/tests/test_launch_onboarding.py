@@ -523,12 +523,12 @@ class NativeLinuxTests(unittest.TestCase):
 
 class PhoneTransportDiagnosticsTests(unittest.TestCase):
     def test_linux_proxy_is_explicit_and_darwin_is_unchanged(self):
-        status = {'Self': {'DNSName': 'box.example.ts.net.', 'TailscaleIPs': ['100.64.0.2']}}
+        status = {'Self': {'DNSName': 'box.example.ts.net.', 'TailscaleIPs': ['192.0.2.2']}}
         with patch.object(platform, 'system', return_value='Linux'), \
              patch.object(phone, 'connect_proxy', return_value=contextlib.nullcontext('http://127.0.0.1:1234')) as proxy:
             with phone.emulator_network(status, 9450) as args:
                 self.assertEqual(args, ['-http-proxy', 'http://127.0.0.1:1234'])
-            proxy.assert_called_once_with('box.example.ts.net', ['100.64.0.2'], 9450)
+            proxy.assert_called_once_with('box.example.ts.net', ['192.0.2.2'], 9450)
         with patch.object(platform, 'system', return_value='Darwin'), patch.object(phone, 'connect_proxy') as proxy:
             with phone.emulator_network({}, 9450) as args:
                 self.assertEqual(args, [])
@@ -551,9 +551,9 @@ class PhoneTransportDiagnosticsTests(unittest.TestCase):
             port = upstream.server_address[1]
             try:
                 with self.assertRaisesRegex(RuntimeError, '^test$'):
-                    with connect_proxy('127.0.0.1', ['100.64.0.2', 'fd7a::1'], port) as address:
+                    with connect_proxy('127.0.0.1', ['192.0.2.2', '2001:db8::1'], port) as address:
                         endpoint = urlsplit(address)
-                        for authority in (f'127.0.0.1:{port}', f'100.64.0.2:{port}', f'[fd7a::1]:{port}'):
+                        for authority in (f'127.0.0.1:{port}', f'192.0.2.2:{port}', f'[2001:db8::1]:{port}'):
                             with socket.create_connection((endpoint.hostname, endpoint.port), timeout=3) as client:
                                 client.sendall(f'CONNECT {authority} HTTP/1.1\r\n\r\n'.encode())
                                 self.assertIn(b'200 Connection Established', client.recv(4096))
