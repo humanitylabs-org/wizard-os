@@ -191,6 +191,10 @@ broken. So:
 | Fixes only (each with a regression test) | none | upgrade test from the current stable passed (+ fresh install when a box allows it), `--fast-track` |
 | Any feature, data-format change or big UX change | 72h on latest | upgrade test passed |
 
+Owner rule (Miguel, 29 Oct 2026): any fix release is fast-tracked to stable; anything carrying a feature goes to
+latest (early testers) first and waits the normal soak. `tools/release_train.py run` follows it: a feature candidate
+stops on latest unless `--feature-fast-track` is passed for that run.
+
 ```sh
 python3 tools/promote_stable.py promote 0.3.32 --from 0.3.25 \
     --evidence docs/acceptance/promote-0.3.32.md \
@@ -265,3 +269,7 @@ live machine just to check the manifest.
 
 Advance `latest` only when the complete new JSON has passed provenance and
 installer-contract checks, and `stable` only through `tools/promote_stable.py promote`. Never insert a placeholder digest to unblock a merge.
+
+## Phone app pointer
+
+`phone/latest.json` names the one shared Wizard OS Android release every box mirrors. App Manager's hourly `wam phone-sync` fetches it, checks the signer, size and SHA-256 of the GitHub release asset, and writes the box's same-origin phone update feed. Boxes on a snapshot older than `min_box_snapshot` skip it. Only advance it to a release whose exact APK has no owner address built in and has passed the upgrade checks in wizard-ux `docs/phone-canonical-release.md`.

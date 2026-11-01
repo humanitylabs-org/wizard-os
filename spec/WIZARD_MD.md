@@ -88,6 +88,38 @@ health: /healthz
 ---
 ```
 
+## App names and renames
+
+The internal `id` is the display `name` in kebab-case: **Movies → `movies`**, **Food → `food`**,
+**Outline → `outline`**, **Connected accounts → `connected-accounts`**, **Meditate → `meditate`**.
+Do not give an app an unrelated codename or retain one merely because it used to be its name.
+An existing `wizard-` prefix is allowed when the rest matches the name (`wizard-calendar` for Calendar).
+Staging labels are not new products: `movies-next` / Movies (test) and `search-preview` / Search (preview)
+are allowed. The checker carries a frozen transition list for already-published exceptions; never add new codenames.
+The repository slug, a native class name, an MCP method prefix, or a registered OAuth callback is not the app ID:
+keep those compatibility contracts when changing them would lose data or break installed callers.
+
+Publish a rename in the app's own source, changing both `wizard.md` and the Runtipi configuration:
+
+```yaml
+id: connected-accounts
+name: Connected accounts
+renamed_from: [wizard-connectors]
+```
+
+`renamed_from` is a nonempty list of earlier valid app IDs, never the current ID. Existing owners move through
+`wam app-rename <old-id> <new-id>` (or the normal app updater); they do not install an unrelated fresh copy.
+App Manager stops the old app, copies its data and settings, carries grants and Connection Router references,
+starts and verifies the new app, and only then removes the old installation. Retained old data and the
+`~/.wizard-os/renames/` receipt support rollback. A failed verification restores the old app.
+
+Host-managed gateways must also publish the canonical view URL and retain old bookmark/deep-link redirects.
+Keep a registered OAuth callback reachable at its exact old URL until the provider registration is intentionally
+changed; blindly redirecting its callback can break token exchange. Read-only health/MCP checks, record counts,
+and content-free credential counts must match before and after. Do not reauthorize, re-import, delete data, or
+replace the running app with an older default-branch runtime just to rename it. Regenerate `apps.json` after
+changing host view overrides. Third-party app migrations belong to their publishers, not an unrelated repository.
+
 ## State storage
 
 Everything an app must keep lives under `${APP_DATA_DIR}`, so the App Manager's backup and a box move carry it. Docker named volumes are not backed up. The App Manager therefore rewrites each top-level named volume in an app's compose to a bind mount at `${APP_DATA_DIR}/volumes/<name>`; on the first start after the rewrite it copies the old volume's contents there once (ownership and modes kept) and leaves the old volume in place for the owner to delete. A volume with a fixed `name:` is refused by the checker (rule 15); apps that need to give another app a folder use `shares`.
@@ -111,6 +143,21 @@ app names belong in the shell's alias table.
 ## Receives voice input
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
+
+## App-to-app endpoints
+
+`uses:` and `requires.models`/`requires.services` are connection proposals, never addresses. Grants, keys, connection modes and owner decisions are in [PERMISSIONS.md](PERMISSIONS.md). A consumer reads where a granted provider answers from `provider_endpoints[<app-id or slot:name>]` in its own `WIZARD_GRANTS_FILE`; it never guesses service names or scrapes owner-facing `apps.json` URLs. Slot grants keep the `slot:` key, not the selected provider's app ID. With no advertised endpoint the consumer reports the provider unavailable rather than inventing a fallback.
+
+The App Manager derives the endpoint from the provider's sole `x-runtipi.is_main` compose service and its `x-runtipi.internal_port`: the first network alias if present, otherwise the service name. Give shared ingress services a unique alias (`wizard-connectors-calendar`), not a generic `ingress`. If the main service is also attached to Runtipi's main network under another logical name, Compose keeps only the injected `tipi_main_network` attachment and can drop the recipe's aliases; the App Manager then advertises the unique container name (`<app>_<store>-<service>-1`, or an explicit `container_name`). With no single main service, a `network_mode` main service, or an invalid port, nothing is derived. A provider that needs another address declares it:
+
+```yaml
+api:
+  port: 8799
+  path: /api
+  endpoint: http://wizard-connectors-calendar:8799
+```
+
+`api.endpoint` is the advertised app-to-app base URL, not an owner-facing URL: absolute `http`/`https`, no user info, query, fragment, whitespace or `$` interpolation; a fixed path prefix is allowed and a trailing `/` is dropped. An invalid value fails the grants reconcile. An endpoint the owner wrote by hand into a consumer's grants file (for example a host-network Router) is kept.
 
 ## Packaging: source, build or image
 

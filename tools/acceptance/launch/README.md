@@ -9,8 +9,14 @@ private directory on the build machine's work volume. Keep all Lima images, cach
 VMs, runs and state under it. `run.py` is a durable **heavy** worker entry, not a
 command to run inside a conversational terminal or a cron shell. Submit its argv
 and cwd using `wizard_heavy_submit`; receipt is the turn boundary. Set the worker's
-`WIZARD_WORK_ROOT` to the mounted work volume; the runner rejects an unmounted root
-or an acceptance directory outside that volume.
+`WIZARD_WORK_ROOT` to the mounted work volume on macOS, or an existing reserved
+work directory on Linux. The acceptance directory must be strictly below it.
+The runner admits native macOS/arm64 (VZ) and Linux/x86_64 (QEMU/KVM) only, reusing
+`release_gate.native_vm_config` and its digest-pinned image. Linux also reuses
+the release gate's 24 GiB guest disk budget; Mac keeps its 50 GiB guest. Preflight
+requires 250 GiB reserve plus guest disk, 1 GiB metadata and (when enabled)
+9 GiB phone scratch: 284 GiB for Linux onboarding. Host commands refuse a
+depleted reserve, but forced stop/delete always remain available.
 
 The runner accepts `--root`, `--release`, `--previous-release`, and `--cli` (the
 frozen WAM CLI source mounted into the guest). Both VM installs use the **public**
@@ -20,7 +26,7 @@ lane. The opt-in onboarding lane below adds a dedicated ChatGPT sign-in; it neve
 uses an owner's existing provider login. Frozen CLI probes do not modify the shipped profile. This is not
 proof that an unreleased CLI change is already in a released installer.
 
-- `launch-real-use`: persistent Ubuntu 24.04 ARM appliance; never automatically deleted.
+- `launch-real-use`: persistent native Ubuntu 24.04 appliance; never automatically deleted.
 - `launch-clean-<run-id>`: disposable **candidate** clean install and strict shell/Setup
   first-contact journey; deleted, then recreated from empty disk for a separate
   previous-release fixture baseline → public candidate upgrade → strict readback.
@@ -110,7 +116,13 @@ Implementation/reuse plan:
   no new production auth, chat, pairing or UI implementation.
 
 Keep the running daily stage and its retained VM **unchanged**. Stage a new pushed
-wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Use a new,
+wizard-os commit, frozen WAM CLI and pushed `chatgpt-connection` source. Set
+`--oauth-source` to the exact directory containing `codex.py`, not its archive
+wrapper. Inspect archive member paths rather than assuming every archive has one
+leading directory. The runner rejects a missing helper before starting any VM;
+`first_chat.validate_oauth_source` performs the same metadata-only preflight without
+reading credentials, importing the helper, renewing OAuth or contacting a provider.
+Use a new,
 short acceptance root, outside the directory holding host secrets. An onboarding
 receipt is labelled `launch-onboarding-87-88` and can never satisfy the daily soak.
 The default daily invocation still does not require a credential or emulator.
@@ -172,7 +184,9 @@ additional containment layer, not a substitute for lease cleanup.
 
 Failures append `first_chat_failure` to the **private** run log: fixed snippet
 `install`/`chat`/`remove`, guest return code (null on timeout), and an allowlisted
-stderr exception class. Nested Docker failures use the same class-only projection.
+stderr exception class. Host catalog/access failures use fixed `catalog`/`access`
+stages, a null return code and the same class allowlist. Nested Docker failures use
+the same class-only projection.
 Raw stderr, argv, HTTP bodies, credential values, session IDs and response text are
 never copied into that diagnostic or the public receipt. An install failure and a
 subsequent cleanup failure each retain a separate diagnostic row.
@@ -183,7 +197,7 @@ The private phone config contains host paths/settings, never provider credential
 
 ```
 {"apk":"PUBLISHED_APK", "feed":"FROZEN_PUBLISHED_FEED.json",
- "sdk":"ANDROID_SDK", "work_root":"ANDROID_BUILD_WORK_ROOT",
+ "sdk":"ANDROID_SDK", "work_root":"SHARED_WORKER_LOCK_DIRECTORY",
  "java_home":"JAVA21_HOME", "emulator_port":5682, "https_port":9450}
 ```
 
@@ -191,7 +205,24 @@ Freeze the **actual published** feed and APK together; record version/code drift
 rather than relabelling a newer feed as an older version. Verify byte size, SHA256,
 release signer, package and version/code before installation. No build or QA APK
 is substituted. The source supports Android SDK/AVD placement from the
-android-build-thales tooling and takes the same `worker.lock` non-blockingly.
+Android build tooling and takes the same `worker.lock` non-blockingly. On the
+Linux worker, `work_root` is the heavy service's lock directory, not AndroidBuilds:
+read its `--lock` argument from the user service and use the parent directory.
+The inherited `WIZARD_HEAVY_LOCK_FD` must match that exact file's device/inode;
+it is neither unlocked nor closed by the phone step. API35 uses x86_64 on Linux,
+arm64-v8a on macOS, never a cross-architecture emulator.
+
+Set `"tailscale_sudo": true` only on a worker with pre-authorized passwordless
+`sudo -n tailscale` access and no configured unprivileged Tailscale operator. It
+prefixes only the bounded Tailscale commands, never the VM or emulator, and keeps
+the same dedicated-port conflict/preservation/cleanup checks. The default remains
+unprivileged. It does not change operator permissions or reset Serve.
+
+Append `--check-only` to the frozen invocation for host admission, OAuth helper
+layout, credential permissions and guest-mount exclusion checks without creating
+a VM or contacting the provider. This does not validate the APK, boot an emulator,
+or prove a first chat; separately run `phone.validate_apk` against the frozen
+feed/SDK and inspect `avdmanager list` / `emulator -version` before queuing.
 
 The emulator has a new AVD/disk and no installed package or stored origin. It opens
 the real native Connect before any owner server loads. A generic artifact proves
@@ -208,7 +239,17 @@ visible in accessibility XML. It exercises Back at nested thread and shell root
 Unpaired root Back is also exercised for generic APKs, but deliberately not for
 owner-default artifacts, where it would navigate to the old live server.
 
-Only bounded pass/fail checks + APK identity enter the phone receipt. UI XML,
+Only bounded pass/fail checks + APK identity enter a successful phone receipt.
+The emulator uses the host's scoped MagicDNS resolver for the box's tailnet
+suffix (read from `scutil --dns` on macOS, `/etc/resolv.conf` on Linux,
+or `dns_server` in the phone config), as a
+real phone running Tailscale would; otherwise it sees only the host's primary
+resolver and cannot resolve the box address.
+Failures retain completed checks and an allowlisted `failure_stage` (preflight,
+APK validation/install, lock/AVD/emulator, Connect, HTTPS, address entry/pairing,
+reply, Back, restart, crash or cleanup); a failed phone receipt fails the whole
+onboarding run. Exception text, command output, URLs and session data are never
+serialized. UI XML,
 transcripts and screenshots are never retained. Emulator disk and temporary XML
 are deleted, emulator stopped, and only the new HTTPS handler removed/read back
 in `finally`; existing Serve handlers must remain identical. **Address pairing is

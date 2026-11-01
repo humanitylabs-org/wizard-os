@@ -29,6 +29,15 @@ def private_file(path, secrets_root):
     return path
 
 
+def validate_oauth_source(oauth_source):
+    # Archive roots differ: require the explicit directory containing codex.py,
+    # never search recursively or silently import another helper revision.
+    source = Path(oauth_source) / 'codex.py'
+    if not source.is_file():
+        raise RuntimeError('oauth_source_missing')
+    return source
+
+
 def oauth_module(path, secrets_root, oauth_source):
     private_file(path, secrets_root)
     # Reuse the pushed ChatGPT app's single-writer OAuth implementation. Refreshes
@@ -204,8 +213,21 @@ def credential_lease(vm, path, secrets_root, oauth_source, log=None):
     # retained soak VM, or any arbitrary owner box provided on a command line.
     if not vm.startswith('lc-'):
         raise RuntimeError('disposable_guest_required')
-    model = select_model(path, secrets_root, oauth_source)
-    auth = access_lease(path, secrets_root, oauth_source)
+    # Host failures happen before guest() can write its bounded diagnostic.
+    # Project onto the same fixed enums; never log exception text or traceback.
+    def host_call(stage, operation):
+        try:
+            return operation(path, secrets_root, oauth_source)
+        except Exception as exc:
+            if log is not None:
+                category = type(exc).__name__
+                diagnostic = {'snippet': stage, 'rc': None,
+                              'stderr_class': category if category in STDERR_CLASSES else 'unknown'}
+                with Path(log).open('a') as out:
+                    out.write(json.dumps({'first_chat_failure': diagnostic}, sort_keys=True) + '\n')
+            raise
+    model = host_call('catalog', select_model)
+    auth = host_call('access', access_lease)
     try:
         guest(vm, INSTALL, auth, log=log)
         del auth

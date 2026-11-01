@@ -40,6 +40,16 @@ A grant is one direction: **consumer app → provider**. The consumer may open c
 - An app never needs a grant to itself. Uninstalling an app removes its grants as consumer and as provider; reinstalling proposes them again unless they are in `denied`.
 - **Grants carry no agent authority.** A grant lets app A call app B's own API. It never lets A act as an agent, reach the gateway, read agent data, or read a private agent (#59). An app bound to a private agent (#60) delivers through the Agent Service endpoint, not through a grant to the agent.
 
+## Connection policy (as built)
+
+The App Manager keeps the owner's connection decisions in the same grants file:
+
+- **Mode.** `declared` (the default): apps reach each other only through grants. `open` (owner's choice): every app reaches every app except a pair the owner disconnected (either direction, because networks are two-way) and unapproved connections to sensitive apps. Open mode marks those reachability-only pairs as `approved: open` grants, which carry no key and link nothing in declared mode.
+- **Declared connections are approved quietly.** A `uses:`/`requires` grant is approved at install, or when an update adds it (with a notice to the owner). When an update drops the declaration, the automatic grant goes too.
+- **Runtime requests.** Every Wizard app service also gets its own read-write `${APP_DATA_DIR}/wizard-requests:/wizard-requests` and `WIZARD_CONNECTION_REQUESTS=/wizard-requests/connections.json`. An app asks for a new connection by writing a list of app IDs or slots there (`["wizard-connectors"]` or `{"connections":[{"to":"slot:transcription"}]}`; max 16 KiB, 32 entries, read without following links). The folder is the app's own, so the requester is the app. A request is approved like a declaration (`reason: request`).
+- **Sensitive apps.** A connection to an app the owner marked `sensitive` (and, in open mode, a sensitive app's new connection outwards) is never approved automatically: it waits in `pending` and the owner approves or denies it in App Manager → Connections.
+- **Disconnect is sticky.** The owner's Disconnect or Deny writes a `denied` row, by the app it reaches; no update, slot alias or runtime request adds it back. Only the owner (the authenticated App Manager API or `wam`) changes `mode`, `sensitive`, `pending` and `denied`.
+
 ## Share grants
 
 A `share` grant lets a consumer mount a folder a provider exports ([WIZARD_MD.md](WIZARD_MD.md#shared-folders)): `{"kind": "share", "from": "hermes-agent", "to": "wizard-claude", "share": "claude-login", "reason": "mounts", "approved": "install", "created_at": …}`. It is proposed at install for each `mounts:` entry whose provider is installed (and again when the provider is installed later), shown on the install sheet as "Hermes Agent will be able to use: Claude sign-in", and revocable like any grant. The App Manager adds the bind mount when it compiles the consumer and restarts the consumer when a share grant is added or revoked. A share grant carries no network access and no key; it is only the mount.
@@ -69,33 +79,55 @@ The App Manager writes one JSON file, `<runtipi data dir>/state/wizard-grants.js
 
 ## Enforcement layer 1: Docker networks
 
-With isolation on, a Wizard app's main service (`is_main`) and any `add_to_main_network` service **leave** the shared main network and join the app's own network, `wizard-app-<id>` (created by the App Manager, not internal, label `wizard.app=<id>`).
+A Wizard app's main service (`is_main`) and any `add_to_main_network` service **leave** the shared main network. One
+network per grant replaces it. This is the form Miguel approved on 27 Oct 2026, implemented in
+[wizard-app-manager#271](https://github.com/humanitylabs-org/wizard-app-manager/pull/271). A network per provider
+would let two consumers of the same provider reach each other.
 
-| Before | After |
-|---|---|
-| Main services of all apps on `runtipi_tipi_main_network` | Main services on `wizard-app-<id>` only |
-| Any app reaches any app by service name | A consumer's containers are **connected to the provider's network** for each grant, with the provider's service name as alias, so `http://wizard-claude:8080` resolves as before, but only for granted apps |
-| Multi-service private network `<app>_<store>_network` | Unchanged |
+| Network | Members | Internal |
+|---|---|---|
+| `wizard-app-<id>` | that app's services only (its internet access and published `127.0.0.1` port) | no |
+| `wizard-link-<consumer>--<provider>` | the consumer's services + the provider's main service, aliased `<provider id>` so `http://wizard-claude:8080` resolves as before | yes |
+| `wizard-gw-<id>`, `wizard-core` | fresh boxes only: the app + the shell, Agent Service and agent (the gateway runs in containers there) | yes |
+| `<app>_<store>_network` | unchanged | as Runtipi makes it |
 
-- The App Manager **reconciles** after every install/start/update/restart of a Wizard app, on boot and every few minutes: create missing `wizard-app-<id>` networks, connect each granted consumer, disconnect anything without a grant. `docker compose up` drops manual connections, which is why reconcile runs after every start.
-- **Runtipi's own reach.** Wizard apps publish their port on `127.0.0.1` only and aren't exposed through Traefik, so leaving the main network loses nothing. If an owner exposes a Wizard app through Traefik, that main service stays on the main network too and the Apps screen warns that every app can reach it.
-- **Agent containers** are not connected to any `wizard-app-<id>` network. They reach apps only through the gateway.
+- **Persistence.** The App Manager writes the topology into each app's stock Runtipi user-config compose override
+  (a block marked `x-wizard-networks`), so every Runtipi start, restart, update and reboot keeps it. No timer.
+- **Reconcile.** `wam network reconcile` runs after every install (planned before the first start), uninstall,
+  update and installer run. It creates the networks and writes the blocks. It moves running containers live:
+  connect first, then leave the shared network. Then it removes orphaned networks. Undeclared pairs share no network.
+- **The gateway.**
+  - Alongside boxes run the gateway on the host network. It reaches apps on their published loopback port and joins
+    no app network.
+  - Fresh boxes: the gateway containers join each app's `wizard-gw-<id>`.
+- **Host access.** `wam install` refuses a recipe with `network_mode: host`, `privileged` or the container runtime
+  socket unless the owner passes `--allow-host-access`.
+- **Runtipi's own reach.** If an owner exposes a Wizard app through Traefik, that main service stays on the main
+  network too and also gets its declared links. The Connections view warns that every app can reach it.
 - Apps from other Runtipi stores stay on the main network and can no longer reach isolated Wizard apps.
-- Limit: networks stop other **containers**. Host processes (the Agent Service, a host Hermes) reach every app on its loopback port. Layer 2 covers them.
+- **Limits.**
+  - A link is two-way at the network level: the provider can also open connections to the consumer.
+  - Host processes (the Agent Service, a host Hermes) reach every app on its loopback port. Layer 2 covers them.
+- **The Connections view and `wam connections`** show each app's declared connections and the gateway path. They
+  include a live check of Docker membership against the declarations.
 
 ## Enforcement layer 2: per-grant key
 
 The network says "this container may connect"; the key says "this caller is that app". The key works on stock Runtipi too.
 
-- On each grant the App Manager mints a random 32-byte key and writes one file per app, `<app-data>/<id>/wizard/grants.json`, mounted read-only into the app; `WIZARD_GRANTS_FILE` names the path inside the container:
+- On each grant the App Manager mints a random 32-byte key and writes one file per app, `<app-data>/<id>/wizard/grants.json`. Every service of the app mounts the directory `${APP_DATA_DIR}/wizard:/wizard:ro` (a directory, so an atomic replace is visible without a restart); `WIZARD_GRANTS_FILE` names the path inside the container:
   `{"outgoing": {"slot:connection-router": "<key>"}, "incoming": [{"from": "wisdom", "sha256": "<hex>"}], "provider_endpoints": {"wizard-claude": "http://wizard-claude:8080"}, "enforce": true}`
   - `outgoing`: keys keyed by the grant's `to` (app id or `slot:<name>`).
   - `incoming`: SHA-256 of each key a caller may present, and who it belongs to. The provider never holds callers' keys.
-  - `provider_endpoints` (optional): where each granted provider answers, so a consumer never guesses addresses.
+  - `provider_endpoints` (optional): where each granted provider answers, so a consumer never guesses addresses. Derivation and `api.endpoint`: [WIZARD_MD.md](WIZARD_MD.md#app-to-app-endpoints).
+  - Adopting an existing hand-written file keeps its keys, extra fields and `enforce`. If an old `incoming` caller name differs from the canonical app ID, both rows are kept with the same hash, so old and updated providers accept the unchanged key; revocation removes both.
 - The consumer sends `X-Wizard-Grant: <key>` on every call to the provider (MCP and plain HTTP). `Authorization` is left alone, because some apps already use it.
 - The provider hashes the header, looks it up in `incoming`, and takes the caller's identity from the match, never from the request. It re-reads the file when it changes, so a revoke takes effect without a restart. With `enforce: false` it logs unknown callers and serves them; with `enforce: true` it answers 403. A configured file that is missing or malformed fails closed.
 - The shared MCP front (`mcp/front.py`) does this check for every app built on it. Apps with their own server do the same check to be listed as enforce-ready. The Connection Router already does ([wizard-connection-router](https://github.com/humanitylabs-org/wizard-connection-router) `server.py`).
-- **The gateway is a consumer too.** The Agent Service gateway holds one key per app with an `mcp`, in `~/.wizard-os/grants/agent-service.json` (mode 0600, written by the App Manager), and sends it when it proxies an agent's tool call. That key only proves "this call came through the gateway"; which agent may make the call is still the agent's tick list (#58). A host process without a key gets 403 once `enforce` is on.
+- **The gateway is a consumer too.** The Agent Service gateway holds one key per app with an `mcp`, in `~/.wizard-os/grants/agent-service.json` (mode 0600, owned by the Agent Service's user, written by the App Manager), and sends it when it proxies an agent's tool call. That key only proves "this call came through the gateway"; which agent may make the call is still the agent's tick list (#58). A host process without a key gets 403 once `enforce` is on.
+  - Shape: `{"outgoing": {"<app id>": "<key>"}}`, the same `outgoing` map as an app's grants file. Each key is 64 lowercase hex characters (32 random bytes); a hash is the lowercase hex SHA-256 of the key's ASCII text. The provider's grants file lists the gateway's key hash as `{"from": "host:agent-service", "sha256": "<hex>"}` in `incoming`. `host:` is outside the app-ID namespace (like `slot:`), so no app, whatever its ID, can be given this row: the App Manager never writes a `host:` row from an app grant and never maps an adopted caller name onto one. Until the App Manager writes these, an operator may write both by hand in exactly this shape; the App Manager keeps unmanaged `incoming` rows. There is no other gateway key file.
+  - **The gateway names the calling agent** (James, 31 Oct 2026; wizard-agent-service #287, Oscar): on `tools/call` to an app holding its key, the gateway also sends `X-Wizard-Agent: <agent id>` and URI-encoded `X-Wizard-Agent-Label`. The agent id comes from the gateway's own per-agent token check, never from the agent. The gateway sends its key only to the app's `mcp` URL, and an app may refuse it on other routes. These headers go only together with `X-Wizard-Grant`, never across a redirect, and an app trusts them only when that grant matches its `host:agent-service` row. An app may then apply its own per-agent level on top of the tick list (Messenger: No access / Read-only / Draft-only); it never widens it. This separates agents that cannot read the box's Wizard files (agents in their own containers or under another user). An agent running as the Agent Service's own user can read the gateway's keys and tokens, so for it the levels are defense in depth until privilege separation gives the Agent Service its own user.
+  - An app that checks only the gateway's row (and its own tokens for other callers) is not enforce-ready in the sense above. Messenger is not enforce-ready today: it ignores `enforce` and serves its public tools to callers without a credential.
 - **Revocation** = delete the grant: disconnect the consumer from the provider's network, drop the key from both files, and add the pair to `denied` if it was a proposal.
 
 ## Install sheet and Apps screen
@@ -105,10 +137,15 @@ The network says "this container may connect"; the key says "this caller is that
 
 ## Rollout
 
-1. **Flag off by default.** `WIZARD_APP_ISOLATION=1` on the App Manager turns layer 1 on. Off means byte-for-byte today's compose files and no network changes.
+1. **On by default** (Miguel, 27 Oct 2026). `wam network off` (or `WIZARD_APP_ISOLATION=0`) turns layer 1 off. Every
+   override block is removed, apps go back to the shared network live, and the networks are deleted. `wam network on`
+   redoes it.
 2. **Layer 2 first, per app.** The App Manager writes grants files and keys for every installed Wizard app whether or not layer 1 is on. Providers start with `enforce: false` and move to `enforce: true` once their log shows zero unknown callers on dogfood boxes. The Router on the owner's daily box already runs with `enforce: true` from a hand-written file; the App Manager takes that file over without changing its shape.
-3. **Turning layer 1 on (existing box):** on first reconcile with no grants file, the App Manager makes the install-time proposals for every installed Wizard app as if each had just been installed, shows them on the Apps screen, then restarts Wizard apps one by one.
-4. **Back to stock:** turn the flag off or change the image tag. Runtipi regenerates every compose file on start, so apps return to the main network; the grants file and `wizard-app-*` networks are ignored (remove with `docker network rm`). No database changes either way.
+3. **Turning layer 1 on (existing box):** the installer's `wam bootstrap` reconciles. Running apps move live (no
+   restart unless a published port stops answering) from the declarations already on the box. Those are `uses:`,
+   router needs and approved grants.
+4. **Back to stock:** `wam network off` first. Changing the image tag alone leaves the user-config override blocks,
+   which stock Runtipi still applies. No database changes either way.
 
 Whether layer 1 must be on for the stable release stays deferred (AGENTS.md "Deferred"): due before any box installs another person's app.
 
