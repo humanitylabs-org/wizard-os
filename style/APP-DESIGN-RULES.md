@@ -66,6 +66,20 @@ Miguel, 31 Oct 2026. In narrow windows (below 600 px) the things you act on most
 - **Messaging apps (James, 31 Oct 2026):** a message thread stays bottom-anchored, newest message at the bottom next to the composer, as in every messenger; Messenger and Chats already work this way. A messaging app's **conversation list** (Messenger's chat list, the Chats list) is **not** flipped: newest conversation stays at the top, because people expect that from every messenger. Its primary controls may still sit in the bottom bar.
 - **Applies to (apps today, 31 Oct 2026):** Notifications (inbox), Manager (Ready updates), Mail (inbox), Podcasts (My feed; the first to adopt it, in 0.3.2), Topics and Wizard Signal (chronological feeds; a ranked view such as Signal's For you keeps best-first). Bottom controls only: Morning Report (a report is read from the top) and MindFeed (one card at a time). Messenger and Chats: threads already comply; their conversation lists stay newest-first. Each app adopts the rule in its next update.
 
+### Personal features are tweaks
+
+James, 1 Nov 2026: features only one person wants live in `wizard-ux/web/tweaks/<author>/<id>/` and stay **off for everyone else**. A personal feature is not a new default or a permanent Settings item. Changes to core UX (Home, Settings or the shell) need James’s decision first. Skins and colours remain separate choices; do not turn colour variants into separate skins.
+
+The existing tweak host, introduced in [wizard-ux #437](https://github.com/humanitylabs-org/wizard-ux/pull/437) and extended by [#755](https://github.com/humanitylabs-org/wizard-ux/pull/755) and [#779](https://github.com/humanitylabs-org/wizard-ux/pull/779), already supports:
+
+- **Home:** a `layout` package can mount content at named slots, including `home-top` and `home-main`; Miguel’s `machines-home` is an existing example. This is an opt-in Home treatment, not a general installed Home-view provider.
+- **Settings:** a trusted author with the `settings` capability can add sections to the existing System pages (`overview`, `ai`, `network`, `storage`). This does not grant replacement of Settings, arbitrary new pages, or changes to Look’s skin/colour controls.
+- **Controls and menus:** a `layout` package can mount its own controls in declared slots (for example `thread-header-actions` or `dock-end`) and register a Back handler for its overlay. There is no generic tweak API for adding an item to every core menu. A missing slot or hook needs a small reviewed core extension, not a parallel menu implementation.
+
+Implementation limits: packages are shipped with the shell and declared in its catalog; author folders are namespaces, not per-user access controls. Contributed tweaks start off on a fresh device, but existing explicit choices and migrated choices are preserved, and owners can opt in with any skin. Release-wide `catalog.defaults` are a separate mechanism for approved core features, not a shortcut for personal features. Choices currently use per-device storage, not account-wide profile sync. Capability filtering and cleanup are guardrails for trusted same-origin code, not a security sandbox or remote package installation system.
+
+Source: `wizard-ux/web/core/{skin-host.js,experience.js,slots.json}`, `web/tweaks/catalog.json`. Credit Oscar (`oscarhenrycollins`, Miguel’s agent) for his contributions to the tweak and Look work; this rule does not approve the flattened Look picker introduced by #755.
+
 ## App checklist (for app PRs)
 - [ ] Loads `wizard-ui.css`, and the app frame has no `max-width`.
 - [ ] Looks right at 360, 700 and 1200 px window widths, in at least two skins, one of them light.
