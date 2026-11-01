@@ -13,6 +13,9 @@ import time
 
 HERE = Path(__file__).resolve().parent
 
+# Outlives tunnel.py's own readiness deadline plus its guest snapshot.
+TUNNEL_TIMEOUT_SECONDS = 600
+
 
 def command(argv, log, timeout=1800):
     cleanup = argv[:3] in (['limactl', 'stop', '-f'], ['limactl', 'delete', '-f'])
@@ -183,7 +186,7 @@ def main():
     def journey(name, case, state, expected_release):
         if case != 'upgrade-baseline':
             contact_evidence = run / f'first-contact-{name}-{case}-{len(result["cases"])}'
-            command(['python3', str(HERE / 'tunnel.py'), name, str(args.cli), str(contact_evidence)], log, 120)
+            command(['python3', str(HERE / 'tunnel.py'), name, str(args.cli), str(contact_evidence)], log, TUNNEL_TIMEOUT_SECONDS)
         output = run / f'{case}-{len(result["cases"])}.json'
         # Wrapper creates a machine-only result file, while stderr stays in the private log.
         shell(name, ['env', 'WIZARD_LAUNCH_FIXTURE=launch-audits-8-9', 'python3', str(HERE / 'capture.py'),

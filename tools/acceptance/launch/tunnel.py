@@ -14,6 +14,34 @@ import urllib.request
 
 
 FORWARD_READY_SECONDS = 180
+# Bounded guest snapshot kept when the shell never answers, so a failed run
+# says why (user manager, units, listeners, containers) before the VM is deleted.
+GUEST_STATE_COMMANDS = (
+    'uptime',
+    'systemctl is-system-running',
+    'loginctl list-users --no-pager',
+    'ls /var/lib/systemd/linger',
+    'systemctl is-active user@$(id -u).service',
+    'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user list-units --type=service --all --no-pager --plain',
+    'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user --failed --no-pager --plain',
+    'ss -ltn',
+    'sudo -n docker ps -a --format "{{.Names}} {{.Status}}"',
+    'XDG_RUNTIME_DIR=/run/user/$(id -u) journalctl --user -n 80 --no-pager -o cat',
+)
+GUEST_STATE_BYTES = 8192
+
+
+def save_guest_state(vm, evidence):
+    sections = []
+    for line in GUEST_STATE_COMMANDS:
+        try:
+            p = subprocess.run(['limactl', 'shell', '--workdir', '/', vm, '--', 'bash', '-lc', line],
+                               stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
+            body = (p.stdout + p.stderr)[-GUEST_STATE_BYTES:].decode('utf-8', 'replace')
+            sections.append(f'$ {line}\n[rc={p.returncode}]\n{body}')
+        except (OSError, subprocess.TimeoutExpired) as error:
+            sections.append(f'$ {line}\n[{type(error).__name__}]')
+    (evidence / 'private-guest-state.txt').write_text('\n'.join(sections) + '\n')
 
 
 @contextlib.contextmanager
@@ -65,6 +93,8 @@ def open_forward(vm, cli, evidence):
                 except OSError:
                     pass
                 time.sleep(.5)
+            if not ready:
+                save_guest_state(vm, evidence)
             assert ready, 'printed shell forward never became ready'
             setup_url = urllib.parse.urljoin(contact['url'], '/wizard/v1/setup')
             with opener.open(setup_url, timeout=5) as response:
