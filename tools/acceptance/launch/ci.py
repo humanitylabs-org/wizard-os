@@ -54,7 +54,7 @@ def placement(env):
         check(lock.samefile(env['WIZARD_HEAVY_REMOTE_LOCK']), 'shared_lock_identity_mismatch')
     if env.get('WIZARD_HEAVY_ROOT'):
         check(Path(env['WIZARD_HEAVY_ROOT']).resolve(strict=True) == work, 'heavy_root_mismatch')
-    check(shutil.disk_usage(work).free >= 275 * GIB, '275_GiB_free_required')
+    check(shutil.disk_usage(work).free >= 291 * GIB, '291_GiB_free_required')
     for tool in ('limactl', 'git', 'python3'):
         check(shutil.which(tool), 'missing_' + tool)
     return ci, work, lock
@@ -132,7 +132,7 @@ def main():
     wam_commit = published_manifest(release, expected)
     ci, work, lock = placement(env)
     print(json.dumps({'preflight': True, 'executed': False, 'shared_lock_exists': True,
-                      'external_volume': True, 'reserve_gib': 250, 'required_free_gib': 275,
+                      'external_volume': True, 'reserve_gib': 250, 'required_free_gib': 291,
                       'release': release, 'manifest_sha256': expected}), flush=True)
     check(env.get('ACCEPT_PREFLIGHT_ONLY') in ('true', 'false'), 'explicit_preflight_choice_required')
     if env['ACCEPT_PREFLIGHT_ONLY'] == 'true':

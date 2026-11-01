@@ -171,7 +171,7 @@ class HarnessTests(unittest.TestCase):
     def test_release_vm_reserves_full_backup_capacity(self):
         with patch.dict(sys.modules, {'run': module('run')}):
             gate = module('release_gate')
-        self.assertEqual(gate.GUEST_DISK_GIB, 24)
+        self.assertEqual(gate.GUEST_DISK_GIB, 40)
         # macOS TMPDIR is long enough to trip Lima's UNIX socket limit. Use a
         # short, synthetic root: this is a check-only test and creates no VM.
         with tempfile.TemporaryDirectory() as td:
@@ -181,10 +181,10 @@ class HarnessTests(unittest.TestCase):
                     '--previous-release', '0.3.39', '--cli', str(cli), '--wam-commit', 'a' * 40, '--check-only']
             with patch.object(gate.sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=str(work)), \
                     patch.object(Path, 'is_mount', return_value=True), patch.object(gate.sys, 'stdout', io.StringIO()):
-                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=274 * gate.GIB)):
+                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=290 * gate.GIB)):
                     with self.assertRaises(AssertionError):
                         gate.main()
-                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=275 * gate.GIB)):
+                with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=291 * gate.GIB)):
                     self.assertEqual(gate.main(), 0)
                 self.assertFalse((work / 'check').exists())
 

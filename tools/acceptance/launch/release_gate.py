@@ -21,9 +21,11 @@ import run as launch
 
 HERE = Path(__file__).resolve().parent
 GIB = 1 << 30
-# Public launch defaults plus a real ~1 GiB backup, staging, and Undo copies.
-# 17 GiB leaves ~1 GiB free: WAM correctly refuses its ~2.5 GiB export budget.
-GUEST_DISK_GIB = 24
+# Includes upgrade-retained images, a real ~1 GiB backup, staged archives,
+# expanded app data and Undo snapshots. 0.3.94 exhausted 24 GiB while making
+# the transcriber Undo archive; 40 GiB adds 16 GiB for that peak and headroom.
+# This is harness capacity, not the product's minimum disk requirement.
+GUEST_DISK_GIB = 40
 
 
 def native_vm_config():
