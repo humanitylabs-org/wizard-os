@@ -1,0 +1,150 @@
+[
+  {
+    "probe": "no session: GET /",
+    "status": 302,
+    "detail": ""
+  },
+  {
+    "probe": "no session: GET /login",
+    "status": 200,
+    "detail": "text/html; charset=utf-8"
+  },
+  {
+    "probe": "no session: GET /api/status",
+    "status": 200,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/auth/me",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/config",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/sessions",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/env",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/plugins/wizard-os/usage",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/cron/jobs",
+    "status": 401,
+    "detail": "application/json"
+  },
+  {
+    "probe": "no session: GET /api/model/info",
+    "status": 200,
+    "detail": "application/json"
+  },
+  {
+    "probe": "Host: attacker.example (rebinding)",
+    "status": 400,
+    "detail": ""
+  },
+  {
+    "probe": "Host: bound IP without port",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "POST /auth/password-login (wrong password, provider basic)",
+    "status": 401,
+    "detail": "{\"detail\":\"Invalid credentials\"}"
+  },
+  {
+    "probe": "POST /auth/password-login (right password)",
+    "status": 200,
+    "detail": "hermes_session_at,hermes_session_rt,hermes_session_provider"
+  },
+  {
+    "probe": "cookie hermes_session_at",
+    "status": "-",
+    "detail": "['httponly', 'max-age', 'path', 'samesite'] SameSite=['lax']"
+  },
+  {
+    "probe": "cookie hermes_session_rt",
+    "status": "-",
+    "detail": "['httponly', 'max-age', 'path', 'samesite'] SameSite=['lax']"
+  },
+  {
+    "probe": "cookie hermes_session_provider",
+    "status": "-",
+    "detail": "['httponly', 'max-age', 'path', 'samesite'] SameSite=['lax']"
+  },
+  {
+    "probe": "25 more wrong passwords in a row",
+    "status": [
+      401,
+      429
+    ],
+    "detail": "any 429 = rate limited"
+  },
+  {
+    "probe": "right password right after that burst (same client IP)",
+    "status": 429,
+    "detail": "429 = a caller can lock the consumer apps out"
+  },
+  {
+    "probe": "session: GET /api/status",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "session: GET /api/config",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "session: GET /api/env",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "session: GET /api/sessions",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "session: GET /api/auth/me",
+    "status": 200,
+    "detail": ""
+  },
+  {
+    "probe": "GET / framing headers",
+    "status": 200,
+    "detail": "XFO=None CSP-fa=False"
+  },
+  {
+    "probe": "session + Origin evil + cross-site: GET /api/config",
+    "status": 200,
+    "detail": "cookie only rides if SameSite allows"
+  },
+  {
+    "probe": "CORS preflight from https://evil.example",
+    "status": 400,
+    "detail": "ACAO=None"
+  },
+  {
+    "probe": "CORS preflight from the Wizard shell origin",
+    "status": 400,
+    "detail": "ACAO=None"
+  },
+  {
+    "probe": "same-origin logout POST with the session (control)",
+    "status": 302,
+    "detail": ""
+  }
+]

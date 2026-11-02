@@ -1,0 +1,204 @@
+{
+  "mode": "candidate",
+  "wam": {
+    "gateway_file_mode": "0o600",
+    "gateway_outgoing_apps": [
+      "browser",
+      "transcriber",
+      "wizard-voice-service"
+    ],
+    "app_env_keys": {
+      "transcriber": [
+        "WIZARD_BROWSER_BOUNDARY",
+        "WIZARD_GATEWAY_KEY"
+      ],
+      "browser": [
+        "WIZARD_BROWSER_BOUNDARY",
+        "WIZARD_GATEWAY_KEY"
+      ],
+      "wizard-voice-service": [
+        "WIZARD_BROWSER_BOUNDARY",
+        "WIZARD_GATEWAY_KEY"
+      ]
+    },
+    "apps_json_carries_a_key": false
+  },
+  "gateway_tools_visible": {
+    "transcriber": true,
+    "browser": true,
+    "voice": true
+  },
+  "agent_calls": {
+    "transcriber": {
+      "tool": "transcriber__transcriber_status",
+      "ok": true,
+      "excerpt": "{\n  \"ok\": true,\n  \"default_model\": \"stub-whisper\",\n  \"models\": [\n    \"stub-whisper\"\n  ],\n  \"api\": \"OpenAI-compatible /v1/audio/transcriptions on this app's addr"
+    },
+    "browser": {
+      "tool": "browser__read_page",
+      "ok": true,
+      "excerpt": "{\n  \"title\": \"Card five synthetic page\",\n  \"url\": \"http://127.0.0.1:44485/page\",\n  \"text\": \"Rendered by the box browser\"\n}"
+    },
+    "voice": {
+      "tool": "wizard_voice_service__voice_status",
+      "ok": true,
+      "excerpt": "{\"status\": \"ok\", \"service\": \"wizard-stt\", \"product\": \"Wizard Voice Service\", \"provider\": \"openai-compatible\", \"model\": \"Systran/faster-whisper-small\", \"attested"
+    }
+  },
+  "cdp": {
+    "granted": "connected; title=Card five synthetic page",
+    "keyless": "refused: browserType.connectOverCDP: Unexpected status 403 when connecting to http://127.0.0.1:50433/json/version/."
+  },
+  "results": [
+    {
+      "caller": "agent via gateway",
+      "request": "tools/call transcriber__transcriber_status",
+      "status": "ok",
+      "expect_candidate": "ok"
+    },
+    {
+      "caller": "agent via gateway",
+      "request": "tools/call browser__read_page",
+      "status": "ok",
+      "expect_candidate": "ok"
+    },
+    {
+      "caller": "agent via gateway",
+      "request": "tools/call wizard_voice_service__voice_status",
+      "status": "ok",
+      "expect_candidate": "ok"
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "transcriber POST /mcp tools/list",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, guessed key",
+      "request": "transcriber POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "browser page (Origin)",
+      "request": "transcriber POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "tailnet-proxied (Tailscale-User-Login)",
+      "request": "transcriber POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "browser POST /mcp tools/list",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, guessed key",
+      "request": "browser POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "browser page (Origin)",
+      "request": "browser POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "tailnet-proxied (Tailscale-User-Login)",
+      "request": "browser POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "voice POST /mcp tools/list",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, guessed key",
+      "request": "voice POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "browser page (Origin)",
+      "request": "voice POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "tailnet-proxied (Tailscale-User-Login)",
+      "request": "voice POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "gateway key + Origin",
+      "request": "browser POST /mcp",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "browser GET /json/version (DevTools)",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "browser GET /json/list (DevTools)",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box peer, no key",
+      "request": "browser WS /devtools/browser (CDP upgrade)",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "granted app (defleur-video key)",
+      "request": "browser GET /json/version (DevTools)",
+      "status": 200,
+      "expect_candidate": 200
+    },
+    {
+      "caller": "box peer, no key (grants not enforced: log+serve)",
+      "request": "transcriber GET /v1/models (engine API)",
+      "status": 200,
+      "expect_candidate": 200
+    },
+    {
+      "caller": "browser page (Origin)",
+      "request": "transcriber GET /v1/models (engine API)",
+      "status": 403,
+      "expect_candidate": 403
+    },
+    {
+      "caller": "box probe",
+      "request": "transcriber GET /health",
+      "status": 200,
+      "expect_candidate": 200
+    },
+    {
+      "caller": "granted app via Playwright connectOverCDP",
+      "request": "browser CDP session",
+      "status": "connected",
+      "expect_candidate": "connected"
+    },
+    {
+      "caller": "keyless peer via Playwright connectOverCDP",
+      "request": "browser CDP session",
+      "status": "refused",
+      "expect_candidate": "refused"
+    }
+  ]
+}
