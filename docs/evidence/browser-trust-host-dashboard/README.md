@@ -55,3 +55,34 @@ box were not verified.
 
 Not covered: real Tailscale Serve / TLS, a real remote tailnet device (box-peer refusal is unit-tested with injected
 interface tables: another tailnet IP and a LAN neighbour are refused), real Runtipi restarts, systemd itself.
+
+## 2. Card-5 callers send their keys (Transcriber engine API, Browser DevTools)
+
+`card5-callers-e2e.py base|candidate <out.json>`. The providers are the same in both runs and are the real card-5
+fronts with the boundary on and their grants file at `enforce: true`:
+- Transcriber front from transcriber#1 (`c3f6600`), engine = a stub OpenAI-compatible API;
+- Browser front from browser#2 (`556017f`, `WIZARD_PEER_GATE=require` as its compose sets) over a real
+  chrome-headless-shell.
+
+The callers are the real code of each checkout:
+- Agent Service `createWizardServer`: base = Service #316 head `88298f9`, candidate = Service #317. Its key comes from
+  `grants/agent-service.json`, as WAM #421 writes it.
+- Voice `providers._request_text`, packaged local-engine profile; only the socket target moves from `transcriber:8000`
+  to the local front port. Base = Voice #9 head `f179432`, candidate = Voice #10.
+- DeFleur Video `transcriber.status()`, `workflow.browser_status()` and the real `capture-remote.cjs` smoke capture
+  (puppeteer-core 25.13.0, 2-frame synthetic project). Base = `main` `ba5b14c`, candidate = defleur-video #12. Its
+  keys come from its own grants file (`outgoing` + `provider_endpoints`).
+
+| Caller | Request | Base | Candidate |
+|---|---|---|---|
+| keyless box peer | Transcriber `GET /v1/models` | 403 | 403 |
+| keyless box peer | Browser `GET /json/version` | 403 | 403 |
+| Agent Service STT | `GET /wizard/voice/status` | `ready: false` ("Voice unavailable") | **`ready: true`** |
+| Agent Service STT | `POST /wizard/voice/transcribe` | 502 | **200** (synthetic text) |
+| Voice | local engine transcription | `HTTP 403: this service needs X-Wizard-Grant from a granted app` | **transcript** |
+| DeFleur Video | `transcriber.status()` / `workflow.browser_status()` | unreachable / `HTTP Error 403` | **reachable / reachable** |
+| DeFleur Video | `capture-remote.cjs` smoke via CDP | `Failed to fetch browser webSocket URL … HTTP Forbidden` | **exit 0, 2 frames** |
+
+So with these three PRs, the Transcriber's `enforce` flag can go true, and Browser's strict DevTools no longer
+breaks DeFleur Video. Each caller keeps working unchanged without a key (unit-tested in each PR).
+Voice and DeFleur Video still need new images before boxes run this code (plans in Voice #10 and defleur-video #12).

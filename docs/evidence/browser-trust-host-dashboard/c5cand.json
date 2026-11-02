@@ -1,0 +1,61 @@
+{
+  "mode": "candidate",
+  "rows": [
+    {
+      "caller": "keyless box peer",
+      "request": "Transcriber GET /v1/models (enforce on)",
+      "result": 403
+    },
+    {
+      "caller": "keyless box peer",
+      "request": "Browser GET /json/version",
+      "result": 403
+    },
+    {
+      "caller": "Agent Service STT",
+      "request": "GET /wizard/voice/status",
+      "result": {
+        "ready": true,
+        "name": "Local model"
+      }
+    },
+    {
+      "caller": "Agent Service STT",
+      "request": "POST /wizard/voice/transcribe",
+      "result": {
+        "status": 200,
+        "body": {
+          "text": "synthetic words",
+          "provider": "",
+          "model": ""
+        }
+      }
+    },
+    {
+      "caller": "Voice (real provider code)",
+      "request": "POST /v1/audio/transcriptions",
+      "result": {
+        "local_engine": true,
+        "text": "synthetic words"
+      }
+    },
+    {
+      "caller": "DeFleur Video (real code)",
+      "request": "transcriber.status / workflow.browser_status",
+      "result": {
+        "transcriber_reachable": true,
+        "browser_reachable": true,
+        "browser_error": ""
+      }
+    },
+    {
+      "caller": "DeFleur Video capture-remote.cjs",
+      "request": "smoke capture via Browser (CDP)",
+      "result": {
+        "exit": 0,
+        "frames": 2,
+        "error": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "mode": "base",
+  "rows": [
+    {
+      "caller": "keyless box peer",
+      "request": "Transcriber GET /v1/models (enforce on)",
+      "result": 403
+    },
+    {
+      "caller": "keyless box peer",
+      "request": "Browser GET /json/version",
+      "result": 403
+    },
+    {
+      "caller": "Agent Service STT",
+      "request": "GET /wizard/voice/status",
+      "result": {
+        "ready": false,
+        "name": "Voice unavailable"
+      }
+    },
+    {
+      "caller": "Agent Service STT",
+      "request": "POST /wizard/voice/transcribe",
+      "result": {
+        "status": 502,
+        "body": {
+          "error": "upstream_unavailable"
+        }
+      }
+    },
+    {
+      "caller": "Voice (real provider code)",
+      "request": "POST /v1/audio/transcriptions",
+      "result": {
+        "local_engine": true,
+        "error": "openai-compatible returned HTTP 403: this service needs X-Wizard-Grant from a granted app"
+      }
+    },
+    {
+      "caller": "DeFleur Video (real code)",
+      "request": "transcriber.status / workflow.browser_status",
+      "result": {
+        "transcriber_reachable": false,
+        "browser_reachable": false,
+        "browser_error": "HTTPError: HTTP Error 403: Forbidden"
+      }
+    },
+    {
+      "caller": "DeFleur Video capture-remote.cjs",
+      "request": "smoke capture via Browser (CDP)",
+      "result": {
+        "exit": 1,
+        "frames": 0,
+        "error": "Error: Failed to fetch browser webSocket URL from http://127.0.0.1:45561/json/version: HTTP Forbidden"
+      }
+    }
+  ]
+}
