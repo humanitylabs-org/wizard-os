@@ -1,0 +1,335 @@
+[
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET owner /wizard/v1/apps",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "no-cors POST /notifications/api/mark",
+    "expect": "no readable owner data / no success",
+    "got": "opaque-0 (no-cors, unreadable)",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET files own tab api",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "no-cors POST dashboard login",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET hermes dashboard /api/status",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET claude own port accounts",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET content listener root",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors GET /notifications/api/items",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "cors POST notifications own port mcp",
+    "expect": "no readable owner data / no success",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "no-cors POST store-install",
+    "expect": "no readable owner data / no success",
+    "got": "opaque-0 (no-cors, unreadable)",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "no-cors POST troubleshoot action",
+    "expect": "no readable owner data / no success",
+    "got": "opaque-0 (no-cors, unreadable)",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "WebSocket dashboard",
+    "expect": "no readable owner data / no success",
+    "got": "error (refused)",
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:8796/wizard-os-home/",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "",
+      "body": "wtrain.train.test refused to connect."
+    },
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:8796/wizard-os-home/desktop.html",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "",
+      "body": "wtrain.train.test refused to connect."
+    },
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:8794/files/",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "",
+      "body": "wtrain.train.test refused to connect."
+    },
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:9120/",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "",
+      "body": "wtrain.train.test refused to connect."
+    },
+    "pass": true
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:8796/troubleshoot/",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "https://wtrain.train.test:8796/troubleshoot/",
+      "body": "{\"error\":\"frame_refused\"}"
+    },
+    "pass": false
+  },
+  {
+    "suite": "A cross-site page",
+    "probe": "framed https://wtrain.train.test:8796/notifications/",
+    "expect": "framing refused (chrome-error or blank)",
+    "got": {
+      "loaded": "",
+      "body": "wtrain.train.test refused to connect."
+    },
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "self origin is opaque",
+    "expect": "allowed",
+    "got": "null",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "own op notifications.inbox",
+    "expect": "allowed",
+    "got": "ok items=2",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "cross-app op ai_accounts.inventory",
+    "expect": "refused",
+    "got": "refused not_allowed",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "cross-app op claude_code.status",
+    "expect": "refused",
+    "got": "refused not_allowed",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "undeclared op files.list",
+    "expect": "refused",
+    "got": "refused not_allowed",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch other app api /wizard-claude/api/accounts",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch own listener /notifications/api/items",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch owner API /wizard/v1/apps",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch adapter endpoint directly",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch store-install",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "fetch troubleshoot repairs",
+    "expect": "refused",
+    "got": "TypeError Failed to fetch",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "read parent.document",
+    "expect": "refused",
+    "got": "threw SecurityError",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "top navigation",
+    "expect": "refused",
+    "got": "threw SecurityError",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "window.open popup",
+    "expect": "refused",
+    "got": "blocked null",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "localStorage of shell",
+    "expect": "refused",
+    "got": "threw SecurityError",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "forged postMessage to shell (fake count + fake intent)",
+    "expect": "allowed",
+    "got": "sent",
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "forged count message ignored by shell",
+    "expect": "unread != 999",
+    "got": 6,
+    "pass": true
+  },
+  {
+    "suite": "B opaque app frame",
+    "probe": "forged intent opened no tab",
+    "expect": "pages=1",
+    "got": 1,
+    "pass": true
+  },
+  {
+    "suite": "C replay",
+    "probe": "captured adapter calls",
+    "expect": ">0",
+    "got": 9,
+    "pass": true
+  },
+  {
+    "suite": "C replay",
+    "probe": "replay exact inbox call while binding open (same shell token)",
+    "expect": "served",
+    "got": "403 {\"error\":\"replay\",\"retryable\":false}",
+    "pass": false
+  },
+  {
+    "suite": "C replay",
+    "probe": "replay after frame navigated (stale binding)",
+    "expect": "refused",
+    "got": "403 {\"error\":\"stale_binding\",\"retryable\":false}",
+    "pass": true
+  },
+  {
+    "suite": "C replay",
+    "probe": "replay without shell token",
+    "expect": "refused",
+    "got": "401 {\"error\":\"shell_token_required\",\"check\":\"browser_boundary\"}",
+    "pass": true
+  },
+  {
+    "suite": "C replay",
+    "probe": "replay with foreign Origin",
+    "expect": "refused",
+    "got": "403 {\"error\":\"stale_binding\",\"retryable\":false}",
+    "pass": true
+  },
+  {
+    "suite": "C revocation",
+    "probe": "fresh binding before revoke",
+    "expect": "ok",
+    "got": "ok",
+    "pass": true
+  },
+  {
+    "suite": "C revocation",
+    "probe": "open binding after WAM revoke",
+    "expect": "refused",
+    "got": "refused revoked",
+    "pass": true
+  },
+  {
+    "suite": "C replay",
+    "probe": "replay of pre-revoke call after revoke",
+    "expect": "refused",
+    "got": "403 {\"error\":\"revoked\",\"retryable\":false}",
+    "pass": true
+  },
+  {
+    "suite": "C revocation",
+    "probe": "reopened view after revoke shows refusal",
+    "expect": "permission message",
+    "got": "Notifications need permission from the owner for this.\n\nUnread\nAll\nMore",
+    "pass": true
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "boundary": {
+    "enabled": true
+  },
+  "bell": {
+    "state": {
+      "unread": 0,
+      "needs": 0,
+      "ok": true,
+      "at": 1793654263898
+    },
+    "items": 0,
+    "requests": [
+      "POST /wizard/v1/browser-shell/call {\"operation\":\"notifications.count\",\"args\":{}}",
+      "POST /wizard/v1/browser-shell/call {\"operation\":\"notifications.items\",\"args\":{}}"
+    ]
+  },
+  "bell-mark": {
+    "skipped": "no unread item"
+  },
+  "app-store": {
+    "sandbox": "allow-scripts allow-forms allow-downloads",
+    "origin": "null",
+    "text": "App Store Refresh Installed status is incomplete. Refresh before requesting a release change. Apps Things you open and use › Agent apps New skills for your agent › Agents The minds that run Wizard › Connectors Accounts your agents can use › The App Index isn’t reachable right now.",
+    "errors": [
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/index/search?limit=100&offset=0' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested ",
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/installed-apps' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/api/apps/installed' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+    ],
+    "allErrors": 7
+  },
+  "model-picker": {
+    "opts": {
+      "error": "",
+      "n": 0,
+      "sample": [],
+      "claudeNote": ""
+    },
+    "shellOps": 1
+  },
+  "hermes-dashboard-sign-in": {
+    "before": {
+      "status": 200,
+      "url": "https://wtrain.train.test:9120/login?next=%2F",
+      "xfo": "DENY"
+    },
+    "after": {
+      "url": "https://wtrain.train.test:9120/?profile=default",
+      "title": "Hermes Agent - Dashboard",
+      "text": "Help improve Hermes? Asking once more: an earlier version could save \"No thanks\" before you saw this question. Details Share with Nous No thanks HERMES AGENT CHAT SESSIONS FILES MODELS LOGS CRON SKILLS PLUGINS MCP CHANNELS WEBHOOKS PAIRING "
+    },
+    "apiStatus": 200
+  },
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/index/search?limit=100&offset=0' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested ",
+    "Failed to load resource: net::ERR_FAILED",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/installed-apps' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/api/apps/installed' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ]
+}

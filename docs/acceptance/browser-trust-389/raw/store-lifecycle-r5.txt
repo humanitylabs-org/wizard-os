@@ -1,0 +1,33 @@
+{"step": "before", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 1 install index 0.1.4 (Store path, public index)
+  }
+}
+{"step": "index-installed", "installed": true, "version": "0.1.4", "commit": "a635669a02bfb577663bcb80066867db3b1ceeed", "installation_id": "inst-acc1bf9ede1f33970fa4b681969e96c5", "reason": "no_contract", "admissible": false, "contract_ops": null, "granted": [], "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 2 grant attempt on index build
+browser-grants: wizard-files: not eligible for browser grants (no_contract)
+--- 3 update to the candidate (private test pin)
+  ],
+  "message": null
+}
+{"step": "after-update", "installed": true, "version": "0.1.4", "commit": "a635669a02bfb577663bcb80066867db3b1ceeed", "installation_id": "inst-acc1bf9ede1f33970fa4b681969e96c5", "reason": "no_contract", "admissible": false, "contract_ops": null, "granted": [], "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 3b update did not bring the contract: uninstall + install the candidate from the pin
+}
+{"step": "uninstalled-for-candidate", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+error: humanitylabs-org/wizard-files isn't in the public index and this box has no GitHub login. Run `gh auth login` with an account that can see it, or set GITHUB_TOKEN
+{"step": "candidate-installed", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 4 grant files.list
+browser-grants: wizard-files: expected one installed app, found 0
+{"step": "granted", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 5 grant an undeclared op (deny)
+browser-grants: wizard-files: expected one installed app, found 0
+--- 6 revoke files.list
+}
+{"step": "revoked", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 7 re-grant then uninstall
+browser-grants: wizard-files: expected one installed app, found 0
+}
+{"step": "uninstalled", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+--- 8 reinstall candidate: new installation id, no inherited grant
+error: humanitylabs-org/wizard-files isn't in the public index and this box has no GitHub login. Run `gh auth login` with an account that can see it, or set GITHUB_TOKEN
+{"step": "reinstalled", "installed": false, "version": null, "commit": null, "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "grant_rows_for_app": 0, "credential_files": 3, "cred_for_inst": false}
+exit 0

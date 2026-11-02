@@ -1,0 +1,60 @@
+{
+  "boundary": {
+    "enabled": true
+  },
+  "bell": {
+    "state": {
+      "unread": 7,
+      "needs": 0,
+      "ok": true,
+      "at": 1793651680784
+    },
+    "items": 8,
+    "requests": [
+      "POST /wizard/v1/browser-shell/call {\"operation\":\"models.claude_accounts\",\"args\":{}}",
+      "POST /wizard/v1/browser-shell/call {\"operation\":\"notifications.count\",\"args\":{}}",
+      "POST /wizard/v1/browser-shell/call {\"operation\":\"notifications.items\",\"args\":{}}"
+    ]
+  },
+  "bell-mark": {
+    "id": "qcuZprdeBSqp",
+    "ok": true,
+    "readAfter": true,
+    "unread": 6
+  },
+  "app-store": {
+    "sandbox": "allow-scripts allow-forms allow-downloads",
+    "origin": "null",
+    "text": "App Store Refresh Installed status is incomplete. Refresh before requesting a release change. Apps Things you open and use › Agent apps New skills for your agent › Agents The minds that run Wizard › Connectors Accounts your agents can use › The App Index isn’t reachable right now.",
+    "errors": [
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/installed-apps' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/api/apps/installed' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/index/search?limit=100&offset=0' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested "
+    ],
+    "allErrors": 8
+  },
+  "model-picker": {
+    "opts": {
+      "error": "",
+      "n": 0,
+      "sample": [],
+      "claudeNote": ""
+    },
+    "shellOps": 3
+  },
+  "hermes-dashboard-sign-in": {
+    "error": "TimeoutError: locator.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('input').first()\n    - locator resolved to <input value=\"/\" name=\"next\" type=\"hidden\"/>\n    - fill(\"hermes\")\n  - attempting fill action\n    2 × waiting for element to be visible, enabled and editable\n      - elem"
+  },
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/installed-apps' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/api/apps/installed' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Access to fetch at 'https://wtrain.train.test:8796/wizard-os-home/store-data/wizard/v1/index/search?limit=100&offset=0' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested ",
+    "Failed to load resource: net::ERR_FAILED",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "stop": "stopped\n",
+  "tab": {
+    "status": 200,
+    "text": "‹\nFix Wizard\n2 problems\nWhat's wrong?\nTell me and I'll fix it, even when Wizard's normal chat is down.\nI can already see a problem with Secure gateway: secure connection failed: self-signed certificate. Tap below and I'll fix it.\nMy Wizard is down\nMessages won't send\nMy agent isn't replying\nWizard is slow\nClaude\nNot available\nChatGPT\nNot signed in\nTinfoil\nNot available\n↑"
+  },
+  "fixSheet": "‹\nFix Wizard\n2 problems\nMy Wizard is down, please fix it.\nClaude repairs need Claude Code installed for root on this server, so the Troubleshooter can't use Claude here yet. Pick ChatGPT or Tinfoil.\nIt works now\nStill not working\nSomething else\nClaude\nNot available\nChatGPT\nNot signed in\nTinfoil\nNot available\n↑",
+  "afterFix": "‹\nFix Wizard\n2 problems\nMy Wizard is down, please fix it.\nClaude repairs need Claude Code installed for root on this server, so the Troubleshooter can't use Claude here yet. Pick ChatGPT or Tinfoil.\nIt works now\nStill not working\nSomething else\nClaude\nNot available\nChatGPT\nNot signed in\nTinfoil\nNot available\n↑",
+  "serviceAfter": "agent-service not running\n",
+  "shellText": "7\n+\nTue, Nov 3 03:51\nConnecting…\nHermes Main Agent\n✕\nNot up to date · Reconnecting…\nOpen Troubleshooter\nPull to refresh\nDRAFTS\n1\n✎\nRehearsal draft 389: keep me across upgrade and rollback\n2h\nDraft · saved on this device\n×\nWizard’s gateway isn’t responding. Open Troubleshooter to check it.\nNew chat\nU"
+}
