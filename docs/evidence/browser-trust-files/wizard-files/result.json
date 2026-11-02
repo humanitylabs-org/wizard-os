@@ -1,0 +1,818 @@
+{
+  "candidate": true,
+  "baseline": false,
+  "nginxStandIn": "node",
+  "checks": [
+    "WAM: wizard-files admitted opaque with its five owner-granted files.* operations",
+    "WAM: listener credential minted and written to the app env (never in apps.json)",
+    "apps.json carries only the credential reference, not its value",
+    "wizard-files runs in the opaque sandboxed frame (origin null)",
+    "browse: the root folder lists Apps, Documents, Photos, Videos",
+    "thumbnail: a bounded JPEG preview (480x320) painted for the photo",
+    "preview: the full photo (1200 px) loads from a ticket on the separate content origin",
+    "video: seek to 14.5 s lands (14.50 s, readyState 4)",
+    "content listener served Range requests from a non-zero offset (206): bytes=15728640-, bytes=15892480-",
+    "video: after its ticket lapsed, a seek back to 7 s (unbuffered) renewed the ticket through the binding and landed",
+    "server-side: the lapsed ticket now answers 410 (absolute expiry, no sliding extension)",
+    "no content-listener request carried a cookie, Referer or the shell token",
+    "download: the file saved by the browser is byte-identical (sha256) and named synthetic-clip.mp4",
+    "download was started by the shell document from a ticket (attachment) on the content origin",
+    "open: the shell opened the file in a new tab on the content origin (no opener)",
+    "download.request without an owner click is refused by the shell (denied)",
+    "index: Files home lists recent files (synthetic-sunset.jpg / synthetic-clip.mp4) from the bounded index",
+    "upload: 5 MiB + 12345 B landed in Documents byte-identical (sha256)",
+    "upload: progress shown while uploading (uploading|Uploading 0% \u00b7 0 B of 5.0 MB / uploading|Uploading 19% \u00b7 1.0 MB of 5.0 MB / uploading|Uploading 39% \u00b7 2.0 MB of 5.0 MB)",
+    "resume: the connection dropped for 3 s (6 chunk request(s) cut) \u2192 \"Reconnecting\u2026 n% kept\", then the upload carried on from the server's offset",
+    "upload port: 6 chunks of at most 1 MiB, each answered 200 after its own Service check",
+    "chunks resumed at increasing server offsets (no byte sent twice past the acknowledged offset)",
+    "the uploaded file shows in the folder listing",
+    "cancel: the cancelled file never appears in Documents",
+    "cancel: the box reports the real outcome (aborted) \u2192 \"Upload cancelled\"",
+    "scoping: app data is browsable in the app scope",
+    "scoping: an upload into app data is refused server-side (not_allowed); a ../ folder is refused (bad_request)",
+    "typed only: extra arguments refused, a forged resource id is not_found, a path is never a resource id",
+    "server-side: the frame's own direct reads of /wizard-files/api (list, content) were refused 403 by the listener (403,403)",
+    "another app's opaque frame: files.list, media tickets and the upload port are all refused (not_allowed)",
+    "server-side: its direct read of /wizard-files/api was refused 403 (1 request(s))",
+    "same-origin app tab: /wizard-files/api/files refused 403 by the listener (browser request, no adapter credential)",
+    "listener: the owner's tailnet login is not adapter authority (403); no or a wrong credential \u2192 401",
+    "revocation: the first chunk after files.upload was revoked got 403 from the Service; the upload stopped (Files can\u2019t upload right now: permission changed. Reopen Files to try again.) and no file was placed",
+    "dark standalone tab: the listener refuses its API (browser request) and the page says to open Files from Wizard"
+  ],
+  "screenshots": [
+    "photo-preview-nebula.png",
+    "video-seek-nebula.png",
+    "home-grove.png",
+    "upload-done-nebula.png",
+    "photos-landscapes-light.png",
+    "app-scope-nebula.png",
+    "standalone-dark.png"
+  ],
+  "errors": [
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Access to fetch at 'https://box.test:42941/wizard-files/api/files?folder=Documents' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "console: Access to fetch at 'https://box.test:42941/wizard-files/api/files/content?path=Documents%2Fsynthetic-notes.txt' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Access to fetch at 'https://box.test:42941/wizard-files/api/files?folder=Documents' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+  ],
+  "wam": [
+    "install wizard-files --repo humanitylabs-org/wizard-files --provides files --port 36881 --wizard-md wizard.md --listener-auth",
+    "install hostile-notes --repo synthetic/hostile-notes --provides notes --port 34943 --no-contract",
+    "grant wizard-files files.list files.index files.thumbnail files.content files.upload",
+    "write",
+    "revoke wizard-files files.upload",
+    "write"
+  ],
+  "listener": [
+    {
+      "via": "shell-origin",
+      "at": 1793610615740,
+      "method": "GET",
+      "path": "/wizard-files/",
+      "site": "same-origin",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615768,
+      "method": "GET",
+      "path": "/wizard-files/wizard-tokens.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615776,
+      "method": "GET",
+      "path": "/wizard-files/wizard-sheet.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615776,
+      "method": "GET",
+      "path": "/wizard-files/styles.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615777,
+      "method": "GET",
+      "path": "/wizard-files/my-files.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615778,
+      "method": "GET",
+      "path": "/wizard-files/restyle.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615779,
+      "method": "GET",
+      "path": "/wizard-files/integration.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615782,
+      "method": "GET",
+      "path": "/wizard-files/wizard-ui.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615786,
+      "method": "GET",
+      "path": "/wizard-files/files-data.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615788,
+      "method": "GET",
+      "path": "/wizard-files/media-gallery.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615789,
+      "method": "GET",
+      "path": "/wizard-files/app.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610615789,
+      "method": "GET",
+      "path": "/wizard-files/my-files.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610647575,
+      "method": "GET",
+      "path": "/wizard-files/api/files",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 403
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610647577,
+      "method": "GET",
+      "path": "/wizard-files/api/files/content",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 403
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610647987,
+      "method": "GET",
+      "path": "/hostile-notes/",
+      "site": "same-origin",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610648023,
+      "method": "GET",
+      "path": "/wizard-files/api/files",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 403
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610648443,
+      "method": "GET",
+      "path": "/hostile-notes/",
+      "site": "none",
+      "dest": "document",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610648459,
+      "method": "GET",
+      "path": "/wizard-files/api/files",
+      "site": "same-origin",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "",
+      "cookie": false,
+      "status": 403
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651469,
+      "method": "GET",
+      "path": "/wizard-files/",
+      "site": "none",
+      "dest": "document",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651476,
+      "method": "GET",
+      "path": "/wizard-files/wizard-tokens.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651480,
+      "method": "GET",
+      "path": "/wizard-files/my-files.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651482,
+      "method": "GET",
+      "path": "/wizard-files/styles.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651483,
+      "method": "GET",
+      "path": "/wizard-files/wizard-ui.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651486,
+      "method": "GET",
+      "path": "/wizard-files/integration.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651487,
+      "method": "GET",
+      "path": "/wizard-files/restyle.css",
+      "site": "same-origin",
+      "dest": "style",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651494,
+      "method": "GET",
+      "path": "/wizard-files/wizard-sheet.js",
+      "site": "same-origin",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651507,
+      "method": "GET",
+      "path": "/wizard-files/files-data.js",
+      "site": "same-origin",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651508,
+      "method": "GET",
+      "path": "/wizard-files/media-gallery.js",
+      "site": "same-origin",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651508,
+      "method": "GET",
+      "path": "/wizard-files/app.js",
+      "site": "same-origin",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651508,
+      "method": "GET",
+      "path": "/wizard-files/my-files.js",
+      "site": "same-origin",
+      "dest": "script",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610651519,
+      "method": "GET",
+      "path": "/wizard-files/api/files",
+      "site": "same-origin",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "",
+      "cookie": false,
+      "status": 403
+    }
+  ],
+  "content": [
+    {
+      "at": 1793610615946,
+      "method": "GET",
+      "ticket": true,
+      "range": "",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 200
+    },
+    {
+      "at": 1793610616144,
+      "method": "GET",
+      "ticket": true,
+      "range": "bytes=0-",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 206
+    },
+    {
+      "at": 1793610616184,
+      "method": "GET",
+      "ticket": true,
+      "range": "bytes=15728640-",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 206
+    },
+    {
+      "at": 1793610616196,
+      "method": "GET",
+      "ticket": true,
+      "range": "bytes=15892480-",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 206
+    },
+    {
+      "at": 1793610621826,
+      "method": "GET",
+      "ticket": true,
+      "range": "bytes=0-",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 206
+    },
+    {
+      "at": 1793610622011,
+      "method": "GET",
+      "ticket": true,
+      "range": "bytes=0-1023",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 410
+    },
+    {
+      "at": 1793610622180,
+      "method": "GET",
+      "ticket": true,
+      "range": "",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 200
+    },
+    {
+      "at": 1793610622556,
+      "method": "GET",
+      "ticket": true,
+      "range": "",
+      "origin": "",
+      "cookie": false,
+      "referer": false,
+      "shellToken": false,
+      "status": 200
+    }
+  ],
+  "chunks": [
+    {
+      "at": 1793610632475,
+      "offset": 0,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610632872,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610632873,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610632873,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610632876,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610634501,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610634503,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": true
+    },
+    {
+      "at": 1793610638196,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610638580,
+      "offset": 2097152,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610638949,
+      "offset": 3145728,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610639337,
+      "offset": 4194304,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610639634,
+      "offset": 5242880,
+      "bytes": 12345,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610640221,
+      "offset": 0,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610640729,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 410
+    },
+    {
+      "at": 1793610648911,
+      "offset": 0,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 200
+    },
+    {
+      "at": 1793610651036,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 403
+    }
+  ],
+  "service": {},
+  "videoBytes": 45774415,
+  "wamBrowser": {
+    "schema": 1,
+    "installation_id": "inst-8e419487e7937f68b9147f8ea7659e15",
+    "source_id": "standard:humanitylabs-org/wizard-files",
+    "commit": "cccccccccccccccccccccccccccccccccccccccc",
+    "contract": {
+      "version": 1,
+      "isolation": "opaque",
+      "operations": [
+        "files.content",
+        "files.index",
+        "files.list",
+        "files.thumbnail",
+        "files.upload"
+      ],
+      "state": {
+        "schema_version": 1,
+        "persistent_bytes": 65536
+      }
+    },
+    "granted": [
+      "files.content",
+      "files.index",
+      "files.list",
+      "files.thumbnail",
+      "files.upload"
+    ],
+    "grant_revision": 1,
+    "admissible": true,
+    "upstream": "http://127.0.0.1:36881",
+    "reason": null,
+    "contract_digest": "c7c5bc4489f0d99dae381342e933ab0e11ecd4b27e207990f000f63e8b1b71be",
+    "permission_revision": "p-26f3684a2b021e4e71bdd5b3",
+    "listener_credential": {
+      "header": "X-Wizard-App-Credential",
+      "ref": "browser-app-credentials/inst-8e419487e7937f68b9147f8ea7659e15.key",
+      "env": "WIZARD_APP_CREDENTIAL",
+      "state": "written"
+    }
+  },
+  "onboardingFixture": {
+    "providerReads": 1,
+    "setupReads": 1
+  },
+  "frame": {
+    "sandbox": "allow-scripts allow-forms allow-downloads",
+    "origin": "null"
+  },
+  "rootRows": [
+    "Apps",
+    "Documents",
+    "Photos",
+    "Skins",
+    "Videos"
+  ],
+  "photoSrc": "https://box.test:33549/t/<ticket>",
+  "seek1": {
+    "t": 14.5002,
+    "ready": 4,
+    "src": "https://box.test:33549/t/<ticket>"
+  },
+  "seek2": {
+    "t": 7.0003,
+    "ready": 4,
+    "src": "https://box.test:33549/t/<ticket>"
+  },
+  "expiredTicketStatus": 410,
+  "download": {
+    "suggested": "synthetic-clip.mp4",
+    "url": "https://box.test:33549/t/<ticket>",
+    "sha": true
+  },
+  "openTab": {
+    "origin": "https://box.test:33549",
+    "opener": true
+  },
+  "noClick": "denied",
+  "uploadStates": [
+    "uploading|Uploading 0% \u00b7 0 B of 5.0 MB",
+    "uploading|Uploading 19% \u00b7 1.0 MB of 5.0 MB",
+    "reconnecting|Reconnecting\u2026 19% kept",
+    "uploading|Uploading 39% \u00b7 2.0 MB of 5.0 MB",
+    "uploading|Uploading 59% \u00b7 3.0 MB of 5.0 MB",
+    "uploading|Uploading 79% \u00b7 4.0 MB of 5.0 MB",
+    "uploading|Uploading 99% \u00b7 5.0 MB of 5.0 MB"
+  ],
+  "chunkOffsets": [
+    0,
+    1048576,
+    2097152,
+    3145728,
+    4194304,
+    5242880
+  ],
+  "cancelToast": "Upload cancelled",
+  "stagedAfterCancel": [],
+  "scoping": {
+    "appList": [
+      "app-data.txt"
+    ],
+    "personalHidden": [
+      "Apps",
+      "Documents",
+      "Photos",
+      "Skins",
+      "Videos"
+    ],
+    "appUpload": "not_allowed",
+    "escape": "bad_request",
+    "extra": "bad_request",
+    "forged": "not_found",
+    "pathAsId": "bad_request"
+  },
+  "directFromFrame": {
+    "list": "blocked",
+    "content": "blocked"
+  },
+  "directFromFrameServerSide": [
+    {
+      "via": "shell-origin",
+      "at": 1793610647575,
+      "method": "GET",
+      "path": "/wizard-files/api/files",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 403
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793610647577,
+      "method": "GET",
+      "path": "/wizard-files/api/files/content",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 403
+    }
+  ],
+  "hostileFrame": {
+    "origin": "null",
+    "list": "not_allowed",
+    "media": "not_allowed",
+    "upload": "not_allowed",
+    "direct": "blocked"
+  },
+  "hostileTab": {
+    "status": 403,
+    "sawNote": false,
+    "serverSide": [
+      "GET /wizard-files/api/files \u2192 403"
+    ]
+  },
+  "networkProbes": {
+    "owner": 403,
+    "bare": 401,
+    "wrong": 401
+  },
+  "revokeChunks": [
+    {
+      "at": 1793610651036,
+      "offset": 1048576,
+      "bytes": 1048576,
+      "dropped": false,
+      "status": 403
+    }
+  ],
+  "revokeMessage": "Files can\u2019t upload right now: permission changed. Reopen Files to try again.",
+  "standalone": {
+    "error": "Open Files from your Wizard to see your files.",
+    "rows": 0
+  },
+  "appLogTail": "   self.error(404 if isinstance(e, FileNotFoundError) else 400, 'unavailable_or_unsafe_path')\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"server.py\", line 254, in error\n    self.json(status, {'error': error})\n    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"server.py\", line 250, in json\n    self.respond(status, 'application/json', len(body))\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"server.py\", line 246, in respond\n    self.end_headers()\n    ~~~~~~~~~~~~~~~~^^\n  File \"/usr/lib/python3.13/http/server.py\", line 538, in end_headers\n    self.flush_headers()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"/usr/lib/python3.13/http/server.py\", line 542, in flush_headers\n    self.wfile.write(b\"\".join(self._headers_buffer))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.13/socketserver.py\", line 845, in write\n    self._sock.sendall(b)\n    ~~~~~~~~~~~~~~~~~~^^^\nBrokenPipeError: [Errno 32] Broken pipe\n----------------------------------------\n"
+}

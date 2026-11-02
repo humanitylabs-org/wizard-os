@@ -1,0 +1,495 @@
+{
+  "candidate": false,
+  "baseline": true,
+  "nginxStandIn": "node",
+  "serveStandIn": "node",
+  "fileBrowser": "filebrowser/filebrowser:v2.63.23@sha256:a469ea076d4a1b4b1d86a41d130f2f536cd9da996a2b1fb39c0d7635f9d89b9a",
+  "checks": [
+    "baseline: Files is a Wizard-origin path (/files/) with no own_tab",
+    "the hostile app runs in the opaque sandboxed frame",
+    "BASELINE: Files opens framed (opaque sandbox) in a Wizard window",
+    "BASELINE: the hostile frame's no-cors POST reached File Browser's noauth login (200, a JWT minted; body unreadable)",
+    "BASELINE: a same-origin app tab gets a File Browser JWT from /files/api/login and lists the owner's files (200)"
+  ],
+  "open": [],
+  "screenshots": [
+    "baseline-shell-files-frame.png"
+  ],
+  "errors": [
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag."
+  ],
+  "wam": [
+    "install files --repo oscarhenrycollins/files --provides files --port 35215 --wizard-md files-wizard.md",
+    "install hostile-notes --repo synthetic/hostile-notes --provides notes --port 39785 --no-contract"
+  ],
+  "filesRequests": [
+    {
+      "via": "shell-origin",
+      "at": 1793609284022,
+      "method": "GET",
+      "path": "/files/",
+      "site": "same-origin",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284085,
+      "method": "GET",
+      "path": "/files/static/assets/index-BOEsmRAc.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284086,
+      "method": "GET",
+      "path": "/files/static/assets/dayjs-CzkqPyy2.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284087,
+      "method": "GET",
+      "path": "/files/static/assets/i18n-C0UlxgXD.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284089,
+      "method": "GET",
+      "path": "/files/static/assets/index-BqkXVoMb.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284090,
+      "method": "GET",
+      "path": "/files/static/assets/rolldown-runtime-BM3Ffeng.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292703,
+      "method": "GET",
+      "path": "/hostile-notes/",
+      "site": "same-origin",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292733,
+      "method": "GET",
+      "path": "/files/api/resources/Documents/",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 401
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292741,
+      "method": "POST",
+      "path": "/files/api/login",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "no-cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292746,
+      "method": "GET",
+      "path": "/files/api/raw/Documents/synthetic-notes.txt",
+      "site": "cross-site",
+      "dest": "image",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 401
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292753,
+      "method": "GET",
+      "path": "/files/",
+      "site": "cross-site",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292764,
+      "method": "GET",
+      "path": "/files/static/assets/index-BOEsmRAc.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292765,
+      "method": "GET",
+      "path": "/files/static/assets/rolldown-runtime-BM3Ffeng.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292766,
+      "method": "GET",
+      "path": "/files/static/assets/dayjs-CzkqPyy2.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292767,
+      "method": "GET",
+      "path": "/files/static/assets/i18n-C0UlxgXD.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292768,
+      "method": "GET",
+      "path": "/files/static/assets/index-BqkXVoMb.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609293596,
+      "method": "GET",
+      "path": "/hostile-notes/",
+      "site": "none",
+      "dest": "document",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609293604,
+      "method": "POST",
+      "path": "/files/api/login",
+      "site": "same-origin",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "https://box.test:43625",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609293608,
+      "method": "GET",
+      "path": "/files/api/resources/Documents/",
+      "site": "same-origin",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    }
+  ],
+  "fileBrowserHealth": 200,
+  "origins": {
+    "shell": "https://box.test:43625",
+    "files": "https://box.test:35215"
+  },
+  "serviceFiles": {
+    "id": "files",
+    "name": "Files",
+    "desc": "Your own cloud folder that every app shares.",
+    "url": "/files/",
+    "view": {
+      "mode": "original",
+      "url": "/files/"
+    },
+    "status": "running",
+    "system": true,
+    "source": "apps.json",
+    "receives_voice_input": false,
+    "provides": [
+      "files"
+    ],
+    "type": "view",
+    "category": "system"
+  },
+  "onboardingFixture": {
+    "providerReads": 1,
+    "setupReads": 1
+  },
+  "shellTile": {
+    "ownTab": false,
+    "url": "/files/"
+  },
+  "framesForFiles": [
+    {
+      "src": "https://box.test:43625/files/",
+      "sandbox": "allow-scripts allow-forms allow-downloads"
+    }
+  ],
+  "hostileFrame": {
+    "origin": "null",
+    "cors": "blocked",
+    "loginPost": "sent",
+    "img": "error",
+    "frame": "load-event"
+  },
+  "hostileFrameServerSide": [
+    {
+      "via": "shell-origin",
+      "at": 1793609284085,
+      "method": "GET",
+      "path": "/files/static/assets/index-BOEsmRAc.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284086,
+      "method": "GET",
+      "path": "/files/static/assets/dayjs-CzkqPyy2.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284087,
+      "method": "GET",
+      "path": "/files/static/assets/i18n-C0UlxgXD.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284089,
+      "method": "GET",
+      "path": "/files/static/assets/index-BqkXVoMb.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609284090,
+      "method": "GET",
+      "path": "/files/static/assets/rolldown-runtime-BM3Ffeng.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292733,
+      "method": "GET",
+      "path": "/files/api/resources/Documents/",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 401
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292741,
+      "method": "POST",
+      "path": "/files/api/login",
+      "site": "cross-site",
+      "dest": "empty",
+      "mode": "no-cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292746,
+      "method": "GET",
+      "path": "/files/api/raw/Documents/synthetic-notes.txt",
+      "site": "cross-site",
+      "dest": "image",
+      "mode": "no-cors",
+      "origin": "",
+      "cookie": false,
+      "status": 401
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292753,
+      "method": "GET",
+      "path": "/files/",
+      "site": "cross-site",
+      "dest": "iframe",
+      "mode": "navigate",
+      "origin": "",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292764,
+      "method": "GET",
+      "path": "/files/static/assets/index-BOEsmRAc.css",
+      "site": "cross-site",
+      "dest": "style",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292765,
+      "method": "GET",
+      "path": "/files/static/assets/rolldown-runtime-BM3Ffeng.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292766,
+      "method": "GET",
+      "path": "/files/static/assets/dayjs-CzkqPyy2.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292767,
+      "method": "GET",
+      "path": "/files/static/assets/i18n-C0UlxgXD.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    },
+    {
+      "via": "shell-origin",
+      "at": 1793609292768,
+      "method": "GET",
+      "path": "/files/static/assets/index-BqkXVoMb.js",
+      "site": "cross-site",
+      "dest": "script",
+      "mode": "cors",
+      "origin": "null",
+      "cookie": false,
+      "status": 200
+    }
+  ],
+  "baselineFrameStatuses": [
+    "GET /files/static/assets/index-BOEsmRAc.css style \u2192 200",
+    "GET /files/static/assets/dayjs-CzkqPyy2.js script \u2192 200",
+    "GET /files/static/assets/i18n-C0UlxgXD.js script \u2192 200",
+    "GET /files/static/assets/index-BqkXVoMb.js script \u2192 200",
+    "GET /files/static/assets/rolldown-runtime-BM3Ffeng.js script \u2192 200",
+    "GET /files/api/resources/Documents/ empty \u2192 401",
+    "POST /files/api/login empty \u2192 200",
+    "GET /files/api/raw/Documents/synthetic-notes.txt image \u2192 401",
+    "GET /files/ iframe \u2192 200",
+    "GET /files/static/assets/index-BOEsmRAc.css style \u2192 200",
+    "GET /files/static/assets/rolldown-runtime-BM3Ffeng.js script \u2192 200",
+    "GET /files/static/assets/dayjs-CzkqPyy2.js script \u2192 200",
+    "GET /files/static/assets/i18n-C0UlxgXD.js script \u2192 200",
+    "GET /files/static/assets/index-BqkXVoMb.js script \u2192 200"
+  ],
+  "hostileTab": {
+    "wizardLogin": 200,
+    "wizardList": 200,
+    "wizardSawFile": true
+  },
+  "frontLogTail": ""
+}
