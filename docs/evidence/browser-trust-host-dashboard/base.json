@@ -1,0 +1,151 @@
+{
+  "mode": "base",
+  "wam": "/home/oscar/.hermes/cache/scratch/bt-card5/wizard-app-manager",
+  "rows": [
+    {
+      "caller": "App Manager",
+      "request": "ensure",
+      "result": "ready",
+      "front": "n/a (base)"
+    },
+    {
+      "caller": "App Manager",
+      "request": "Hermes unit binds",
+      "result": "127.0.0.5:9119"
+    },
+    {
+      "caller": "App Manager",
+      "request": "consumer app.env holds the dashboard password",
+      "result": {
+        "wizard-chatgpt": true,
+        "wizard-claude": true
+      }
+    },
+    {
+      "caller": "App Manager",
+      "request": "consumer dashboard address",
+      "result": {
+        "wizard-chatgpt": "http://127.0.0.5:9119",
+        "wizard-claude": "http://127.0.0.5:9119"
+      }
+    },
+    {
+      "caller": "ChatGPT app (real engine code)",
+      "request": "connection reads: GET /api/model/info, /api/providers/oauth",
+      "result": {
+        "ok": true,
+        "model_info": true,
+        "oauth_list": true
+      }
+    },
+    {
+      "caller": "Claude app (real engine code)",
+      "request": "account inventory (provider-accounts/claude)",
+      "result": {
+        "ok": true,
+        "owner": "hermes",
+        "inventory": true
+      }
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/status",
+      "result": 200
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/model/info",
+      "result": 200
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/config",
+      "result": 401
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/env",
+      "result": 401
+    },
+    {
+      "caller": "ChatGPT app's credential",
+      "request": "POST /auth/password-login",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/model/info",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/env",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/config",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/sessions",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential + Origin",
+      "request": "GET /api/model/info",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential + Tailscale-User-Login",
+      "request": "GET /api/model/info",
+      "result": 200
+    },
+    {
+      "caller": "DNS rebinding",
+      "request": "GET /api/status Host: attacker.example",
+      "result": 400
+    },
+    {
+      "caller": "box peer",
+      "request": "25 wrong dashboard logins",
+      "result": [
+        401,
+        429
+      ]
+    },
+    {
+      "caller": "ChatGPT app (real engine code)",
+      "request": "connection reads right after that burst",
+      "result": {
+        "ok": false,
+        "error": "HermesError: Hermes Agent answered 429."
+      }
+    },
+    {
+      "caller": "Claude app (real engine code)",
+      "request": "account inventory right after that burst",
+      "result": {
+        "ok": false,
+        "error": "BridgeError 503 unreachable"
+      }
+    },
+    {
+      "caller": "owner",
+      "request": "real Chromium: a hostile page frames the dashboard address",
+      "result": {
+        "hostileFrame": {
+          "frameUrl": "http://127.0.0.5:9119/login",
+          "rendered": true,
+          "answers": [
+            {
+              "status": 200,
+              "xfo": null
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

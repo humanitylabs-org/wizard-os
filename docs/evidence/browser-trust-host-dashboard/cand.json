@@ -1,0 +1,187 @@
+{
+  "mode": "candidate",
+  "wam": "/home/oscar/.hermes/cache/scratch/bt-hd/wt/wam",
+  "rows": [
+    {
+      "caller": "App Manager",
+      "request": "ensure",
+      "result": "ready",
+      "front": "on"
+    },
+    {
+      "caller": "App Manager",
+      "request": "Hermes unit binds",
+      "result": "127.0.0.2:19119"
+    },
+    {
+      "caller": "App Manager",
+      "request": "consumer app.env holds the dashboard password",
+      "result": {
+        "wizard-chatgpt": false,
+        "wizard-claude": false
+      }
+    },
+    {
+      "caller": "App Manager",
+      "request": "consumer dashboard address",
+      "result": {
+        "wizard-chatgpt": "http://127.0.0.5:9119",
+        "wizard-claude": "http://127.0.0.5:9119"
+      }
+    },
+    {
+      "caller": "App Manager",
+      "request": "front config mode / consumers",
+      "result": "0o600",
+      "consumers": [
+        "wizard-chatgpt",
+        "wizard-claude"
+      ]
+    },
+    {
+      "caller": "App Manager",
+      "request": "password rotated when the front took over",
+      "result": true
+    },
+    {
+      "caller": "ChatGPT app (real engine code)",
+      "request": "connection reads: GET /api/model/info, /api/providers/oauth",
+      "result": {
+        "ok": true,
+        "model_info": true,
+        "oauth_list": true
+      }
+    },
+    {
+      "caller": "Claude app (real engine code)",
+      "request": "account inventory (provider-accounts/claude)",
+      "result": {
+        "ok": true,
+        "owner": "hermes",
+        "inventory": true
+      }
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/status",
+      "result": 401
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/model/info",
+      "result": 401
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/config",
+      "result": 401
+    },
+    {
+      "caller": "box peer, no session",
+      "request": "GET /api/env",
+      "result": 401
+    },
+    {
+      "caller": "ChatGPT app's credential",
+      "request": "POST /auth/password-login",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/model/info",
+      "result": 200
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/env",
+      "result": 403
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/config",
+      "result": 403
+    },
+    {
+      "caller": "ChatGPT app's credential (session)",
+      "request": "GET /api/sessions",
+      "result": 403
+    },
+    {
+      "caller": "ChatGPT app's credential + Origin",
+      "request": "GET /api/model/info",
+      "result": 403
+    },
+    {
+      "caller": "ChatGPT app's credential + Tailscale-User-Login",
+      "request": "GET /api/model/info",
+      "result": 403
+    },
+    {
+      "caller": "DNS rebinding",
+      "request": "GET /api/status Host: attacker.example",
+      "result": 400
+    },
+    {
+      "caller": "box peer",
+      "request": "25 wrong dashboard logins",
+      "result": [
+        401
+      ]
+    },
+    {
+      "caller": "ChatGPT app (real engine code)",
+      "request": "connection reads right after that burst",
+      "result": {
+        "ok": true,
+        "model_info": true,
+        "oauth_list": true
+      }
+    },
+    {
+      "caller": "Claude app (real engine code)",
+      "request": "account inventory right after that burst",
+      "result": {
+        "ok": true,
+        "owner": "hermes",
+        "inventory": true
+      }
+    },
+    {
+      "caller": "pre-rotation password",
+      "request": "POST /auth/password-login on Hermes itself",
+      "result": 401
+    },
+    {
+      "caller": "front",
+      "request": "its own Hermes sign-ins during the whole run",
+      "result": 1
+    },
+    {
+      "caller": "owner",
+      "request": "real Chromium own tab",
+      "result": {
+        "first": {
+          "status": 200,
+          "url": "http://box.tail0.ts.net:9120/login?next=%2F",
+          "xfo": "DENY"
+        },
+        "signedIn": {
+          "url": "http://box.tail0.ts.net:9120/?profile=default",
+          "title": "Hermes Agent - Dashboard"
+        },
+        "sameOriginApi": 200,
+        "hostileFrame": {
+          "frameUrl": "chrome-error://chromewebdata/",
+          "rendered": false,
+          "answers": [
+            {
+              "status": 200,
+              "xfo": "DENY"
+            }
+          ]
+        },
+        "otherTailnetUser": 403
+      }
+    }
+  ]
+}

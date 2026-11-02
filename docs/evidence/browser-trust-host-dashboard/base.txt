@@ -1,0 +1,22 @@
+App Manager                                  ensure                                                     ready
+App Manager                                  Hermes unit binds                                          127.0.0.5:9119
+App Manager                                  consumer app.env holds the dashboard password              {'wizard-chatgpt': True, 'wizard-claude': True}
+App Manager                                  consumer dashboard address                                 {'wizard-chatgpt': 'http://127.0.0.5:9119', 'wizard-claude': 'http://127.0.0.5:9119'}
+ChatGPT app (real engine code)               connection reads: GET /api/model/info, /api/providers/oauth {'ok': True, 'model_info': True, 'oauth_list': True}
+Claude app (real engine code)                account inventory (provider-accounts/claude)               {'ok': True, 'owner': 'hermes', 'inventory': True}
+box peer, no session                         GET /api/status                                            200
+box peer, no session                         GET /api/model/info                                        200
+box peer, no session                         GET /api/config                                            401
+box peer, no session                         GET /api/env                                               401
+ChatGPT app's credential                     POST /auth/password-login                                  200
+ChatGPT app's credential (session)           GET /api/model/info                                        200
+ChatGPT app's credential (session)           GET /api/env                                               200
+ChatGPT app's credential (session)           GET /api/config                                            200
+ChatGPT app's credential (session)           GET /api/sessions                                          200
+ChatGPT app's credential + Origin            GET /api/model/info                                        200
+ChatGPT app's credential + Tailscale-User-Login GET /api/model/info                                        200
+DNS rebinding                                GET /api/status Host: attacker.example                     400
+box peer                                     25 wrong dashboard logins                                  [401, 429]
+ChatGPT app (real engine code)               connection reads right after that burst                    {'ok': False, 'error': 'HermesError: Hermes Agent answered 429.'}
+Claude app (real engine code)                account inventory right after that burst                   {'ok': False, 'error': 'BridgeError 503 unreachable'}
+owner                                        real Chromium: a hostile page frames the dashboard address {'hostileFrame': {'frameUrl': 'http://127.0.0.5:9119/login', 'rendered': True, 'answers': [{'status': 200, 'xfo': None}]}}

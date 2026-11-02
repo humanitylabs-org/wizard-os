@@ -1,0 +1,26 @@
+App Manager                                  ensure                                                     ready
+App Manager                                  Hermes unit binds                                          127.0.0.2:19119
+App Manager                                  consumer app.env holds the dashboard password              {'wizard-chatgpt': False, 'wizard-claude': False}
+App Manager                                  consumer dashboard address                                 {'wizard-chatgpt': 'http://127.0.0.5:9119', 'wizard-claude': 'http://127.0.0.5:9119'}
+App Manager                                  front config mode / consumers                              0o600
+App Manager                                  password rotated when the front took over                  True
+ChatGPT app (real engine code)               connection reads: GET /api/model/info, /api/providers/oauth {'ok': True, 'model_info': True, 'oauth_list': True}
+Claude app (real engine code)                account inventory (provider-accounts/claude)               {'ok': True, 'owner': 'hermes', 'inventory': True}
+box peer, no session                         GET /api/status                                            401
+box peer, no session                         GET /api/model/info                                        401
+box peer, no session                         GET /api/config                                            401
+box peer, no session                         GET /api/env                                               401
+ChatGPT app's credential                     POST /auth/password-login                                  200
+ChatGPT app's credential (session)           GET /api/model/info                                        200
+ChatGPT app's credential (session)           GET /api/env                                               403
+ChatGPT app's credential (session)           GET /api/config                                            403
+ChatGPT app's credential (session)           GET /api/sessions                                          403
+ChatGPT app's credential + Origin            GET /api/model/info                                        403
+ChatGPT app's credential + Tailscale-User-Login GET /api/model/info                                        403
+DNS rebinding                                GET /api/status Host: attacker.example                     400
+box peer                                     25 wrong dashboard logins                                  [401]
+ChatGPT app (real engine code)               connection reads right after that burst                    {'ok': True, 'model_info': True, 'oauth_list': True}
+Claude app (real engine code)                account inventory right after that burst                   {'ok': True, 'owner': 'hermes', 'inventory': True}
+pre-rotation password                        POST /auth/password-login on Hermes itself                 401
+front                                        its own Hermes sign-ins during the whole run               1
+owner                                        real Chromium own tab                                      {'first': {'status': 200, 'url': 'http://box.tail0.ts.net:9120/login?next=%2F', 'xfo': 'DENY'}, 'signedIn': {'url': 'http://box.tail0.ts.net:9120/?profile=default', 'title': 'Hermes Agent - Dashboard'}, 'sameOriginApi': 200, 'hostileFrame': {'frameUrl': 'chrome-error://chromewebdata/', 'rendered': False, 'answers': [{'status': 200, 'xfo': 'DENY'}]}, 'otherTailnetUser': 403}
