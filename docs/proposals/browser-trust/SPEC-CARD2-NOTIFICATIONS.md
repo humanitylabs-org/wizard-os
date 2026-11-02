@@ -6,10 +6,10 @@ Implementation drafts (all draft, all default-off, each stacked on its card-1 dr
 
 | Repo | Branch | Stacked on |
 |---|---|---|
-| `oscarhenrycollins/notifications` | `feature/browser-trust-default-notifications` | main `e6df99a` |
-| App Manager | `feature/browser-trust-default-notifications` | WAM #405 `0b92cbf3` |
-| Agent Service | `feature/browser-trust-default-notifications` | Service #306 `74f6e017` |
-| Wizard UX | `feature/browser-trust-default-notifications` | UX #831 `032b7e09` |
+| `oscarhenrycollins/notifications` | [notifications #17](https://github.com/oscarhenrycollins/notifications/pull/17) `feature/browser-trust-default-notifications` | main `e6df99a` |
+| App Manager | [WAM #407](https://github.com/humanitylabs-org/wizard-app-manager/pull/407) `feature/browser-trust-default-notifications` | WAM #405 `0b92cbf3` |
+| Agent Service | [Service #309](https://github.com/humanitylabs-org/wizard-agent-service/pull/309) `feature/browser-trust-default-notifications` | Service #306 `74f6e017` |
+| Wizard UX | [UX #838](https://github.com/humanitylabs-org/wizard-ux/pull/838) `feature/browser-trust-default-notifications` | UX #831 `032b7e09` |
 
 ## 1. What the real app needed (census row, read from both screens)
 
