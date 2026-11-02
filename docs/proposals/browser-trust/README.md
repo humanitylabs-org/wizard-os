@@ -8,3 +8,4 @@ Proposal for review by Jan (native Android/Mac) and Miguel (WAM, Store, grants).
 
 Tracking issue: #133. Draft implementation PRs: wizard-ux #327, wizard-agent-service #100, wizard-app-manager #168, wizard-os #163.
 - [SPEC-CARD1.md](SPEC-CARD1.md): card 1 (#384) decision register for the review questions, architecture disposition, WAM-backed admission contract, Notifications operation schemas, storage scope and legacy ownership. Draft for Miguel's review.
+- [LISTENER-INVENTORY.md](LISTENER-INVENTORY.md): card 3 (#386) listener and direct-route inventory, why the gate sits on the app listener (Tailscale Serve routes bypass the shell), and the per-installation listener credential contract. Draft for Miguel's review.
