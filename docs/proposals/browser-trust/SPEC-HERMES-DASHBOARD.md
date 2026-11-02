@@ -37,4 +37,25 @@ Why not the opaque frame: the census row (APP-CENSUS `hermes-agent`) needs dashb
 - H1 approval.
 - Real Serve and Runtipi restart.
 - The engine joins the Runtipi network (`add_to_main_network`), so peers reach the dashboard and API behind its login and key (card 5).
-- The **alongside** host dashboard (`wizard-host-dashboard.service`, stock `hermes dashboard` on the box's Tailscale IPv4, http, its own login) is not a WAM app and is not covered by this front. It has no shell entry. A browser reaches it only by typing its address. It needs an audit, and if wanted, a Wizard-side front. Hermes is still not patched.
+- The **alongside** host dashboard is covered by section 5 (drafts).
+
+## 5. Alongside host dashboard: Wizard front (approved disposition, drafts, default-off)
+
+Approved on #386 (comment 6574712392): Hermes stays stock; WAM moves it and puts a small front in front of it. Owner
+browser access is **H2 = own tab, own origin, like H1**.
+
+| Piece | Where |
+|---|---|
+| Hermes binds `127.0.0.2:19119` (host-only, still a public bind for Hermes: password and Host check on) | WAM `host_dashboard.ensure` |
+| Front on `<Tailscale IPv4>:9119` (the address the apps use): box peers only; browser and network markers refused; each consumer app known by its **own key** with a reviewed path allowlist; the app's existing login is answered by the front | WAM `host_dashboard_front.py` |
+| The front alone holds the dashboard password, rotated when it takes over; ChatGPT/Claude get their own key in the same variable (images unchanged) | WAM #422; chatgpt-connection #19, claude-connection #23 (field text) |
+| Owner tab: Serve `https:9120` → front owner listener; owner logins only; own Host; frames, foreign/opaque Origins and non-navigation cross-/same-site refused; `X-Frame-Options: DENY`; Hermes' own login | WAM #422 |
+| Login lockout: Hermes limits 10 attempts a minute per client IP, successes included. Consumer logins never reach Hermes; the front (`127.0.0.3`) and the owner (`127.0.0.4`) are separate buckets | WAM #422 |
+
+Evidence (local, synthetic; stock Hermes v0.22.2, the real ChatGPT/Claude engine code, real Chromium): wizard-os
+branch `docs/evidence/browser-trust-host-dashboard`. Base → candidate: `/api/status` without a session 200 → 401; the
+app's credential on `/api/env` 200 → 403; real apps after 25 wrong logins 429 → ok; a hostile page frames the sign-in
+form → blocked; the owner signs in on his own tab.
+
+Still open: real Serve/TLS, a real remote tailnet device, rootless-Docker source addresses on a real box, a shell
+entry for the owner tab (the host dashboard is not a WAM app).
