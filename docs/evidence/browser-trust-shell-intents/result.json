@@ -1,0 +1,282 @@
+{
+ "candidate": {
+  "checks": [
+   "WAM: ChatGPT installed contract = its wizard.md (4 account ops, one sign-in page)",
+   "WAM: Claude installed contract = its wizard.md (10 ops, PKCE authorize page)",
+   "WAM: both granted for this installation; listener credentials written",
+   "ChatGPT: the real accounts page is an opaque sandboxed frame (no modals, no popups, no same-origin)",
+   "ChatGPT: both synthetic accounts render with usage meters; pill Connected",
+   "ChatGPT: the page follows the shell skin over Appearance v1 (data-skin nebula, --wz-* tokens)",
+   "inventory read through the shell's possession-bound adapter call (ai_accounts.inventory)",
+   "the migrated page never asked its own api/ from the frame",
+   "wizard-chatgpt: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-chatgpt: a synthetic click on the shell chip opens nothing",
+   "wizard-chatgpt: a press inside the 500 ms wake and synthetic pointer/click events confirm nothing",
+   "Add: Wizard's own dialog showed the Service summary (Connect a ChatGPT account) and one trusted press confirmed it",
+   "Add: exactly one add reached the agent broker, with confirmed:true set by the Service after consumption",
+   "Add: the frame holds no sign-in URL (link href is #)",
+   "wizard-chatgpt: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-chatgpt: a synthetic click on the shell chip opens nothing",
+   "Sign-in: Wizard showed auth.openai.com/codex/device and opened exactly that page in a new tab, with no Referer",
+   "Add: the approved sign-in shows Connected and a third account (multiple accounts)",
+   "wizard-chatgpt: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-chatgpt: a synthetic click on the shell chip opens nothing",
+   "Reconnect: confirmed with a keyboard activation inside Wizard's dialog",
+   "Reconnect: the expired account is ready again (renewal)",
+   "wizard-chatgpt: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-chatgpt: a synthetic click on the shell chip opens nothing",
+   "Use first: confirmed in Wizard; the agent now tries that account first",
+   "Remove: Wizard's dialog is the danger variant naming the sign-in",
+   "Remove: Cancel in Wizard's dialog changes nothing (no remove reached the agent)",
+   "wizard-chatgpt: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-chatgpt: a synthetic click on the shell chip opens nothing",
+   "Remove (Disconnect): confirmed once, exactly one remove reached the agent",
+   "server-side: the frame's 2 direct requests to its own api/ (GET + a simple no-cors POST with confirmed:true) were refused 403 by the app's listener gate",
+   "frame: an account change as data.call (not_allowed), confirmed:true (bad_request), an unknown sign-in ref (not_found) and a raw URL (bad_request) are all refused",
+   "frame: window.open and confirm() stay blocked (no allow-popups / allow-modals added)",
+   "no hostile attempt removed an account",
+   "Claude (Grove): the accounts page renders in the opaque frame and follows the skin",
+   "wizard-claude: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-claude: a synthetic click on the shell chip opens nothing",
+   "wizard-claude: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-claude: a synthetic click on the shell chip opens nothing",
+   "Claude sign-in: Wizard opened exactly the PKCE authorize page from the contract (query from the agent, no Referer)",
+   "Claude: the pasted code reached the broker once and is not kept in the Service receipts",
+   "Claude Code page: status read through claude_code.status (Not connected)",
+   "wizard-claude: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-claude: a synthetic click on the shell chip opens nothing",
+   "Claude Code: Connect needs the owner in Wizard's dialog",
+   "wizard-claude: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-claude: a synthetic click on the shell chip opens nothing",
+   "Claude Code: the sign-in link opens only through Wizard (the official CLI's authorize page)",
+   "Claude Code: the pasted code connects (claude_code.code); the row shows Connected as Max 5x",
+   "Claude Code: Test (connection test) answers through claude_code.test",
+   "wizard-claude: the request only queued a Review chip in the window bar; no dialog opened by itself",
+   "wizard-claude: a synthetic click on the shell chip opens nothing",
+   "Claude Code: Disconnect is confirmed in Wizard's dialog, not confirm()",
+   "Claude Code: Disconnected",
+   "review requests: three queued and cancelled in Wizard, the fourth in the same minute refused (cancelled, cancelled, cancelled, rate_limited)",
+   "after a WAM revoke the open binding refuses even reads (revoked)",
+   "fresh binding without the grant: accounts still read, an account change cannot even be queued (not_allowed)",
+   "dark standalone tab: its own api/accounts is refused by the gate (403) and the page says to open it from Wizard",
+   "every intent request reached the Service from the shell document (its own origin + token), never from a frame (Origin null)"
+  ],
+  "intents": [
+   {
+    "app": "wizard-chatgpt",
+    "chipText": "Review: Connect a ChatGPT account",
+    "title": "Connect a ChatGPT account",
+    "detail": "Starts ChatGPT's own sign-in inside your agent. Your agent keeps the sign-in; the app never sees it.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-chatgpt",
+    "chipText": "Review: ChatGPT sign-in page",
+    "title": "Open the sign-in page?",
+    "detail": "Opens auth.openai.com in a new tab. Sign in there, then come back.",
+    "host": "https://auth.openai.com/codex/device",
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-chatgpt",
+    "chipText": "Review: Reconnect synthetic.two@example.com",
+    "title": "Reconnect synthetic.two@example.com",
+    "detail": "Starts ChatGPT's sign-in again for this account.",
+    "host": null,
+    "activation": "keyboard",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-chatgpt",
+    "waitedMs": 54744
+   },
+   {
+    "app": "wizard-chatgpt",
+    "chipText": "Review: Use synthetic.two@example.com first?",
+    "title": "Use synthetic.two@example.com first?",
+    "detail": "Your agent tries this account first and moves to the others when it hits a limit. Nothing signs out.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-chatgpt",
+    "waitedMs": 2060
+   },
+   {
+    "app": "wizard-chatgpt",
+    "chipText": "Review: Remove this sign-in?",
+    "title": "Remove this sign-in?",
+    "detail": "Sign-in A \u00b7 synthetic.one@example.com. Your agent stops using it.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-chatgpt",
+    "waitedMs": 56284
+   },
+   {
+    "app": "wizard-claude",
+    "chipText": "Review: Connect a Claude account",
+    "title": "Connect a Claude account",
+    "detail": "Starts Claude's own sign-in inside your agent. Your agent keeps the sign-in; the app never sees it.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-claude",
+    "chipText": "Review: Claude sign-in page",
+    "title": "Open the sign-in page?",
+    "detail": "Opens claude.ai in a new tab. Sign in there, then come back.",
+    "host": "https://claude.ai/oauth/authorize",
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-claude",
+    "chipText": "Review: Connect Claude",
+    "title": "Connect Claude",
+    "detail": "Starts the official Claude Code sign-in for this Wizard. You paste the code Claude shows you back into the app.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-claude",
+    "waitedMs": 54793
+   },
+   {
+    "app": "wizard-claude",
+    "chipText": "Review: Claude sign-in page",
+    "title": "Open the sign-in page?",
+    "detail": "Opens claude.ai in a new tab. Sign in there, then come back.",
+    "host": "https://claude.ai/oauth/authorize",
+    "activation": "pointer",
+    "confirmCalls": 1
+   },
+   {
+    "app": "wizard-claude",
+    "chipText": "Review: Disconnect Claude?",
+    "title": "Disconnect Claude?",
+    "detail": "Your agents stop using your Claude subscription until you connect again.",
+    "host": null,
+    "activation": "pointer",
+    "confirmCalls": 1
+   }
+  ],
+  "burst": [
+   "cancelled",
+   "cancelled",
+   "cancelled",
+   "rate_limited"
+  ],
+  "hostile": {
+   "fetchAccounts": "blocked",
+   "simplePost": "opaque",
+   "dataChange": "not_allowed",
+   "confirmedTrue": "bad_request",
+   "openUnknown": "not_found",
+   "openUrl": "bad_request",
+   "popup": "null",
+   "confirm": "false"
+  },
+  "hostileAppRequests": [
+   {
+    "app": "chatgpt",
+    "method": "GET",
+    "path": "/api/accounts",
+    "site": "cross-site",
+    "dest": "empty",
+    "origin": "null",
+    "status": 403
+   },
+   {
+    "app": "chatgpt",
+    "method": "POST",
+    "path": "/api/operations",
+    "site": "cross-site",
+    "dest": "empty",
+    "origin": "null",
+    "status": 403
+   }
+  ],
+  "popups": [
+   {
+    "url": "",
+    "referer": null
+   },
+   {
+    "url": "https://auth.openai.com/codex/device",
+    "referer": null
+   },
+   {
+    "url": "https://claude.ai/oauth/authorize?code=true&client_id=synthetic-client&response_type=code&redirect_uri=https%3A%2F%2Fconsole.anthropic.com%2Foauth%2Fcode%2Fcallback&scope=user%3Ainference&code_challenge=synthetic-challenge&code_challenge_method=S256&state=synthetic-state",
+    "referer": null
+   },
+   {
+    "url": "https://claude.ai/oauth/authorize?code=true&client_id=synthetic-client&response_type=code&redirect_uri=https%3A%2F%2Fconsole.anthropic.com%2Foauth%2Fcode%2Fcallback&scope=user%3Ainference&code_challenge=synthetic-challenge&code_challenge_method=S256&state=synthetic-state",
+    "referer": null
+   },
+   {
+    "url": "",
+    "referer": null
+   }
+  ],
+  "standalone": {
+   "message": "Open this app from Wizard to see and change your accounts.",
+   "scheme": "dark"
+  },
+  "landscapesLight": {
+   "skin": "landscapes-light",
+   "scheme": "light"
+  },
+  "freshAfterRevoke": "not_allowed",
+  "chatgptGate": {
+   "on": true,
+   "guarded": "/api/accounts/,/api/operations/"
+  },
+  "claudeGate": {
+   "on": true,
+   "guarded": "/api/accounts/,/api/operations/,/claude-code/api/"
+  },
+  "wam": [
+   "install wizard-chatgpt --repo oscarhenrycollins/chatgpt-connection --port 40207 --provides ai-connection --wizard-md /home/oscar/github_repos/btauth/chatgpt-connection/wizard.md --listener-auth",
+   "install wizard-claude --repo oscarhenrycollins/claude-connection --port 45615 --provides claude-subscription --wizard-md /home/oscar/github_repos/btauth/claude-connection/wizard.md --listener-auth",
+   "grant wizard-chatgpt ai_accounts.change ai_accounts.inventory ai_accounts.progress ai_accounts.step",
+   "grant wizard-claude ai_accounts.change ai_accounts.inventory ai_accounts.progress ai_accounts.step claude_code.cancel claude_code.code claude_code.connect claude_code.logout claude_code.status claude_code.test",
+   "revoke wizard-chatgpt ai_accounts.change"
+  ]
+ },
+ "baseline": {
+  "baselineChatgpt": {
+   "rows": 0,
+   "message": "Offline. Showing last reading.",
+   "problem": false,
+   "add": false
+  },
+  "baselineSandbox": "allow-scripts allow-forms allow-downloads",
+  "baselineClaudeCode": {
+   "list": "Loading\u2026",
+   "confirm": false,
+   "open": "blocked (null)"
+  },
+  "baselineAppRequests": [
+   "GET chatgpt/api/accounts -> 200",
+   "GET claude/api/accounts -> 200",
+   "GET claude/claude-code/api/accounts -> 200"
+  ],
+  "chatgptGate": {
+   "on": false,
+   "note": "this app checkout has no listener gate"
+  },
+  "claudeGate": {
+   "on": false,
+   "note": "this app checkout has no listener gate"
+  }
+ }
+}
