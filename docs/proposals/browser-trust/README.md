@@ -8,3 +8,4 @@ Proposal for review by Jan (native Android/Mac) and Miguel (WAM, Store, grants).
 
 Tracking issue: #133. Draft implementation PRs: wizard-ux #327, wizard-agent-service #100, wizard-app-manager #168, wizard-os #163.
 - [SPEC-CARD1.md](SPEC-CARD1.md): card 1 (#384) decision register for the review questions, architecture disposition, WAM-backed admission contract, Notifications operation schemas, storage scope and legacy ownership. Draft for Miguel's review.
+- [SPEC-CARD2-NOTIFICATIONS.md](SPEC-CARD2-NOTIFICATIONS.md): card 2 (#385) first slice: the real Notifications app behind the opaque frame. Registry delta (`notifications.inbox`, compare-and-set `notifications.mark`), reply draft and badge over the boundary, parity table, open items. Draft for Miguel's review; the two new ids need James.
