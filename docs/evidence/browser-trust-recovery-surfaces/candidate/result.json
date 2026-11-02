@@ -1,0 +1,1085 @@
+{
+  "candidate": true,
+  "baseline": false,
+  "nginxStandIn": "node",
+  "checks": [
+    "shell document: both tokens left the DOM at boot (memory only)",
+    "picker: one shell-owned typed read (shell token, 200); the shell never asked the Claude app listener",
+    "picker: the Claude limit note and the native Claude route are kept (real engine, real gated front)",
+    "Claude listener gate refuses the shell document's direct /wizard-claude/api/accounts (403 browser_request_refused, server-side)",
+    "Troubleshooter window: opaque sandboxed frame, served without any token",
+    "every /troubleshoot/api/ call came from the shell document with the recovery token, never the shell token, never from the frame",
+    "Troubleshooter: status pill and engine picker painted through recovery operations",
+    "one-tap fix ran through recovery.action (the listener restarted the shell container via its fixed command)",
+    "repair chat: message started through recovery.repair.start (202) and the answer painted from recovery.repair.read",
+    "diagnosed sign-in: \"Sign in to Claude\" opened the Claude app as a Wizard window (source-bound open_app); the Troubleshooter frame did not navigate",
+    "diagnosed sign-in: the \"message sent?\" poll is one shell read of the Agent Service (recovery.provider_run)",
+    "Agent Service stopped: the Troubleshooter window still reads status through the recovery path and now reports the Agent Service down",
+    "Agent Service stopped: a new repair chat message was started (202) and answered through the recovery operations",
+    "same-origin app page: /troubleshoot/api reads and fixes refused server-side (403 recovery_token_required)",
+    "same-origin app page: fetching the Troubleshooter page is refused (navigation only)",
+    "same-origin app page: the Troubleshooter tab it opens cannot be read (COOP noopener-allow-popups) and a framed copy is opaque without a token",
+    "opaque frame POST /troubleshoot/api/action (no-cors): reached the listener and was refused server-side (403)",
+    "opaque frame POST to Secret Drop /api/v1/requests and /mcp (no-cors): refused server-side by the listener gate (403)",
+    "Secret Drop: a raw OPTIONS preflight to the agent API is refused (403, no CORS header)",
+    "standalone tab (no shell): works with its own navigation-bound recovery token, which left the DOM at boot",
+    "Secret Drop: recipient page on its own non-owner origin (plain HTTP, not a secure context); the capability fragment left the address bar",
+    "Secret Drop: sealed in the browser (bundled HPKE, no WebCrypto needed), picked up once and decrypted by the agent client",
+    "Secret Drop: the one-use link reports Already used on a second open",
+    "Secret Drop: the page refuses framing (CSP frame-ancestors none + XFO DENY) and openers (COOP same-origin)",
+    "Secret Drop: the agent client (no browser headers) created and picked up through the gated front"
+  ],
+  "open": [],
+  "screenshots": [
+    "<qa>/qa9/model-picker-nebula.png",
+    "<qa>/qa9/model-picker-grove.png",
+    "<qa>/qa9/model-picker-landscapes-light.png",
+    "<qa>/qa9/troubleshooter-nebula.png",
+    "<qa>/qa9/troubleshooter-details-nebula.png",
+    "<qa>/qa9/troubleshooter-chat-nebula.png",
+    "<qa>/qa9/troubleshooter-chat-grove.png",
+    "<qa>/qa9/troubleshooter-chat-landscapes-light.png",
+    "<qa>/qa9/troubleshooter-diagnosed-signin-nebula.png",
+    "<qa>/qa9/troubleshooter-service-down-nebula.png",
+    "<qa>/qa9/troubleshooter-standalone-dark.png",
+    "<qa>/qa9/secret-drop-recipient-dark.png",
+    "<qa>/qa9/secret-drop-sent-dark.png",
+    "<qa>/qa9/secret-drop-already-used.png"
+  ],
+  "errors": [
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Connecting to 'https://derp1.tailscale.com/generate_204' violates the following Content Security Policy directive: \"connect-src 'self' blob: data:\". The action has been blocked.",
+    "console: Fetch API cannot load https://derp1.tailscale.com/generate_204. Refused to connect because it violates the document's Content Security Policy.",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "console: Framing 'http://drop.box.test:41155/' violates the following Content Security Policy directive: \"default-src 'self'\". The request has been blocked. Note that 'frame-src' was not explicitly set, so 'default-src' is used as a fallback.\n"
+  ],
+  "wam": [
+    "install wizard-claude --repo oscarhenrycollins/claude-connection --port 41177 --provides claude-subscription --wizard-md <qa>/wt/claude/wizard.md --listener-auth"
+  ],
+  "trace": [
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    },
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    },
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    },
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status?fresh=1&accounts=1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repairs?limit=20",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/incidents",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/action",
+      "method": "POST",
+      "origin": "http://127.0.0.1:46297",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/incidents",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair",
+      "method": "POST",
+      "origin": "http://127.0.0.1:46297",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 202
+    },
+    {
+      "path": "/troubleshoot/api/repair/ed187667de009e66?since=1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair/ed187667de009e66?since=2",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair/ed187667de009e66?since=4",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status?fresh=1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/?provider=claude&run_id=run_qa_1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/wizard/v1/provider-recovery",
+      "method": "GET",
+      "shellToken": true,
+      "origin": "",
+      "status": 404
+    },
+    {
+      "path": "/wizard-claude/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/boot.js",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/wizard-tokens.css",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/wizard-ui.css",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/wizard-layout.css",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/app.css",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/boundary.js",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/theme-client.js",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/wizard-sheet.js",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/app.js",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard-claude/logo-claude.svg",
+      "method": "GET",
+      "origin": "",
+      "site": "cross-site",
+      "claude": true,
+      "status": 200
+    },
+    {
+      "path": "/wizard/v1/provider-recovery",
+      "method": "GET",
+      "shellToken": true,
+      "origin": "",
+      "status": 404
+    },
+    {
+      "path": "/wizard/v1/provider-recovery",
+      "method": "GET",
+      "shellToken": true,
+      "origin": "",
+      "status": 404
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair",
+      "method": "POST",
+      "origin": "http://127.0.0.1:46297",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 202
+    },
+    {
+      "path": "/troubleshoot/api/repair/6865f8093aa1d5ca?since=1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair/6865f8093aa1d5ca?since=2",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repair/6865f8093aa1d5ca?since=4",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status?fresh=1",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repairs?limit=5",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/api/action",
+      "method": "POST",
+      "origin": "http://127.0.0.1:46297",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "document",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/ping",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/action",
+      "method": "POST",
+      "origin": "null",
+      "site": "cross-site",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/api/status?source=connection-banner",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "none",
+      "dest": "document",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/ping",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/ping",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": true,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    }
+  ],
+  "drop": [
+    {
+      "method": "POST",
+      "path": "/api/v1/requests",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/mcp",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 403
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/requests",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/requests",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.css",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/noble-crypto.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/hpke.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/request",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/submit",
+      "origin": "http://drop.box.test:41155",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/requests/<id>",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.css",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/noble-crypto.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/hpke.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/request",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 409
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    }
+  ],
+  "refusals": [
+    {
+      "what": "shell document direct Claude read",
+      "status": 403,
+      "body": "{\"error\": \"browser_request_refused\"}"
+    }
+  ],
+  "claudeInstall": {
+    "installation": "inst-<id>",
+    "credential": "written",
+    "slot": "wizard-claude"
+  },
+  "claudeGate": {
+    "on": true,
+    "guarded": "/api/accounts/,/api/operations/,/claude-code/api/"
+  },
+  "templateHasRecoveryMeta": true,
+  "onboardingFixture": {
+    "providerReads": 0,
+    "setupReads": 1
+  },
+  "picker": {
+    "note": "Every listed Claude account reports a limit. Changing accounts alone may not restore this model; another model may still be available.",
+    "down": false,
+    "opusProvider": "anthropic"
+  },
+  "pickerTrace": [
+    {
+      "path": "/wizard/v1/browser-shell/call",
+      "method": "POST",
+      "shellToken": true,
+      "origin": "http://127.0.0.1:46297",
+      "status": 200
+    }
+  ],
+  "troubleshooter": {
+    "origin": "null",
+    "pill": "2 problems",
+    "picker": 3,
+    "hasToken": false,
+    "sandbox": "allow-scripts allow-forms allow-downloads"
+  },
+  "fix": {
+    "msg": "Restart Wizard app screens: done.",
+    "calls": "restart qa-shell"
+  },
+  "chat": [
+    "Wizard feels slow today",
+    "Claude \u00b7 Opus 5.5The Agent Service had stopped. I restarted it and checked /wizard/health: it answers again. Try sending"
+  ],
+  "landscapesLight": {
+    "scheme": "light",
+    "bg": "rgba(0, 0, 0, 0)"
+  },
+  "signinOpened": [
+    "/troubleshoot/",
+    "/troubleshoot/?provider=claude&run_id=run_qa_1",
+    "/wizard-claude/",
+    "/wizard-os-home/desktop.html"
+  ],
+  "serviceUpRow": {
+    "text": "Agent Service",
+    "bad": false
+  },
+  "serviceDown": {
+    "pill": "4 problems",
+    "agent": {
+      "text": "Agent ServiceNot running.",
+      "bad": true
+    }
+  },
+  "serviceDownChat": [
+    "The Agent Service is down",
+    "Claude \u00b7 Opus 5.5The Agent Service had stopped. I restarted it and checked /wizard/health: it answer"
+  ],
+  "hostileSameOrigin": {
+    "readRepairs": "403 {\"error\":\"recovery_token_required\"}",
+    "runFix": "403 {\"error\":\"recovery_token_required\"}",
+    "fetchPage": "403 {\"error\":\"navigation_only\"}",
+    "openerHandle": "got a handle",
+    "openerClosed": true,
+    "openerRead": "blocked: SecurityError",
+    "frameRead": "no access (opaque)"
+  },
+  "opaqueProbes": {
+    "client": {
+      "recovery": "status 0",
+      "dropCreate": "status 0",
+      "dropMcp": "status 0"
+    },
+    "troubleshooter": [
+      {
+        "path": "/troubleshoot/api/action",
+        "method": "POST",
+        "origin": "null",
+        "site": "cross-site",
+        "dest": "empty",
+        "recoveryToken": false,
+        "shellToken": false,
+        "by": "",
+        "status": 403
+      }
+    ],
+    "drop": [
+      {
+        "method": "POST",
+        "path": "/api/v1/requests",
+        "origin": "null",
+        "site": "",
+        "dest": "",
+        "status": 403
+      },
+      {
+        "method": "POST",
+        "path": "/mcp",
+        "origin": "null",
+        "site": "",
+        "dest": "",
+        "status": 403
+      }
+    ]
+  },
+  "dropPreflight": {
+    "status": 403,
+    "body": "{\"error\": \"preflight_refused\"}",
+    "acao": null
+  },
+  "standalone": {
+    "pill": "4 problems",
+    "tokenInDom": false,
+    "scheme": true
+  },
+  "dropPage": {
+    "origin": "http://drop.box.test:41155",
+    "secure": false,
+    "subtle": "undefined",
+    "fragmentGone": true
+  },
+  "dropRoundTrip": {
+    "pickedMatches": true,
+    "secure": false
+  },
+  "dropReuse": "Secret\nDrop\nAlready used\n\nThis Secret Drop link has already been used. If that was not you, tell the agent that asked so it can discard it and send a new link.\n",
+  "dropFramed": "no access",
+  "dropHeaders": {
+    "csp": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'",
+    "xfo": "DENY",
+    "coop": "same-origin"
+  },
+  "passed": true
+}

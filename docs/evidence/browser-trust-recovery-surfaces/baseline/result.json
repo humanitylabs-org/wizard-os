@@ -1,0 +1,581 @@
+{
+  "candidate": false,
+  "baseline": true,
+  "nginxStandIn": "node",
+  "checks": [
+    "shell document: both tokens left the DOM at boot (memory only)"
+  ],
+  "open": [],
+  "screenshots": [
+    "<qa>/qa-baseline/baseline-model-picker-nebula.png",
+    "<qa>/qa-baseline/baseline-model-picker-grove.png",
+    "<qa>/qa-baseline/baseline-model-picker-landscapes-light.png",
+    "<qa>/qa-baseline/baseline-troubleshooter-opaque-nebula.png",
+    "<qa>/qa-baseline/baseline-troubleshooter-standalone-dark.png",
+    "<qa>/qa-baseline/secret-drop-recipient-dark.png",
+    "<qa>/qa-baseline/secret-drop-sent-dark.png",
+    "<qa>/qa-baseline/secret-drop-already-used.png"
+  ],
+  "errors": [
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "page: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
+    "console: Access to fetch at 'http://127.0.0.1:43295/troubleshoot/api/status' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "console: Failed to load resource: net::ERR_FAILED",
+    "console: Access to fetch at 'http://127.0.0.1:43295/troubleshoot/api/engines' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "console: Failed to load resource: net::ERR_FAILED",
+    "console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "console: Framing 'http://drop.box.test:42175/' violates the following Content Security Policy directive: \"default-src 'self'\". The request has been blocked. Note that 'frame-src' was not explicitly set, so 'default-src' is used as a fallback.\n"
+  ],
+  "wam": [
+    "install wizard-claude --repo oscarhenrycollins/claude-connection --port 35395 --provides claude-subscription --wizard-md <qa>/wt/claude/wizard.md --listener-auth"
+  ],
+  "trace": [
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "null",
+      "site": "cross-site",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "null",
+      "site": "cross-site",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/repairs?limit=5",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/action",
+      "method": "POST",
+      "origin": "http://127.0.0.1:43295",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "document",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "iframe",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/action",
+      "method": "POST",
+      "origin": "null",
+      "site": "cross-site",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 403
+    },
+    {
+      "path": "/troubleshoot/",
+      "method": "GET",
+      "origin": "",
+      "site": "none",
+      "dest": "document",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/status",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    },
+    {
+      "path": "/troubleshoot/api/engines",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "dest": "empty",
+      "recoveryToken": false,
+      "shellToken": false,
+      "by": "",
+      "status": 200
+    }
+  ],
+  "drop": [
+    {
+      "method": "POST",
+      "path": "/api/v1/requests",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 415
+    },
+    {
+      "method": "POST",
+      "path": "/mcp",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/requests",
+      "origin": "null",
+      "site": "",
+      "dest": "",
+      "status": 405
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/requests",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.css",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/noble-crypto.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/hpke.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/request",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/submit",
+      "origin": "http://drop.box.test:42175",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/requests/<id>",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.css",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/noble-crypto.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/hpke.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/static/app.js",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/request",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 409
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "origin": "",
+      "site": "",
+      "dest": "",
+      "status": 200
+    }
+  ],
+  "refusals": [],
+  "claudeInstall": {
+    "installation": "inst-<id>",
+    "credential": "written",
+    "slot": "wizard-claude"
+  },
+  "claudeGate": {
+    "on": true,
+    "guarded": "/api/accounts/,/api/operations/,/claude-code/api/"
+  },
+  "templateHasRecoveryMeta": false,
+  "onboardingFixture": {
+    "providerReads": 0,
+    "setupReads": 1
+  },
+  "picker": {
+    "note": "",
+    "down": false,
+    "opusProvider": "claude-subscription-directsdk-experimental"
+  },
+  "pickerTrace": [
+    {
+      "path": "/wizard-claude/api/accounts",
+      "method": "GET",
+      "origin": "",
+      "site": "same-origin",
+      "claude": true,
+      "status": 403
+    }
+  ],
+  "baselinePicker": {
+    "note": "",
+    "down": false,
+    "opusProvider": "claude-subscription-directsdk-experimental",
+    "requests": [
+      "GET /wizard-claude/api/accounts -> 403 (site same-origin)"
+    ]
+  },
+  "baselineTroubleshooter": {
+    "origin": "null",
+    "pill": "Can't check",
+    "picker": 0,
+    "sandbox": "allow-scripts allow-forms allow-downloads",
+    "requests": [
+      "GET /troubleshoot/api/status -> 200 (origin null, site cross-site)",
+      "GET /troubleshoot/api/engines -> 200 (origin null, site cross-site)"
+    ]
+  },
+  "hostileSameOrigin": {
+    "readRepairs": "200 {\"repairs\":[],\"running\":null}",
+    "runFix": "200 {\"ok\":true,\"detail\":\"Restart Wizard app screens: done.\",\"sta",
+    "fetchPage": "200 <!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8",
+    "openerHandle": "got a handle",
+    "openerClosed": false,
+    "openerRead": "read, no token",
+    "frameRead": "read, no token"
+  },
+  "opaqueProbes": {
+    "client": {
+      "recovery": "status 0",
+      "dropCreate": "opaque/no-cors",
+      "dropMcp": "status 0"
+    },
+    "troubleshooter": [
+      {
+        "path": "/troubleshoot/api/action",
+        "method": "POST",
+        "origin": "null",
+        "site": "cross-site",
+        "dest": "empty",
+        "recoveryToken": false,
+        "shellToken": false,
+        "by": "",
+        "status": 403
+      }
+    ],
+    "drop": [
+      {
+        "method": "POST",
+        "path": "/api/v1/requests",
+        "origin": "null",
+        "site": "",
+        "dest": "",
+        "status": 415
+      },
+      {
+        "method": "POST",
+        "path": "/mcp",
+        "origin": "null",
+        "site": "",
+        "dest": "",
+        "status": 200
+      }
+    ]
+  },
+  "dropPreflight": {
+    "status": 405,
+    "body": "{\"error\":\"method_not_allowed\"}",
+    "acao": null
+  },
+  "standalone": {
+    "pill": "5 problems",
+    "tokenInDom": false,
+    "scheme": true
+  },
+  "dropPage": {
+    "origin": "http://drop.box.test:42175",
+    "secure": false,
+    "subtle": "undefined",
+    "fragmentGone": true
+  },
+  "dropRoundTrip": {
+    "pickedMatches": true,
+    "secure": false
+  },
+  "dropReuse": "Secret\nDrop\nAlready used\n\nThis Secret Drop link has already been used. If that was not you, tell the agent that asked so it can discard it and send a new link.\n",
+  "dropFramed": "no access",
+  "dropHeaders": {
+    "csp": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'",
+    "xfo": "DENY",
+    "coop": "same-origin"
+  },
+  "passed": false
+}

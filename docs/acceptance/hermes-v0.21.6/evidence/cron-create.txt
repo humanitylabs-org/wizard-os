@@ -1,4 +1,0 @@
-Created job: 766aef336bde
-  Name: hs-cron
-  Schedule: every 1m
-  Next run: 2026-10-22T01:09:30.356430+00:00

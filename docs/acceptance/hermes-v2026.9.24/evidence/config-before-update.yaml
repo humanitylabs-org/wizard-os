@@ -1,9 +1,0 @@
-model:
-  provider: custom
-  base_url: http://hs-fake:18080/v1
-  api_key: acceptance-fake-model
-  default: hs-fake
-  context_length: 64000
-compression:
-  enabled: true
-_config_version: 46

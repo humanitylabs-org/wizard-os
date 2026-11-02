@@ -1,4 +1,0 @@
-Created job: a886a6a258b1
-  Name: hs-cron
-  Schedule: every 1m
-  Next run: 2026-10-22T01:04:31.133456+00:00
