@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 2 Nov 2026 — Miguel: owner proof moves into the platform ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 106 | **Passphrase-free owner access is a platform feature, not a per-app ingress.** An app opts in with `owner_proof: hmac-v1` in `wizard.md`. The App Manager mints a per-app key outside the app's data volume, mounts it read-only into the app, and runs one owner edge that `wam links` routes the app's Wizard path through. The edge signs a request (`X-Wizard-App-Owner-Proof`, HMAC over app id, time, nonce, method and target) only after it proved the caller is tailscaled, the owner's tailnet login, and one of the owner's devices rather than the box itself; never for a bearer or agent. It also gives every such app a restart waiting page and an owner-activity signal. Messenger's hand-built ingress on Miguel's box is migrated to it (same keys, no logout) and retired, so every owner gets passphrase-free Messenger and `/messenger/` stops being the one route `wam links` can break. The Agent Service is not in the app path and is not used for this. Number may be renumbered at merge (105 is claimed by open PRs). | **Proposed by Miguel, 2 Nov 2026.** James to approve; draft PRs not deployed |
+
 ## 27 Oct 2026 — release source returns to main (James)
 
 | # | Decision | Status |

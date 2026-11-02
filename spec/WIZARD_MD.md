@@ -85,6 +85,9 @@ needs: []                   # device capabilities: mic, system-audio, camera,
                             # home-network (only works on a home internet
                             # connection; the Store says so on the app page)
 health: /healthz
+owner_proof: hmac-v1        # optional, proposed (#106): the platform signs the owner's
+                            # page requests so the app needs no second password
+                            # (OWNER_PROOF.md)
 ---
 ```
 
