@@ -1,3 +1,69 @@
+# Promote 0.3.102 (hand cut, wizard-os #395)
+
+## Why
+
+Miguel approved shipping the wizard-os #386 security fixes ("ship"), and his standing rule is: "If you're shipping a fix, ship it straight to stable" (30 Oct 2026). Stable 0.3.94 lacks:
+
+- oscarhenrycollins/notifications#18 Recommended fix: other websites can't read or publish notifications through ntfy (ntfy's built-in `Access-Control-Allow-Origin: *`, no login); `/mcp` handshake box-only
+- oscarhenrycollins/files#2 Recommended fix: through Tailscale Serve, Files (File Browser noauth) answers only the box owner
+- humanitylabs-org/wizard-app-manager#408 Recommended fix: app update writes the owner's tailnet login for recipes that started declaring it (so existing Files/Tinfoil installs get protected)
+- oscarhenrycollins/notifications#19 Recommended fix: Landscapes Light gets the minimal inbox and swipe strip
+
+Not pinned by a release (they reach boxes through the nightly app updates from the index): oscarhenrycollins/wizard-microsoft#1 (0.2.6) and wizard-app-store#56 + oscarhenrycollins/wizard-tinfoil#12 (0.3.8). Not shipped: wizard-ux#840 (waiting on required review).
+
+## What changes (0.3.94 → 0.3.102)
+
+**Classification: feature** (launch-phase fast-track, DECISIONS #93): Latest 0.3.95–0.3.101 already carried changes that are not provably fixes, and the App Manager and Notifications pins bring more along.
+
+- wizard-ux#513 [maintenance] Maintenance: canonical origin-less phone release tooling and signed origin-custody proof
+- wizard-ux#714 [fix] Recommended fix: Wizard ID approval shows the raw request when an event only partly matches a known action
+- wizard-ux#732 [fix] Recommended fix: replies with pictures no longer show twice or as raw MEDIA text
+- wizard-ux#759 [fix] Recommended fix: keep the Resources Back control tappable
+- wizard-ux#766 [fix] Recommended fix: launcher tiles for agent Pages open in the Pages window (#766)
+- wizard-ux#769 [fix] Recommended fix: Replace Installed with Open after install
+- wizard-ux#770 [fix] Recommended fix: ignore gitleaks false positive on app-logo storage key
+- wizard-ux#772 [fix] Recommended fix: chat files download from the card; PDFs open in the viewer
+- wizard-ux#773 [fix] Recommended fix: chat file Download/viewer styles use tokens (style check)
+- wizard-ux#774 [feature] James: keep classic Home, Settings and skins by default; Miguel's Home as his tweak
+- wizard-ux#777 [fix] Recommended fix: desktop Settings from Home stays on Home
+- wizard-ux#778 [feature] Miguel's tweaks: drop Home resource bars; Defer and Done join the model switch
+- wizard-ux#779 [feature] Settings › Look: tweaks grouped by person, each with an All switch
+- wizard-agent-service#284 [fix] Recommended fix: Import keeps host-shared paths on the host (main, conflict resolved)
+- wizard-agent-service#285 [feature] Show routed agents' notes paths as their notebook, not [private attachment]
+- wizard-agent-service#286 [feature] Agent notebooks for Notes: owner-only, read-only route
+- wizard-app-manager#369 [maintenance] Maintenance: mirror Wizard OS 0.3.91 and 0.3.92 onto latest
+- wizard-app-manager#370 [maintenance] Mirror 0.3.93 onto latest (byte-identical to wizard-os #349)
+- wizard-app-manager#371 [fix] Recommended fix: the wizard-os plugin follows the release's Agent Service commit
+- wizard-app-manager#372 [maintenance] Maintenance: mirror Wizard OS 0.3.94 onto latest (release train)
+- wizard-app-manager#373 [fix] Recommended fix: an update survives Ubuntu's automatic restarts and keeps its release
+- wizard-app-manager#374 [maintenance] Maintenance: mirror Wizard OS stable 0.3.94 (release train, feature)
+- wizard-app-manager#375 [feature] links: keep an app's Wizard address when Serve can't be read; serialize link refreshes
+- wizard-app-manager#379 [maintenance] Maintenance: mirror Wizard OS 0.3.95–0.3.97 onto latest (release train)
+- wizard-app-manager#380 [maintenance] Mirror 0.3.98 onto latest (release train) (#380)
+- wizard-app-manager#381 [maintenance] Maintenance: mirror Wizard OS 0.3.99 onto latest (release train)
+- wizard-app-manager#383 [feature] App update notice: use display names, not internal ids
+- wizard-app-manager#384 [maintenance] Maintenance: mirror Wizard OS 0.3.100 onto latest (release train)
+- wizard-app-manager#385 [feature] App renames: an app's id follows its name (renamed_from), migrated with rollback; naming lint
+- wizard-app-manager#388 [fix] Recommended fix: app checks distinguish acceptance harnesses from hosted code
+- wizard-app-manager#389 [fix] Fix: phone sync reads the public release mirror (wizard-os is private)
+- wizard-app-manager#391 [maintenance] Maintenance: mirror Wizard OS 0.3.101 onto latest (release train)
+- wizard-app-manager#392 [feature] Retire migrated app ids and update the Connected accounts default
+- wizard-app-manager#393 [fix] Recommended fix: reach every provider without breaking install checks
+- wizard-app-manager#398 [feature] Store installs recover after a failed release; apps open in every shell alias
+- wizard-app-manager#401 [feature] wam standard: show where a box drifts from the Store
+- wizard-app-manager#402 [fix] Recommended fix: preserve private sources and detect never-pull overrides
+- wizard-app-manager#408 [fix] Recommended fix: app update writes the owner's tailnet login for recipes that started declaring it
+- notifications#13 [feature] Reply only on Wizards that support Chats drafts (wizard11)
+- notifications#14 [fix] Recommended fix: Notifications shows under Agent apps on the Connections map
+- notifications#15 [feature] 2.29.0-wizard15: ship the box build (inbox marks + sources); run-as, thumbnail folders and ntfy exempt hosts as owner settings
+- notifications#18 [fix] Recommended fix: other websites can't read or publish notifications through ntfy; /mcp handshake box-only (wizard16)
+- notifications#19 [fix] Recommended fix: Landscapes Light gets the minimal inbox and swipe strip like the other Mizel palettes
+- files#2 [fix] Recommended fix: through Tailscale Serve, Files (File Browser noauth) answers only the box owner (wizard3)
+
+Not checked: real Tailscale Serve/HTTPS on the rig (headscale has no Serve), real chats and sign-ins, phones, a fresh install. The security gates themselves were verified on Miguel's box (oscar-main) after `wam app-updates --apply`: cross-origin ntfy reads/preflights 403 with no CORS header, tailnet `/mcp` handshakes 403, forged stranger / no-login proxied requests to Files and Tinfoil 403, owner views and the shell bell count 200, agent MCP tools answer.
+
+## Upgrade test
+
 ## Installed upgrade 0.3.94 → 0.3.102 on a disposable KVM guest
 
 **Result: PASSED** (20261102T042003Z → 20261102T043449Z UTC)
