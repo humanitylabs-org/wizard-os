@@ -1,6 +1,6 @@
 # Browser-isolation release rehearsal: wizard-os #389 (card 6), run 2
 
-> **Run 3 (final) is appended at the end:** [Run 3](#run-3-final-candidates-03103-bt3896--7-flag-on), with the final pass/fail table and remaining blockers.
+> **Run 3 (final) is appended at the end:** [Run 3](#run-3-final-candidates-03103-bt3896--7-flag-on), with the final pass/fail table and remaining blockers. **Run 4** closes R16 (Store window on a fresh box): [Run 4](#run-4-r16-store-window-on-a-fresh-box-diagnosed-not-a-product-bug).
 
 Raw receipts: [browser-trust-389/raw](browser-trust-389/raw), screenshots: [browser-trust-389/screenshots](browser-trust-389/screenshots) (inspected).
 
@@ -109,7 +109,7 @@ Raw receipts: [browser-trust-389/raw/run3](browser-trust-389/raw/run3). Screensh
 | R13 | Wizard Files install with **no owner setting** (#12, via the integration commit `7df0ec5` = #11 + #12, stock WAM test pin, no `--set`) | **PASS**: installed; WAM wrote `WIZARD_TRUSTED_HOSTS=wtrain.train.test:8796,wtrain.train.test`; `FILES_ALLOWED_HOSTS` empty; boundary on at first start (`/api/files` 401 without credential, `/health` 200) | run3/38 |
 | R14 | Grants on the fresh box (contract app) | **PASS**: grant `files.list` admissible; undeclared op refused; revoke → `no_grant`; re-grant `files.index`+`files.list` | run3/40 |
 | R15 | Doctor with Files + Wizard Files on the candidate | **FAIL as expected** (`slot collision`). With WAM #427 patched in: **0 FAIL**, row `PASS slot 'files': active app is chosen files (also installed: wizard-files)`. Reverted after | run3/38, 39 |
-| R16 | Store **UI** Get / Remove on the fresh box | **FAIL (open)**: after the owner clicks the shell's Install/Remove, the shell document closes its own tab (Playwright `page close`, no crash, no popup). No request reached the WAM store listener. Get also logged one `POST /wizard-files 403` earlier in the run. The same runner passed Remove on the upgraded box. Not diagnosed | run3/37, 41, 42 |
+| R16 | Store **UI** Get / Remove on the fresh box | **Closed in run 4 (rig artifact, not a product bug)**. Run 3 text: after the owner clicks the shell's Install/Remove, the shell document closes its own tab (Playwright `page close`, no crash, no popup). No request reached the WAM store listener. Get also logged one `POST /wizard-files 403` earlier in the run. The same runner passed Remove on the upgraded box. Not diagnosed | run3/37, 41, 42 |
 
 ### Findings and fixes in run 3
 
@@ -119,9 +119,38 @@ Raw receipts: [browser-trust-389/raw/run3](browser-trust-389/raw/run3). Screensh
 
 ### Release blockers remaining
 
-1. R16 Store UI install/remove on a fresh box (open, undiagnosed).
+1. ~~R16 Store UI install/remove on a fresh box~~: closed in run 4, rig artifact (see Run 4).
 2. Jan's native review: **wizard-ux #871** (native main-document receivers, draft, REVIEW_REQUIRED) and **try-wizard #61** (Mac), both still open drafts. Device lanes (APK/Mac, phone gestures) are not covered by this rig.
 3. Merge-order dependencies for a real release: WAM #424 (non-draft), #425 (O4/O5), #422; router #10; UX #874 on #873; wizard-files #11 rebased on main (0.1.6); spec wizard-os #403. Already on main (merged by defleur-agents during this run, not by Oscar): WAM #427 (slot doctor) and wizard-files #13, which supersedes #12 (box-host admission, optional setting).
 4. Still unverified: the Store UI *update* of a contract app. Update ran through the CLI test pin in run 2/3, because the Store has no UI path to a test pin. Also unverified: model listing with real provider accounts and the Troubleshooter one-tap fix.
 
 Integration branches cited by this report and kept: `integration/browser-trust-release-rehearsal` in wizard-app-manager, wizard-ux and **wizard-files (`7df0ec5`)**. Rig torn down after this run (VMs, disks, registry, tunnels).
+
+## Run 4: R16 Store window on a fresh box (diagnosed, not a product bug)
+
+Raw receipts: [browser-trust-389/raw/run4](browser-trust-389/raw/run4). Screenshots: [screenshots/run4](browser-trust-389/screenshots/run4) (inspected). Same candidate `0.3.103-bt389.7`, flag on. Two new disposable guests: a **fresh** public `os.sh` install of `.7`, then an **upgraded** box (0.3.102 → `.7`). Real Chromium (Playwright) through the rig's two browser paths. Nothing was merged, released or published.
+
+**Root cause of R16: two rig artifacts. Neither is a product bug.**
+
+1. **"Nothing reaches WAM" / the 403.** On the fresh box, run 3 drove the browser only through `bt389-socks`. That is `ssh -D` *into the guest*, so every request reaches Tailscale Serve from the box's own tailnet address. WAM's Store listener refuses owner changes from the box itself (`store_install.check_request` → `from_box`, on main; it exists because every app container also reaches Serve as the owner). The refusal is `403 {"error": "changes are refused from this Wizard itself: its apps reach Tailscale Serve with your identity too. Use your phone or computer, or `wam` on the server"}`. The WAM journal logs only `"POST /wizard-files HTTP/1.1" 403 -` without the reason, so run 3 read it as "nothing reached WAM". Run 3's passing upgraded-box Remove used the second path, `bt389-device-tunnel` (a SOCKS proxy in a container on the guest's Docker bridge, i.e. "another device"). Run 3's upgraded-box Get through `ssh -D` failed in the same way.
+2. **"The tab closes itself."** After a refusal the runner kept polling for "Installed" until the shell `timeout` (280/420 s) killed node. Playwright then closes the browser gracefully, which logs `page close`. Proof in run 4: `pw:browser <gracefully close start>` at exactly the timeout, after the 403 ([10-get-1081.log](browser-trust-389/raw/run4/10-get-1081.log)). There is no `window.close()` anywhere in the shell; an init-script hook on `window.close`, `pagehide` and `beforeunload` never fired. The shell stays open and shows the refusal in the Store's own sheet ([screenshot](browser-trust-389/screenshots/run4/r8-fresh-1081-store-remove.png)), or a toast "Wizard Files wasn't installed" for Get.
+
+| # | Check (Store window, owner confirms in the shell dialog) | Fresh box | Upgraded box (0.3.102 → `.7`) | Evidence |
+|---|---|---|---|---|
+| R4-1 | Get from the box itself (`ssh -D` path) | **refused 403 `from_box`** (correct); shell intact, reason shown | same | 10, 12, 30, 18/36 journal |
+| R4-2 | Store Get, index release `wizard-files` 0.1.5 @ `1b30909` (main, incl. #13), "other device" path | **PASS**: 202, container healthy, row shows Open | **PASS** | 11, 31 |
+| R4-3 | Store Remove (Store sheet → shell Review → Remove) | **PASS** (one earlier attempt saw the Store list still loading at 12 s; retry passed) | **PASS** | 13b, 32 |
+| R4-4 | Install by **link** at `1b30909` (Store's install-link sheet, `source: link`) | **PASS** | **PASS** (stock WAM, no rig stub) | 15, 33 |
+| R4-5 | Release change by link to **wizard-files #11 rebased head `5aceb5d` (0.1.6, browser contract)** | **PASS** as **"Switch to this release"** → 0.1.6, `WIZARD_BROWSER_BOUNDARY=1`, credential set, `WIZARD_TRUSTED_HOSTS` written; `/api/files` 403 with a browser Origin, 401 without credential, `/health` 200; contract ops listed, `no_grant` until granted | **PASS** (same switch) | 16, 34, snap in 16 |
+| R4-6 | Store Remove of the 0.1.6 contract app | **PASS** (container gone, recipe dir gone) | **PASS** | 17, 35 |
+| R4-7 | Every Store owner change sent by the shell document, none by the frame; nothing POSTed before the owner confirms | **PASS** in every run | **PASS** | all |
+
+Notes:
+- The Store's **Update** button is not reachable on the rig. It appears only when the *same* source and channel offer a newer version. The public index has one wizard-files release, and link installs carry no channel, so a newer link is offered as "Switch to this release" (operation `switch`). The release change itself (0.1.5 → 0.1.6 through the Store window, owner-confirmed) is proven. The literal "Update" label needs a newer public index release. WAM's test pin (`WAM_PRIVATE_CATALOG`) is not shown in the Store UI.
+- `wam doctor` on the fresh box with Files + Wizard Files: 1 FAIL `slot collision`. That is expected on `.7`, which predates WAM #427 (merged on main).
+- The Store-listener journal has no refusal reason. Logging `why` next to the 403 would have made R16 a one-line diagnosis. This is a suggestion only; no PR was opened.
+- Rig fixes: the Serve stand-in installer now puts the `serve` passthrough right after `REAL=` (run 3's wrapper-order artifact). The fresh-box SOCKS IP is read from `.NetworkSettings.Networks`.
+
+**wizard-files #11** was rebased on main (after merged #13) and became **0.1.6** (`5aceb5d`: recipe/server/manifest/assets/test version). Conflicts in `runtipi/config.json` and `server.py` were resolved by keeping main's optional `FILES_ALLOWED_HOSTS` and box-host admission, plus #11's boundary gate and kit assets. Local suite: 48 tests, 1 failure, `test_provenance…invalidate_cache`, the known ctime-tick flake that also fails on main (39 tests, same single failure). Live: the image builds and installs through the Store link path on both boxes (R4-5).
+
+**Verdict after run 4:** the Store-window blocker (R16) is closed. No server-side release blocker remains on this rig. Still open, as before: Jan's native review (wizard-ux #871, try-wizard #61) and the device lanes. Merge order: WAM #425/#422 (#424 landed as #426), router #10, UX #874 on #873, wizard-files #11 (now on main, 0.1.6), spec #403. Rig torn down (both guests, disks, registry container, tunnels).

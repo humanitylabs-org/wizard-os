@@ -1,0 +1,8 @@
+Nov 03 01:32:59 wtrain python3[80695]: wam store: "POST /wizard-files HTTP/1.1" 403 -
+Nov 03 01:33:40 wtrain python3[80695]: wam store: "POST /wizard-files HTTP/1.1" 202 -
+Nov 03 01:34:29 wtrain python3[80695]: wam store: "GET /_remove/wizard-files/plan HTTP/1.1" 200 -
+Nov 03 01:34:35 wtrain python3[80695]: wam store: "POST /_remove/wizard-files HTTP/1.1" 202 -
+Nov 03 01:35:24 wtrain python3[80695]: wam store: "POST /wizard-files HTTP/1.1" 202 -
+Nov 03 01:36:07 wtrain python3[80695]: wam store: "POST /wizard-files HTTP/1.1" 202 -
+Nov 03 01:37:06 wtrain python3[80695]: wam store: "GET /_remove/wizard-files/plan HTTP/1.1" 200 -
+Nov 03 01:37:12 wtrain python3[80695]: wam store: "POST /_remove/wizard-files HTTP/1.1" 202 -

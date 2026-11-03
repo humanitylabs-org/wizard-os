@@ -1,0 +1,34 @@
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+PASS Link sheet shows the expected action | {"button":"Install","text":"App Store\nRefresh\n‹\nWizard Files\n\nReview before installing\n\nLink\n\nAlso available in the catalog. Shared by a link.\n\nBrowse, search and preview your Wizard owner-files storage with the shared resumable upload service.\n\nRepository\nhumanitylabs-org/wizard-files
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-upg-link015-link-sheet.png
+PASS nothing POSTed before the owner confirms in shell UI | 0
+PASS Store link Install: shell Review chip appears (frame asked, shell decides) | "Review: Install wizard-files?"
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+PASS Store link Install: shell dialog text | "Wizard · request from\nApp Store\nInstall wizard-files?\n\nFrom github.com/humanitylabs-org/wizard-files at 1b30909c4976 (link).\n\nWizard shows this, not the app. Nothing happens until you confirm.\n\nCancel\nInstall"
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-upg-link015-link-review.png
+REQ POST https://wtrain.train.test:8796/wizard-os-home/store-install/wizard-files shell
+RESP 202 POST https://wtrain.train.test:8796/wizard-os-home/store-install/wizard-files {
+  "app": "wizard-files",
+  "state": "installing",
+  "started": 1793669724,
+  "selection": {
+    "source": "link",
+    "repo": "humanitylabs-org/wizard-files",
+    "commit": "1b30909c4976dc9ad19cd11a817fe51981fe39ac",
+    "operation": "install"
+  }
+}
+PASS Store link Install finished | "App Store\nRefresh\n‹\nWizard Files\n\nReview before installing\n\nLink\n\nAlso available in the catalog. Shared by a link.\n\nBrowse, search and preview your Wizard owner-files storage with the shared resumable upload service.\n\nRepository\nhumanitylabs-org/wizard-files\nCommit\n1b30909c4976dc9ad
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-upg-link015-link.png
+PASS Store owner changes went out from the shell document only | [{"url":"/wizard-os-home/store-install/wizard-files","method":"POST","fromShell":true,"origin":null}]
+EVENT page close
+EVENT ctx close

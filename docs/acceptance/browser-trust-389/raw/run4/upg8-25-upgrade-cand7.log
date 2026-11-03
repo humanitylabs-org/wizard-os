@@ -1,0 +1,27 @@
+08:17:47 install 0.3.103-bt389.7: curl -fsSL https://aiwizards.com/os.sh | _HERMES_GATEWAY=1 HERMES_SESSION_PLATFORM=telegram WIZARD_RELEASE=0.3.103-bt389.7 WIZARD_STRICT=1 WIZARD_RELEASE_BASE=file:///root/rel bash -s start
+08:17:49 install 0.3.103-bt389.7: running · starting
+08:18:05 install 0.3.103-bt389.7: running · Installing Wizard OS 0.3.103-bt389.7 (App Manager b3bb28142533)
+08:24:26 install 0.3.103-bt389.7: done · Installing Wizard OS 0.3.103-bt389.7 (App Manager b3bb28142533)
+08:24:56 install 0.3.103-bt389.7: Hermes gateway restarted and answers
+{
+  "version": "0.3.103-bt389.7",
+  "base": "file:///root/rel",
+  "state": {
+    "state": "done",
+    "step": "Installing Wizard OS 0.3.103-bt389.7 (App Manager b3bb28142533)",
+    "tailscale_login_url": null,
+    "wizard_url": "https://wtrain.train.test:8796/wizard-os-home/",
+    "message": "Wizard OS is installed. Hermes restarts once in about 20 seconds; the chat goes quiet for about a minute.",
+    "notes": [],
+    "restart_pending": true,
+    "started_at": "2026-11-03T01:17:49Z",
+    "pid": 38749,
+    "boot_id": "06c30cc9-a737-417a-82c8-43458028adf3",
+    "updated_at": "2026-11-03T01:24:18Z",
+    "exit_code": 0,
+    "failure_reason": null,
+    "approval_url": null,
+    "owner_url": null
+  },
+  "seconds": 399
+}

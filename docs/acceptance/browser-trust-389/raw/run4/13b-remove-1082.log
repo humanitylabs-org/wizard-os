@@ -1,0 +1,35 @@
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+PASS Store lists wizard-files | 1
+PASS Store detail has Remove app | "<div class=\"row\" data-app=\"wizard-files|humanitylabs-org/wizard-files\" role=\"button\" tabindex=\"0\"><span class=\"ic ic-m\" "
+PASS Store Remove sheet confirm clicked | "App Store\nRefresh\n‹\nRemove Wizard Files?\n\nhumanitylabs-org/wizard-files\n\nWizard Files and its app data on this Wizard will be deleted.\n\nCancel\nRemoving…"
+PASS Store Remove wizard-files: shell Review chip appears (frame asked, shell decides) | "Review: Remove wizard-files?"
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+PASS Store Remove wizard-files: shell dialog text | "Wizard · request from\nApp Store\nRemove wizard-files?\n\nRemoves the app and its data from this Wizard.\n\nWizard shows this, not the app. Nothing happens until you confirm.\n\nCancel\nRemove"
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-fresh-1082b-store-remove-review.png
+REQ POST https://wtrain.train.test:8796/wizard-os-home/store-install/_remove/wizard-files shell
+RESP 202 POST https://wtrain.train.test:8796/wizard-os-home/store-install/_remove/wizard-files {
+  "app": "wizard-files",
+  "name": "Wizard Files",
+  "state": "removing",
+  "identity": {
+    "repo": "humanitylabs-org/wizard-files",
+    "commit": "1b30909c4976dc9ad19cd11a817fe51981fe39ac"
+  },
+  "started": 1793667569
+}
+PASS Store Remove finished | "App Store\nRefresh\n‹\nResults\n\n1 for “Wizard Files”\n\nW\nWizard Files\nPublic\nAgent app · Browse, search and preview your Wizard owner-files storage with the shared resumable upload service.\nGet"
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-fresh-1082b-store-remove.png
+PASS Store owner changes went out from the shell document only | [{"url":"/wizard-os-home/store-install/_remove/wizard-files","method":"POST","fromShell":true,"origin":null}]
+EVENT page close
+EVENT ctx close

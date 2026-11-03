@@ -1,0 +1,24 @@
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: net::ERR_SOCKS_CONNECTION_FAILED
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+FAIL Store lists wizard-files | 0
+FAIL Store detail has Remove app | null
+FAIL Store Remove sheet confirm clicked | "App Store\nRefresh"
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+locator.waitFor: Timeout 60000ms exceeded.
+Call log:
+  - waiting for locator('.wz-intent-chip').first() to be visible
+
+    at confirmInShell (/home/oscar/.hermes/cache/scratch/bt-rehearsal/pw/run8diag.cjs:49:24)
+    at /home/oscar/.hermes/cache/scratch/bt-rehearsal/pw/run8diag.cjs:108:13 {
+  name: 'TimeoutError'
+}

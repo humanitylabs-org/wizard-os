@@ -1,0 +1,51 @@
+2026-11-03T00:47:39.968Z pw:browser <launching> /home/oscar/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --proxy-server=socks5://127.0.0.1:1081 --proxy-bypass-list=<-loopback> --ignore-certificate-errors --user-data-dir=/home/oscar/.hermes/cache/scratch/bt-rehearsal/pw/profiles8-fresh --remote-debugging-pipe about:blank
+2026-11-03T00:47:39.972Z pw:browser <launched> pid=498524
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/ui-preferences/seed shell
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ PUT https://wtrain.train.test:8796/wizard/thread-seen shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ PUT https://wtrain.train.test:8796/wizard/v1/workspaces shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+PASS Store lists wizard-files | 1
+PASS Store Get clicked | true
+PASS nothing POSTed before the owner confirms in shell UI | 0
+PASS Store Get wizard-files: shell Review chip appears (frame asked, shell decides) | "Review: Install wizard-files?"
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+PASS Store Get wizard-files: shell dialog text | "Wizard · request from\nApp Store\nInstall wizard-files?\n\nFrom github.com/humanitylabs-org/wizard-files at 1b30909c4976 (standard).\n\nWizard shows this, not the app. Nothing happens until you confirm.\n\nCancel\nInstall"
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r8-fresh-1081-store-get-review.png
+REQ POST https://wtrain.train.test:8796/wizard-os-home/store-install/wizard-files shell
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+RESP 403 POST https://wtrain.train.test:8796/wizard-os-home/store-install/wizard-files {
+  "error": "changes are refused from this Wizard itself: its apps reach Tailscale Serve with your identity too. Use your phone or computer, or `wam` on the server"
+}
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+REQ POST https://wtrain.train.test:8796/wizard/v1/browser-shell/call shell
+CONSOLE error Failed to load resource: the server responded with a status of 404 (Not Found)
+CONSOLE error Failed to load resource: the server responded with a status of 403 (Forbidden)
+2026-11-03T00:52:19.761Z pw:browser [pid=498524] <gracefully close start>
+EVENT page close
+page.waitForTimeout: Target page, context or browser has been closed
+    at /home/oscar/.hermes/cache/scratch/bt-rehearsal/pw/run8diag.cjs:97:49
+2026-11-03T00:52:19.776Z pw:browser [pid=498524] <kill>
+2026-11-03T00:52:19.776Z pw:browser [pid=498524] <will force kill>
+2026-11-03T00:52:19.777Z pw:browser [pid=498524] starting temporary directories cleanup
+2026-11-03T00:52:19.777Z pw:browser [pid=498524] finished temporary directories cleanup
