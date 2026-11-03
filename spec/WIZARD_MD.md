@@ -144,6 +144,26 @@ app names belong in the shell's alias table.
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
+
+## Home-screen pins
+
+Optional `home_screen:` lets an app declare what the shell must do for it when the owner pins it to the phone home screen. The app opts in; the shell holds no per-app list and never infers a capability from an app's id, path or storage keys.
+
+```yaml
+home_screen:
+  offline: true                    # a pin of this app may open with no connection
+  position_keys: ["myapp:*:pos:*"] # localStorage keys that hold SCREEN position
+  route_state: myapp               # history.state key the app restores its own route from
+```
+
+- `offline` (strict boolean). The pin opens from the shell's small offline host without a connection. The app promises to keep what it shows in a `WizOffline` replica named `<id>-` (`offline-kit.js`), so the shell can keep the pin's route and reading position in that replica with strict durability. Missing/false: a pin needs a connection.
+- `position_keys` (at most 8 strings of at most 120 characters, no control characters, each with at least 3 literal characters before the first `*`; `*` is the only wildcard). Those keys hold screen position only. The shell keeps them per pin so a pin never overwrites the position of the same app opened inside the workspace. Content and preferences are not listed and stay shared.
+- `route_state` (a name matching `[A-Za-z_][A-Za-z0-9_]{0,39}`). The app rebuilds its own route from that `history.state` key at boot, so the shell does not replay `popstate` for it.
+
+If the durable journal cannot save (quota, blocked, no strict durability) the shell dispatches `wizard:presentation-save-failed` on the app's window; the app shows its own quiet inline notice, and the shell never pops anything up.
+
+The App Manager validates the block (any non-empty declaration needs a declared `view`) and copies the normalized values to `apps.json`; the Agent Service carries them through to the shell. A malformed block drops the declaration, never the app. Unknown capabilities are ignored by older shells.
+
 ## App-to-app endpoints
 
 `uses:` and `requires.models`/`requires.services` are connection proposals, never addresses. Grants, keys, connection modes and owner decisions are in [PERMISSIONS.md](PERMISSIONS.md). A consumer reads where a granted provider answers from `provider_endpoints[<app-id or slot:name>]` in its own `WIZARD_GRANTS_FILE`; it never guesses service names or scrapes owner-facing `apps.json` URLs. Slot grants keep the `slot:` key, not the selected provider's app ID. With no advertised endpoint the consumer reports the provider unavailable rather than inventing a fallback.
@@ -181,6 +201,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 6. `view` present for type view.
 7. Every `needs` entry is a known device permission (including `home-network`), `credentials:<provider>`, a non-null default app ID, or an explicit `provides` capability from the source defaults. The spec/index checkers carry an offline snapshot of `wizard-app-manager/wam/defaults.json` (app IDs and explicit `provides` only). Slot aliases, null placeholders and a candidate's own `provides` do not extend that vocabulary. This is manifest validation, not proof a provider is installed or permission to install it.
 8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
+8c. `home_screen`, if present, is a mapping with only `offline` (boolean), `position_keys` (list as above) and `route_state` (name as above); a non-empty declaration requires a declared `view` with path and port.
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
