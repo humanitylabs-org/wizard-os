@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-11-03T22:30:35.540136+00:00",
+  "candidate_count": 10,
+  "raw_search_pages": 169,
+  "incomplete_results_count": 0,
+  "union_reported_total": 12612,
+  "union_unique_collected": 12612,
+  "registry_http_records_digest_verified": 45,
+  "exact_open_issue_readbacks": 23,
+  "comment_count_mismatches": [
+    {
+      "number": 139742,
+      "state": "open",
+      "title": "Desktop 0.22.2 (stable) vs backend on main: archive/rename/delete session fails with 409 mutation_identity_required",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/139742",
+      "comments_reported": 4,
+      "comments_collected": 3,
+      "pages": [
+        {
+          "page": 1,
+          "count": 3
+        }
+      ],
+      "read_at": "2026-11-03T22:28:17.996196+00:00"
+    }
+  ],
+  "tracked_git_status_clean": true,
+  "no_layers_or_runtime_execution": true
+}

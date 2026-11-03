@@ -1,0 +1,613 @@
+{
+  "decision": "HOLD",
+  "checked_at": "2026-11-03T22:33:28.025650+00:00",
+  "snapshot": "0.3.102.json",
+  "pin": {
+    "tag": "v2026.9.24",
+    "commit": "f97608f178d1ffeca59860195ab7da295f7c8e5f",
+    "image": {
+      "ref": "docker.io/nousresearch/hermes-agent:v2026.9.24",
+      "digest": "sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7"
+    },
+    "test_record": "none: carried over from 0.3.21, pinned before Wizard stable existed",
+    "rollback": null
+  },
+  "candidate": {
+    "tag": "v0.22.5",
+    "commit": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+    "published_at": "2026-10-23T05:28:45Z",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5"
+  },
+  "blocked": [
+    "image/tag source identity unproven: linux/amd64 has no full OCI revision label; image/tag agreement is unproven",
+    "no fresh Thales acceptance record for this tag",
+    "114 open version-mentioned risk-search hit(s) need adjudication; these are not confirmed regressions",
+    "unversioned upstream issue/fix-churn review not yet signed off",
+    "two-to-three-day Archimedes soak not yet signed off (no install authorized)",
+    "James has not approved promotion"
+  ],
+  "approval": null,
+  "too_young": [
+    "v0.22.7",
+    "v0.22.6"
+  ],
+  "image": {
+    "ref": "docker.io/nousresearch/hermes-agent:v0.22.5",
+    "digest": "sha256:9c5561579f3ffdf333401797094ac3a743738d6c25d40f4331c7bf77b694238d",
+    "commit": null,
+    "provenance_error": "linux/amd64 has no full OCI revision label; image/tag agreement is unproven"
+  },
+  "test_record": null,
+  "open_risk_reports": [
+    {
+      "number": 145180,
+      "title": "[desktop 0.22.5] Remote mode: session list mixes profiles on secondary tabs (primary-shared routing)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145180"
+    },
+    {
+      "number": 148510,
+      "title": "Hermes Desktop 0.22.5: GPU process is launched with `--use-angle=swiftshader` and `--use-gl=disabled` after a launch that ended before first paint",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148510"
+    },
+    {
+      "number": 145261,
+      "title": "Watch-pattern completion injections always refused with admission_conflict (0.22.5, multiplex profiles, Discord group session)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145261"
+    },
+    {
+      "number": 147451,
+      "title": "[Bug]: Kimi K3 ends turns on visible action-announcement tails \u2014 the stall guard (promoted-reasoning scope) never fires",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147451"
+    },
+    {
+      "number": 148004,
+      "title": "[Bug]: Chats a Nous sign-in creates over the dashboard socket can't be pinned/renamed/archived \u2014 'nous:' owner stamp never matches (still on main)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148004"
+    },
+    {
+      "number": 143478,
+      "title": "`hermes update` leaves the gateway stopped when Python deps are already current (0.22.5, Linux user units)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143478"
+    },
+    {
+      "number": 147564,
+      "title": "[Bug] Hermes Cloud instance: all outbound TCP refused (Errno 111) \u2014 dashboard login 503 'Auth provider nous unreachable', survives upgrade/reset/restart",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147564"
+    },
+    {
+      "number": 143839,
+      "title": "[Bug]: Desktop (0.22.5) cannot archive/delete or resume its own new-style chats \u2014 REST mutations of unrouted source='desktop' rows are refused permission_denied, resume not_found",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143839"
+    },
+    {
+      "number": 147720,
+      "title": "[Bug]: Profile-route subagents ignore the target profile\u2019s toolsets (get the parent\u2019s full toolset instead)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147720"
+    },
+    {
+      "number": 146484,
+      "title": "Cron delivery workers (0.22.5): gateway-armed plugins silently stop covering delivery \u2014 worker plugin surface undocumented, no supported delivery-outcome hook",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146484"
+    },
+    {
+      "number": 147585,
+      "title": "restore_api_session wedges an API session with 409 admission_conflict after a TUI close",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147585"
+    },
+    {
+      "number": 148257,
+      "title": "[Bug]: Group Chat members can't be woken after a standalone\u2192gateway handoff \u2014 \"message.member authority epoch does not match the room\"",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148257"
+    },
+    {
+      "number": 147715,
+      "title": "[Bug]: Switch between same provider subscription",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147715"
+    },
+    {
+      "number": 146371,
+      "title": "[Bug]: Hermes update error",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146371"
+    },
+    {
+      "number": 145687,
+      "title": "Gateway worker API binds 127.0.0.1 \u2014 breaks on hosts with non-functional IPv4 loopback (WSL2 mirrored networking)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145687"
+    },
+    {
+      "number": 146676,
+      "title": "Cron ticker froze mid-sweep for 17h, silently \u2014 WITH the #60703 bounded jobs-lock fix present (0.22.5): what unbounded shared wait can park the sweep thread?",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146676"
+    },
+    {
+      "number": 145955,
+      "title": "[Bug]: Desktop browses a Bot's workspace (Files tree, folder picker) with the window's profile, not the session owner's (gap left by #144741)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145955"
+    },
+    {
+      "number": 147726,
+      "title": "[Bug][Mobile iOS beta] SSH & Mosh mode fails post-auth: SSH + dashboard both succeed server-side, app reports credential error",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147726"
+    },
+    {
+      "number": 147619,
+      "title": "Pain cluster: auxiliary lanes (compression, goal judge, vision, fallback) call the wrong model on custom/local/fallback routes, and the error points at the wrong config",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147619"
+    },
+    {
+      "number": 147002,
+      "title": "[Feature]: Reuse one xAI TTS WebSocket per spoken reply (speak-stream opens a socket per sentence, ~0.7 s each)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147002"
+    },
+    {
+      "number": 145760,
+      "title": "[Bug]: Gateway refuses local session recovery receipts with storage_unavailable / invalid policy on every restart",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145760"
+    },
+    {
+      "number": 146798,
+      "title": "[Bug]: Gateway /resume <number> resolves against different sort order than /sessions (positional pick resumes wrong session)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146798"
+    },
+    {
+      "number": 146498,
+      "title": "config: writing a partial config view silently deletes every omitted section (no cross-process lock, no section-count guard)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146498"
+    },
+    {
+      "number": 145761,
+      "title": "[Bug]: gateway_state.json reports session_store unavailable while every profile DB is readable",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145761"
+    },
+    {
+      "number": 148433,
+      "title": "[Bug]: Shutdown during a redirected turn overwrites the already streamed reply with the wait sentinel",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148433"
+    },
+    {
+      "number": 145762,
+      "title": "[Bug]: Desktop profile=all session and sidebar fan-out issues one ticket and one DB read per profile",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145762"
+    },
+    {
+      "number": 146469,
+      "title": "[Bug]: No option to cancel, abort, or select a different model during local model download in Settings",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146469"
+    },
+    {
+      "number": 144616,
+      "title": "[Bug]: Nix builds report version 0.0.0, so the homeassistant plugin never loads",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144616"
+    },
+    {
+      "number": 146772,
+      "title": "computer_use: cua-driver serve+mcp pair per session is never released for one-shot sessions (leak under the gateway)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146772"
+    },
+    {
+      "number": 145815,
+      "title": "[Bug]: Windows `hermes update` collides with the detached multiplexer's long-lived MCP children \u2014 kill-on-close reaping never fires because the gateway never exits",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145815"
+    },
+    {
+      "number": 145840,
+      "title": "Telegram inbound message saved multiple times (same uid): 1 row with platform message id, N-1 without",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145840"
+    },
+    {
+      "number": 148120,
+      "title": "[Bug]: Docker backend on Windows \u2014 desktop project root passed untranslated to `docker run -w`, sandbox cannot start (exit 125)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148120"
+    },
+    {
+      "number": 147655,
+      "title": "[Bug]: macOS gateway can't read the login keychain, so Claude DirectSDK says \"Not logged in\"",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147655"
+    },
+    {
+      "number": 147377,
+      "title": "[Bug]: Login-stamped legacy Bot Chat row (source 'tui') can't be adopted by any actor or displaced; message_agent gets not_found permanently",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147377"
+    },
+    {
+      "number": 145889,
+      "title": "[Bug]: a memory provider's initialize() on the turn critical path can wedge the gateway forever \u2014 drain cannot interrupt it, guard won't restart it, and the process becomes unkillable while holding gateway.lock",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145889"
+    },
+    {
+      "number": 148603,
+      "title": "[P1] laowu profile kanban worker crash: \"Kanban execution unknown; retained by owner\"",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148603"
+    },
+    {
+      "number": 147943,
+      "title": "[Bug]: Discord Relay prospective threads alias an older session and stall queued messages",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147943"
+    },
+    {
+      "number": 144001,
+      "title": "Bug: Model switch in Bot Chat (follows-profile session) fails with \"internal error\" (AttributeError in prepare_model)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144001"
+    },
+    {
+      "number": 144932,
+      "title": "Gateway crash-loops under Windows service (pythonw): _uvicorn_console_logging() doesn't handle sys.stdout=None",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144932"
+    },
+    {
+      "number": 145375,
+      "title": "`hermes update` (Linux, system gateway units, no passwordless sudo): systemd restarts the paused gateways, but the pause record keeps a restart owed forever \u2014 every `hermes` command retries \"Windows gateway recovery\" and fails",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145375"
+    },
+    {
+      "number": 144729,
+      "title": "[Bug]: Canonical group stuck in stopping after lost approval lease \u2014 queued admissions prevent recovery",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144729"
+    },
+    {
+      "number": 146275,
+      "title": "[Bug]: [TUI] the model list is huge to select",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146275"
+    },
+    {
+      "number": 146712,
+      "title": "[Bug] Forked sessions inherit parent session timestamp instead of using fork creation time",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146712"
+    },
+    {
+      "number": 148392,
+      "title": "[Bug]: Desktop \u2014 a failed unpin is swallowed and the session is re-listed from the server flag (unpin never sticks, no error)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148392"
+    },
+    {
+      "number": 145986,
+      "title": "[Bug]: Sessions started in third-party clients fail to resume in Hermes Desktop with not_found",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145986"
+    },
+    {
+      "number": 147503,
+      "title": "Desktop: first message in a new chat fails with bare permission_denied when the app attaches to a running session-authority gateway (create is rejected for source/cols, submit needs a subscription the socket never got)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147503"
+    },
+    {
+      "number": 148354,
+      "title": "Model picker shows many \"duplicate\" rows: distinct raw ids collapse to the same prettified display name",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148354"
+    },
+    {
+      "number": 147051,
+      "title": "[Bug]: copilot-acp loads by directory presence and emits BrokenPipeError traceback when no credentials are configured",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147051"
+    },
+    {
+      "number": 145138,
+      "title": "[Bug] Cloud instance: outbound TCP to non-web ports blocked since 2026-10-26 12:29 UTC (breaks MQTT 1883/8883)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145138"
+    },
+    {
+      "number": 143641,
+      "title": "[Bug](desktop): Inbox-style session rows are squeezed below their content, so cards overlap their neighbours",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143641"
+    },
+    {
+      "number": 144328,
+      "title": "Catalog fetch silently fails when a provider returns a gzip-encoded /models response \u2014 live model list degrades to the static catalog",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144328"
+    },
+    {
+      "number": 148158,
+      "title": "[Bug]: tool_call fails when function_call_arguments.done.arguments is incomplete despite valid accumulated deltas",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148158"
+    },
+    {
+      "number": 147873,
+      "title": "[Bug]: owed-restart obligation can never clear when one gateway PID is recorded both mapped and stopped_unmapped",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147873"
+    },
+    {
+      "number": 148517,
+      "title": "[Bug]: session fanout starts a thread while holding event_stream.lock, so the gateway loop exits 75",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148517"
+    },
+    {
+      "number": 145759,
+      "title": "[Bug]: Desktop registry REST path keeps minting tickets against a stale gateway endpoint after a restart",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145759"
+    },
+    {
+      "number": 147716,
+      "title": "[Bug]: Webapp on iPhone Safari: sidebar overlays chat, composer keyboard unreliable, \"Resume failed \u2013 not_found\" on existing sessions",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147716"
+    },
+    {
+      "number": 148469,
+      "title": "/model switch crashes with AttributeError: 'tuple' object has no attribute 'get' on a following session",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148469"
+    },
+    {
+      "number": 147500,
+      "title": "[Bug]: Mobile app (Android beta): \"UPDATE AVAILABLE\" on an up-to-date host, and \"Manual restart required\" never clears after dashboard+gateway restarts",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147500"
+    },
+    {
+      "number": 147923,
+      "title": "[Bug][Desktop] Assistant message after a bot-chat cron delivery is not rendered until the next turn",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147923"
+    },
+    {
+      "number": 147620,
+      "title": "Pain cluster: error cards and failure notices hide the one-line cause the product already knows (model not found, lost SSH backend, compression floor, fallback 401/404)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147620"
+    },
+    {
+      "number": 146440,
+      "title": "Windows: Kanban managed workers freeze during agent init (git child inherits stdin control pipe; lazy numpy import from a user-dir plugin deadlocks)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146440"
+    },
+    {
+      "number": 148204,
+      "title": "[Bug]: hermes update on Windows aborts (\"SCM service enumeration failed\") when the SCM denies service enumeration to the session (WinError 5 from OpenSCManager)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148204"
+    },
+    {
+      "number": 147552,
+      "title": "Chat on every surface rebuilds most of the system prompt per project/surface \u2014 one opt-in fixed chat dir would fix the cache",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147552"
+    },
+    {
+      "number": 147247,
+      "title": "[Bug]: Desktop SSH boot dies at the token upload \u2014 `loginShellQuote()` escapes backslashes, so nested payloads arrive with broken quoting",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147247"
+    },
+    {
+      "number": 148429,
+      "title": "[Bug]: a hung update helper holds .git/hermes-update.lock with no age ceiling \u2014 desktop boot is blocked for hours with no pid, no elapsed time and no way to skip",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148429"
+    },
+    {
+      "number": 144587,
+      "title": "[Bug]: Resuming a local session from a new TUI keeps the creating client's client_env, so plugins see the old terminal's identity",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144587"
+    },
+    {
+      "number": 144223,
+      "title": "[Relay] Native pipeline threads busy-spin on socketpair event channels \u2014 ~80% of a core each, constant (v0.22.5)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144223"
+    },
+    {
+      "number": 147241,
+      "title": "[Bug]: Desktop window stays stale after an out-of-band gateway restart \u2014 main process recovers, the window needs a manual reload",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147241"
+    },
+    {
+      "number": 144675,
+      "title": "[Bug]: Bot Mode hide toast points to a nonexistent 'eye button in the Bots header'",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144675"
+    },
+    {
+      "number": 144255,
+      "title": "macOS gateway launches via /usr/bin/osascript, so TCC attributes the whole tool tree to a system script interpreter",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144255"
+    },
+    {
+      "number": 143689,
+      "title": "[Feature]: Desktop: a queued prompt owned by the gateway has no \"send now\", so it can only wait",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143689"
+    },
+    {
+      "number": 145208,
+      "title": "[Bug]: Nix install: a failed dashboard plugin install leaves a python fact in tools/facts.json, breaking every .py cron script",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145208"
+    },
+    {
+      "number": 148626,
+      "title": "[Feature]: \"Apply changes\" action: activate .env / plugin / integration changes without quitting the app or stopping the gateway (and without dropping live voice calls)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148626"
+    },
+    {
+      "number": 148377,
+      "title": "[Bug][Bot delivery] message_agent fails with not_found when the target profile's Bot Chat row is unbound (chat_id/session_key NULL)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/148377"
+    },
+    {
+      "number": 147912,
+      "title": "[Bug]: Docker: `gateway start --force` on a named profile exits 0, but the s6 slot runs without --force and stops with 78",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147912"
+    },
+    {
+      "number": 146994,
+      "title": "[Bug]: Windows \u2014 hermes/hermes-acp/hermes-agent console scripts fail with ModuleNotFoundError (stale editable direct_url after environment re-staging)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146994"
+    },
+    {
+      "number": 145195,
+      "title": "[Bug]: A single oversized user message is uncompressible \u2014 compaction keeps it verbatim and the session auto-resets",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145195"
+    },
+    {
+      "number": 145676,
+      "title": "Stale reaps never tick the circuit breaker: endpoint outage produced 27 consecutive spawn->stale->requeue loops on one card",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145676"
+    },
+    {
+      "number": 146495,
+      "title": "[Bug]: [Desktop][Linux] Newly created projects are unchecked in the Projects filter by default",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146495"
+    },
+    {
+      "number": 145963,
+      "title": "[Bug]:  TUI - cannot switch model in tui in old session",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145963"
+    },
+    {
+      "number": 145381,
+      "title": "[Bug]: Desktop transport-error retry re-runs the turn (no turn-level idempotency) + persistence blocks the event loop",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145381"
+    },
+    {
+      "number": 144949,
+      "title": "[Bug]: Native Gemini adapter reports `finish_reason=\"tool_calls\"` for MAX_TOKENS / SAFETY candidates, so a call from a truncated or blocked reply is executed",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144949"
+    },
+    {
+      "number": 144683,
+      "title": "Windows: gateway autostart silently dies when the profile path is non-ASCII \u2014 Hermes_Gateway.vbs is written UTF-8 (no BOM), WSH reads it as ANSI",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144683"
+    },
+    {
+      "number": 144303,
+      "title": "[Bug]: Remote-to-host sync does not respect deleted files",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144303"
+    },
+    {
+      "number": 147146,
+      "title": "[Feature]: Desktop plugin SDK \u2014 selection context, anchored highlights, user-message render slot, empty-composer submit",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147146"
+    },
+    {
+      "number": 147025,
+      "title": "[Bug]: platform_toolsets.<platform>: [] still loads every MCP server; no_mcp is undocumented",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147025"
+    },
+    {
+      "number": 146846,
+      "title": "[Bug]: Loop guardrails that key on result hashes go blind on tool-side BLOCKED refusals and hint lines carrying a rising counter",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146846"
+    },
+    {
+      "number": 146537,
+      "title": "[Bug] TUI session switcher crashes when a live session row has a NULL model \u2014 Cannot read properties of null (reading 'replace')",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146537"
+    },
+    {
+      "number": 144449,
+      "title": "[Bug]: Sidecar-only memory evidence is absent from compaction summary input and can be lost for referential follow-ups",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144449"
+    },
+    {
+      "number": 147387,
+      "title": "Gated dashboard middleware rejects Desktop token-mode credentials (X-Hermes-Session-Token header / ?token=) \u2014 Remote gateway connections fail on any auth-gated dashboard",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147387"
+    },
+    {
+      "number": 146852,
+      "title": "[Bug]: Desktop session switch blocks the renderer main thread 0.4\u20131.7 s per switch (forced synchronous layout)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146852"
+    },
+    {
+      "number": 146497,
+      "title": "[Feature]: Public Kanban worker-backend hook + supported credential/approval path for external CLI workers",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146497"
+    },
+    {
+      "number": 146165,
+      "title": "[Bug]: the classic CLI's /resume and /branch leave an empty session row behind when switched before the first message",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146165"
+    },
+    {
+      "number": 145002,
+      "title": "[Bug]: \"Not granting the current user access \u2026 (junction, symlink or other reparse point)\" floods every command on a self-managed HERMES_HOME junction",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145002"
+    },
+    {
+      "number": 147719,
+      "title": "[Bug]: (desktop/tui-gateway) complete.path ValueError on Windows device paths \u2014 unguarded ntpath.relpath at tui_gateway/methods_complete.py:215",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147719"
+    },
+    {
+      "number": 145524,
+      "title": "[Bug]: openai-codex unusable behind a proxy \u2014 proxy env is dropped at the managed-worker boundary (OAuth login succeeds, every request ConnectTimeout)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145524"
+    },
+    {
+      "number": 145201,
+      "title": "[Regression] Buzz Desktop managed agents can't reply again: the ACP gateway attach model drops harness `BUZZ_*` credentials (re-opens #76243)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145201"
+    },
+    {
+      "number": 145085,
+      "title": "Langfuse tracing omits auxiliary LLM calls and truncates their outputs",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145085"
+    },
+    {
+      "number": 145467,
+      "title": "[Bug]: Desktop: \"Begin\" after a Settings sign-in replaces the default model, and for Nous the tool backends",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145467"
+    },
+    {
+      "number": 144156,
+      "title": "[Bug]: An OIDC dashboard login can't delete, rename, archive or pin the Desktop chats it created (permission_denied)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144156"
+    },
+    {
+      "number": 147227,
+      "title": "[Bug]: Mattermost progress/status work messages post flat in channel while final reply correctly threads (reply_mode=thread)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147227"
+    },
+    {
+      "number": 147035,
+      "title": "[Bug]: Memory-provider OAuth status/start routes 500 on a multiplexed gateway (UnscopedSecretError: HERMES_HONCHO_HOST)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147035"
+    },
+    {
+      "number": 146302,
+      "title": "[Bug]: Desktop \"Move to project\" fails with \"Session revision unavailable\" on a compression-rotated local chat",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146302"
+    },
+    {
+      "number": 146288,
+      "title": "[Bug]: claude-subscription-directsdk: PermissionError [WinError 32] on exit when cleaning up claude-directsdk-picker temp dir (Windows)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146288"
+    },
+    {
+      "number": 147832,
+      "title": "Explicit -t toolset pick still gets every plugin toolset and MCP server (gateway path)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147832"
+    },
+    {
+      "number": 144117,
+      "title": "[Bug]: background process on a Docker backend is reported as exited (-1) while it still runs",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144117"
+    },
+    {
+      "number": 146682,
+      "title": "Desktop: 'resume failed 30s' + sticky 'backend checking' \u2014 background session.resume budget, frozen gui.log tail, and RPC pool starvation",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146682"
+    },
+    {
+      "number": 146035,
+      "title": "[Bug]: The bot-relay mailbox is root-ambiguous - profile-scoped writes split the relay across two locations and stall cross-machine agent DMs",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146035"
+    },
+    {
+      "number": 145001,
+      "title": "[Bug]: update.log stops at the Windows hand-off line and never mirrors completion output; hand-off prints a misleading 'Update preparation failed'",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/145001"
+    },
+    {
+      "number": 147612,
+      "title": "[Bug]: browser_exec fails to launch local Chromium in TrueNAS Docker despite working agent-browser and CDP startup",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/147612"
+    },
+    {
+      "number": 144165,
+      "title": "[Bug]: Windows v0.22.5 update leaves gateway restart unaccounted after successful dependency/build stages; startup recovery blocks Desktop",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/144165"
+    },
+    {
+      "number": 143922,
+      "title": "Kanban worker can own the update fence: 36 min of update_paused refusals",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143922"
+    },
+    {
+      "number": 146293,
+      "title": "Memory: claim_instance lets one provider instance be re-initialized for another profile when multiplexing is off (cross-profile memory reads/writes in multi-profile hosts)",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/146293"
+    },
+    {
+      "number": 143874,
+      "title": "[Bug]: Desktop loses the cause of every gateway-ticket mint failure \u2014 a dead owner, a timeout and a crashed helper all read the same",
+      "url": "https://github.com/NousResearch/hermes-agent/issues/143874"
+    }
+  ]
+}

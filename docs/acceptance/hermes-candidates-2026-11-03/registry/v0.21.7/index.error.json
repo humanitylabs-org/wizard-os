@@ -1,0 +1,5 @@
+{
+  "url": "https://registry-1.docker.io/v2/nousresearch/hermes-agent/manifests/v0.21.7",
+  "status": 404,
+  "body": "{\"errors\":[{\"code\":\"MANIFEST_UNKNOWN\",\"message\":\"manifest unknown\",\"detail\":\"unknown tag=v0.21.7\"}]}\n"
+}
