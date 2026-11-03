@@ -1,0 +1,12 @@
+# Excerpt (grep of guest /root/on3-checks.txt on VM upg6, read before the VM was powered off; full file not retained)
+1:## cand7-on 2026-11-02T22:39:59Z release=0.3.103-bt389.7 pinned
+6:projection notifications granted ['notifications.inbox', 'notifications.mark', 'notifications.media'] ungranted [] admissible True p-a01c93ef00c54fdbc08a23ab
+7:projection wizard-chatgpt granted ['ai_accounts.change', 'ai_accounts.inventory', 'ai_accounts.progress', 'ai_accounts.step'] ungranted [] admissible True p-8daadb10fd9b02dcffef73d4
+8:projection wizard-claude granted [... 10 ops ...] ungranted [] admissible True p-ed391acf3df5f15daaecd515
+10:WIZARD_OWN_HOSTS=wtrain.train.test:8794
+11:WIZARD_BROWSER_BOUNDARY=1
+12:started 2026-11-02T22:38:38.708364729Z
+16:40 tools; router: ['wizard_chatgpt__connection_status', 'wizard_claude__connection_status', 'wizard_connection_router__connection_needs']
+18:router direct tools/list (no app identity): 200
+20:wizard doctor FAIL lines: 0
+21:wam doctor FAIL lines: 0

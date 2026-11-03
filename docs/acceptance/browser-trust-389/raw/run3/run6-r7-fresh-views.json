@@ -1,0 +1,62 @@
+{
+  "label": "r7-fresh",
+  "step": "views",
+  "checks": [
+    {
+      "name": "O5 Notifications renders without a manual grant",
+      "pass": true,
+      "got": "Inbox 2\nFlagged\nArchive\nMark all read\nRehearsal 1\nnow\n\nSynthetic notification 1 for 389 final (2026-11-03T00:05:20Z)\n\nRehearsal 2\nnow\n\nSynthetic notification 2 for 389 final (2026-11-03T00:05:20Z)"
+    },
+    {
+      "name": "O1 Store window is still an opaque frame",
+      "pass": true,
+      "got": {
+        "src": "/wizard-os-home/store/index.html",
+        "sandbox": "allow-scripts allow-forms allow-downloads"
+      }
+    },
+    {
+      "name": "O1 Store shows index data (no \"isn't reachable\")",
+      "pass": true,
+      "got": "App Store\nRefresh\nApps\nThings you open and use\n›\nAgent apps\nNew skills for your agent\n›\nAgents\nThe minds that run Wizard\n›\nConnectors\nAccounts your agents can use\n›"
+    },
+    {
+      "name": "O1 every Store data request is made by the shell document, none by the frame",
+      "pass": true,
+      "got": [
+        {
+          "url": "/wizard-os-home/store-data/router/v1/needs/app-store",
+          "method": "GET",
+          "fromShell": true,
+          "origin": null
+        },
+        {
+          "url": "/wizard-os-home/store-data/wizard/v1/installed-apps",
+          "method": "GET",
+          "fromShell": true,
+          "origin": null
+        }
+      ]
+    },
+    {
+      "name": "O1 the bridge answers only through the shell (same call from the frame -> typed op)",
+      "pass": true,
+      "got": "status 200"
+    },
+    {
+      "name": "O1 anything else under store-data from the frame is refused",
+      "pass": true,
+      "got": "status 403 {\"error\":\"This Store request is not available in a Wizard window.\",\"code\":\"not_a"
+    },
+    {
+      "name": "O1 not a relay: an unknown store op is refused",
+      "pass": true,
+      "got": "refused not_allowed"
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ]
+}

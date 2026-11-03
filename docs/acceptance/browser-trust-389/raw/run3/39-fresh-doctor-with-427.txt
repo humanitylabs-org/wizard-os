@@ -1,0 +1,7 @@
+patching file wam/cli.py
+Hunk #1 succeeded at 1657 (offset 111 lines).
+patching file wam/registry.py
+Hunk #1 succeeded at 261 (offset 2 lines).
+wam doctor FAIL lines (with #427 applied): 0
+PASS  slot 'files': active app is chosen  files (also installed: wizard-files); switch in Apps or remove one in the Store
+reverted: 1 FAIL

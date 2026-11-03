@@ -1,0 +1,23 @@
+## before-rollback 2026-11-02T23:27:38Z release=0.3.103-bt389.7 pinned
+## browser grants (O5)
+{"app_id": "wizard-chatgpt", "by": "release-default", "release": "0.3.103-bt389.6", "commit": "15009cf0b02a189b40647edc31e9d557b9d8ab92", "operations": ["ai_accounts.change", "ai_accounts.inventory", "ai_accounts.progress", "ai_accounts.step"], "revision": 1, "permission_revision": "p-8daadb10fd9b02dcffef73d4", "source_id": "standard:oscarhenrycollins/chatgpt-connection"}
+{"app_id": "wizard-claude", "by": "release-default", "release": "0.3.103-bt389.6", "commit": "ecde674df0aad2265d482e81909e9995ba57be6b", "operations": ["ai_accounts.change", "ai_accounts.inventory", "ai_accounts.progress", "ai_accounts.step", "claude_code.cancel", "claude_code.code", "claude_code.connect", "claude_code.logout", "claude_code.status", "claude_code.test"], "revision": 2, "permission_revision": "p-ed391acf3df5f15daaecd515", "source_id": "standard:oscarhenrycollins/claude-connection"}
+{"app_id": "notifications", "by": "release-default", "release": "0.3.103-bt389.6", "commit": "610f11d8976cfa18969e260ddcc9df262a56fbb4", "operations": ["notifications.inbox", "notifications.mark", "notifications.media"], "revision": 3, "permission_revision": "p-a01c93ef00c54fdbc08a23ab", "source_id": "standard:oscarhenrycollins/notifications"}
+{"app_id": "wizard-files", "by": null, "release": null, "commit": null, "operations": ["files.index", "files.list"], "revision": 6, "permission_revision": null, "source_id": "owner-private:humanitylabs-org/wizard-files"}
+projection notifications granted ['notifications.inbox', 'notifications.mark', 'notifications.media'] ungranted [] admissible True p-a01c93ef00c54fdbc08a23ab
+projection wizard-chatgpt granted ['ai_accounts.change', 'ai_accounts.inventory', 'ai_accounts.progress', 'ai_accounts.step'] ungranted [] admissible True p-8daadb10fd9b02dcffef73d4
+projection wizard-claude granted ['ai_accounts.change', 'ai_accounts.inventory', 'ai_accounts.progress', 'ai_accounts.step', 'claude_code.cancel', 'claude_code.code', 'claude_code.connect', 'claude_code.logout', 'claude_code.status', 'claude_code.test'] ungranted [] admissible True p-ed391acf3df5f15daaecd515
+projection wizard-files granted [] ungranted ['files.content', 'files.index', 'files.list', 'files.thumbnail', 'files.upload'] admissible False p-7fdb28301a831f716f90bcb5
+## Files container (O4): env + start time
+WIZARD_OWN_HOSTS=wtrain.train.test:8794
+WIZARD_BROWSER_BOUNDARY=1
+started 2026-11-02T22:38:38.708364729Z
+-rw------- 1 root root 92 2026-11-02T22:25:00 /root/runtipi/user-config/wizardapps/files/app.env
+3
+## gateway tools/list (O3 router)
+42 tools; router: ['wizard_chatgpt__connection_status', 'wizard_claude__connection_status', 'wizard_connection_router__connection_needs']
+router mcp url: http://127.0.0.1:8802/mcp
+router direct tools/list (no app identity): 200
+## doctors
+wizard doctor FAIL lines: 0
+wam doctor FAIL lines: 1

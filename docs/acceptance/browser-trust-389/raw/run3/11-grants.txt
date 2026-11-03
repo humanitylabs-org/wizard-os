@@ -1,0 +1,12 @@
+wizard-files_wizardapps-wizard-files-1 wizard-local/wizard-files-wizard-files:5765f5703ae5 Up 3 minutes (healthy)
+--- owner grant files.list
+}
+{"step": "granted", "installed": true, "version": "0.1.5", "commit": "5765f5703ae5", "installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "reason": null, "admissible": true, "contract_ops": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "granted": ["files.list"], "ungranted": ["files.content", "files.index", "files.thumbnail", "files.upload"], "grant_rows": [{"installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "operations": ["files.list"], "revision": 4, "by": null}]}
+--- grant an undeclared op (deny)
+browser-grants: wizard-files: grant only operations its installed browser_contract declares
+--- revoke files.list
+}
+{"step": "revoked", "installed": true, "version": "0.1.5", "commit": "5765f5703ae5", "installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "reason": "no_grant", "admissible": false, "contract_ops": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "granted": [], "ungranted": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "grant_rows": [{"installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "operations": [], "revision": 5, "by": null}]}
+--- re-grant files.list + files.index
+}
+{"step": "regranted", "installed": true, "version": "0.1.5", "commit": "5765f5703ae5", "installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "reason": null, "admissible": true, "contract_ops": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "granted": ["files.index", "files.list"], "ungranted": ["files.content", "files.thumbnail", "files.upload"], "grant_rows": [{"installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "operations": ["files.index", "files.list"], "revision": 6, "by": null}]}

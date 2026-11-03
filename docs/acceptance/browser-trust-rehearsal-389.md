@@ -1,5 +1,7 @@
 # Browser-isolation release rehearsal: wizard-os #389 (card 6), run 2
 
+> **Run 3 (final) is appended at the end:** [Run 3](#run-3-final-candidates-03103-bt3896--7-flag-on), with the final pass/fail table and remaining blockers.
+
 Raw receipts: [browser-trust-389/raw](browser-trust-389/raw), screenshots: [browser-trust-389/screenshots](browser-trust-389/screenshots) (inspected).
 
 **Verdict: not release-ready.** The browser boundary stays default-off. Every PR below is a draft, and nothing was merged, released or published to a real registry. This dossier covers synthetic data on a disposable KVM alongside box (`wizard-train-guest`, ssh 2273, its own headscale). It does not cover oscar-main, James's box or any phone. Device lanes are not covered at all: Jan's APK/Mac and real phone gestures were not run.
@@ -83,3 +85,43 @@ Jan's APK/Mac and phone gestures. Model listing with real provider accounts. The
 
 WAM #422 (pushed `1c862d9`) · Service #318 · UX #873 · notifications #23 · troubleshooter #30 · wizard-files #11 (pushed `5765f57`).
 Integration branches kept for this report: `integration/browser-trust-release-rehearsal` in wizard-app-manager (`018d28e5`) and wizard-ux (`c1932e10`). The chatgpt-connection, claude-connection and wizard-voice-service rehearsal branches (localhost:5000 images) were deleted.
+
+## Run 3 (final): candidates `0.3.103-bt389.6` / `.7`, flag on
+
+Raw receipts: [browser-trust-389/raw/run3](browser-trust-389/raw/run3). Screenshots: [screenshots/run3](browser-trust-389/screenshots/run3) (inspected). Same rig as run 2: disposable KVM guests, loopback registry, Serve stand-in. Nothing was merged, released or published.
+
+**Verdict: still not release-ready.** O1/O3/O4/O5 now pass on the rig. Two issues remain open: Store UI install/remove on a *fresh* box (R3-2) and the device lanes. Both are listed below.
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| R1 | Upgrade 0.3.102 → `.6`, flag on: O5 release-default grants (Notifications, ChatGPT, Claude) | **PASS**: all three `by: release-default`, admissible; doctors 0 FAIL | run3/06-on.txt |
+| R2 | O4 on `.6`: Files gated right after `on` | **FAIL on `.6`**: Files env empty after `on`. Fixed in `.7` (WAM #425) | run3/06-on.txt |
+| R3 | O4 on `.6` second `on` / `.7` upgrade | **PASS**: Files `WIZARD_BROWSER_BOUNDARY=1`, `WIZARD_OWN_HOSTS=wtrain.train.test:8794`; doctors 0 FAIL | run3/08-on-again.txt, on3-checks-cand7.txt |
+| R4 | O3 Connection Router through the gateway (router #10) | **PASS**: 40 tools incl. `wizard_connection_router__connection_needs`; direct `tools/list` 200 | same |
+| R5 | O1 Store under the boundary (UX #874, real Chromium, upgraded box) | **PASS 7/7**: opaque frame; index data shown; every store-data request made by the shell document; frame-direct store-data 403; unknown op refused | out/run6-r6-upg7-views.json |
+| R6 | Store lifecycle with grants on wizard-files, upgraded box (Store UI Get/Remove + CLI grants) | **PASS** for UI Remove, grant/deny/revoke/re-grant, reinstall gets a new installation id and no inherited grant (`no_grant`). UI Get of the *index* commit failed: `needs FILES_ALLOWED_HOSTS` (R3-1) | run3/11-grants.txt, 13, 14 |
+| R7 | Rollback `.7` → 0.3.102, flag on, Wizard Files installed | **FAIL**: strict `wam doctor` `slot 'files' has 2 apps (files, wizard-files)` (R3-3) | run3/15, 16 |
+| R8 | Rollback rerun after removing Wizard Files | **PASS**: `pinned` in 124 s, doctors 0 FAIL. Owner state **identical** (config.yaml/.env/SOUL.md, memories, skills, media, browser-grants.json hashes; Hermes version). Files back to the ungated 0.3.102 recipe | run3/18–21, snap-*-rollback2.json |
+| R9 | **Fresh** install of `.7` (new guest, public `os.sh`), then flag on | **PASS**: `pinned` in 520 s, doctors 0 FAIL; O5 grants present without any manual grant | run3/25, 29, 31 |
+| R10 | O5 fresh: Notifications renders with no manual grant (real Chromium) | **PASS**: "Inbox 2 … Rehearsal 1/2" after seeding 2 synthetic notifications. The unseeded run showed an empty inbox, no permission prompt | run3/36, r7-fresh-notifications.png |
+| R11 | O4 fresh: Files gated immediately | **PASS once Serve works**: `wam links` wrote the own-tab env and restarted Files *before returning* (StartedAt 00:04:18, return 00:04:21). The first `on` left Files ungated (`/api/files` 200 with a foreign Origin) because the rig's tailscale wrapper answered `serve status --json` with the cert stub. That is a rig artifact (wrapper order), fixed by hand | run3/30, 33, 34 |
+| R12 | O1 fresh Store window | **PASS** (same 6 O1 checks) | run6-r7-fresh-views.json |
+| R13 | Wizard Files install with **no owner setting** (#12, via the integration commit `7df0ec5` = #11 + #12, stock WAM test pin, no `--set`) | **PASS**: installed; WAM wrote `WIZARD_TRUSTED_HOSTS=wtrain.train.test:8796,wtrain.train.test`; `FILES_ALLOWED_HOSTS` empty; boundary on at first start (`/api/files` 401 without credential, `/health` 200) | run3/38 |
+| R14 | Grants on the fresh box (contract app) | **PASS**: grant `files.list` admissible; undeclared op refused; revoke → `no_grant`; re-grant `files.index`+`files.list` | run3/40 |
+| R15 | Doctor with Files + Wizard Files on the candidate | **FAIL as expected** (`slot collision`). With WAM #427 patched in: **0 FAIL**, row `PASS slot 'files': active app is chosen files (also installed: wizard-files)`. Reverted after | run3/38, 39 |
+| R16 | Store **UI** Get / Remove on the fresh box | **FAIL (open)**: after the owner clicks the shell's Install/Remove, the shell document closes its own tab (Playwright `page close`, no crash, no popup). No request reached the WAM store listener. Get also logged one `POST /wizard-files 403` earlier in the run. The same runner passed Remove on the upgraded box. Not diagnosed | run3/37, 41, 42 |
+
+### Findings and fixes in run 3
+
+- **R3-1 Store can't install Wizard Files** (`needs FILES_ALLOWED_HOSTS`: a required form field the Store can't fill). Fix: **wizard-files #12** (ordinary PR off main). The listener also trusts `WIZARD_TRUSTED_HOSTS`, which WAM already writes for recipes that declare it, so `FILES_ALLOWED_HOSTS` becomes optional. 2 new tests fail on main. Suite 36/37 (the known provenance ctime flake). Verified live in R13. #11 must take 0.1.6 when it rebases.
+- **R3-3 Alternative slot provider failed strict doctor.** WAM's slot model supports several providers with a saved active choice: install the alternative before removing the default, as `blocks_uninstall`/Store Remove expect, and `slots.<s>.default` is kept across rewrites. Only doctor called it a FAIL. Fix: **WAM #427** (off main). Doctor reports the active choice and FAILs only if the saved choice names no installed app. 4 new tests fail on main; full suite 1833 passed. A rollback *to* 0.3.102 still runs 0.3.102's doctor, so on such a box Wizard Files must be removed before rolling back.
+- **R3-2 Store UI confirm closes the shell tab on a fresh box** (R16). Open, needs a UX look (wizard-ux #874 / intents).
+
+### Release blockers remaining
+
+1. R16 Store UI install/remove on a fresh box (open, undiagnosed).
+2. Jan's native review: **wizard-ux #871** (native main-document receivers, draft, REVIEW_REQUIRED) and **try-wizard #61** (Mac), both still open drafts. Device lanes (APK/Mac, phone gestures) are not covered by this rig.
+3. Merge-order dependencies for a real release: WAM #424 (non-draft), #425 (O4/O5), #427 (slot doctor), #422; router #10; UX #874 on #873; wizard-files #12 then #11 rebased; spec wizard-os #403. None are merged.
+4. Still unverified: the Store UI *update* of a contract app. Update ran through the CLI test pin in run 2/3, because the Store has no UI path to a test pin. Also unverified: model listing with real provider accounts and the Troubleshooter one-tap fix.
+
+Integration branches cited by this report and kept: `integration/browser-trust-release-rehearsal` in wizard-app-manager, wizard-ux and **wizard-files (`7df0ec5`)**. Rig torn down after this run (VMs, disks, registry, tunnels).

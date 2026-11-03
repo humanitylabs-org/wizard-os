@@ -1,0 +1,28 @@
+06:41:21 install 0.3.102: curl -fsSL https://aiwizards.com/os.sh | _HERMES_GATEWAY=1 HERMES_SESSION_PLATFORM=telegram WIZARD_RELEASE=0.3.102 WIZARD_STRICT=1 bash -s start
+06:41:23 install 0.3.102: running · starting
+06:41:38 install 0.3.102: running · Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)
+06:43:25 install 0.3.102: done · Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)
+06:43:45 install 0.3.102: Hermes gateway restarted and answers
+{
+  "version": "0.3.102",
+  "base": "public mirror",
+  "state": {
+    "state": "done",
+    "step": "Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)",
+    "tailscale_login_url": null,
+    "wizard_url": "https://wtrain.train.test:8796/wizard-os-home/",
+    "message": "Wizard OS is installed. Hermes restarts once in about 20 seconds; the chat goes quiet for about a minute.",
+    "notes": [],
+    "restart_pending": true,
+    "started_at": "2026-11-02T23:41:23Z",
+    "pid": 302238,
+    "boot_id": "bd48d890-9861-46b0-a1d5-51fd8d2cbb88",
+    "updated_at": "2026-11-02T23:43:13Z",
+    "exit_code": 0,
+    "failure_reason": null,
+    "approval_url": null,
+    "owner_url": null
+  },
+  "seconds": 124
+}
+EXIT 0

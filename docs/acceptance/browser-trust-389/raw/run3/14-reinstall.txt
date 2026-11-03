@@ -1,0 +1,2 @@
+/root/lc2.done
+{"step": "reinstalled", "installed": true, "version": "0.1.5", "commit": "5765f5703ae5", "installation_id": "inst-1bee0e0ec4fa4ae335e0f4c09d468bbb", "reason": "no_grant", "admissible": false, "contract_ops": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "granted": [], "ungranted": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "grant_rows": [{"installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "operations": ["files.index", "files.list"], "revision": 6, "by": null}]}

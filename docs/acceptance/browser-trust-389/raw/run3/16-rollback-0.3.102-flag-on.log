@@ -1,0 +1,28 @@
+06:27:40 install 0.3.102: curl -fsSL https://aiwizards.com/os.sh | _HERMES_GATEWAY=1 HERMES_SESSION_PLATFORM=telegram WIZARD_RELEASE=0.3.102 WIZARD_STRICT=1 bash -s start
+06:27:42 install 0.3.102: running · starting
+06:27:57 install 0.3.102: running · Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)
+06:34:03 install 0.3.102: failed · Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)
+06:36:06 install 0.3.102: Hermes gateway kept running and answers
+{
+  "version": "0.3.102",
+  "base": "public mirror",
+  "state": {
+    "state": "failed",
+    "step": "Installing Wizard OS 0.3.102 (App Manager 525e9d3d211b)",
+    "tailscale_login_url": null,
+    "wizard_url": null,
+    "message": "Wizard OS did not finish installing (exit 3). The last log lines show why.",
+    "notes": [],
+    "restart_pending": false,
+    "started_at": "2026-11-02T23:27:42Z",
+    "pid": 259019,
+    "boot_id": "bd48d890-9861-46b0-a1d5-51fd8d2cbb88",
+    "updated_at": "2026-11-02T23:33:56Z",
+    "exit_code": 3,
+    "failure_reason": "Re-run the same curl command to retry; 'wam doctor' shows the current state.",
+    "approval_url": null,
+    "owner_url": null
+  },
+  "seconds": 383
+}
+EXIT 0

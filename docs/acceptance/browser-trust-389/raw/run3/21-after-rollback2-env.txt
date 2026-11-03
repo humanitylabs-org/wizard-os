@@ -1,0 +1,16 @@
+files_wizardapps-files-1
+WIZARD_OWNER_LOGINS=train
+notifications_wizardapps-notifications-1 ghcr.io/humanitylabs-org/wizard-app-manager:curator-sha256-1b668429b3511ab407d8
+notifications_wizardapps-notifications-engine-1 binwiederhier/ntfy:v2.29.0
+wizard-agent-service_wizardapps-wizard-agent-service-1 d1b9282dad32
+wizard-ux_wizardapps-wizard-ux-1 b4785d8eef3d
+{
+  "release": "0.3.102",
+  "mode": "alongside",
+  "at": "2026-11-02T23:43:13Z",
+  "status": "pinned",
+  "install_rc": 0,
+  "checks": [
+    {
+      "name": "wizard-app-manager commit",
+      "expected

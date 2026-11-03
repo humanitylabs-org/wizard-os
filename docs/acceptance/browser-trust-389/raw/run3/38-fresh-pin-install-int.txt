@@ -1,0 +1,14 @@
+{"step": "before-install", "installed": false, "version": null, "commit": "", "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "ungranted": null, "grant_rows": []}
+    ]
+  }
+}
+{"step": "installed", "installed": true, "version": "0.1.6", "commit": "7df0ec5cba5f", "installation_id": "inst-546b9296955331fd7f8f268f59cd624a", "reason": "no_grant", "admissible": false, "contract_ops": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "granted": [], "ungranted": ["files.content", "files.index", "files.list", "files.thumbnail", "files.upload"], "grant_rows": []}
+container wizard-files_wizardapps-wizard-files-1
+WIZARD_APP_CREDENTIAL=<set>
+FILES_ALLOWED_HOSTS=
+WIZARD_TRUSTED_HOSTS=wtrain.train.test:8796,wtrain.train.test
+WIZARD_BROWSER_BOUNDARY=1
+Host wtrain.train.test /health: 200  /api/files: 401
+Host evil.example /health: 200  /api/files: 401
+wam doctor FAIL lines: 1
+FAIL  slot collision  slot 'files' has 2 apps (files, wizard-files); default files

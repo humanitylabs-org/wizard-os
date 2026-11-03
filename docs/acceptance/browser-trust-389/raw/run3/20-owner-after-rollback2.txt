@@ -1,0 +1,15 @@
+memories d6de51a0ec3c1ede
+skills 2a27558ec385b8bb
+sessions 0
+media 8c15cc5d83c269e5 files=7
+grants-file host-dashboard-env.sha256 host-dashboard-mode 
+.wizard-os/browser-grants.json 70dbc6c394823bfe
+browser-grants [["notifications", "release-default"], ["wizard-chatgpt", "release-default"], ["wizard-claude", "release-default"], ["wizard-files", null]]
+boundary 1 {
+  "connection_mode_settled": {
+    "mode": "declared",
+    "why": "new box (only Wizard's own apps)",
+    "at": 1793656523
+  },
+  "browser_boundary": true
+}

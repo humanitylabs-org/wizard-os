@@ -1,0 +1,22 @@
+#!/bin/bash
+# TEST-ONLY wrapper (disposable upgrade-rig guest): headscale cannot issue HTTPS certs; simulate "owner turned HTTPS on".
+REAL=/usr/bin/tailscale
+[ "$1" = serve ] && exec python3 /root/standin/serve_cli.py "$@"
+{
+  "Web": {
+    "wtrain.train.test:8796": {
+      "Handlers": {
+        "/wizard-os-home/store-data": {
+          "Prox
+  ChatGPT                      https://wtrain.train.test:8796/wizard-chatgpt/
+  Claude                       https://wtrain.train.test:8796/wizard-claude/
+  Connection Router            https://wtrain.train.test:8796/wizard-connection-router/
+  Files                        https://wtrain.train.test:8794/files/
+  Notifications                https://wtrain.train.test:8796/notifications/
+errors {}
+[('wizard-ux', None), ('wizard-chatgpt', None), ('wizard-claude', None), ('wizard-connection-router', None), ('files', 'written'), ('notifications', None)]
+WIZARD_OWN_HOSTS=wtrain.train.test:8794
+WIZARD_BROWSER_BOUNDARY=1
+WIZARD_OWNER_LOGINS=
+2026-11-03T00:04:18.405109566Z
+2026-11-03T00:04:21Z

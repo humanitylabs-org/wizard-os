@@ -1,0 +1,12 @@
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+PASS Store Remove sheet confirm clicked | "App Store\nRefresh\n‹\nRemove Wizard Files?\n\nhumanitylabs-org/wizard-files\n\nWizard Files and its app data on this Wizard will be deleted.\n\nCancel\nRemoving…"
+PASS Store Remove wizard-files: shell Review chip appears (frame asked, shell decides) | "Review: Remove wizard-files?"
+EVENT nav https://wtrain.train.test:8796/wizard-os-home/desktop.html
+PASS Store Remove wizard-files: shell dialog text | "Wizard · request from\nApp Store\nRemove wizard-files?\n\nRemoves the app and its data from this Wizard.\n\nWizard shows this, not the app. Nothing happens until you confirm.\n\nCancel\nRemove"
+SHOT /home/oscar/.hermes/cache/screenshots/bt-rehearsal/r7-fresh-store-remove-review.png
+EVENT page close
+page.waitForTimeout: Target page, context or browser has been closed
+    at /home/oscar/.hermes/cache/scratch/bt-rehearsal/pw/run7diag.cjs:93:49

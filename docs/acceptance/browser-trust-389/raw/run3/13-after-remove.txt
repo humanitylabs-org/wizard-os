@@ -1,0 +1,3 @@
+{"step": "after-store-remove", "installed": false, "version": null, "commit": "", "installation_id": null, "reason": null, "admissible": null, "contract_ops": null, "granted": null, "ungranted": null, "grant_rows": [{"installation_id": "inst-f3d0c16739ba630dadc72573c4d66702", "operations": ["files.index", "files.list"], "revision": 6, "by": null}]}
+0
+started

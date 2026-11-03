@@ -1,0 +1,21 @@
+[boundary-on] registry write (projection + app env/credentials) and host dashboard
+note: browser boundary env changed for browser: restarted
+note: browser boundary env changed for notifications: restarted
+note: browser boundary env changed for secret-drop: restarted
+note: browser boundary env changed for transcriber: restarted
+note: browser boundary env changed for wizard-chatgpt: restarted
+note: browser boundary env changed for wizard-claude: restarted
+note: browser boundary env changed for wizard-voice-service: restarted
+{"state": "ready", "url": "http://100.73.0.1:9119", "apps": ["wizard-chatgpt", "wizard-claude"], "changed_apps": ["wizard-chatgpt", "wizard-claude"], "front": "on", "owner_tab": {"state": "published", "url": "https://wtrain.train.test:9120"}}
+[boundary-on] restart apps so they read the env WAM wrote
+  restarted wizard-ux
+  restarted wizard-agent-service
+  restarted notifications
+  restarted files
+  restarted wizard-chatgpt
+  restarted wizard-claude
+  restarted transcriber
+  restarted browser
+  restarted secret-drop
+  restarted wizard-voice-service
+[boundary-on] done

@@ -1,0 +1,238 @@
+{
+  "files": {
+    "config.yaml": "13a542c3d58a52876977f094daf2154cdcc872eef569e3bb18656230ceb4929f",
+    ".env": "330f73321d98af9725c996ed8a16ee7e2c383e35d02914ff2478ded26516494c",
+    "SOUL.md": "36c1f5a2e92cd1d018311eaf4c8f1e8886672eae78212e033c681d0e3d5d506f"
+  },
+  "hermes": "Hermes Agent v0.22.5 (2026.9.24) \u00b7 stable \u00b7 local bf0203a794a0",
+  "api": "200",
+  "gateway": "active",
+  "shell": "302",
+  "release": {
+    "release": "0.3.102",
+    "mode": "alongside",
+    "at": "2026-11-02T23:43:13Z",
+    "status": "pinned",
+    "install_rc": 0,
+    "checks": [
+      {
+        "name": "wizard-app-manager commit",
+        "expected": "525e9d3d211b16d1fcc667cf5865c5776aae369f",
+        "observed": "525e9d3d211b16d1fcc667cf5865c5776aae369f",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "App Manager checkout clean",
+        "expected": "clean",
+        "observed": "clean",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "image wizard-app-manager",
+        "expected": "sha256:f116feb1e4aa2fbd2a84eae9dbdc006e120092cfce80d7e05c9ae4714d0548e9",
+        "observed": "sha256:f116feb1e4aa2fbd2a84eae9dbdc006e120092cfce80d7e05c9ae4714d0548e9",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "image wizard-agent-service",
+        "expected": "sha256:d1b9282dad321b20321582f6d7c0e32c88f07330c6e82ff029bd952129424ee4",
+        "observed": "sha256:d1b9282dad321b20321582f6d7c0e32c88f07330c6e82ff029bd952129424ee4",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "image wizard-ux",
+        "expected": "sha256:b4785d8eef3d1aa9690fc0bafd7fa8de16da45aa67da99f291f26e4d81131efe",
+        "observed": "sha256:b4785d8eef3d1aa9690fc0bafd7fa8de16da45aa67da99f291f26e4d81131efe",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app shell",
+        "expected": "wizard-ux 0.3.0-candidate.20261012",
+        "observed": "wizard-ux 0.3.0-candidate.20261012",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source shell",
+        "expected": "61c116404c58f6821284e48467619f13ba75fc5b",
+        "observed": "61c116404c58f6821284e48467619f13ba75fc5b",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app agent-service",
+        "expected": "wizard-agent-service 0.3.0-candidate.20261012",
+        "observed": "wizard-agent-service 0.3.0-candidate.20261012",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source agent-service",
+        "expected": "1eaaa4f25d837c693e40e3f5a9accf7f207bb21d",
+        "observed": "1eaaa4f25d837c693e40e3f5a9accf7f207bb21d",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app ai-connection",
+        "expected": "wizard-chatgpt 0.2.12",
+        "observed": "wizard-chatgpt 0.2.12",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source ai-connection",
+        "expected": "37c3bc8924fe304c0a4333e66ee60f6ff97f3e95",
+        "observed": "37c3bc8924fe304c0a4333e66ee60f6ff97f3e95",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app claude-subscription",
+        "expected": "wizard-claude 0.2.14",
+        "observed": "wizard-claude 0.2.14",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source claude-subscription",
+        "expected": "2e58656b9776cb2c2a4139b7a0d2aab2437111ca",
+        "observed": "2e58656b9776cb2c2a4139b7a0d2aab2437111ca",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app files",
+        "expected": "files 2.63.23-wizard3",
+        "observed": "files 2.63.23-wizard3",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source files",
+        "expected": "623c69118b209452d6f1c82b6392980222004a45",
+        "observed": "623c69118b209452d6f1c82b6392980222004a45",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app transcription",
+        "expected": "transcriber 0.9.0-rc.3.cpu",
+        "observed": "transcriber 0.9.0-rc.3.cpu",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source transcription",
+        "expected": "b8d1170a3f97e1d6eed8abc874bdebdf7e9f21dc",
+        "observed": "b8d1170a3f97e1d6eed8abc874bdebdf7e9f21dc",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app browser",
+        "expected": "browser 155.0.8059.40",
+        "observed": "browser 155.0.8059.40",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source browser",
+        "expected": "4c313284bc73e0af20b7faba7a2554bff1b63513",
+        "observed": "4c313284bc73e0af20b7faba7a2554bff1b63513",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app secrets",
+        "expected": "secret-drop 0.1.1",
+        "observed": "secret-drop 0.1.1",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source secrets",
+        "expected": "690b277619847405cffc711917abafd85223f10b",
+        "observed": "690b277619847405cffc711917abafd85223f10b",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app notifications",
+        "expected": "notifications 2.29.0-wizard17",
+        "observed": "notifications 2.29.0-wizard17",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source notifications",
+        "expected": "46cd17cf6210aea5bb2a5ff4c84c6e9aff8750d4",
+        "observed": "46cd17cf6210aea5bb2a5ff4c84c6e9aff8750d4",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app voice",
+        "expected": "wizard-voice-service 0.2.2-rc1.app1",
+        "observed": "wizard-voice-service 0.2.2-rc1.app1",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source voice",
+        "expected": "d28c5f7cd29040ab1df3b5a945a81486f53e445a",
+        "observed": "d28c5f7cd29040ab1df3b5a945a81486f53e445a",
+        "ok": true,
+        "core": true
+      },
+      {
+        "name": "default app connection-router",
+        "expected": "wizard-connection-router 0.1.4",
+        "observed": "wizard-connection-router 0.1.4",
+        "ok": true,
+        "core": false
+      },
+      {
+        "name": "default app source connection-router",
+        "expected": "f46a867207deb6e3a465bf86241dd3fe76a6ce5f",
+        "observed": "f46a867207deb6e3a465bf86241dd3fe76a6ce5f",
+        "ok": true,
+        "core": true
+      }
+    ]
+  },
+  "containers": [
+    "browser_wizardapps-browser-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:32:35.814325404Z",
+    "browser_wizardapps-browser-engine-1 sha256:0dc9356ce1428962cddcf938dab712a8c56de79adc326f9138298f13df440071 2026-11-02T23:32:35.689196931Z",
+    "bt389-device sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8 2026-11-02T23:01:06.740394981Z",
+    "files_wizardapps-files-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:31:16.862219308Z",
+    "files_wizardapps-files-engine-1 sha256:a469ea076d4a1b4b1d86a41d130f2f536cd9da996a2b1fb39c0d7635f9d89b9a 2026-11-02T23:31:16.744621603Z",
+    "notifications_wizardapps-notifications-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:33:19.630922832Z",
+    "notifications_wizardapps-notifications-engine-1 sha256:4c599cf0818965782f93f652bd843e92714992e84d6b88ad17713dc0951cda1f 2026-11-02T23:33:19.50464469Z",
+    "runtipi sha256:f116feb1e4aa2fbd2a84eae9dbdc006e120092cfce80d7e05c9ae4714d0548e9 2026-11-02T23:42:45.806196402Z",
+    "runtipi-db sha256:a26d06e6878f114ab53aace021fd9c599b498cca4c5ba2c18b34aee472f20148 2026-11-02T21:53:20.104653423Z",
+    "runtipi-queue sha256:21577d148f4f7563a87d761862fa353f59348a094833ca8b1b1a46a8102dffce 2026-11-02T21:53:19.971968668Z",
+    "runtipi-reverse-proxy sha256:4cda3393930dceff030e144b46260e96e1337c9cfaa4fed81c90cb8f4d498f57 2026-11-02T21:53:35.391851991Z",
+    "runtipi-wizard-release-index-1 sha256:f116feb1e4aa2fbd2a84eae9dbdc006e120092cfce80d7e05c9ae4714d0548e9 2026-11-02T23:41:42.439442232Z",
+    "secret-drop_wizardapps-secret-drop-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:32:57.463934828Z",
+    "secret-drop_wizardapps-secret-drop-engine-1 sha256:29ebc6a7846e6036afc471dc6ddcee31a9cac3a0ce8f00d59cd1186c80c03302 2026-11-02T23:32:57.348856415Z",
+    "serve-standin sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 2026-11-02T22:04:19.624778134Z",
+    "transcriber_wizardapps-transcriber-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:32:15.346734141Z",
+    "transcriber_wizardapps-transcriber-engine-1 sha256:2163775b6df5e451a71200e8f675fed68dbd8ab184fc604453d549e486f22fd2 2026-11-02T23:32:15.234165756Z",
+    "wizard-agent-service_wizardapps-wizard-agent-service-1 sha256:d1b9282dad321b20321582f6d7c0e32c88f07330c6e82ff029bd952129424ee4 2026-11-02T23:30:13.693040448Z",
+    "wizard-chatgpt_wizardapps-wizard-chatgpt-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:30:34.51104098Z",
+    "wizard-chatgpt_wizardapps-wizard-chatgpt-engine-1 sha256:abe83ddb8fe1e54347f94b5057740ba5da2309691f20b5692db476967638b445 2026-11-02T23:30:34.350110893Z",
+    "wizard-claude_wizardapps-wizard-claude-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-02T23:30:55.693508883Z",
+    "wizard-claude_wizardapps-wizard-claude-engine-1 sha256:e839af7cdc32c875fcefec9189ae4e29509ea78b3b52d922416285c9e2eb81bb 2026-11-02T23:30:55.559174378Z",
+    "wizard-connection-router_wizardapps-wizard-connection-router-1 sha256:71e9721efc3904c76862b83613d6e88a1c5edff26432152f3727073fde417ecf 2026-11-02T23:33:42.125869805Z",
+    "wizard-ux_wizardapps-wizard-ux-1 sha256:b4785d8eef3d1aa9690fc0bafd7fa8de16da45aa67da99f291f26e4d81131efe 2026-11-02T23:30:08.977082673Z",
+    "wizard-voice-service_wizardapps-wizard-voice-service-1 sha256:a279274949c03bd8fe244f083f727e41f51d7040e58a48288089621f5ab27e89 2026-11-02T23:33:27.020022521Z"
+  ],
+  "wizard_doctor_fail": [],
+  "wam_doctor_fail": []
+}
