@@ -1,0 +1,24 @@
+test_carried_over_september_pin_passes (tools.tests.test_check_release.HermesPin.test_carried_over_september_pin_passes) ... ok
+test_container_installs_need_an_image (tools.tests.test_check_release.HermesPin.test_container_installs_need_an_image) ... ok
+test_image_must_match_the_tag (tools.tests.test_check_release.HermesPin.test_image_must_match_the_tag) ... ok
+test_new_snapshot_without_a_pin_fails (tools.tests.test_check_release.HermesPin.test_new_snapshot_without_a_pin_fails) ... ok
+test_older_snapshots_stay_history (tools.tests.test_check_release.HermesPin.test_older_snapshots_stay_history) ... ok
+test_release_candidate_tags_are_refused (tools.tests.test_check_release.HermesPin.test_release_candidate_tags_are_refused) ... ok
+test_rollback_is_required_and_different (tools.tests.test_check_release.HermesPin.test_rollback_is_required_and_different) ... ok
+test_test_record_must_exist (tools.tests.test_check_release.HermesPin.test_test_record_must_exist) ... ok
+test_upstream_stable_label_is_not_a_pin (tools.tests.test_check_release.HermesPin.test_upstream_stable_label_is_not_a_pin) ... ok
+test_gate_starts_at_0_3_33 (tools.tests.test_check_release.ServiceRoutes.test_gate_starts_at_0_3_33) ... ok
+test_old_service_without_setup_fails (tools.tests.test_check_release.ServiceRoutes.test_old_service_without_setup_fails) ... ok
+test_proposed_and_non_service_routes_are_not_required (tools.tests.test_check_release.ServiceRoutes.test_proposed_and_non_service_routes_are_not_required) ... ok
+test_real_spec_parses (tools.tests.test_check_release.ServiceRoutes.test_real_spec_parses) ... ok
+test_service_with_every_stable_route_passes (tools.tests.test_check_release.ServiceRoutes.test_service_with_every_stable_route_passes) ... ok
+test_a_bad_commit_fails_the_shape (tools.tests.test_check_release.Shape.test_a_bad_commit_fails_the_shape) ... ok
+test_every_release_file_has_a_valid_shape (tools.tests.test_check_release.Shape.test_every_release_file_has_a_valid_shape) ... ok
+test_stable_names_an_existing_release (tools.tests.test_check_release.Shape.test_stable_names_an_existing_release) ... ok
+test_stable_release_pins_what_the_installer_needs (tools.tests.test_check_release.Shape.test_stable_release_pins_what_the_installer_needs)
+get.sh refuses a release without a 40-hex App Manager commit and sha256 image digests. ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 11.475s
+
+OK

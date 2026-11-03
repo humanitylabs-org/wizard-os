@@ -1,0 +1,424 @@
+{
+  "checked_at": "2026-11-03T22:12:21.421186+00:00",
+  "scope": "all finals after v2026.9.24; 46 upstream releases enumerated, next page empty",
+  "wizard_os_base": "b70cc7e6b46b341562f8255ddc6b16e98f227d09",
+  "candidates": [
+    {
+      "tag": "v0.22.7",
+      "published_at": "2026-11-03T21:53:16Z",
+      "seven_days_reached_at": "2026-11-10T21:53:16Z",
+      "age_eligible": false,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.7",
+      "tag_commit": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+      "image_digest": "sha256:e6d81ae52ebf6a43efa529701405509f20054ba818f179ddd748bed4f8af584c",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:a86ace4d4177485ce136c1160ad65a641211268e733e7ea6078fe6761bacb06e",
+          "config_digest": "sha256:33d8e5300f78ad582103605d4f2531846f83e5b71f30230ad618b0e35ea3b203",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-11-03T19:59:34.064513859Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:91572467f9d94295ce89d9523032d4416120cd2cac0d5a1882a07b0839f9d236",
+          "config_digest": "sha256:ca0c3d68c7c9aa305de2e501ceb4324a00737b907bcf4a10dfeb59f56bf06d39",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-11-03T20:01:12.984974266Z"
+        }
+      ],
+      "blockers": [
+        "less_than_7_full_days_public",
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [],
+        "assessment": "No version-search hits yet; freshly published, not evidence of safety. Unversioned and commit-scoped issues still need adjudication.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.7\"",
+        "total_version_hits": 0,
+        "risk_search_hits": 0
+      }
+    },
+    {
+      "tag": "v0.22.6",
+      "published_at": "2026-11-02T17:18:36Z",
+      "seven_days_reached_at": "2026-11-09T17:18:36Z",
+      "age_eligible": false,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.6",
+      "tag_commit": "f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab",
+      "image_digest": "sha256:d27689bc6e8581ec884a7227c9101fdaebf6c853cff8859020dac14f21452b4d",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:9a31a97e38540562142c52f439c124325355f671f31ad10f9ebd1c7b55dab7ea",
+          "config_digest": "sha256:1a60715bcb77a108e9c69d63a60e43da2162f98a74f81180976ff2b53309c471",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-11-02T16:02:04.987660551Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:bf2c62b700e4131e4cc3f5d57bfc357219034b32fa59c4798224a127feb8d9a2",
+          "config_digest": "sha256:ea8efc4f0b660f709b5c2685e3a225565fb3695d7aa33e1db7f3ddf3dbffb30e",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-11-02T16:04:37.428958204Z"
+        }
+      ],
+      "blockers": [
+        "less_than_7_full_days_public",
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          148581
+        ],
+        "assessment": "#148581 explicitly reports three session.resume failure classes reproduced at f0d94882 (the tag commit). Reporter evidence, not independently reproduced here.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.6\"",
+        "total_version_hits": 14,
+        "risk_search_hits": 12
+      }
+    },
+    {
+      "tag": "v0.22.5",
+      "published_at": "2026-10-23T05:28:45Z",
+      "seven_days_reached_at": "2026-10-30T05:28:45Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5",
+      "tag_commit": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "image_digest": "sha256:9c5561579f3ffdf333401797094ac3a743738d6c25d40f4331c7bf77b694238d",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:fd822bae0a61bf023450737edbeaeea5fc6460f17cb4ee240a7e67b306ed63fb",
+          "config_digest": "sha256:49b70739d2e8b4206fabf8b089f88337db73f8edaccb93e64b0836694ef10a03",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-23T02:28:32.579290321Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:41f1cfdd2486b38ca55453a28785910b498ee184e71eed4f2d7ee3f908aa7236",
+          "config_digest": "sha256:f4292032632fd5c16587c47b132223685618e06b01ff01fda84367c228fa3b9e",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-23T02:30:15.198966758Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          143478,
+          144449
+        ],
+        "assessment": "#143478 reports gateway left stopped on exact release/Linux git install (not automatically a container defect); #144449 reports controlled offline loss of sidecar evidence from compaction input on packaged exact release, explicitly not permanent data loss.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.5\"",
+        "total_version_hits": 130,
+        "risk_search_hits": 114
+      }
+    },
+    {
+      "tag": "v0.22.4",
+      "published_at": "2026-10-21T18:49:24Z",
+      "seven_days_reached_at": "2026-10-28T18:49:24Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4",
+      "tag_commit": "4d04303818b61bf3aa09278af48356315515965b",
+      "image_digest": "sha256:7a69201726bc64db2072a1371557137c23312d29705cda2b8ea2a0214a50a4cf",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:a04cf256fecbb24add4db2ae1840d6b65cf37b8dc9b9c290b0cde516e44e67fa",
+          "config_digest": "sha256:f46aff421bee5cdbe32434ba609329eb2964636c4f24c77286dfc5a568560429",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-21T17:06:24.505094993Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:78d4ebd3a9f22ecea2bb9d05e6eb9de83d9818c9cf56f773510b76d48ccf3a65",
+          "config_digest": "sha256:01a3750057458e69cda44055a01a18944e81e7cdd3979002eee02270c25f6b04",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-21T17:09:01.984119165Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          143818,
+          143150
+        ],
+        "assessment": "#143818 reports API-binding/session-write and delegation-delivery problems after cutover, but discloses third-party direct DB writes; separate native versus third-party causes. #143150 names exact release in multiplex policy migration/resume failure.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.4\"",
+        "total_version_hits": 32,
+        "risk_search_hits": 29
+      }
+    },
+    {
+      "tag": "v0.22.3",
+      "published_at": "2026-10-21T12:21:11Z",
+      "seven_days_reached_at": "2026-10-28T12:21:11Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3",
+      "tag_commit": "5b147ab036d6d19131bff8d20701b5001eab844a",
+      "image_digest": "sha256:2f305c9bdc81731f48664586d23cb6a6f838a15ad7be1bfabe0c3c269d8e09b9",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:1d33f6087fab79d580ffaec34ceed825e11d7bb8e803206be75a56d027c62538",
+          "config_digest": "sha256:004cbfacc1d92697e76de72a34a0bafe465c7c1c56342537c735e6e72b6052ad",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-21T11:21:35.577749177Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:d19d71bdfebe7f9d2f1242588e0c45bb27c0cc9e4a09a48856f3f7037a35dea4",
+          "config_digest": "sha256:725f9fa59308bb8939b6773ed0c057c317f1b0728ed889af147d286b93168e13",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-21T11:24:10.652506405Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          142579
+        ],
+        "assessment": "#142579 names exact 5b147ab0 release in gateway service_identity_unverified startup failure. Other search mentions include upgrade destinations and mixed main/release setups, not confirmed regressions.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.3\"",
+        "total_version_hits": 7,
+        "risk_search_hits": 7
+      }
+    },
+    {
+      "tag": "v0.22.2",
+      "published_at": "2026-10-15T08:21:32Z",
+      "seven_days_reached_at": "2026-10-22T08:21:32Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2",
+      "tag_commit": "d923a5eb487a17c0a68801bba9ef0f56c81040a8",
+      "image_digest": "sha256:36099926da316742423544e055d4734777105ffe6341873af5459b957d0c2919",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:a11574b7fe8e1631d7d88d556677dac693bc058abf558cdeb899155688c1bf05",
+          "config_digest": "sha256:02e7aa0e84123fa0e9b22686e7a2bfb7d85fd59821d4d28812a3e07f3061cf41",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-15T06:20:46.439224137Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:6793b8c89a44872fc9a5ef135ac0c28bf0a7b9caf4968278195b14e43919aef5",
+          "config_digest": "sha256:7686c88409fb9f0c4324acb4abfe7ca3112cac2d64acd4c27f9a3c6489a63f5d",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-15T06:20:39.83657779Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          139799,
+          141438
+        ],
+        "assessment": "#139799 names exact release Docker/s6 gateway-status false negative; #141438 reports pending clarify swallowing replies after Stop, and explicitly says 0.22.1 had the fix. Both are reports, not reproductions performed here.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.2\"",
+        "total_version_hits": 146,
+        "risk_search_hits": 123
+      }
+    },
+    {
+      "tag": "v0.22.1",
+      "published_at": "2026-10-14T23:59:24Z",
+      "seven_days_reached_at": "2026-10-21T23:59:24Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.1",
+      "tag_commit": "297552a9d646119871391d202509822cd86330df",
+      "image_digest": "sha256:861c9756ed6c558530c73d5c27860343b00c0d5efd6997a1d8ec6416c8a2b485",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:cd9cb455576d27c9b6311de1104494ad7e221b6e68dc77e9ac2a8af661a4dc21",
+          "config_digest": "sha256:72cd23dcea49ddb3a2ccf6cb24b9b38088034ab2b465c68913730d25678dd01f",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-14T22:20:47.13836689Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:f24de2fd617c0bef83a8fcec4cda996aaa463705f8097e62ec4fb60eb2618d6b",
+          "config_digest": "sha256:5c350697f4beefff92a796978a6f15fa84ed3680e36d26b11deed31bd69d5b3b",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-14T22:21:17.253718936Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          138949
+        ],
+        "assessment": "#138949 names exact 297552a9d6 release: ACP per-task overlay homes cannot start/resume. #19003 is an Ollama 0.22.1 mention, not Hermes 0.22.1; #141438 cites 0.22.1 as positive control/fixed version.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.1\"",
+        "total_version_hits": 37,
+        "risk_search_hits": 35
+      }
+    },
+    {
+      "tag": "v0.22.0",
+      "published_at": "2026-10-14T03:21:46Z",
+      "seven_days_reached_at": "2026-10-21T03:21:46Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.0",
+      "tag_commit": "e06df9c2eae6901f4c88f464e0ae6e753c0428b8",
+      "image_digest": "sha256:c69536a39e885b8943329bda68cdf44492458b96aa74a212239bde9d2aeb406a",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:c50eef7ccc91db06cdfe729008f45267a7208d899c73dd257c19eb4a30450c7d",
+          "config_digest": "sha256:9ab267b5aa275a9445d4ed17d17b029ddbf342d6cfab48cc826d12a668d0c0c3",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-14T00:41:46.380577608Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:14258f345ff9726457e7316240262f7e02110ea17522fdb19d7f4ae2cb5094de",
+          "config_digest": "sha256:efec8bed5cbd870aabd042838ceee7d3a668b9b36d0f61475005aa834ee87bfd",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-14T00:43:15.527913504Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          139538
+        ],
+        "assessment": "#139538 reports a meta-summary and later malformed reply; investigation saw exact release but incident revision was not independently pinned, causal chain unproven. #138949 mentions this version as working baseline, not affected version.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.22.0\"",
+        "total_version_hits": 23,
+        "risk_search_hits": 19
+      }
+    },
+    {
+      "tag": "v0.21.7",
+      "published_at": "2026-10-12T05:53:41Z",
+      "seven_days_reached_at": "2026-10-19T05:53:41Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.21.7",
+      "tag_commit": "71d34bad1045610252eda02ee79549436896e784",
+      "image_digest": null,
+      "architectures": [],
+      "blockers": [
+        "final_image_missing_http_404"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          138454
+        ],
+        "assessment": "#138454 names exact desktop 71d34ba release: compacted transcript tail missing while backend rows are correct. #143818 mentions 0.21.7 as upgrade origin, not proof of a 0.21.7 defect.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.21.7\"",
+        "total_version_hits": 22,
+        "risk_search_hits": 19
+      }
+    },
+    {
+      "tag": "v0.21.6",
+      "published_at": "2026-10-08T11:51:57Z",
+      "seven_days_reached_at": "2026-10-15T11:51:57Z",
+      "age_eligible": true,
+      "release_url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.21.6",
+      "tag_commit": "818c13be1dc4fd28987e1e881a9408224afd4535",
+      "image_digest": "sha256:55e192fba0cd4fde61142abbff5adeacff40efdb482ccd0ff877924bd274f909",
+      "architectures": [
+        {
+          "architecture": "amd64",
+          "manifest_digest": "sha256:32d095e84190ae7266afbb361579e6921f2c633e899f5eacfb88111b9c851a22",
+          "config_digest": "sha256:dbef99bdc06b511c83d3e117a995f92d6c0c7a38b13f590d319b20f37e4e45d4",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-08T06:14:28.921848602Z"
+        },
+        {
+          "architecture": "arm64",
+          "manifest_digest": "sha256:93b295a42bdb6003e06fb9ce316bd6d4f4c09a93a7a89d263701ec6b1a79b208",
+          "config_digest": "sha256:3f2aeb883766f4bc161011f217d83acb27170699b811359e3b44f9567e244081",
+          "revision": null,
+          "revision_matches_tag": false,
+          "config_created": "2026-10-08T06:15:57.82391451Z"
+        }
+      ],
+      "blockers": [
+        "both_architectures_missing_oci_revision_labels"
+      ],
+      "issue_assessment": {
+        "selected_reports": [
+          137752,
+          148383
+        ],
+        "assessment": "#137752 concerns ACP compaction-status notifications on brew; #148383 concerns stale in-memory row IDs after external DB changes on a version-reported 0.21.6 cross-device setup. Neither establishes a stock container regression. Existing acceptance record separately documents image runtime/tag source mismatch; this run only confirms absent OCI labels and unchanged index digest.",
+        "regression_independently_confirmed": false,
+        "unversioned_adjudication": "required; no clearance inferred from absent version mention"
+      },
+      "version_search": {
+        "query": "repo:NousResearch/hermes-agent is:issue is:open in:title,body \"0.21.6\"",
+        "total_version_hits": 60,
+        "risk_search_hits": 53
+      }
+    }
+  ]
+}

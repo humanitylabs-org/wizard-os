@@ -1,0 +1,53 @@
+# Hermes candidate discovery: no eligible final image (3 Nov 2026)
+
+Result: HOLD. This is the no-eligible-candidate outcome for Kanban `t_7a7b8cfc`, not a seven-check runtime acceptance record. No candidate was admitted to a VM, installed or promoted. The September Hermes pin is unchanged.
+
+## Exact boundary and current pin
+
+Discovery began at 22:12 UTC on 3 Nov 2026; issue collection ended at 22:26 UTC, with selected issue/comment readbacks through 22:30 UTC. The existing helper was rerun against freshly fetched wizard-os `b70cc7e6b46b341562f8255ddc6b16e98f227d09`, stable/latest `0.3.102`; see [actual current helper output](hermes-candidates-2026-11-03/current-snapshot-report.json). The first run used an older local snapshot `0.3.53`; its [original output](hermes-candidates-2026-11-03/initial-report.json) remains labelled evidence, not the current release claim. Both snapshots carry the same September Hermes pin.
+
+The current pin is source `f97608f178d1ffeca59860195ab7da295f7c8e5f`, final `v2026.9.24`, image `docker.io/nousresearch/hermes-agent@sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7`. No release file or `releases/hermes-lock.json` was changed.
+
+GitHub release discovery returned 46 distinct releases on the first 100-item page and an empty second page. Candidates were ordered by GitHub release `published_at`, not by version-string sorting. The exact cutoff is the pinned release's `published_at`, **2026-09-24T10:09:38Z**; no other final was published between that timestamp and 30 Sep. Age dates use release publication, not image creation or push time, following the current release-age rule. Exactly ten non-draft, non-prerelease semantic final tags were published after that cutoff; [release dates and boundary](hermes-candidates-2026-11-03/releases.json). The helper chooses only the newest age-eligible release, `v0.22.5`, so it was supplemented with explicit checks of every other final rather than assuming it represented them.
+
+## Image identity and eligibility
+
+[Machine-readable candidate evidence](hermes-candidates-2026-11-03/candidates.json) names every source SHA, top-level image digest, architecture manifest/config digest, seven-day timestamp and result. [HERMES_STABLE.md](../HERMES_STABLE.md#where-things-stand-checked-3-nov-2026-utc) lists all ten tags with their blockers.
+
+- All nine available final images have runnable linux/amd64 and linux/arm64 manifests, but neither architecture has a full `org.opencontainers.image.revision` label. Under `dockerhub_image_revision()` in `tools/check_release.py`, this fails closed: source/tag identity is unproven. It does not prove every image contains the wrong source. The [raw registry directory](hermes-candidates-2026-11-03/registry/) retains exact index, per-architecture manifest and config bytes; 45 downloaded registry documents were SHA-256 checked against their requested digest. Each of the nine exact image indices contains only two descriptors (linux/amd64 and linux/arm64), with no embedded attestation manifest or other descriptor. No detached-referrers provenance claim is made; the exact blocker is the missing OCI label required by the current Docker Hub checker. This report does not invent an alternative admission policy.
+- `v0.21.7` has no available final image: its [registry manifest request](hermes-candidates-2026-11-03/registry/v0.21.7/index.error.json) returned HTTP 404. No release-candidate tag was substituted.
+- `v0.21.6` still resolves to the same index digest as the [22 Oct acceptance](hermes-v0.21.6.md), whose runtime reported source `a28a5d03a9fa60418db5f44f3436fa2aa029c8f2` rather than tag source `818c13be1dc4fd28987e1e881a9408224afd4535`. That historical mismatch is stronger evidence than today's absent labels; that old runtime PASS cannot become a PASS for the tag.
+- `v0.22.6` and `v0.22.7` additionally fail seven full days public. Their earliest age-only reconsideration times are **9 Nov 2026 17:18:36 UTC** and **10 Nov 2026 21:53:16 UTC**, respectively. No date is known when image provenance and open-report clearance will be satisfied. A republished aged final could clear provenance earlier; elapsed time alone cannot clear it.
+
+Independent parent verification reran `hermes_candidate_report.image("v0.22.5")`: index digest `sha256:9c5561579f3ffdf333401797094ac3a743738d6c25d40f4331c7bf77b694238d`, commit `null`, error `linux/amd64 has no full OCI revision label; image/tag agreement is unproven`. Parent also recomputed all retained index/manifest/config hashes and seven-day dates, confirming all ten candidates and eighteen missing revision labels.
+
+## Open risk reports: triage, not a regression count
+
+Searches cover public open issue title/body mentions of sessions, compaction/compression, state.db/SQLite/database, gateway and history. Version references can be upgrade destinations, positive controls or dependency versions; they are not automatically affected Hermes releases. Selected exact issue/comment readbacks support the following qualifications; none was independently reproduced in this discovery run:
+
+- `v0.22.6`: [#148581](https://github.com/NousResearch/hermes-agent/issues/148581) explicitly reports session-resume failure classes at tag commit `f0d94882`.
+- `v0.22.5`: [#143478](https://github.com/NousResearch/hermes-agent/issues/143478) reports a stopped gateway on an exact-release Linux git install, not proof of a container defect. [#144449](https://github.com/NousResearch/hermes-agent/issues/144449) reports controlled offline compaction-input evidence loss, explicitly not permanent database loss.
+- `v0.22.4`: [#143150](https://github.com/NousResearch/hermes-agent/issues/143150) names the release in migration/resume failure. [#143818](https://github.com/NousResearch/hermes-agent/issues/143818) reports session-write/delegation problems but discloses third-party database writes; separate the native and third-party causes.
+- `v0.22.3`: [#142579](https://github.com/NousResearch/hermes-agent/issues/142579) names exact release `5b147ab0` in gateway-startup failure.
+- `v0.22.2`: [#139799](https://github.com/NousResearch/hermes-agent/issues/139799) names the exact Docker/s6 release in a gateway-status false negative. [#141438](https://github.com/NousResearch/hermes-agent/issues/141438) reports pending clarification swallowing replies after Stop, with `v0.22.1` cited as a fixed positive control.
+- `v0.22.1`: [#138949](https://github.com/NousResearch/hermes-agent/issues/138949) names exact `297552a9d6` in ACP overlay-home start/resume failure. An Ollama `0.22.1` mention elsewhere is not a Hermes regression.
+- `v0.22.0`: [#139538](https://github.com/NousResearch/hermes-agent/issues/139538) reports a compaction incident, but the incident revision and causal chain remain unresolved.
+- `v0.21.7`: [#138454](https://github.com/NousResearch/hermes-agent/issues/138454) names exact desktop `71d34ba`: compacted transcript tail missing while backend rows are correct.
+- `v0.21.6`: [#137752](https://github.com/NousResearch/hermes-agent/issues/137752) concerns ACP compaction-status notifications; [#148383](https://github.com/NousResearch/hermes-agent/issues/148383) includes externally modified database state. Neither alone establishes a stock-container regression.
+- Newly published `v0.22.7` had no version-search hits at collection time; that is not evidence of safety.
+
+A separate keyword-union inventory collected 12,612 unique open hits, partitioning over-1,000 searches by creation time. All 169 saved search responses reported `incomplete_results=false`, and the deduplicated count matched the queried total. Of these, 6,130 lack any numeric x.y.z token and 10,939 lack any of the ten recent candidate version tokens. These are noisy search pools, not confirmed bugs or exhaustive manual adjudication. [Verification receipt](hermes-candidates-2026-11-03/verification.json).
+
+Unversioned/commit-only examples remain relevant: [#148627](https://github.com/NousResearch/hermes-agent/issues/148627) and [#146088](https://github.com/NousResearch/hermes-agent/issues/146088) concern compaction; [#147280](https://github.com/NousResearch/hermes-agent/issues/147280) and [#147087](https://github.com/NousResearch/hermes-agent/issues/147087) concern SQLite/gateway lifecycle. [#146968](https://github.com/NousResearch/hermes-agent/issues/146968) identifies source matching `v0.22.2` despite no semantic release version; [#147339](https://github.com/NousResearch/hermes-agent/issues/147339) instead explicitly reproduces on main, not automatically on a final. No unversioned pool was cleared. Twenty-three selected reports had exact issue/comment readbacks; #139742 advertises four comments but repeated REST pagination returned three, so its unavailable fourth comment was not reviewed.
+
+Full discovery search responses and readbacks are retained in this task's evidence attachment; only bounded release/image evidence and helper output are committed here. Missing provenance independently blocks every final, so an exhaustive manual verdict on the keyword inventory would not admit a candidate.
+
+## Execution and next gate
+
+- Actual required helper: `python3 tools/hermes_candidate_report.py --json`, exit 0, HOLD, current snapshot `0.3.102.json`; helper-selected `v0.22.5` does not imply admission.
+- Required release-validator command: `python3 -m unittest tools/tests/test_check_release.py -v`, **18 tests passed**; [actual output](hermes-candidates-2026-11-03/release-validator.txt).
+- Read-only forum preflight: `df -B1 /srv/work` returned 127,601,950,720 bytes available; host architecture x86_64. No fit conclusion was needed because no candidate qualified. No other folders were deleted.
+- Seven runtime acceptance checks: **NOT RUN**, not PASS or FAIL. No heavy job, VM, container, image-layer pull, app image update PR or release snapshot PR was started. No cleanup is pending from this lane.
+- No live Hermes, live cron job, core Hermes source, release pointer or pin was changed. Promotion and Archimedes soak are not authorized by this report.
+
+Upstream must first provide verifiable image/tag identity and the relevant open reports must be resolved or shown inapplicable. The next bounded action after discovery clears is the existing seven-check rig, including September-pin update and rollback, in a fresh Linux VM on forum `/srv/work` admitted through `wizard_heavy_submit host="forum"`, with every started VM stopped afterward. Only a PASS can justify the app-image PR (non-author review, never self-merge), draft release-snapshot PR and later promotion ask to James. No promotion decision is ready, and no new schedule was created.

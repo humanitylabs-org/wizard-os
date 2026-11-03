@@ -22,13 +22,28 @@ Hermes ships a new release roughly every few days, and some of them break things
 3. Every candidate release has a test record in `docs/acceptance/` from a fresh Thales VM. The record covers the checks listed below, including an update and a rollback.
 4. The weekly release check posts one message saying whether there is a candidate and what is blocking it. Promoting a candidate to Wizard stable needs one "yes" from James.
 
-## Where things stand (checked 21 Oct 2026)
+## Where things stand (checked 3 Nov 2026, UTC)
 
-- **Fresh installs already pin Hermes, but the pin is old and was set by hand.** Snapshot 0.3.21 installs the `hermes-agent` app (`oscarhenrycollins/hermes-agent` at `e8ae558`). That app wraps the official image `nousresearch/hermes-agent:v2026.9.24`, pinned by digest. That image is four weeks old and several releases behind.
-- **Upstream's own "stable" label does not fit our purpose.** On Docker Hub, `stable` and `latest` both point to v0.22.2 (15 Oct). That is the release with the open reports about lost and duplicated conversations.
-- **Releases do not always come in both forms.** v0.21.7 exists as a source tag only: Docker Hub has its test builds but no final image. So a release can be a candidate for source installs and still not be one for container installs.
-- **Wizard does not control the Hermes version on alongside installs.** On a source install, `hermes update` follows upstream `main`, which includes code that has not been released yet.
-- **Archimedes is now pinned to an exact tag by hand.** The overnight move from v0.21.6 to v0.21.7 (script `hermes_0217_update.py` on James's box) is the first working version of the promotion step. It takes a backup, waits until the box is quiet, swaps the version, checks it, and rolls back if anything fails.
+**HOLD: no newer final image qualifies for the acceptance run.** Stable and latest snapshot **0.3.102** still pin `v2026.9.24` at source `f97608f178d1ffeca59860195ab7da295f7c8e5f`, image digest `sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7`. The [dated discovery record](acceptance/hermes-candidates-2026-11-03.md) preserves source SHAs, image digests, both architecture configs, issue qualifications and check receipts. This is the no-eligible-candidate result, not a runtime PASS.
+
+Every final release newer than the September pin was checked. **P** below means the published image lacks a full OCI source-revision label on **both linux/amd64 and linux/arm64**; image/tag identity is unproven, not an observed unequal revision. The current checker fails closed on this. Open session, compaction, database and gateway reports also require adjudication; keyword hits alone are not confirmed regressions.
+
+| Final tag | Seven full days public (UTC) | Exact reason not eligible now |
+|---|---|---|
+| v0.22.7 | 10 Nov 2026 21:53:16 | Too young; P. No version-search hits yet does not clear unversioned reports. |
+| v0.22.6 | 9 Nov 2026 17:18:36 | Too young; P; exact-tag session-resume failure report #148581 remains open. |
+| v0.22.5 | 30 Oct 2026 05:28:45 | P; gateway report #143478 and compaction-input report #144449 need adjudication. |
+| v0.22.4 | 28 Oct 2026 18:49:24 | P; migration/resume report #143150 and mixed native/third-party session-write report #143818 need adjudication. |
+| v0.22.3 | 28 Oct 2026 12:21:11 | P; exact-release gateway-startup report #142579 needs adjudication. |
+| v0.22.2 | 22 Oct 2026 08:21:32 | P; Docker/s6 gateway-status report #139799 and pending-reply report #141438 need adjudication. |
+| v0.22.1 | 21 Oct 2026 23:59:24 | P; exact-release ACP session start/resume report #138949 needs adjudication. |
+| v0.22.0 | 21 Oct 2026 03:21:46 | P; compaction report #139538 has unresolved incident-version/causality questions. |
+| v0.21.7 | 19 Oct 2026 05:53:41 | Final Docker manifest returns HTTP 404; desktop transcript-tail report #138454 also needs adjudication. |
+| v0.21.6 | 15 Oct 2026 11:51:57 | P; the unchanged image digest also has a previously proven runtime/tag mismatch ([22 Oct record](acceptance/hermes-v0.21.6.md)). |
+
+**Next age gate:** v0.22.6 reaches seven days on **9 Nov 2026 at 17:18:36 UTC**; v0.22.7 follows on **10 Nov at 21:53:16 UTC**. These are earliest age-only reconsideration dates, not bookings or promised eligibility. Already-aged finals could be reconsidered sooner only after upstream publishes verifiable matching image provenance and relevant reports are resolved or shown inapplicable; neither has a known date. No scheduled run was created or changed.
+
+No VM, Docker pull, acceptance run, app-image PR, release-snapshot PR, promotion, live Hermes update or live cron edit was performed. There is no promotion decision for James yet. Once discovery clears, this task's Linux acceptance route is a fresh VM on forum under `/srv/work`, admitted through `wizard_heavy_submit host="forum"`; earlier Thales receipts below remain historical evidence, not a substitute.
 
 ## Rules for Wizard stable
 
