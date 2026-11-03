@@ -39,7 +39,7 @@ class HomeScreen(unittest.TestCase):
         self.assertEqual(checker.home_screen({'home_screen': {'offline': True}}), {'offline': True})
 
     def test_invalid(self):
-        bad = ['offline', [], {'offline': 'true'}, {'offline': 1}, {'unknown': True},
+        bad = [None, 'offline', [], {'offline': 'true'}, {'offline': 1}, {'unknown': True},
                {'position_keys': 'a'}, {'position_keys': ['*']}, {'position_keys': ['ab*']},
                {'position_keys': ['x' * 121]}, {'position_keys': ['abc'] * 9}, {'position_keys': [5]},
                {'position_keys': ['abc\n']}, {'route_state': '1abc'}, {'route_state': 'a b'},
