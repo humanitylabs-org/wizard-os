@@ -1,5 +1,7 @@
 # Agents: more than one agent on a box
 
+Incognito private-agent conversations have a separate [no-persistence contract](INCOGNITO.md); ordinary private history remains unchanged.
+
 **Status: MVP contract, approved by James 14 Oct 2026** (DECISIONS #43, #48, #58, #59 approved; #54, #60 proposed; #64 Unified Chats approved by James 18 Oct 2026). Builds on [AGENT_STATE.md](AGENT_STATE.md) (one folder per agent, the agent adapter) and the permissions draft ([PERMISSIONS.md](PERMISSIONS.md), PR #6). The Agent Service implements this contract; the **Agents** app is its front end.
 
 A box runs more than one agent. The first extra one is a **Private** agent: stock Hermes in its own container, talking only to a confidential model (Tinfoil GLM 5.3), with no outside tools. Its chats, memory and session history stay in its own folder. The main agent (the host Hermes, `hermes`) cannot see them.

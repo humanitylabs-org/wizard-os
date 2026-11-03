@@ -79,6 +79,7 @@ The [core agent path](CORE_AGENT_PATH.md) labels the existing person â†’ shell â
 | `wizard.md` v0.2, the app format | [spec/WIZARD_MD.md](../spec/WIZARD_MD.md) + `tools/check_wizard_md.py` | shared (Miguel drives) |
 | `apps.json` v1, the installed apps | [spec/APPS_JSON.md](../spec/APPS_JSON.md) | Miguel writes it, Jan reads it |
 | `/wizard/...` API, versioned | [spec/AGENT_SERVICE_API.md](../spec/AGENT_SERVICE_API.md) | Archimedes (DECISIONS #42; Jan reviews) |
+| Incognito private-agent chat (disposable stock-Hermes sibling, no persistence; Hermes and the normal private runtime unchanged) | [spec/INCOGNITO.md](../spec/INCOGNITO.md) | Archimedes (DECISIONS #105) |
 | Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) | James + Archimedes (desktop UX and native app) |
 | Style tokens and shared components | [style/](../style/) | James |
 | Release file (which versions go together) | `releases/` (to create) | Jan |

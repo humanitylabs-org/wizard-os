@@ -22,6 +22,26 @@ Handlers live in `server/service.mjs` (`createWizardServer`), the Hermes allowli
 - **Passthrough (`/wizard/hermes/...`):** the Hermes API (`/api/sessions...`, `/v1/runs...`) behind a fixed allowlist. The allowlist (paths, methods, query keys, limits) and the Wizard projections listed below are v1. The rest of each body is whatever Hermes returns and moves with Hermes, so front ends read it defensively (`run.run_id || run.id`, `p.data || p.messages || p.items`), as the UX already does. The agent adapter call set (spec/AGENT_BRIDGE.md, DECISIONS #48) is what a second harness must serve underneath.
 - **Discovery:** `GET /wizard/v1/bootstrap` returns `bootstrap: 1`, `api: "wizard-agent-service/1"`, `capabilities` and `endpoints`. Front ends take the apps, sessions, runs, transcribe, route, upload, uploads and shares addresses from `endpoints` and switch features off from `capabilities`. A shell that cannot reach bootstrap falls back to the pre-bootstrap aliases (class `compat`).
 
+## Incognito private-agent chat (additive candidate; not shipped)
+
+See [INCOGNITO.md](INCOGNITO.md) for the storage, confidential-provider and cleanup boundary.
+Public agent records add `incognito_available: boolean`; an absent/false value hides the action on older/unsupported services. A true value advertises the Service/runtime interface, not successful model or provider readiness. No ordinary endpoint accepts an Incognito boolean/header/query mode.
+
+All routes below require an authenticated owner and same-origin writes, return `Cache-Control: no-store`, and use no durable Service state. `:temporary` is the random `incog_<32 lowercase hex>` value returned at start; it never becomes a normal thread pin.
+
+| Method | Path | Contract |
+|---|---|---|
+| POST | `/wizard/v1/agents/:agent/incognito` | Empty JSON object. Private confidential-Tinfoil agent only. `201 {session_id, incognito:true, history_search:"available"|"unavailable", lease_seconds:90}`; no credentials or target addresses. |
+| POST | `/wizard/v1/agents/:agent/incognito/:temporary/lease` | Empty JSON object. Renew to 90 seconds, never beyond the two-hour owner-message idle deadline. `200 {open:true}`. |
+| DELETE | `/wizard/v1/agents/:agent/incognito/:temporary` | Forget before cancelling streams/teardown. Idempotent `200 {closed:true}`. |
+| POST | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs` | Only `{input:string}` (nonblank, at most 64,000 chars). The Service supplies session/model/Incognito instructions (RAM memory writes allowed; external writes require explicit yes); upstream run admission response. |
+| GET | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run` | Only runs admitted by this temporary session; standard secret-safe run response. |
+| GET | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run/events` | Same ownership rule and shared secret-safe SSE projection. No durable event log/replay. |
+| POST | `/wizard/v1/agents/:agent/incognito/:temporary/v1/runs/:run/stop` | Stop only an owned temporary run. |
+| GET | `/wizard/v1/agents/:agent/incognito/:temporary/api/sessions/:temporary/messages` | Own session only; no catalog/search/read receipt. |
+
+Closed/expired/forgotten references return `410 incognito_closed`; an unknown owned-run path returns 404. All query parameters are rejected. Text/provider/tool/file overrides fail `400 incognito_text_only`. A second active session for the same agent returns `409 incognito_already_open`; overlapping turns return `409 incognito_turn_in_progress`. Unavailable helper/startup/provider preconditions fail closed with a bounded error, not a normal-chat fallback. Helper/API errors never include arbitrary exception text or seed/provider credentials. A Service restart forgets every temporary reference; helper lease/watchdog/orphan cleanup then reaps the sibling. The ordinary discovery and side-state routes reserve and refuse the `incog_` namespace.
+
 ## Phone Setup (companion implementation: wizard-agent-service #24)
 
 The five `/wizard/v1/setup*` routes below are the [Phone Setup](PHONE_SETUP.md) contract.
