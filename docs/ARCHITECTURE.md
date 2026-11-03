@@ -74,14 +74,14 @@ The [core agent path](CORE_AGENT_PATH.md) labels the existing person â†’ shell â
 
 ## Contracts
 
-| Contract | Where | Owner |
-|---|---|---|
-| `wizard.md` v0.2, the app format | [spec/WIZARD_MD.md](../spec/WIZARD_MD.md) + `tools/check_wizard_md.py` | shared (Miguel drives) |
-| `apps.json` v1, the installed apps | [spec/APPS_JSON.md](../spec/APPS_JSON.md) | Miguel writes it, Jan reads it |
-| `/wizard/...` API, versioned | [spec/AGENT_SERVICE_API.md](../spec/AGENT_SERVICE_API.md) | Archimedes (DECISIONS #42; Jan reviews) |
-| Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) | James + Archimedes (desktop UX and native app) |
-| Style tokens and shared components | [style/](../style/) | James |
-| Release file (which versions go together) | `releases/` (to create) | Jan |
+| Contract | Where |
+|---|---|
+| `wizard.md` v0.2, the app format | [spec/WIZARD_MD.md](../spec/WIZARD_MD.md) + `tools/check_wizard_md.py` |
+| `apps.json` v1, the installed apps | [spec/APPS_JSON.md](../spec/APPS_JSON.md) |
+| `/wizard/...` API, versioned | [spec/AGENT_SERVICE_API.md](../spec/AGENT_SERVICE_API.md) |
+| Native bridge (hotkeys, mic, files) | [spec/NATIVE_BRIDGE.md](../spec/NATIVE_BRIDGE.md) |
+| Style tokens and shared components | [style/](../style/) |
+| Release file (which versions go together) | `releases/` (to create) |
 
 ## Rules everyone builds to
 
