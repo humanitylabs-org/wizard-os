@@ -121,7 +121,7 @@ Raw receipts: [browser-trust-389/raw/run3](browser-trust-389/raw/run3). Screensh
 
 1. R16 Store UI install/remove on a fresh box (open, undiagnosed).
 2. Jan's native review: **wizard-ux #871** (native main-document receivers, draft, REVIEW_REQUIRED) and **try-wizard #61** (Mac), both still open drafts. Device lanes (APK/Mac, phone gestures) are not covered by this rig.
-3. Merge-order dependencies for a real release: WAM #424 (non-draft), #425 (O4/O5), #427 (slot doctor), #422; router #10; UX #874 on #873; wizard-files #12 then #11 rebased; spec wizard-os #403. None are merged.
+3. Merge-order dependencies for a real release: WAM #424 (non-draft), #425 (O4/O5), #422; router #10; UX #874 on #873; wizard-files #11 rebased on main (0.1.6); spec wizard-os #403. Already on main (merged by defleur-agents during this run, not by Oscar): WAM #427 (slot doctor) and wizard-files #13, which supersedes #12 (box-host admission, optional setting).
 4. Still unverified: the Store UI *update* of a contract app. Update ran through the CLI test pin in run 2/3, because the Store has no UI path to a test pin. Also unverified: model listing with real provider accounts and the Troubleshooter one-tap fix.
 
 Integration branches cited by this report and kept: `integration/browser-trust-release-rehearsal` in wizard-app-manager, wizard-ux and **wizard-files (`7df0ec5`)**. Rig torn down after this run (VMs, disks, registry, tunnels).
