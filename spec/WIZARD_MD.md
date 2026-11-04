@@ -1,5 +1,10 @@
 # wizard.md — Wizard app format, v0.2 (draft)
 
+Candidate generic runtime admission: [APP_AGENT_RUNTIMES.md](APP_AGENT_RUNTIMES.md).
+A validated `agent_runtime` app implements the agent HTTP protocol directly and
+need not claim an MCP endpoint or ship an agent skill. This is a private-test
+platform extension until compatible WAM and Agent Service releases land.
+
 Status: draft for James, Jan and Miguel. Source: Wizard Dev Council, 9 Oct 2026, full transcript.
 
 - "We make any open source GitHub repo compatible if … it has a WizardMD" (James)
