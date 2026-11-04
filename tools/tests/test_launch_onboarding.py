@@ -383,6 +383,9 @@ class OnboardingTests(unittest.TestCase):
             native = release_gate.native_vm_config()
             config = json.loads(next((work / 'run/runs').glob('*/lc-*.json')).read_text())
             self.assertEqual(receipt['architecture'], native['arch'])
+            self.assertEqual(receipt['reserve_gib'], 250 if native['vmType'] == 'vz' else 60)
+            self.assertEqual(receipt['disk_gib'], 50 if native['vmType'] == 'vz' else 40)
+            self.assertEqual(receipt['required_free_gib'], 310 if native['vmType'] == 'vz' else 110)
             self.assertEqual(config['disk'], '50GiB' if native['vmType'] == 'vz' else '40GiB')
             self.assertTrue(all(config[key] == value for key, value in native.items()))
             self.assertEqual([m for m in config['mounts'] if m['writable']],
@@ -480,7 +483,7 @@ class NativeLinuxTests(unittest.TestCase):
                 disk.return_value.free = 400 << 30
                 self.assertEqual(launch_run.main(), 0)
                 self.assertEqual(json.loads(out.getvalue())['architecture'], 'x86_64')
-                disk.return_value.free = 274 << 30
+                disk.return_value.free = (101 << 30) - 1
                 with self.assertRaises(SystemExit):
                     launch_run.main()
                 disk.return_value.free = 400 << 30
