@@ -154,12 +154,16 @@ alone, so migration is an explicit step, not a side effect of a refresh.
 
 An app that asks to escape isolation must be accepted by the owner on one of their own enrolled devices. The agent
 principals the audit covers (below) are refused. **What this does and does not stop is written out in "Honest limits"
-and the follow-ups; the grant endpoint is not to be wired into any UI until follow-ups 2 and 6 are done.**
+and the follow-ups. Grants are off by default:** the listener answers `403 grants_off` and creates no key unless the
+host file `app-manager.json` has `owner_host_access_grants: true`, which must not be set before follow-ups 2 and 6 are
+done. While off, `--allow-host-access` and `wam network allow` refuse everything, so an app that newly asks for host
+access cannot be installed or updated (an update that asks for nothing new, and apps already running, are unaffected).
 
 - **What counts as host access** (`wam/network.py host_access()`, one list for install, update and the Store view):
   `privileged`; the Docker, containerd or Podman socket; a bind mount outside the app (absolute, `~`, `..`, or a
-  variable that is not one Runtipi sets: `${APP_DATA_DIR}`, `${APP_SOURCE_DIR}`, and under `${ROOT_FOLDER_HOST}` only
-  `media/` and `app-data/.wizard-source/`; an app's own release folder read-only; `/etc/localtime` and
+  variable that is not one Runtipi sets: `${APP_DATA_DIR}`, under `${ROOT_FOLDER_HOST}` only `media/`, and, read-only
+  only, `${APP_SOURCE_DIR}` and `app-data/.wizard-source/` (a writable source folder lets an app rewrite its own recipe
+  or the source Wizard builds from); an app's own release folder read-only; `/etc/localtime` and
   `/etc/timezone` read-only). Every other path under `${ROOT_FOLDER_HOST}` (the root, `user-config`, `apps`, `state`,
   `traefik`, another app's `app-data`) is host access, because from there an app can rewrite the network policy file or
   a compose override. Also: named volumes bound to a host path; volumes the app does not own (`external`, fixed `name`;
@@ -170,7 +174,8 @@ and the follow-ups; the grant endpoint is not to be wired into any UI until foll
   Docker's default set; networks the app does not own; and anything that cannot be checked: a variable in
   `privileged`, a namespace mode, `cap_add` or a bind source, `include`, `extends`.
 - **Values the installer is given count.** The check runs on the recipe with the values given to the install
-  (`--set NAME=...`, form fields) filled in, and the grant is bound to that result, so an optional media folder pointed
+  (`--set NAME=...`, form fields) filled in, and the grant is bound to the hash of that filled-in recipe and to concrete
+  risk items (each names its path, socket, capability or network), compared exactly, so an optional media folder pointed
   at `~/.ssh` is host access. The variables Runtipi sets cannot be overridden by a given value. *Not covered:* values
   stored by an earlier install and used by an update (follow-up 8).
 - **Gate.** `--allow-host-access` (install and `wam app update`) and `wam network allow` do not accept anything by
@@ -185,7 +190,8 @@ and the follow-ups; the grant endpoint is not to be wired into any UI until foll
   An allowance already on file never opens an install and never covers what an update adds: new access always needs
   a new grant.
 - **Who writes a grant.** Only the App Manager's owner listener, `POST /_host-access/<app>` on the existing Store
-  listener: the peer is tailscaled (root) on the Store's loopback socket; owner login; not this box; the shell's origin;
+  listener (a loopback TCP port; the peer's uid is read from the kernel's socket table and must be root, i.e.
+  tailscaled; this is weaker than the edge's Unix-socket peer-PID check and is the existing Store model); owner login; not this box; the shell's origin;
   **and** the enrollment check of step 3 on a single `X-Forwarded-For`; **and** no `Authorization` header. The listener
   is HTTP/1.0, one request per connection, so a refused body cannot be read as a second request.
 - **Paths audited.** Agent container `wam` CLI (install, `app update`, `network allow`): gated in `wam`. Agent Service
@@ -207,6 +213,11 @@ and the follow-ups; the grant endpoint is not to be wired into any UI until foll
   turning grants on**, not a nice-to-have. Phones count by self-reported `Hostinfo.OS` with no record entry
   (what "Connect another device" does), so anything that can register a node as the owner and claim `android` passes
   until stable IDs are recorded.
+- **Symlinks in bind sources.** Sources are judged by their text. Docker follows a symlink inside an allowed source
+  (for example `${APP_DATA_DIR}/data/x -> /` made by an earlier container of the same app, or inside the shared
+  `media/` folder) when it creates the container, so a text-clean recipe can still mount the host. Not stopped.
+  Closing it needs a host-side check before every start that resolves each bind source without following symlinks
+  and beneath the app's folder (follow-up 10).
 - **Agent content on the shell origin** could make the owner's own browser send the request (follow-up 6).
 - **A recipe changed between the check and Runtipi's deploy** is not detected (follow-up 7).
 - **Allowance lists.** `app-manager.json` `host_access_allowed` (mirrored to `user-config/wizard-app-networks.json`
@@ -241,6 +252,8 @@ and the follow-ups; the grant endpoint is not to be wired into any UI until foll
    rather than refusing them.
 8. **Folder sharing and stored values under the same gate:** treat a form-chosen or `${ROOT_FOLDER_HOST}` media/source
    mount as an owner action, and apply the given-values check to values an earlier install stored.
+10. **Symlink-safe bind sources:** resolve with `openat2(RESOLVE_NO_SYMLINKS | RESOLVE_BENEATH)` (or refuse symlinks)
+    in the start-time enforcement in the Runtipi fork, for `APP_DATA_DIR`, `media/` and the source folders.
 9. **Agent container invariant test:** assert that no container the Builder or an agent can start has the Docker
    socket, the Runtipi token or write access to the Runtipi folders.
 
