@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 2 Nov 2026 — Miguel: owner proof moves into the platform ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 106 | **Passphrase-free owner access is a platform feature, not a per-app ingress.** An app opts in with `owner_proof: hmac-v1` in `wizard.md`. The App Manager mints a per-app key outside the app's data volume, mounts it read-only into the app, and runs one owner edge that `wam links` routes the app's Wizard path through. The edge signs a request (`X-Wizard-App-Owner-Proof`, HMAC over app id, time, nonce, method and target) only after it proved the caller is tailscaled, the owner's tailnet login, and one of the owner's devices rather than the box itself; never for a bearer or agent. It also gives every such app a restart waiting page and an owner-activity signal. Messenger's hand-built ingress on Miguel's box is migrated to it (same keys, no logout) and retired, so every owner gets passphrase-free Messenger and `/messenger/` stops being the one route `wam links` can break. The Agent Service is not in the app path and is not used for this. Number may be renumbered at merge (105 is claimed by open PRs). | **Proposed by Miguel, 2 Nov 2026; approved by James, 5 Nov 2026.** Approval covers the design; the implementation PRs still need their review fixes, and James asked for two amendments in a follow-up PR (owner device = an enrolled Wizard device; host-access acceptance only from the owner). Not deployed. |
+
 ## 1 Nov 2026 — James: sign-in safety for every app and connector
 
 **Approved by James, 1 Nov 2026.** Classify the account before choosing the sign-in path. A person's personal account and a verified agent-operated service account have different entry and session rules. Unknown or mixed ownership takes the personal-account path until verified; cookie domains and profile names alone prove neither ownership nor active login.
