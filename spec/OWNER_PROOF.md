@@ -77,7 +77,11 @@ and the app keeps its own sign-in. `wam check` validates it when present ("owner
 
 One App Manager process (`wam owner-edge serve`, user unit `wizard-owner-edge.service`) binds
 `~/.wizard-os/owner-edge/<app>.sock` (0600, folder 0700) for each owner-proof app, and `wam links` publishes the app's
-Wizard path on every shell port as `unix:<that socket>` instead of the raw port. Per request, in order:
+Wizard path on every shell port as `unix:<that socket>` instead of the raw port. This rollout is off by default:
+`app-manager.json` must explicitly set `owner_proof_enabled: true`. **Follow-up 2 is a hard precondition for enabling
+the edge**, including any migration or lifecycle hook. While off, provisioning and `owner-edge serve` refuse,
+registry output omits the declaration, and routing is unchanged even if a recipe declares `owner_proof` or an old
+edge socket remains. When enabled, per request, in order:
 
 1. **Kernel peer credentials:** the connecting process is tailscaled (uid/gid 0 and the PID systemd reports for
    `tailscaled.service`). Anything else gets 403 before a byte is read.
@@ -108,9 +112,9 @@ Wizard path on every shell port as `unix:<that socket>` instead of the raw port.
      at most 10 s.
    - Known limit, deliberately recorded: an iOS/iPadOS/Android node counts by its reported `Hostinfo.OS` (that is
      what "Connect another device" itself keys on; no per-phone record exists), and the OS is self-reported by the
-     node, so someone with root on an owner-login server could make it claim `android`. Stable-ID enrollment at the
-     owner-authenticated connect step (follow-up 2) closes this; until then it is not a boundary against a server the
-     agent has root control of.
+     node, so anyone who can register a node as the owner could make it claim `android`. Stable-ID enrollment at the
+     owner-authenticated connect step (follow-up 2) closes this; until then the enrollment check is not a boundary
+     against such a caller, whether or not they have root on an existing server.
    - Known limit, deliberately recorded: the record names nodes (tailnet names), not stable IDs, and the agent can
      edit it (`wizard-devices group`). Closing that needs the stable ID stored at the owner-authenticated connect step
      and the record made owner-writable only; see Follow-ups.
@@ -152,14 +156,25 @@ alone, so migration is an explicit step, not a side effect of a refresh.
 
 ## Host access is an owner-device action (amended, #107)
 
-An app that asks to escape isolation must be accepted by the owner on one of their own enrolled devices. The agent
-principals the audit covers (below) are refused. **What this does and does not stop is written out in "Honest limits"
-and the follow-ups. Grants are off by default:** the listener answers `403 grants_off` and creates no key unless the
-host file `app-manager.json` has `owner_host_access_grants: true`, which must not be set before follow-ups 2 and 6 are
-done. While off, `--allow-host-access` and `wam network allow` refuse everything, so an app that newly asks for host
-access cannot be installed or updated (an update that asks for nothing new, and apps already running, are unaffected).
+The intended boundary is that an app asking to escape isolation is accepted by the owner on an enrolled device,
+not by an agent. **The implementation is staged, not that completed boundary.** Host-access grants are off by default:
+the host file `app-manager.json` must explicitly set `owner_host_access_grants: true`. **Follow-ups 2, 5, 6, 7, 8, 9
+and 10 are all hard preconditions for enabling grants.** Follow-up 7 cannot wait: the checked recipe must be the
+deployed artifact, or an agent can replace it after consent.
 
-- **What counts as host access** (`wam/network.py host_access()`, one list for install, update and the Store view):
+**Switch off means existing main behaviour, not deny-all.** The listener answers `403 grants_off` and creates no key.
+Install, update, `wam network allow`, network planning and start-time policy retain the existing host-access detector,
+owner `--allow-host-access` CLI path and stored allowances. No existing recipe becomes newly blocked; in particular
+`wizard-connection-router` keeps its `${ROOT_FOLDER_HOST}/repos` and `/app-data/wizard-os` mounts. This deliberately
+does not secure acceptance while off. Nothing is provisioned, migrated or restarted by merging this change.
+
+The remaining gate and audit descriptions in this section apply **only with grants enabled**, subject to the honest
+limits below. Symlinks in `${APP_DATA_DIR}` or `media/`, unchecked stored update values (including a value pointing
+at `~/.ssh`), the `media/` and read-only `.wizard-source/` exemptions, unauthenticated legacy/forged start-time
+allowances and the check-to-deploy race work **regardless of the switch**; turning it on does not close those paths.
+
+- **What counts as host access when enabled** (`wam/network.py owner_host_access()`, used by install, update and
+  the grant listener; `host_access()` remains the unchanged main detector for network planning/start policy):
   `privileged`; the Docker, containerd or Podman socket; a bind mount outside the app (absolute, `~`, `..`, or a
   variable that is not one Runtipi sets: `${APP_DATA_DIR}`, under `${ROOT_FOLDER_HOST}` only `media/`, and, read-only
   only, `${APP_SOURCE_DIR}` and `app-data/.wizard-source/` (a writable source folder lets an app rewrite its own recipe
@@ -221,9 +236,10 @@ access cannot be installed or updated (an update that asks for nothing new, and 
 - **Agent content on the shell origin** could make the owner's own browser send the request (follow-up 6).
 - **A recipe changed between the check and Runtipi's deploy** is not detected (follow-up 7).
 - **Allowance lists.** `app-manager.json` `host_access_allowed` (mirrored to `user-config/wizard-app-networks.json`
-  for start-time enforcement) is a plain file with no MAC. Nothing the agent can reach through `wam` writes it any
-  more, but allowances written before this change are indistinguishable from forged ones and stay honoured at
-  start-time enforcement so running apps do not stop (follow-up 5).
+  for start-time enforcement) is a plain file with no MAC. The audited enabled-gate paths require a grant to write
+  it, but switch-off commands retain the main writer. Allowances written
+  before this change are indistinguishable from forged ones and stay honoured at start-time enforcement with either
+  switch setting so running apps do not stop (follow-up 5).
 - **Folder sharing.** `media/` and `.wizard-source/` mounts, which Wizard's own apps use, are not counted (counting
   them would force an owner grant on every update of those apps). Follow-up 8.
 - **Host user.** A process running as the host user can read the key and write a grant, exactly as it can read the
@@ -234,28 +250,28 @@ access cannot be installed or updated (an update that asks for nothing new, and 
 1. **Agent Service tailnet verifier has the same weakness.** `wizard-agent-service/server/tailnet-access.mjs` authorizes
    any request whose `Tailscale-User-Login` is the owner, from any untagged node of the owner, including their other
    servers. It should resolve the caller (whois) and require an enrolled device like step 3. Not changed here.
-2. **Make the enrollment record trustworthy (precondition for grants).** Store the node's stable ID when "Connect
+2. **Make the enrollment record trustworthy (hard precondition for edge and grants).** Store the node's stable ID when "Connect
    another device" completes (owner-authenticated), match on stable ID rather than name or reported OS, make
    `groups: human` writable only from an owner request (not by `wizard-devices` run by an agent), and remove a mark
    when its node is deleted so a later node with the same name does not inherit it.
 3. **UI:** the "Allow host access" action in Store / Connections on the owner's device (calls `/_host-access/<app>`).
 4. **Key lifecycle** (provision on install/update) stays off until the rollout order below reaches it.
-5. **Authenticate allowances.** MAC each allowance with the host-access key over (app, risk digest, recipe hash);
+5. **Authenticate allowances (hard precondition for grants).** MAC each allowance with the host-access key over (app, risk digest, recipe hash);
    verify on every read including start-time enforcement; legacy entries become "unverified" until the owner
    re-accepts them on a device; clear on uninstall and on failed install. Needs a change to the Runtipi fork's
    `wizard-networks.ts`, so it is not part of this inert change.
-6. **Grant UI hardening (precondition for grants):** serve "Allow host access" from an origin that renders no agent
+6. **Grant UI hardening (hard precondition for grants):** serve "Allow host access" from an origin that renders no agent
    content, with a WebAuthn user-verification step bound to (app, risks, recipe hash); today a grant proves the owner's
    enrolled device, not the tap.
-7. **Deployed-artifact check:** verify at apply time that what Runtipi deploys hashes to the grant's recipe hash
+7. **Deployed-artifact check (hard precondition for grants):** verify at apply time that what Runtipi deploys hashes to the grant's recipe hash
    (today the check is on the store copy read just before the apply), and render `include`/`extends`/interpolation
    rather than refusing them.
-8. **Folder sharing and stored values under the same gate:** treat a form-chosen or `${ROOT_FOLDER_HOST}` media/source
+8. **Folder sharing and stored values under the same gate (hard precondition for grants):** treat a form-chosen or `${ROOT_FOLDER_HOST}` media/source
    mount as an owner action, and apply the given-values check to values an earlier install stored.
-10. **Symlink-safe bind sources:** resolve with `openat2(RESOLVE_NO_SYMLINKS | RESOLVE_BENEATH)` (or refuse symlinks)
-    in the start-time enforcement in the Runtipi fork, for `APP_DATA_DIR`, `media/` and the source folders.
-9. **Agent container invariant test:** assert that no container the Builder or an agent can start has the Docker
+9. **Agent container invariant test (hard precondition for grants):** assert that no container the Builder or an agent can start has the Docker
    socket, the Runtipi token or write access to the Runtipi folders.
+10. **Symlink-safe bind sources (hard precondition for grants):** resolve with `openat2(RESOLVE_NO_SYMLINKS | RESOLVE_BENEATH)` (or refuse symlinks)
+    in the start-time enforcement in the Runtipi fork, for `APP_DATA_DIR`, `media/` and the source folders.
 
 ## Threat model
 
@@ -268,11 +284,15 @@ access cannot be installed or updated (an update that asks for nothing new, and 
 | Another tailnet user (shared device, invited user) | `Tailscale-User-Login` is not the owner → 403, nothing forwarded |
 | Tagged tailnet node / Funnel | Serve sets no user identity for them → 403 |
 | Owner's own phone/laptop (enrolled in Wizard) | Allowed: that is the trust decision (enrolled owner device = owner) |
-| The owner's other untagged server, where agents run, signed in as the owner | `X-Forwarded-For` resolves (tailscale whois) to a node that is not in the Devices record as the owner's device → `owner_device_required` |
+| The owner's other untagged server, where agents run, signed in as the owner | Conditional on trusted stable-ID enrollment (follow-up 2, required before edge enablement): whois resolves a node not enrolled as an owner device → `owner_device_required`. Today's name/OS check can be defeated as below |
 | Tailscale cannot answer, address unknown, record unreadable | Fail closed → `owner_device_unverified` |
-| Agent edits the Devices record to mark its own server `human` | **Not stopped yet** (follow-up 2). The record is agent-writable today; the edge matches names, not stable IDs. It also lets that server request a host-access grant, so follow-up 2 is a precondition for turning grants on |
+| Agent edits the Devices record to mark its own server `human` | **Not stopped yet** (follow-up 2). The record is agent-writable today; the edge matches names, not stable IDs. It also lets that server request a host-access grant, so follow-up 2 is a hard precondition for enabling either edge or grants |
 | An owner-login node that reports a mobile OS (anyone who can register a node as the owner, not only root on a server) | **Not stopped yet** (follow-up 2): phones count by reported OS with no record entry |
-| Agent accepts an app's host access through `wam` (`--allow-host-access`, `wam network allow`, Builder or Agent Service install/update) | Refused: acceptance needs a one-time grant written only by the owner listener after it authenticated an enrolled owner device. *Except* via the limits in Host access: honest limits (an agent that reaches Docker/Runtipi directly, an agent-controlled owner-login node, agent content on the shell origin) |
+| Agent accepts host access through `wam` with grants off | **Not stopped**: unchanged main detector, CLI flag and existing allowances. Off is compatibility, not a security boundary |
+| Agent accepts detected host access through `wam` with grants on (`--allow-host-access`, `wam network allow`, Builder or Agent Service install/update) | The audited gate paths require a single-use grant. **Not a complete boundary**: direct Docker/Runtipi access, agent-controlled owner-login nodes, shell-origin content, symlinks, stored values, exempt folders, legacy/forged allowances and check-to-deploy races remain; follow-ups 2, 5, 6, 7, 8, 9, 10 must be completed before enablement |
+| Host access through symlinks in app data/media, stored update values pointing at `~/.ssh`, or exempt media/source mounts | **Not stopped with either switch setting** (follow-ups 8, 10); the enabled detector checks recipe text and given install values, not these runtime paths |
+| Legacy or forged unauthenticated host-access allowance at start time | **Not stopped with either switch setting**; indistinguishable and still honoured (follow-up 5) |
+| Recipe replaced between check and deployment | **Not stopped with either switch setting** (follow-up 7) |
 | A program on the box calling the tailnet URL | `X-Forwarded-For` is the node's own address → 403 (closes the gap Miguel's ingress has today) |
 | A program on the box connecting to the edge socket | Socket 0600 in a 0700 folder, and the peer must be tailscaled's PID |
 | A program on the box calling the app port directly | No valid proof without the key; app port alone never grants owner |
@@ -311,9 +331,12 @@ Added in the draft PRs:
 Added with the amendments (#107): wizard-app-manager `tests/test_owner_devices.py` (the enrollment rule over a
 synthetic tailnet and record, fail-closed lookups, the edge refusing the owner's other server),
 `tests/test_owner_proof_keys.py` (concurrent first provisions publish exactly one key; the key cache re-checks
-permissions) and `tests/test_host_access_gate.py` (an agent cannot accept any kind of host access through any command
-or in-process path; grants are single-use, expiring, app- and risk-bound; the listener makes grants only for an
-enrolled owner device).
+permissions) and `tests/test_host_access_gate.py` (with grants enabled, synthetic examples of the detected risks are
+refused through the listed command/in-process entry points without a grant; grants are single-use, expiring, app-,
+purpose-, risk- and recipe-bound; synthetic listener tests exercise the current enrollment rule, not trustworthy
+enrollment). These do not prove an agent cannot obtain host access by the honest-limit paths. `test_owner_proof_off.py`
+compares off-mode install/update results, output and written bytes with frozen main functions, including the router's
+wide mounts and the existing flag/allowance path; the original network tests remain unchanged and run with switches off.
 
 Still to add before rollout: lifecycle hook test (install/update calls `owner-proof provision` and `links`), a
 two-box Serve rehearsal (a second tailnet device as owner, a second user, and a box-local `curl` to the tailnet URL),
@@ -324,7 +347,9 @@ restart-under-load browser test through the edge (`trusted_restart_browser.cjs` 
 
 1. James approves this decision (#106) and the header/domain names.
 2. Merge Messenger verifier + manifest (inert everywhere: no box injects keys yet). Ship a Store release.
-3. Merge the App Manager part (edge, `wam owner-proof provision`, links routing, checker rule). Nothing provisions
+3. Merge the App Manager part behind `owner_proof_enabled: false` and `owner_host_access_grants: false` (both default
+   to off when absent). **Before enabling the edge or migrating/provisioning, complete follow-up 2. Before enabling
+   grants, complete follow-ups 2, 5, 6, 7, 8, 9 and 10; none may be waived by a green inert-code test run.** Nothing provisions
    keys automatically yet; the installer may install the user unit, which serves nothing until an app has keys.
 4. Migrate Miguel's box (below), watch for a week with the deploy idle gate reading the new activity file.
 5. Add the lifecycle hook (install/update of an `owner_proof` app runs provision, then links, and injects keys only
