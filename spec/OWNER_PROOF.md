@@ -95,15 +95,17 @@ Wizard path on every shell port as `unix:<that socket>` instead of the raw port.
    - The node must be untagged, owned by the asserted login, and **one of the owner's devices in the existing Devices
      record** (`~/.wizard-os/devices.json`, [DEVICES.md](DEVICES.md); written by "Connect another device" / Machines
      and `wizard-devices`). No second list: the rule is wizard-ux `peerGroup` over that record. A node is the owner's
-     when the record's `groups` says `human` under the name the control plane gave it (MagicDNS; a node's own
-     hostname can only take a mark away, never grant one), or by default when it is an iOS, iPadOS or Android device
+     when the record's `groups` says `human` under the name the control plane gave it (whois `Node.Name`, never
+     `Hostinfo.Hostname`; a node's self-reported hostname can only take a mark away, never grant one; a name freed by
+     a deleted node can be inherited by a new node until follow-up 2), or by default when it is an iOS, iPadOS or Android device
      (what "Connect another device" adds). A Mac, laptop or server must be marked `human` first: a Mac that runs
      agents is common, so macOS is not assumed to be the owner (wizard-ux's display default is not used for this gate).
      Anything the Wizard works on (`this`, `devices[]`, any group `agent`) and anything marked `client` or `other` is
      never the owner, whatever else is written.
    - **Fail closed.** If tailscaled cannot answer, the address is unknown, the node has no stable ID, or the record is
      unreadable, the request is refused with `owner_device_unverified`; a resolved caller that is not enrolled gets
-     `owner_device_required`. Neither forwards a byte. Lookups are cached for 10 s.
+     `owner_device_required`. Neither forwards a byte. Lookups are cached for 10 s, keyed on the address and the record's modification time, so a revoked mark can lag by
+     at most 10 s.
    - Known limit, deliberately recorded: an iOS/iPadOS/Android node counts by its reported `Hostinfo.OS` (that is
      what "Connect another device" itself keys on; no per-phone record exists), and the OS is self-reported by the
      node, so someone with root on an owner-login server could make it claim `android`. Stable-ID enrollment at the
@@ -150,71 +152,97 @@ alone, so migration is an explicit step, not a side effect of a refresh.
 
 ## Host access is an owner-device action (amended, #107)
 
-An app that asks to escape isolation must be accepted by the owner on one of their own enrolled devices. No agent can
-trigger it.
+An app that asks to escape isolation must be accepted by the owner on one of their own enrolled devices. The agent
+principals the audit covers (below) are refused. **What this does and does not stop is written out in "Honest limits"
+and the follow-ups; the grant endpoint is not to be wired into any UI until follow-ups 2 and 6 are done.**
 
 - **What counts as host access** (`wam/network.py host_access()`, one list for install, update and the Store view):
-  `privileged`; the Docker, containerd or Podman socket; a bind mount outside the app (absolute, `~`, `..`, or a variable other than
-  the ones Runtipi sets for every app: `${APP_DATA_DIR}`, `${APP_SOURCE_DIR}`, `${ROOT_FOLDER_HOST}`; an app's own
-  release folder read-only; `/etc/localtime` and `/etc/timezone` only read-only); named volumes bound to a host path; `volumes_from`; top-level
-  secrets/configs read from a host file; `network_mode: host`; `pid`/`ipc`/`userns_mode`/`uts`/`cgroup` set to `host`
-  (or another container's); host `devices`, `device_cgroup_rules`, GPU reservations; any `security_opt` but
-  `no-new-privileges`; `cap_add` beyond Docker's default set; networks the app does not own; and anything that cannot
-  be checked: a variable in `privileged`, a namespace mode or `cap_add`, `include`, `extends`.
-- **Gate.** `--allow-host-access` (install and `wam app update`) and `wam network allow` no longer accept anything by
+  `privileged`; the Docker, containerd or Podman socket; a bind mount outside the app (absolute, `~`, `..`, or a
+  variable that is not one Runtipi sets: `${APP_DATA_DIR}`, `${APP_SOURCE_DIR}`, and under `${ROOT_FOLDER_HOST}` only
+  `media/` and `app-data/.wizard-source/`; an app's own release folder read-only; `/etc/localtime` and
+  `/etc/timezone` read-only). Every other path under `${ROOT_FOLDER_HOST}` (the root, `user-config`, `apps`, `state`,
+  `traefik`, another app's `app-data`) is host access, because from there an app can rewrite the network policy file or
+  a compose override. Also: named volumes bound to a host path; volumes the app does not own (`external`, fixed `name`;
+  the Claude login volume shared by design is the one named exception); `volumes_from`; top-level secrets/configs and
+  `env_file` read from outside the app; `build` contexts outside the app (Wizard's pinned source folder excepted);
+  `network_mode: host`; `pid`/`ipc`/`userns_mode`/`uts`/`cgroup` set to `host` or to another container; host
+  `devices`, `device_cgroup_rules`, GPU reservations; any `security_opt` but `no-new-privileges`; `cap_add` beyond
+  Docker's default set; networks the app does not own; and anything that cannot be checked: a variable in
+  `privileged`, a namespace mode, `cap_add` or a bind source, `include`, `extends`.
+- **Values the installer is given count.** The check runs on the recipe with the values given to the install
+  (`--set NAME=...`, form fields) filled in, and the grant is bound to that result, so an optional media folder pointed
+  at `~/.ssh` is host access. The variables Runtipi sets cannot be overridden by a given value. *Not covered:* values
+  stored by an earlier install and used by an update (follow-up 8).
+- **Gate.** `--allow-host-access` (install and `wam app update`) and `wam network allow` do not accept anything by
   themselves. They proceed only with a **grant**: a record MACed with a host-only key (`owner-proof/host-access.key`,
-  0600, never mounted into an app or agent container), bound to one app, one purpose (install, update or allow), the exact risk list the
-  owner was shown and the hash of the recipe those risks were read from, single use (renamed away before it is read,
-  so a stale check cannot burn a newer grant), valid 10 minutes, never blank. Without one the command exits with a refusal that names the owner action ("done from
-  the owner's own device in Wizard"). The in-process callers (`install_with_retry`, bootstrap, `app_updates`, the
-  Agent Service's runtime driver, `app_rename`) share the same functions, so they are gated too; An allowance
-  already on file never opens an install, and never covers what an update adds: new access always needs a new grant.
+  0600, not mounted into any container the Wizard starts). A grant is bound to one app, one purpose (install, update
+  or allow), the risk list and the hash of the recipe as the **listener computed them itself** from the current store
+  copy (the client never supplies a risk list), valid 10 minutes, never blank. It is claimed by an atomic rename to a
+  name unique to the caller, checked, and deleted whatever the result, so exactly one caller can use it; a check that
+  fails on the wrong purpose or recipe is done before the claim and does not use it up. Without a grant the command
+  exits with a refusal that names the owner action. The in-process callers (`install_with_retry`, bootstrap,
+  `app_updates`, the Agent Service's runtime driver, `app_rename`) share the same functions, so they are gated too.
+  An allowance already on file never opens an install and never covers what an update adds: new access always needs
+  a new grant.
 - **Who writes a grant.** Only the App Manager's owner listener, `POST /_host-access/<app>` on the existing Store
-  listener (served only to tailscaled, root peer), after the generic owner checks (peer is tailscaled
-  (root) on the Store's loopback socket, owner login, not this box, the shell's origin) **and** the enrollment check
-  of step 3, **and** no `Authorization` header. The Store listener is HTTP/1.0, one request per connection, so a
-  refused body cannot be read as a second request. The Store/Connections
-  views call it from the owner's device when the owner taps "Allow host access" (UI follow-up below).
-- **Paths audited.** Agent container `wam` CLI (install, `app update`, `network allow`): gated. Agent Service runtime
-  driver and Builder (`cli.install` / `cli.app_update` in-process): gated, they never pass the flag. App Manager HTTP:
-  `wam serve` (`:7790`, bearer) has no host-access endpoint; the Store listener's install/update endpoints take no
-  host-access flag. Nightly `app-updates --apply`, `quick_update` and `store_selection` update without the flag, so an
-  update that adds host access is refused and reported.
-- **Limit: what the gate does not read.** (a) Wizard's own recipes mount the owner's media folders and their own
-  source through `${ROOT_FOLDER_HOST}`/`${APP_SOURCE_DIR}` (wizard-files, movies, wisdom, ...); that is the existing
-  store model and is not counted as host access here (counting it would force an owner grant on every update of
-  those apps), so folder sharing needs its own owner-device step (follow-up 8). (b) Install-form values for
-  declared variables (an optional media folder an agent could point at `~/.ssh` with `--set`) are not read.
-- **Limit: the allowance lists.** `app-manager.json` `host_access_allowed` (mirrored to
-  `user-config/wizard-app-networks.json` for start-time enforcement) is a plain file with no MAC. Nothing the agent
-  can reach writes it any more, but allowances written before this change are indistinguishable from forged ones and
-  stay honoured at start-time enforcement so running apps do not stop. Follow-up 5 makes them verifiable.
-- **Limit.** A process running as the host user can read the key and write a grant, exactly as it can read the edge
-  key (Threat model: same-uid host process). The gate stops agents in containers, the Agent Service and the CLI
-  from a shell the owner did not open on their device; it is not a boundary against the host user.
+  listener: the peer is tailscaled (root) on the Store's loopback socket; owner login; not this box; the shell's origin;
+  **and** the enrollment check of step 3 on a single `X-Forwarded-For`; **and** no `Authorization` header. The listener
+  is HTTP/1.0, one request per connection, so a refused body cannot be read as a second request.
+- **Paths audited.** Agent container `wam` CLI (install, `app update`, `network allow`): gated in `wam`. Agent Service
+  runtime driver and Builder (`cli.install` / `cli.app_update` in-process): gated, they never pass the flag. App
+  Manager HTTP: `wam serve` (`:7790`, bearer) has no host-access endpoint; the Store listener's install/update
+  endpoints take no host-access flag. Nightly `app-updates --apply`, `quick_update` and `store_selection` update
+  without the flag, so an update that adds host access is refused and reported.
+
+### Honest limits (this change does not close these)
+
+- **The gate lives in `wam`.** It stops an agent that goes through `wam` or the Agent Service. It does not stop code
+  that can reach what `wam` itself drives: the Docker socket, the Runtipi API token, a write to the Runtipi folders or
+  `user-config`, or running as the host user. The agent container must not have any of those, and that is a **required
+  invariant to verify** (the agent apps' recipes mount only their own agent folder today; no test enforces it for
+  the container the Builder or an agent can start). Host access also means a root-capable app can do all of the above.
+- **A grant can be obtained by an agent that controls an owner-login node.** The Devices record is agent-writable
+  (`wizard-devices group`) and the edge matches names; an agent that marks its other server `human` can send the
+  grant request itself with a forged `Origin` (curl is not a browser). Follow-up 2 is therefore a **precondition for
+  turning grants on**, not a nice-to-have. Phones count by self-reported `Hostinfo.OS` with no record entry
+  (what "Connect another device" does), so anything that can register a node as the owner and claim `android` passes
+  until stable IDs are recorded.
+- **Agent content on the shell origin** could make the owner's own browser send the request (follow-up 6).
+- **A recipe changed between the check and Runtipi's deploy** is not detected (follow-up 7).
+- **Allowance lists.** `app-manager.json` `host_access_allowed` (mirrored to `user-config/wizard-app-networks.json`
+  for start-time enforcement) is a plain file with no MAC. Nothing the agent can reach through `wam` writes it any
+  more, but allowances written before this change are indistinguishable from forged ones and stay honoured at
+  start-time enforcement so running apps do not stop (follow-up 5).
+- **Folder sharing.** `media/` and `.wizard-source/` mounts, which Wizard's own apps use, are not counted (counting
+  them would force an owner grant on every update of those apps). Follow-up 8.
+- **Host user.** A process running as the host user can read the key and write a grant, exactly as it can read the
+  edge key (Threat model: same-uid host process). This is not a boundary against it.
 
 ## Follow-ups (recorded, not part of this change)
 
 1. **Agent Service tailnet verifier has the same weakness.** `wizard-agent-service/server/tailnet-access.mjs` authorizes
    any request whose `Tailscale-User-Login` is the owner, from any untagged node of the owner, including their other
    servers. It should resolve the caller (whois) and require an enrolled device like step 3. Not changed here.
-2. **Make the enrollment record trustworthy.** Store the node's stable ID when "Connect another device" completes
-   (owner-authenticated), match on stable ID rather than name, and make `groups: human` writable only from an owner
-   request, not by `wizard-devices` run by an agent.
+2. **Make the enrollment record trustworthy (precondition for grants).** Store the node's stable ID when "Connect
+   another device" completes (owner-authenticated), match on stable ID rather than name or reported OS, make
+   `groups: human` writable only from an owner request (not by `wizard-devices` run by an agent), and remove a mark
+   when its node is deleted so a later node with the same name does not inherit it.
 3. **UI:** the "Allow host access" action in Store / Connections on the owner's device (calls `/_host-access/<app>`).
 4. **Key lifecycle** (provision on install/update) stays off until the rollout order below reaches it.
 5. **Authenticate allowances.** MAC each allowance with the host-access key over (app, risk digest, recipe hash);
    verify on every read including start-time enforcement; legacy entries become "unverified" until the owner
    re-accepts them on a device; clear on uninstall and on failed install. Needs a change to the Runtipi fork's
    `wizard-networks.ts`, so it is not part of this inert change.
-8. **Folder sharing under the same gate:** treat a form-chosen or `${ROOT_FOLDER_HOST}` media/source mount as an owner
-   action, which needs the form values and the existing apps' shared-folder model first.
-6. **Grant UI hardening:** serve "Allow host access" from an origin that renders no agent content, ideally with a
-   WebAuthn user-verification step bound to (app, risks, recipe hash); today a grant proves the owner's enrolled
-   device, not the tap.
+6. **Grant UI hardening (precondition for grants):** serve "Allow host access" from an origin that renders no agent
+   content, with a WebAuthn user-verification step bound to (app, risks, recipe hash); today a grant proves the owner's
+   enrolled device, not the tap.
 7. **Deployed-artifact check:** verify at apply time that what Runtipi deploys hashes to the grant's recipe hash
    (today the check is on the store copy read just before the apply), and render `include`/`extends`/interpolation
    rather than refusing them.
+8. **Folder sharing and stored values under the same gate:** treat a form-chosen or `${ROOT_FOLDER_HOST}` media/source
+   mount as an owner action, and apply the given-values check to values an earlier install stored.
+9. **Agent container invariant test:** assert that no container the Builder or an agent can start has the Docker
+   socket, the Runtipi token or write access to the Runtipi folders.
 
 ## Threat model
 
@@ -229,8 +257,9 @@ trigger it.
 | Owner's own phone/laptop (enrolled in Wizard) | Allowed: that is the trust decision (enrolled owner device = owner) |
 | The owner's other untagged server, where agents run, signed in as the owner | `X-Forwarded-For` resolves (tailscale whois) to a node that is not in the Devices record as the owner's device → `owner_device_required` |
 | Tailscale cannot answer, address unknown, record unreadable | Fail closed → `owner_device_unverified` |
-| Agent edits the Devices record to mark its own server `human` | **Not stopped yet** (follow-up 2). The record is agent-writable today; the edge matches names, not stable IDs |
-| Agent accepts an app's host access (`--allow-host-access`, `wam network allow`, Builder or Agent Service install/update) | Refused: acceptance needs a one-time grant written only by the owner listener after it authenticated an enrolled owner device (see Host access) |
+| Agent edits the Devices record to mark its own server `human` | **Not stopped yet** (follow-up 2). The record is agent-writable today; the edge matches names, not stable IDs. It also lets that server request a host-access grant, so follow-up 2 is a precondition for turning grants on |
+| An owner-login node that reports a mobile OS (anyone who can register a node as the owner, not only root on a server) | **Not stopped yet** (follow-up 2): phones count by reported OS with no record entry |
+| Agent accepts an app's host access through `wam` (`--allow-host-access`, `wam network allow`, Builder or Agent Service install/update) | Refused: acceptance needs a one-time grant written only by the owner listener after it authenticated an enrolled owner device. *Except* via the limits in Host access: honest limits (an agent that reaches Docker/Runtipi directly, an agent-controlled owner-login node, agent content on the shell origin) |
 | A program on the box calling the tailnet URL | `X-Forwarded-For` is the node's own address → 403 (closes the gap Miguel's ingress has today) |
 | A program on the box connecting to the edge socket | Socket 0600 in a 0700 folder, and the peer must be tailscaled's PID |
 | A program on the box calling the app port directly | No valid proof without the key; app port alone never grants owner |
