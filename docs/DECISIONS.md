@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 5 Nov 2026 — James: owner proof amendments ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 107 | **Amends #106 (James, 5 Nov 2026).** (1) "The owner's device" means a device enrolled in Wizard's own Devices record (`~/.wizard-os/devices.json`, written by Connect another device / Machines), not any tailnet node signed in as the owner: the owner edge resolves the caller with tailscale whois and refuses the owner's other servers, unresolved callers and unreadable records. (2) Accepting an app's host access (privileged, container-runtime socket, host folders, host network, risky capabilities, foreign networks) is an owner-device action no agent can trigger; `--allow-host-access` alone accepts nothing. The same weakness in the Agent Service tailnet verifier is a recorded follow-up. | **Approved by James, 5 Nov 2026.** Not deployed; implementation PRs stay inert. See [spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md). |
+
 ## 2 Nov 2026 — Miguel: owner proof moves into the platform ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
 
 | # | Decision | Status |

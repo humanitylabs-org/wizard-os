@@ -1,6 +1,6 @@
 # Owner proof: passphrase-free owner access for app pages
 
-Status: **proposed by Miguel, approved by James 5 Nov 2026** ([DECISIONS](../docs/DECISIONS.md) #106). Nothing here is deployed.
+Status: **proposed by Miguel, approved by James 5 Nov 2026** ([DECISIONS](../docs/DECISIONS.md) #106), amended by James the same day ([#107](../docs/DECISIONS.md): "the owner's device" is an enrolled Wizard device; host access is accepted only on one). Nothing here is deployed.
 Draft implementation: wizard-app-manager (owner edge, key minting, routing), wizard-messenger (manifest + verifier).
 
 ## The problem
@@ -83,10 +83,28 @@ Wizard path on every shell port as `unix:<that socket>` instead of the raw port.
    `tailscaled.service`). Anything else gets 403 before a byte is read.
 2. **Serve identity:** `Tailscale-User-Login` (exactly one) is the box owner: the login pinned in
    `~/.wizard-os/owner-edge.json`, else the node's own user; a tagged node has no owner unless pinned.
-3. **Owner's device, not the box:** `X-Forwarded-For` must not be this node's own tailnet address or loopback.
-   Serve labels the node's own address with the node owner's login, so every program on the box would otherwise
-   pass as the owner (same rule as `store_install.from_box`). Serve *sets* these headers, never appends
-   (tailscale 1.104.2 `ipn/ipnlocal/serve.go` `addProxyForwardedHeaders`, `addTailscaleIdentityHeaders`).
+3. **Owner's device, not the box, not the owner's other servers** (amended, #107). `X-Forwarded-For` must not be this
+   node's own tailnet address or loopback: Serve labels the node's own address with the node owner's login, so every
+   program on the box would otherwise pass as the owner (same rule as `store_install.from_box`). Serve *sets* these
+   headers, never appends (tailscale 1.104.2 `ipn/ipnlocal/serve.go` `addProxyForwardedHeaders`,
+   `addTailscaleIdentityHeaders`). And the caller must be a device **enrolled in Wizard**, because `Tailscale-User-Login`
+   is the same on every untagged node the owner signed in to, including their other servers, where agents run:
+   - The edge resolves the caller itself, not from a header: `tailscale whois --json <X-Forwarded-For>` (LocalAPI
+     whois) returns the node's stable ID, tags, hostname, OS and owner login. One literal address is required; a list,
+     a port or a name is refused.
+   - The node must be untagged, owned by the asserted login, and **one of the owner's devices in the existing Devices
+     record** (`~/.wizard-os/devices.json`, [DEVICES.md](DEVICES.md); written by "Connect another device" / Machines
+     and `wizard-devices`). No second list: the rule is wizard-ux `peerGroup` over that record. A node is the owner's
+     when the record's `groups` says `human`, or by default when it is an iOS, iPadOS, Android or macOS device (what
+     "Connect another device" adds, and the owner's laptop). A Linux or Windows server must be marked `human` first.
+     Anything the Wizard works on (`this`, `devices[]`, any group `agent`) and anything marked `client` or `other` is
+     never the owner, whatever else is written.
+   - **Fail closed.** If tailscaled cannot answer, the address is unknown, the node has no stable ID, or the record is
+     unreadable, the request is refused with `owner_device_unverified`; a resolved caller that is not enrolled gets
+     `owner_device_required`. Neither forwards a byte. Lookups are cached for 10 s.
+   - Known limit, deliberately recorded: the record names nodes (tailnet names), not stable IDs, and the agent can
+     edit it (`wizard-devices group`). Closing that needs the stable ID stored at the owner-authenticated connect step
+     and the record made owner-writable only; see Follow-ups.
 4. **Host and origin:** `Host: localhost` with `X-Forwarded-Host` = this node's tailnet name; writes need
    `Origin` = that exact origin; `Sec-Fetch-Site` only `same-origin`/`none`.
 5. **Never for a bearer:** any `Authorization` header is refused. Agents reach apps through the Agent Service's MCP
@@ -123,6 +141,47 @@ reports `owner edge not running` and keeps the last known Wizard path; it never 
 the app would refuse every owner request). An existing different handler (the hand-built ingress) is still left
 alone, so migration is an explicit step, not a side effect of a refresh.
 
+## Host access is an owner-device action (amended, #107)
+
+An app that asks to escape isolation must be accepted by the owner on one of their own enrolled devices. No agent can
+trigger it.
+
+- **What counts as host access** (`wam/network.py host_access()`, one list for install, update and the Store view):
+  `privileged`; the Docker, containerd or Podman socket; a host bind mount outside the app's data (any absolute or `~`
+  source, including `/`, `/home`, `/etc`, `/run`, `/var/run`; `/etc/localtime` and `/etc/timezone` excepted); `network_mode: host`
+  or another container's namespace; `pid`, `ipc`, `userns_mode` or `uts` set to `host`; host `devices`; `security_opt`
+  `unconfined`; `cap_add` beyond Docker's default set; and networks the app does not own.
+- **Gate.** `--allow-host-access` (install and `wam app update`) and `wam network allow` no longer accept anything by
+  themselves. They proceed only with a **grant**: a record MACed with a host-only key (`owner-proof/host-access.key`,
+  0600, never mounted into an app or agent container), bound to one app and to the exact risk list the owner was shown,
+  single use, valid 10 minutes. Without one the command exits with a refusal that names the owner action ("done from
+  the owner's own device in Wizard"). The in-process callers (`install_with_retry`, bootstrap, `app_updates`, the
+  Agent Service's runtime driver, `app_rename`) share the same functions, so they are gated too; `wam network allow`
+  and an allowance the owner already gave stay as they were (existing `host_access_allowed` is honoured).
+- **Who writes a grant.** Only the App Manager's owner listener, `POST /_host-access/<app>` on the existing Store
+  listener (served only to tailscaled, root peer), after the generic owner checks (owner login, not this box, the
+  shell's origin) **and** the enrollment check of step 3, **and** no `Authorization` header. The Store/Connections
+  views call it from the owner's device when the owner taps "Allow host access" (UI follow-up below).
+- **Paths audited.** Agent container `wam` CLI (install, `app update`, `network allow`): gated. Agent Service runtime
+  driver and Builder (`cli.install` / `cli.app_update` in-process): gated, they never pass the flag. App Manager HTTP:
+  `wam serve` (`:7790`, bearer) has no host-access endpoint; the Store listener's install/update endpoints take no
+  host-access flag. Nightly `app-updates --apply`, `quick_update` and `store_selection` update without the flag, so an
+  update that adds host access is refused and reported.
+- **Limit.** A process running as the host user can read the key and write a grant, exactly as it can read the edge
+  key (Threat model: same-uid host process). The gate stops agents in containers, the Agent Service and the CLI
+  from a shell the owner did not open on their device; it is not a boundary against the host user.
+
+## Follow-ups (recorded, not part of this change)
+
+1. **Agent Service tailnet verifier has the same weakness.** `wizard-agent-service/server/tailnet-access.mjs` authorizes
+   any request whose `Tailscale-User-Login` is the owner, from any untagged node of the owner, including their other
+   servers. It should resolve the caller (whois) and require an enrolled device like step 3. Not changed here.
+2. **Make the enrollment record trustworthy.** Store the node's stable ID when "Connect another device" completes
+   (owner-authenticated), match on stable ID rather than name, and make `groups: human` writable only from an owner
+   request, not by `wizard-devices` run by an agent.
+3. **UI:** the "Allow host access" action in Store / Connections on the owner's device (calls `/_host-access/<app>`).
+4. **Key lifecycle** (provision on install/update) stays off until the rollout order below reaches it.
+
 ## Threat model
 
 | Caller | What stops it |
@@ -133,7 +192,11 @@ alone, so migration is an explicit step, not a side effect of a refresh.
 | Agent or any bearer caller (MCP gateway, agent keys) | Edge refuses `Authorization`; agents never reach the edge; the app keeps every bearer on its agent policy |
 | Another tailnet user (shared device, invited user) | `Tailscale-User-Login` is not the owner → 403, nothing forwarded |
 | Tagged tailnet node / Funnel | Serve sets no user identity for them → 403 |
-| Owner's own phone/laptop | Allowed: that is the trust decision (owner device = owner) |
+| Owner's own phone/laptop (enrolled in Wizard) | Allowed: that is the trust decision (enrolled owner device = owner) |
+| The owner's other untagged server, where agents run, signed in as the owner | `X-Forwarded-For` resolves (tailscale whois) to a node that is not in the Devices record as the owner's device → `owner_device_required` |
+| Tailscale cannot answer, address unknown, record unreadable | Fail closed → `owner_device_unverified` |
+| Agent edits the Devices record to mark its own server `human` | **Not stopped yet** (follow-up 2). The record is agent-writable today; the edge matches names, not stable IDs |
+| Agent accepts an app's host access (`--allow-host-access`, `wam network allow`, Builder or Agent Service install/update) | Refused: acceptance needs a one-time grant written only by the owner listener after it authenticated an enrolled owner device (see Host access) |
 | A program on the box calling the tailnet URL | `X-Forwarded-For` is the node's own address → 403 (closes the gap Miguel's ingress has today) |
 | A program on the box connecting to the edge socket | Socket 0600 in a 0700 folder, and the peer must be tailscaled's PID |
 | A program on the box calling the app port directly | No valid proof without the key; app port alone never grants owner |
@@ -155,7 +218,8 @@ alone, so migration is an explicit step, not a side effect of a refresh.
 
 Added in the draft PRs:
 - wizard-app-manager `tests/test_owner_edge.py` (real edge on a Unix socket in front of a real loopback backend,
-  requests shaped like Serve): signed for exactly the forwarded target; client proofs and identity headers dropped,
+  requests shaped like Serve): signed for exactly the forwarded target; refused for the owner's other (unenrolled)
+  server, an unresolvable caller, an unreadable record; client proofs and identity headers dropped,
   app headers kept; refused for other users, tagged/no identity, this box's own address, loopback, missing source,
   wrong host, non-Serve Host, bearer, duplicated identity, non-tailscaled peer, cross-origin writes; body forwarding;
   waiting page vs JSON 502; streaming; activity only for page loads/writes/declared paths; socket modes; node-owner
@@ -167,6 +231,13 @@ Added in the draft PRs:
 - wizard-messenger `tests/test_trusted_owner.py`: the whole existing trusted-owner suite re-run with platform keys
   and platform proofs, plus app-id binding, replay, legacy-domain-under-new-header refusal, both-kinds refusal,
   explicit opt-out, unchanged legacy environment, the same pinned vector.
+
+Added with the amendments (#107): wizard-app-manager `tests/test_owner_devices.py` (the enrollment rule over a
+synthetic tailnet and record, fail-closed lookups, the edge refusing the owner's other server),
+`tests/test_owner_proof_keys.py` (concurrent first provisions publish exactly one key; the key cache re-checks
+permissions) and `tests/test_host_access_gate.py` (an agent cannot accept any kind of host access through any command
+or in-process path; grants are single-use, expiring, app- and risk-bound; the listener makes grants only for an
+enrolled owner device).
 
 Still to add before rollout: lifecycle hook test (install/update calls `owner-proof provision` and `links`), a
 two-box Serve rehearsal (a second tailnet device as owner, a second user, and a box-local `curl` to the tailnet URL),
