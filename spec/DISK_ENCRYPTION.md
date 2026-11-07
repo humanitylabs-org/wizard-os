@@ -91,16 +91,16 @@ When a boot security package or a Secure Boot variable (db, dbx, KEK, SbatLevel,
 
 With a TPM 2.0 chip, the installer always encrypts: one LUKS2 volume with LVM for root and swap, `/boot` and the EFI partition outside, and dracut as the initramfs.
 
-1. **Install.** The installer formats with a random temporary passphrase. It exists only in the installer's memory, as a root-only key file on the encrypted root, and inside every initramfs on `/boot` built while it exists (a dracut `install_items` drop-in, so a kernel update before the seal still boots). `/etc/crypttab` names it as the fallback after the chip. No owner data exists yet.
+1. **Install.** The installer formats with a random temporary passphrase. It exists only in the installer's memory, as a root-only key file on the encrypted root, and inside every initramfs on `/boot` built while it exists (a dracut `install_items` drop-in, so a kernel update before the seal still boots). Until the seal is confirmed, `/etc/crypttab` unlocks with that key file only (`wizard_crypt UUID=… /etc/wizard/disk/install.key luks,discard,x-initrd.attach`, no `tpm2-device=`: systemd-cryptsetup treats a key file next to `tpm2-device=` as a sealed blob, not a passphrase). No owner data exists yet.
 2. **First boot.** The initramfs finds no chip slot and unlocks with the key file. First-run setup, on the box's screen and before anything else:
    1. seals a chip slot for this real installed boot (not the installer's) and tests it without unlocking (`cryptsetup open --test-passphrase --token-only`);
    2. makes the recovery key and shows it once, with "Write this down or take a photo, then press Enter";
-   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rewrites `/etc/crypttab` to `none`, removes the dracut drop-in, rebuilds every initramfs without it (`dracut --regenerate-all`, checking each image holds the chip support and no key file) and restarts.
+   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rewrites `/etc/crypttab` to the final chip line (`none luks,discard,x-initrd.attach,tpm2-device=auto`), removes the dracut drop-in, rebuilds every initramfs without it (`dracut --regenerate-all`, checking each image holds the chip support and no key file) and restarts.
 3. **Second boot.** The chip unlocks the disk with no prompt, and the Tailscale step starts. If the chip ever refuses, the owner has the recovery key they just saved.
 
 If sealing or its test fails, the box keeps the temporary unlock and shows no recovery key. The screen says "This box's security chip could not be used: the disk is not protected yet", setup carries on to Tailscale, status shows the "Not protected yet" line, and every start retries the seal. A later successful retry shows the recovery key on the box's screen without holding up any service, and wipes the temporary key and restarts only after Enter is pressed there. If the box loses power before Enter, the next start replaces the unconfirmed recovery key with a new one. It is never left without a working unlock.
 
-Wiping the temporary slot does not change the volume key. Anyone who copied the LUKS header and the first initramfs before step 2 finished can open the volume at any later time, including data written afterwards. This only matters if someone else had the box between install and first-run setup (a box installed for someone and shipped to them): run first-run setup before it leaves the installer's hands, or re-encrypt to a new volume key (`cryptsetup reencrypt`).
+Wiping the temporary slot does not change the volume key. Anyone who copied the LUKS header and the first initramfs before step 2 finished can open the volume at any later time, including data written afterwards. This matters if someone else had the box between install and the first successful seal (a box installed for someone and shipped to them, or a box whose seal kept failing): run first-run setup before it leaves the installer's hands, or re-encrypt to a new volume key (`cryptsetup reencrypt`), which is the only complete fix. After the rebuild, `/boot` is trimmed so old initramfs images do not linger in free blocks.
 
 **No TPM 2.0 found:** install unencrypted and record `not encrypted: no security chip`. Never require a password at every boot as the fallback.
 
@@ -115,11 +115,11 @@ Root is never re-encrypted in place and existing disks are never repartitioned s
 5. shows the recovery key once on the box's screen with the same Enter confirmation and saved marker as a dedicated box, holds `shim-signed`, and turns off automatic `fwupd` updates if it is installed;
 6. checks every file and keeps the old copy until the owner confirms.
 
-On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` clears the immutable flag, copies the current data back to the old folders and removes the mounts (before confirmation it never falls back to the stale old copy). Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
+On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` stops Wizard, unmounts the bind mounts, clears the immutable flag, copies the current data from the volume back to the old folders, verifies it, then removes the mount units and the `RequiresMountsFor=` lines (before confirmation it never falls back to the stale old copy). Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
 
 ### VPS
 
-No chip to seal to, and the provider controls the disk (a provider's virtual TPM adds nothing). Many providers do not encrypt at all, and Wizard cannot check. Wizard reports "Not encrypted by Wizard: relies on your provider's disk encryption" and changes nothing.
+No chip to seal to, and the provider controls the disk (a provider's virtual TPM adds no protection from the provider). Many providers do not encrypt at all, and Wizard cannot check. Wizard reports "Not encrypted by Wizard: relies on your provider's disk encryption" and changes nothing.
 
 ### Mac (Wizard for Mac)
 
