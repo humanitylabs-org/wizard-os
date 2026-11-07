@@ -5,6 +5,16 @@
     python3 tools/release_train.py run                      # cut -> mirror -> upgrade test -> promote (or stop)
     python3 tools/release_train.py run --dry-run            # everything local; stops before any push or merge
     python3 tools/release_train.py run --dry-run --force    # same, even when no fix is waiting (proves the path)
+    python3 tools/release_train.py cut [--dry-run]          # For testers: cut + mirror main's newest published images
+    python3 tools/release_train.py promote-soaked [--dry-run]   # For everyone: latest after 72h, no release-blocker
+
+For testers / For everyone (Miguel + James, Nov 2026; proposed DECISIONS amendment of #75 in docs/RELEASE_AUTOMATION.md):
+`cut` is what .github/workflows/release-cut.yml runs after any component merge to main publishes its image: every
+newer published Wizard UX / Agent Service main commit is cut onto latest (not only Recommended fixes), mirrored, and
+it stops there (no rig, no promotion). `promote-soaked` is what .github/workflows/release-promote.yml runs on a
+schedule: when releases/latest has been latest for >= SOAK_HOURS (promote_stable.latest_since) and no issue labelled
+`release-blocker` is open anywhere in the org, it runs the same installed upgrade test from the current Stable and
+promotes WITHOUT --fast-track (the normal soaked gate), then mirrors. Anything missing: it waits and says why.
 
 What `run` does, in order, and where it stops:
 
@@ -213,7 +223,9 @@ def published(repo: str, repo_dir: Path, limit: int = 40) -> dict | None:
 # ---------------------------------------------------------------- plan
 
 
-def plan(work: Path) -> dict:
+def plan(work: Path, any_merge: bool = False) -> dict:
+    """What the train would do. any_merge (For testers `cut`): also move every image component whose newest published
+    main commit is newer than latest's pin, fix or not."""
     wos = clone(WOS, work)
     rel = lambda name: show(wos, "origin/main", f"releases/{name}")   # noqa: E731
     stable, latest = rel("stable").strip(), rel("latest").strip()
@@ -242,6 +254,10 @@ def plan(work: Path) -> dict:
             out["manual"] += [f"{repo}#{x['number']} {x['title']} (App Manager: cut by hand)" for x in missing]
         out["waiting_fixes"] += [f"{repo}#{x['number']} {x['title']}" for x in on_latest + ready]
         out["components"][comp] = info
+        if any_merge and comp in IMAGE_COMPONENTS and comp not in out["moves"]:
+            pub = info.get("published") or published(repo, d)
+            if pub and pub["commit"] != l_c and not is_ancestor(d, pub["commit"], l_c):
+                out["moves"][comp] = pub
     if out["moves"]:
         out["candidate"], out["cut"] = next_version(wos), True
     elif out["waiting_fixes"] and _key(latest) > _key(stable):
@@ -433,17 +449,67 @@ def sha(path: Path) -> str:
 # ---------------------------------------------------------------- run
 
 
-def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False) -> dict:
+BLOCKER_LABEL = "release-blocker"
+SOAK_HOURS = 72          # same as promote_stable.SOAK_HOURS (DECISIONS #75); test_release_train checks they match
+
+
+def release_blockers() -> list[str]:
+    """Open issues labelled release-blocker anywhere in the org. Fails closed: an unreadable answer stops promotion."""
+    got = gh_json(["search", "issues", "--owner", ORG, "--label", BLOCKER_LABEL, "--state", "open",
+                   "--json", "url,title", "--limit", "50"])
+    if not isinstance(got, list):
+        raise Stop(f"could not read open {BLOCKER_LABEL} issues")
+    return [f"{x.get('url')} {x.get('title', '')[:80]}" for x in got]
+
+
+def soaked_for(version: str, releases: Path, now: float | None = None) -> float | None:
+    """Hours <version> has been releases/latest (from git history, the same source promote_stable uses)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("promote_stable", Path(__file__).resolve().parent / "promote_stable.py")
+    ps = importlib.util.module_from_spec(spec); spec.loader.exec_module(ps)   # type: ignore[union-attr]
+    since = ps.latest_since(version, releases)
+    if not since:
+        return None
+    t = datetime.fromisoformat(since.replace("Z", "+00:00")).timestamp()
+    return ((now if now is not None else time.time()) - t) / 3600
+
+
+def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False,
+        mode: str = "train") -> dict:
+    """mode "train": today's fix train. "cut": For testers (cut + mirror any newer published main, then stop).
+    "soaked": For everyone (promote latest after SOAK_HOURS with no release-blocker; normal gate, no fast-track)."""
     rep: dict = {"started": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "dry_run": dry, "force": force,
                  "steps": []}
     step = lambda s: (rep["steps"].append(s), say(s))   # noqa: E731
-    p = plan(work)
+    p = plan(work, any_merge=(mode == "cut")) if mode != "soaked" else plan(work)
+    rep["mode"] = mode
     rep["plan"] = {k: v for k, v in p.items() if k != "components"}
     stable, latest = p["stable"], p["latest"]
+    if mode == "soaked":
+        # For everyone takes latest as it is: never a new cut here.
+        if _key(latest) <= _key(stable):
+            rep["outcome"] = f"nothing to promote: For everyone ({stable}) already has latest ({latest})"
+            return rep
+        hours = soaked_for(latest, clone(WOS, work) / "releases")
+        if hours is None or hours < SOAK_HOURS:
+            rep["outcome"] = (f"WAITING: {latest} has been For testers for "
+                              f"{'an unknown time' if hours is None else f'{hours:.0f}h'}; it moves to For everyone "
+                              f"after {SOAK_HOURS}h. Stable stays {stable}.")
+            return rep
+        blockers = release_blockers()
+        if blockers:
+            rep["outcome"] = (f"HELD: {len(blockers)} open {BLOCKER_LABEL} issue(s): " + "; ".join(blockers)
+                              + f". Stable stays {stable}.")
+            return rep
+        p["candidate"], p["cut"], p["moves"] = latest, False, {}
+        step(f"{latest} soaked {hours:.0f}h on For testers; no open {BLOCKER_LABEL}")
     step(f"stable {stable}, latest {latest}; waiting fixes: {len(p['waiting_fixes'])}; to move: {sorted(p['moves'])}")
     for m in p["manual"] + p["unpublished"]:
         step(f"not in this train: {m}")
     if not p["candidate"]:
+        if mode == "cut":
+            rep["outcome"] = f"nothing to cut: latest {latest} already pins main's newest published images"
+            return rep
         if not force:
             rep["outcome"] = "nothing to release: no merged Recommended fix is missing from Stable (or none is publishable yet)"
             return rep
@@ -519,8 +585,12 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                                               "tier: maintenance", need_checks=True)
             step(f"cut merged {rep['cut_pr']}, mirror merged {rep['mirror_pr']}")
             wait_public(f"{V}.json", sha(rel_json))
+    if mode == "cut":
+        rep["outcome"] = (f"CUT {V} onto For testers (latest){' (dry run, local only)' if dry else ''}; For everyone "
+                          f"stays {stable} until {V} has soaked {SOAK_HOURS}h with no {BLOCKER_LABEL}.")
+        return rep
     # Features go to early testers first: a feature candidate stays on Latest for the normal soak (owner rule).
-    if cls != "fix" and not feature_fast_track:
+    if cls != "fix" and not feature_fast_track and mode != "soaked":
         rep["outcome"] = (f"ON LATEST ONLY: {V} carries features, so it soaks 72h on Latest before Stable "
                           f"(promote_stable.py promote {V} --from {stable} after the soak and an upgrade test). "
                           f"Stable stays {stable}.")
@@ -561,8 +631,11 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     notes = ("Ride-alongs onto Stable: " + "; ".join(f"{x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title'][:80]}"
                                                      for x in prs) + ("; " + "; ".join(items) if items else "")
              + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install.")
-    doc = (f"# Promote {V} (release train)\n\n## Why\n\nStable {stable} lacked merged Recommended fixes:\n\n"
-           + "\n".join(f"- {x}" for x in (p["waiting_fixes"] or ["(none: forced proof run)"]))
+    why = ([f"{V} soaked {SOAK_HOURS}h+ on For testers (latest) with no open {BLOCKER_LABEL} issue (For everyone "
+            "promotion, normal gate, no fast-track)."] if mode == "soaked" else (p["waiting_fixes"] or ["(none: forced proof run)"]))
+    doc = (f"# Promote {V} (release train)\n\n## Why\n\n"
+           + ("" if mode == "soaked" else f"Stable {stable} lacked merged Recommended fixes:\n\n")
+           + "\n".join(f"- {x}" for x in why)
            + f"\n\n## What changes ({stable} → {V})\n\n**Classification: {cls}**"
            + (" (every change is a Recommended fix or maintenance)." if cls == "fix" else
               " (launch-phase fast-track, DECISIONS #93): it carries changes that are not provably fixes.")
@@ -578,21 +651,26 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     else:
         sh(["git", "-C", str(wt), "checkout", "-q", "-B", branch_promo])   # dry: stacked on the local cut commit
     evidence = f"https://github.com/{WOS}/blob/main/{evidence_rel}"
-    sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
+    if mode == "soaked":     # the normal gate: promote_stable itself refuses a release that has not soaked
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence,
+            "--notes", notes], cwd=wt)
+    else:
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
         "--classification", cls, "--reason", reason, "--notes", notes], cwd=wt)
     sh([sys.executable, "tools/promote_stable.py", "check"], cwd=wt)
     rec = json.loads((wt / "releases" / "promotions" / f"{V}.json").read_text())
-    if rec.get("fast_track", {}).get("classification") != cls:
+    if mode != "soaked" and rec.get("fast_track", {}).get("classification") != cls:
         raise Stop("the promotion record's classification does not match the computed one")
     sh(["git", *IDENTITY, "-C", str(wt), "add", "releases", evidence_rel])
-    sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Promote {V} to stable ({cls} fast-track, release train)"])
+    sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Promote {V} to stable ({'soaked ' + str(SOAK_HOURS) + 'h, no release-blocker' if mode == 'soaked' else cls + ' fast-track'}, release train)"])
     step(f"promotion record ok ({cls}); channels ok")
     if dry:
         rep["outcome"] = (f"DRY RUN complete: {V} would be promoted ({cls}); stopped before any push, PR or merge. "
                           f"Local commits: {sh(['git', '-C', str(wt), 'log', '--oneline', '-3']).strip()}")
         rep["promotion_record"] = rec
         return rep
-    body = (f"Maintenance (release train): promote **{V}** to stable, fast-track **{cls}**. Installed upgrade "
+    how = f"after {SOAK_HOURS}h on For testers with no open {BLOCKER_LABEL}" if mode == "soaked" else f"fast-track **{cls}**"
+    body = (f"Maintenance (release train): promote **{V}** to stable, {how}. Installed upgrade "
             f"{stable} → {V} passed: {evidence_rel}.\n\nRollback: `releases/stable` back to {stable}.")
     rep["promote_pr"] = open_and_merge(WOS, wt, branch_promo, f"Maintenance: promote {V} to stable (release train, {cls})",
                                        body, "tier: maintenance", need_checks=False)
@@ -605,7 +683,7 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     with open(mwt / "releases" / "README.md", "a") as fh:
         fh.write(f"\n## stable {V}\n\nCanonical: {rep['promote_pr']} (release train). `releases/stable` → {V}; "
                  f"`promotions/{V}.json` sha256 `{sha(mwt / 'releases' / 'promotions' / f'{V}.json')}`.\n"
-                 f"Fast-tracked as **{cls}**. Installed upgrade {stable} → {V} passed: wizard-os {evidence_rel}.\n")
+                 f"{'Soaked ' + str(SOAK_HOURS) + 'h on For testers' if mode == 'soaked' else 'Fast-tracked as **' + cls + '**'}. Installed upgrade {stable} → {V} passed: wizard-os {evidence_rel}.\n")
     sh(["git", "-C", str(mwt), "checkout", "-q", "-B", f"promote/{V}-mirror-train"])
     sh(["git", *IDENTITY, "-C", str(mwt), "add", "releases"])
     sh(["git", *IDENTITY, "-C", str(mwt), "commit", "-qm", f"Mirror stable {V} (release train)"], env={"LEFTHOOK": "0"})
@@ -640,6 +718,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
+    for name, what in (("cut", "For testers: cut + mirror main's newest published images onto latest, then stop"),
+                       ("promote-soaked", "For everyone: promote latest after 72h with no open release-blocker")):
+        x = sub.add_parser(name, help=what)
+        x.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
+        x.add_argument("--keep-guest", action="store_true")
     r = sub.add_parser("run")
     r.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
     r.add_argument("--force", action="store_true", help="go on even when no fix is waiting (proof runs)")
@@ -665,7 +748,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({k: v for k, v in p.items() if k != "components"}, indent=2, default=str))
         return 0
     try:
-        rep = run(a.work, a.dry_run, a.force, ["--keep"] if a.keep_guest else [], a.feature_fast_track)
+        mode = {"cut": "cut", "promote-soaked": "soaked"}.get(a.cmd, "train")
+        rep = run(a.work, a.dry_run, getattr(a, "force", False), ["--keep"] if a.keep_guest else [],
+                  a.feature_fast_track if a.cmd == "run" else False, mode)
         code = 0 if not str(rep.get("outcome", "")).startswith("STOPPED") else 1
     except Stop as e:
         rep, code = {"outcome": f"STOPPED: {e}", "dry_run": a.dry_run}, 1

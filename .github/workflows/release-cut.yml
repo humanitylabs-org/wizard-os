@@ -1,0 +1,41 @@
+# For testers: every merge to main of a Wizard OS component becomes a new For testers (latest) release.
+# Proposed with the DECISIONS amendment of #75 (docs/RELEASE_AUTOMATION.md). Nothing runs until this is merged.
+# Component repos send `repository_dispatch: component-published` from their "Publish public image" workflow once the
+# image of a main commit has published (the train only cuts published, multi-arch images). Uses the existing
+# tools/release_train.py + tools/promote_stable.py: check_release, cut/check, byte-identical mirror into
+# wizard-app-manager, reviewed mirror PR (DECISIONS #96). No upgrade rig, no promotion.
+name: Release cut (For testers)
+on:
+  repository_dispatch:
+    types: [component-published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Local only: stop before any push, PR or merge"
+        type: boolean
+        default: true
+concurrency:
+  group: release-train          # one train at a time (cut and promote share releases/latest)
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  cut:
+    runs-on: [self-hosted, Linux, X64, wizard-os, release-train]
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cut main's newest published images onto latest
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}   # repo scope on wizard-os + wizard-app-manager
+          WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
+        run: |
+          args=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then args="--dry-run"; fi
+          echo "trigger: ${{ github.event.client_payload.repo || 'manual' }} ${{ github.event.client_payload.sha || '' }}"
+          timeout 3600 python3 tools/release_train.py cut $args
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-cut-report
+          path: ${{ runner.temp }}/release-train/reports/

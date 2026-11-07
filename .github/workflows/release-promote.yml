@@ -1,0 +1,40 @@
+# For everyone: promote the newest For testers (latest) release to For everyone (stable) once it has been latest for
+# >= 72h and no issue labelled `release-blocker` is open in the org. Proposed with the DECISIONS amendment of #75
+# (docs/RELEASE_AUTOMATION.md). Nothing runs until this is merged. Uses tools/release_train.py promote-soaked:
+# the same installed upgrade test from the current stable on a disposable KVM guest, then
+# `promote_stable.py promote` WITHOUT --fast-track (promote_stable's own 72h soak gate), then the reviewed mirror.
+name: Release promote (For everyone)
+on:
+  schedule:
+    - cron: "17 */6 * * *"        # every 6h; a release moves 72-78h after it reached For testers
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Local only: stop before any push, PR or merge"
+        type: boolean
+        default: true
+concurrency:
+  group: release-train
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  promote:
+    runs-on: [self-hosted, Linux, X64, wizard-os, release-train]   # needs KVM for the upgrade rig
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Promote latest if soaked 72h with no release-blocker
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
+          WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
+          WIZARD_TRAIN_BUDGET_S: "7000"
+        run: |
+          args=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then args="--dry-run"; fi
+          timeout 7200 python3 tools/release_train.py promote-soaked $args
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-promote-report
+          path: ${{ runner.temp }}/release-train/reports/

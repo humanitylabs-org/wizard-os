@@ -129,7 +129,7 @@ class Gate(unittest.TestCase):
     def test_a_feature_candidate_stays_on_latest_unless_asked(self):
         """Owner rule: fixes fast-track to Stable; features stop on Latest (no upgrade rig, no promotion)."""
         src = (HERE.parent / "release_train.py").read_text()
-        i_gate = src.index('if cls != "fix" and not feature_fast_track:')
+        i_gate = src.index('if cls != "fix" and not feature_fast_track and mode != "soaked":')
         self.assertLess(i_gate, src.index("cmd = [sys.executable, str(RIG)"))
         self.assertLess(i_gate, src.index('"promote", V, "--from", stable'))
         self.assertIn("return rep", src[i_gate:src.index("cmd = [sys.executable, str(RIG)")])
@@ -187,3 +187,97 @@ class CodexWait(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ForTestersForEveryone(unittest.TestCase):
+    """For testers = every merge cut onto latest (`cut`); For everyone = latest after 72h with no release-blocker
+    (`promote-soaked`), the normal promotion gate, never a fast-track."""
+
+    def _plan(self, mode, latest="0.3.106", stable="0.3.102", hours=80.0, blockers=()):
+        p = {"stable": stable, "latest": latest, "components": {}, "waiting_fixes": [], "manual": [],
+             "unpublished": [], "moves": {}, "candidate": None, "cut": False}
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "plan", return_value=p) as plan, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "soaked_for", return_value=hours), \
+                mock.patch.object(rt, "release_blockers", return_value=list(blockers)), \
+                mock.patch.object(rt, "worktree", side_effect=rt.Stop("reached the rig path")):
+            try:
+                rep = rt.run(Path(d), True, False, [], False, mode)
+            except rt.Stop as e:
+                rep = {"outcome": f"PROCEEDS: {e}"}
+            return rep, plan
+
+    def test_soak_constant_matches_promote_stable(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ps", HERE.parent / "promote_stable.py")
+        ps = importlib.util.module_from_spec(spec); spec.loader.exec_module(ps)
+        self.assertEqual(rt.SOAK_HOURS, ps.SOAK_HOURS)
+
+    def test_promote_soaked_waits_until_72_hours(self):
+        rep, _ = self._plan("soaked", hours=71.5)
+        self.assertTrue(rep["outcome"].startswith("WAITING: 0.3.106 has been For testers for 72h"[:30]))
+        self.assertIn("after 72h", rep["outcome"])
+        rep, _ = self._plan("soaked", hours=None)
+        self.assertIn("an unknown time", rep["outcome"])
+
+    def test_promote_soaked_is_held_by_an_open_release_blocker(self):
+        rep, _ = self._plan("soaked", blockers=["https://github.com/humanitylabs-org/wizard-ux/issues/1 Chats blank"])
+        self.assertTrue(rep["outcome"].startswith("HELD: 1 open release-blocker"))
+        self.assertIn("Stable stays 0.3.102", rep["outcome"])
+
+    def test_promote_soaked_with_nothing_newer_does_nothing(self):
+        rep, _ = self._plan("soaked", latest="0.3.102")
+        self.assertTrue(rep["outcome"].startswith("nothing to promote"))
+
+    def test_promote_soaked_goes_on_to_the_upgrade_test_when_soaked_and_clear(self):
+        rep, _ = self._plan("soaked", hours=72.0)
+        self.assertEqual(rep["outcome"], "PROCEEDS: reached the rig path")
+
+    def test_promote_soaked_uses_the_normal_gate_never_fast_track(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        i = src.index('if mode == "soaked":     # the normal gate')
+        block = src[i:src.index("else:", i)]
+        self.assertNotIn("--fast-track", block)
+        self.assertIn('"promote", V, "--from", stable, "--evidence", evidence', block)
+        # it still needs a passed upgrade test first
+        self.assertLess(src.index('rig.get("passed")'), i)
+
+    def test_cut_plans_with_any_merge_and_stops_after_the_mirror(self):
+        rep, plan = self._plan("cut")
+        plan.assert_called_once()
+        self.assertEqual(plan.call_args.kwargs, {"any_merge": True})
+        self.assertTrue(rep["outcome"].startswith("nothing to cut"))
+        src = (HERE.parent / "release_train.py").read_text()
+        i_stop = src.index('if mode == "cut":\n        rep["outcome"] = (f"CUT {V} onto For testers')
+        self.assertLess(src.index('rep["mirror_pr"] = open_and_merge'), i_stop)
+        self.assertLess(i_stop, src.index("cmd = [sys.executable, str(RIG)"))
+
+    def test_release_blockers_fail_closed(self):
+        with mock.patch.object(rt, "gh_json", return_value=None):
+            with self.assertRaises(rt.Stop):
+                rt.release_blockers()
+        with mock.patch.object(rt, "gh_json", return_value=[{"url": "u", "title": "t"}]) as g:
+            self.assertEqual(rt.release_blockers(), ["u t"])
+            self.assertIn("release-blocker", g.call_args.args[0])
+
+    def test_soaked_for_reads_latest_history(self):
+        with tempfile.TemporaryDirectory() as d:
+            rel = Path(d)
+            subprocess.run(["git", "init", "-q"], cwd=rel, check=True)
+            (rel / "latest").write_text("0.3.106\n")
+            env = {"GIT_AUTHOR_DATE": "2026-11-01T00:00:00Z", "GIT_COMMITTER_DATE": "2026-11-01T00:00:00Z",
+                   "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+                   "PATH": "/usr/bin:/bin"}
+            subprocess.run(["git", "add", "latest"], cwd=rel, check=True)
+            subprocess.run(["git", "commit", "-qm", "cut"], cwd=rel, check=True, env=env)
+            from datetime import datetime
+            now = datetime.fromisoformat("2026-11-04T01:00:00+00:00").timestamp()
+            self.assertAlmostEqual(rt.soaked_for("0.3.106", rel, now), 73.0, places=3)
+            self.assertIsNone(rt.soaked_for("0.3.999", rel, now))
+
+    def test_cli_has_cut_and_promote_soaked(self):
+        out = subprocess.run([sys.executable, str(HERE.parent / "release_train.py"), "--help"], capture_output=True,
+                             text=True).stdout
+        self.assertIn("cut", out)
+        self.assertIn("promote-soaked", out)
