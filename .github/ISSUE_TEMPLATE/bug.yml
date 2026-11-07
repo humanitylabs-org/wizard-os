@@ -1,0 +1,42 @@
+name: Bug
+description: Something is wrong or worse than it should be
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Update to the latest build first and check the bug is still there.
+  - type: textarea
+    id: happens
+    attributes:
+      label: What happens
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to see it
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What you will see when it is fixed. The reviewing agent judges against this.
+    validations:
+      required: true
+  - type: textarea
+    id: shot
+    attributes:
+      label: Screenshot
+  - type: input
+    id: version
+    attributes:
+      label: Version and device
+    validations:
+      required: true

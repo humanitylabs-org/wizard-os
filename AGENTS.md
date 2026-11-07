@@ -20,6 +20,19 @@ This repo is the shared map of Wizard OS: architecture, decisions, contracts (`s
    - If you touched `tools/check_wizard_md.py` or `spec/WIZARD_MD.md`, run the checker against a real app repo. Keep its rules identical to the copies in wizard-app-manager and wizard-app-index, and change all three together.
 7. Changing the team rules below? Edit them here first. Then copy the block, unchanged, into the `AGENTS.md` of every other Wizard OS repo in the same round of PRs.
 
+## How Wizard OS is built now (the 7 Nov 2026 call)
+
+James and Miguel's 7 Nov 2026 call is the source of truth for this section; where it conflicts with the team rules below, this section wins from the **cutover** onward (DECISIONS #108-#110). Until the cutover, the team rules below still apply and `main` keeps moving through PRs. The cutover is one permission change: only the builder (`wizardosbuilder`) can merge, for humans and for every other agent. James and Miguel set its date once the Tracker and the builder are running.
+
+- **Two kinds of issue, nothing in between.** A **goal** is a big outcome that James sets; each has one owner who steers it, and it runs a week or longer. A **bug** is anything wrong or worse than it should be; anyone on the team and their agents can file one. Small pieces of a goal are checklist items on the goal, never separate issues.
+- **Every issue says when it is done.** A goal states "done when"; a bug states what happens, what should happen, how to see it, a screenshot, and the version or device. The reviewing agent judges against that text, because the builder reads only the repo and the issue and never your memory.
+- **Reporters update first.** Before filing a bug, update to the latest build and check it is still there.
+- **One line:** Queued → Building → AI review → Human review → Done. The builder merges the work switched off. The agent of whoever opened the issue checks it matches what was asked and sends it back to Building if not. A person then tries it: a goal's owner reviews a goal; anyone but the opener (a person and their agent count as one) reviews a bug. Works makes it permanently on and closes the issue. Doesn't work sends it back to Building.
+- **Releases follow Chrome's two channels.** Every merge reaches **For testers** within minutes, switched off. A known-good tester build is promoted to **For everyone** about every three days, with anything not Done still off. These replace Latest and Stable, and the "automatic or ask me" setting goes. Testers are James, Jan, Miguel and Robert at first; later any user who opts in.
+- **Experiments land switched off.** A feature James is still dialling in ships off by default; he turns it on for himself, then offers it to others.
+- **Rhythm.** The Tracker (`/board/`) shows goals and bugs, counts per step, time in each step, and how often work is kicked back to the builder, including the number of AI-review rounds. Review daily at first, then weekly. Goals are read one by one; bugs are read as metrics. Once "Standardized development pipeline" is done, replace it with an "Optimized development pipeline" goal that sets targets for those metrics.
+- **The builder's instructions are this file.** The builder starts every run from the repo as it stands and keeps no memory, so `AGENTS.md` is its only standing instruction and its quality sets the quality of the work. Changing `AGENTS.md` is a pull request like any other, reviewed by James or Miguel. When the builder, a reviewer or the metrics show repeated kick-backs from the same missing instruction, the owner of that goal or bug files the `AGENTS.md` change. Agents never write their own memory into this file.
+
 ## Shared names
 
 Use these names one way, in chat, PRs and docs (DECISIONS #99-101, James, 25 Oct 2026):

@@ -2,6 +2,15 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 7 Nov 2026 — James and Miguel: the Tame the Chaos pipeline (call; goal [#418](https://github.com/humanitylabs-org/wizard-os/issues/418))
+
+| # | Decision | Status |
+|---|---|---|
+| 108 | **One builder, two issue types.** Wizard OS work is a goal (James sets it, one owner steers it, a week or longer) or a bug (anyone files it). One builder account writes and merges all code; at the cutover merge rights for everyone else, agents included, are removed. Until then the existing PR rules apply and James keeps moving `main` by PR. Line: Queued → Building → AI review → Human review → Done. | James and Miguel on the 7 Nov call; cutover date to be set |
+| 109 | **Reviews and rhythm.** The agent of whoever opened the issue does the AI review; a goal's owner or any non-opener reviews the human step. Metrics (time per step, kick-backs, AI-review rounds) are reviewed daily at first, then weekly, with a weekly stand-up that includes Jan. When the standardized pipeline goal is done it is replaced by an optimized-pipeline goal with targets. | James and Miguel, 7 Nov |
+| 110 | **Channels and releases.** For testers (every merge, switched off) and For everyone (promoted about every 3 days) replace Latest and Stable; updates are automatic. James, Jan, Miguel and Robert are testers first; opt-in users later. Experiments merge switched off. Bug reporters update first. Miguel's Tracker app signs in with GitHub (no token) and is the review surface; GitHub stays the backend for now. | James and Miguel, 7 Nov |
+| 111 | **The builder's AGENTS.md.** The builder keeps no memory and reads the repo fresh each run, so `AGENTS.md` is its instruction set and changes only by pull request reviewed by James or Miguel. Every issue states its "done when" so AI review has something to judge against. | Proposed by Archimedes from the call; James and Miguel to confirm |
+
 ## 5 Nov 2026 — James: owner proof amendments ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
 
 | # | Decision | Status |

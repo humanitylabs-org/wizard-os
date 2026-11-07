@@ -1,0 +1,22 @@
+name: Goal (James writes goals)
+description: A big outcome with one owner. Small pieces are checklist items below, not separate issues.
+labels: ["goal"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+    validations:
+      required: true
+  - type: textarea
+    id: pieces
+    attributes:
+      label: Pieces
+      description: A checklist, one line per piece.
+      value: "- [ ] "
