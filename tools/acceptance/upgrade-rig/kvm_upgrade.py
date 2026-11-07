@@ -47,6 +47,9 @@ HERMES_INSTALL = "https://raw.githubusercontent.com/NousResearch/hermes-agent/ma
 SSH_PORT = int(os.environ.get("WIZARD_RIG_SSH_PORT", "2273"))
 SHELL_PORT = int(os.environ.get("WIZARD_RIG_SHELL_PORT", "18897"))
 HS_PORT = int(os.environ.get("WIZARD_RIG_HS_PORT", "8090"))
+# Guest size: 4 vCPU / 8 GB on a box; a GitHub-hosted runner (2 vCPU, 7 GB) sets smaller values in the workflow.
+GUEST_SMP = os.environ.get("WIZARD_RIG_SMP", "4")
+GUEST_MEM_MB = os.environ.get("WIZARD_RIG_MEM_MB", "8192")
 HS_NAME = "wizard-train-headscale"
 HS_IMAGE = "headscale/headscale:latest"
 GUEST_UNIT = "wizard-train-guest"
@@ -186,8 +189,8 @@ def boot(disk: Path, unit: str, seed_iso: Path | None = None) -> Path:
     qmp = disk.with_suffix(".qmp")
     qmp.unlink(missing_ok=True)
     cmd = ["systemd-run", "--user", "--quiet", "--collect", "--unit", unit,
-           shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", "4",
-           "-m", "8192", "-drive", f"file={disk},if=virtio",
+           shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", GUEST_SMP,
+           "-m", GUEST_MEM_MB, "-drive", f"file={disk},if=virtio",
            "-netdev", f"user,id=n0,hostfwd=tcp:127.0.0.1:{SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:{SHELL_PORT}-:8796",
            "-device", "virtio-net-pci,netdev=n0", "-display", "none", "-serial", f"file:{disk.with_suffix('.console')}",
            "-qmp", f"unix:{qmp},server,nowait"]
