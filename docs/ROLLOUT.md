@@ -48,14 +48,14 @@ Owner: whoever finishes their piece first runs it. Evidence goes in the PR.
 ## Week 2
 
 - ⏳ **One files root, one transcription slot.** Resolve both collisions ([SYSTEM_APPS.md](SYSTEM_APPS.md)). Owners: Jan (Agent Service attachments), Miguel (Transcriber → slot).
-- ⏳ **Meeting Recorder and Reader become wizard.md apps.** Owner: Archimedes.
-- ⏳ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes, with James approving the style.
+- 🔨 **Meeting Recorder and Reader become wizard.md apps.** Owner: Archimedes. Reader ✅: installable app, package merged in [reader#1](https://github.com/humanitylabs-org/reader/pull/1) (`eee4eff`, 21 Oct) and clean-VM acceptance recorded in [WORK_OUTSTANDING](WORK_OUTSTANDING.md#apps-anyone). Meeting Recorder still open: the public repo [wizard-recorder](https://github.com/humanitylabs-org/wizard-recorder) carries `wizard.md` 0.2.0 (`88d96a0`, 7 Nov), but it is not installable yet. It is not in the app index (live index search for `mizel`, `recorder` and `meeting`, 7 Nov 22:10 UTC, found nothing), and its image workflow on `main` failed at the GHCR push on 7 Nov (run 42379195421). Done when the index lists it and `wam install` pulls its image.
+- ✅ **Style tokens + `wizard-app-builder` skill** land in this repo. Owner: Archimedes. Landed: `style/` merged in [wizard-os#36](https://github.com/humanitylabs-org/wizard-os/pull/36) (`1a43b0c`, 15 Oct) and the skill is at `system-skills/wizard-app-builder/SKILL.md` on `main`; the App Manager builder takes the same snapshot ([wizard-app-manager#32](https://github.com/humanitylabs-org/wizard-app-manager/pull/32), merged 15 Oct). Still open: James approving the style. No DECISIONS row records that review (#52–#53 approve Appearance v1; #33 locks sigils).
 - ⏳ **Credentials test**: two harnesses sharing one ChatGPT OAuth token on one box. Result → `docs/CREDENTIALS.md` + the break-glass kit. Owners: Miguel + Oscar, write-up Archimedes.
 - ✅ **First release file**: which version of each repo goes together. Owner: Jan. Done: `releases/<version>.json` on `main` (0.3.7 to 0.3.12) with `releases/stable`.
 
 ## Weeks 3–4: shell customization
 
-- ⏳ **Shell slot, theme file, overlay folder, customize skill** ([spec/SHELL.md](../spec/SHELL.md)). Owners: James + Archimedes. Done when a theme and an overlay survive a shell update.
+- 🔨 **Shell slot, theme file, overlay folder, customize skill** ([spec/SHELL.md](../spec/SHELL.md)). Owners: James + Archimedes. Customize skill ✅ ([wizard-ux#574](https://github.com/humanitylabs-org/wizard-ux/pull/574), merged 29 Oct). The theme file, skins and My skin (which replaced the overlay folder, #73) are tracked in [WORK_OUTSTANDING](WORK_OUTSTANDING.md#shell-customization-james--archimedes-later-specshellmd). Done when a theme and an overlay survive a shell update.
 
 ## Later: Mac installer (after the components work together)
 
