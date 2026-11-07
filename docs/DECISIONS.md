@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 7 Nov 2026 — James: disk encryption with the security chip ([spec/DISK_ENCRYPTION.md](../spec/DISK_ENCRYPTION.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 112 | **Chip-only disk encryption is the Wizard OS standard.** Owner data sits on LUKS2. The key is sealed in the box's TPM 2.0 chip, bound to Secure Boot state (PCR 7), so the box unlocks itself on every normal restart, survives kernel and OS updates, and withholds the key from a pulled disk, a USB boot or changed firmware security settings. A recovery key is made at setup, shown to the owner once and never readable by any agent. A box without a TPM 2.0 chip installs unencrypted and says so; it never asks for a password at every boot. Existing boxes get an opt-in `wam disk encrypt` onto a new drive or partition, never an in-place re-encrypt of root. VPS reports the provider's encryption; Mac reports FileVault. Network-check unlock is a later optional feature. James, 7 Nov 2026: "let's go with your recommendation of chip only as the wizard OS standard. We can add the network check later, but it sounds like that's unnecessary friction that will stop people from being able to use it. So let's make that an optional feature later. It's not needed right now." Number may be renumbered at merge (108–111 are claimed by an open PR). | **Approved by James, 7 Nov 2026.** Follows the box security audit (#413). |
+
 ## 5 Nov 2026 — James: owner proof amendments ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
 
 | # | Decision | Status |
