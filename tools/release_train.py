@@ -336,7 +336,9 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
     while need_checks:
         time.sleep(30)
         checks = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup"])["statusCheckRollup"]
-        states = [(c.get("name"), c.get("status"), c.get("conclusion")) for c in checks]
+        states = [(c.get("name") or c.get("context"),
+                   c.get("status") or ("PENDING" if c.get("state") == "PENDING" else "COMPLETED"),
+                   c.get("conclusion") or c.get("state")) for c in checks]
         if any(s == "COMPLETED" and c not in ("SUCCESS", "SKIPPED", "NEUTRAL") for _, s, c in states):
             raise Stop(f"{url}: a check failed: {[x for x in states if x[2] not in ('SUCCESS', 'SKIPPED', 'NEUTRAL', None, '')]}")
         if states and all(s == "COMPLETED" for _, s, _ in states):
