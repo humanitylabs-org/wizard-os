@@ -35,7 +35,7 @@ Anyone who has **the whole box** for a while and knows what they are doing can r
 - **A whole stolen box that boots normally** unlocks itself, as it does at home. The login, SSH keys and Tailscale are then the barrier.
 - **A running box, and root on it.** The volume key is in memory while the disk is unlocked, and root can read it or ask the chip again. On today's boxes the agent's user has passwordless sudo, so this includes the agent.
 - **Secure Boot off.** The box is still encrypted and still unlocks itself, and a pulled disk is still unreadable, but any USB boot with Secure Boot off can reproduce the same PCR 7. Status says so. Turning Secure Boot on asks for the recovery key once, then the owner re-seals.
-- **Boot security updates that change PCR 7:** a firmware or BIOS update (sometimes), a dbx revocation update, the Microsoft 2023 certificate rollout, a shim update that raises its SBAT level, or a kernel signed with an owner-enrolled key (MOK). The next boot asks for the recovery key once, at the box's keyboard and screen; a headless box waits there and is unreachable until someone types it. To stop this happening unattended, a chip-sealed box holds `shim-signed` from automatic upgrades (`apt-mark hold`), does not install `fwupd`, and Wizard never reboots by itself. The owner applies these at the box, enters the recovery key once and re-seals. Status warns when a boot security package changed since the last seal ("The next restart may ask for the recovery key") and when a held one has an update waiting ("A boot security update is waiting: install it at this box").
+- **Boot security updates that change PCR 7:** a firmware or BIOS update (sometimes), a dbx revocation update, the Microsoft 2023 certificate rollout, a shim update that raises its SBAT level (including booting someone's newer shim, such as a newer Debian rescue stick, which can raise the firmware's SBAT level for every later boot), or a kernel signed with an owner-enrolled key (MOK). The next boot asks for the recovery key once, at the box's keyboard and screen; a headless box waits there and is unreachable until someone types it. To stop this happening unattended, a chip-sealed box holds `shim-signed` from automatic upgrades (`apt-mark hold`), does not install `fwupd`, and Wizard never reboots by itself. The owner applies these at the box, enters the recovery key once and re-seals. Status warns when a boot security package changed since the last seal ("The next restart may ask for the recovery key") and when a held one has an update waiting ("A boot security update is waiting: install it at this box").
 - **Dual boot.** Another OS on the same box (Windows Update in particular) applies dbx and Secure Boot certificate updates by itself, which changes PCR 7 for the Linux boot too. A dedicated box has no other OS. On an alongside box the Wizard data volume is `nofail,headless=true`: the box still starts without waiting at a prompt, the Wizard services stay stopped, and a small unit on the unencrypted root shows "Wizard data is locked: enter the recovery key at this box" on the console and login message (Settings cannot show it, because the shell's data is on the locked volume). `wam disk unlock` at the box opens it and starts the held services.
 - **Only Wizard data encrypted (alongside).** Root stays unencrypted, so anyone who can write to root (pull the disk, add a user, key or service, put it back) or edit GRUB gets the data volume unlocked by the chip on the next boot. What stays on the unencrypted root: Docker's images and its own volumes, swap, the system journal and logs, `/tmp`, and anything Wizard data left in free blocks before the move (until that disk is wiped or retired). App data, agent homes, the vault, tokens and backup staging move.
 
@@ -46,7 +46,7 @@ Closing the whole-box gaps needs the later work: a signed boot image (UKI) with 
 When the chip withholds the key, the boot screen asks for a passphrase. Typing the recovery key unlocks it. After a deliberate change, the owner runs `wam disk reseal` at the box. It:
 
 - runs only from a local console session (a logind session with `Remote=no` on a local tty or serial line), never over SSH or from an agent's pty. This guards against mistakes; it is not a boundary against something that already has root;
-- asks for the recovery key itself (never from an agent, argument or file);
+- asks for the recovery key itself (never from an agent, argument or file). On a box where the agent has root, the agent could still capture it while it is typed; keeping it out of agents is a design rule, not a boundary against root;
 - enrolls a fresh chip slot for the current boot state and removes the old one.
 
 A restart confirms the new seal. Losing both the chip state (new motherboard, cleared TPM) and the recovery key means the data is gone; the encrypted box backup is the remaining copy.
@@ -61,7 +61,10 @@ A restart confirms the new seal. Losing both the chip state (new motherboard, cl
 - whether Secure Boot is on;
 - whether a boot security package changed since the last seal, or a held one has an update waiting;
 - whether the seal still matches: the current PCR 7 against the value recorded when it was sealed (both public), and whether this start unlocked without the chip;
-- whether the owner confirmed saving the recovery key (a marker written when Enter is pressed; the LUKS header only shows that a recovery slot exists).
+- whether the owner confirmed saving the recovery key (a marker written when Enter is pressed; the LUKS header only shows that a recovery slot exists);
+- whether the temporary install key (its key slot or key file) is still present.
+
+Boot security packages are `shim-signed` and the firmware version (DMI BIOS version); a kernel signed by anything other than Debian's key also counts.
 
 It never reads key material. Settings, Security shows one plain line from it:
 
@@ -69,12 +72,11 @@ It never reads key material. Settings, Security shows one plain line from it:
 |---|---|
 | Encrypted, chip-sealed, recovery key confirmed saved | Disk encrypted, unlocks with this box's security chip |
 | Same, Secure Boot off | Disk encrypted, unlocks with this box's security chip. Secure Boot is off: turn it on for stronger protection |
-| Chip-sealed, recovery key not made yet | Disk encrypted. Recovery key not saved yet: finish setup on this box's screen |
-| Encrypted, chip seal failed (the temporary key is still on this box) | Not protected yet: the security chip seal failed and the disk key is still stored on this box |
+| Encrypted, the temporary install key is still on this box (seal failed, or recovery key not confirmed yet). Takes priority over every other row | Not protected yet: the disk key is still stored on this box. Finish setup on this box's screen |
 | Chip-sealed, but this start unlocked with the recovery key or the chip no longer matches | This box's security chip no longer matches: run `wam disk reseal` at this box |
 | Encrypted, needs a passphrase | Disk encrypted, asks for a passphrase at every start |
 | Only Wizard data encrypted (alongside, after `wam disk encrypt`) | Wizard data encrypted, unlocks with this box's security chip (the same Secure Boot and update notes apply) |
-| Alongside, chip refused at this start | Wizard data is locked: enter the recovery key at this box |
+| Alongside, chip refused at this start (console and login message only) | Wizard data is locked: enter the recovery key at this box |
 | No chip found, not encrypted | Not encrypted: no security chip found (it may be turned off in the firmware settings) |
 | Not encrypted | Not encrypted |
 | VPS | Not encrypted by Wizard: relies on your provider's disk encryption |
@@ -93,10 +95,10 @@ With a TPM 2.0 chip, the installer always encrypts: one LUKS2 volume with LVM fo
 2. **First boot.** The initramfs finds no chip slot and unlocks with the key file. First-run setup, on the box's screen and before anything else:
    1. seals a chip slot for this real installed boot (not the installer's) and tests it without unlocking (`cryptsetup open --test-passphrase --token-only`);
    2. makes the recovery key and shows it once, with "Write this down or take a photo, then press Enter";
-   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rebuilds the initramfs without it (checking the new image holds the chip support and no key file) and restarts.
+   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rewrites `/etc/crypttab` to `none`, rebuilds the initramfs without it (checking the new image holds the chip support and no key file) and restarts.
 3. **Second boot.** The chip unlocks the disk with no prompt, and the Tailscale step starts. If the chip ever refuses, the owner has the recovery key they just saved.
 
-If sealing or its test fails, the box keeps the temporary unlock and shows no recovery key. The screen says "This box's security chip could not be used: the disk is not protected yet", setup carries on to Tailscale, status shows the "Not protected yet" line, and every start retries the seal. If the box loses power before Enter, the next start replaces the unconfirmed recovery key with a new one. It is never left without a working unlock.
+If sealing or its test fails, the box keeps the temporary unlock and shows no recovery key. The screen says "This box's security chip could not be used: the disk is not protected yet", setup carries on to Tailscale, status shows the "Not protected yet" line, and every start retries the seal. A later successful retry shows the recovery key on the box's screen without holding up any service, and wipes the temporary key and restarts only after Enter is pressed there. If the box loses power before Enter, the next start replaces the unconfirmed recovery key with a new one. It is never left without a working unlock.
 
 Wiping the temporary slot does not change the volume key. Anyone who copied the LUKS header and the first initramfs before step 2 finished can open the volume at any later time, including data written afterwards. This only matters if someone else had the box between install and first-run setup (a box installed for someone and shipped to them): run first-run setup before it leaves the installer's hands, or re-encrypt to a new volume key (`cryptsetup reencrypt`).
 
@@ -109,10 +111,10 @@ Root is never re-encrypted in place and existing disks are never repartitioned s
 1. needs a new drive or an empty partition;
 2. takes a verified backup first;
 3. creates a TPM-sealed LUKS2 volume with a recovery key;
-4. stops Wizard, moves the Wizard home and app data (which hold the agent homes, vault and tokens) onto it, and bind-mounts them back at their old paths, ordered with `RequiresMountsFor=` on Wizard's own units (not the owner's other containers) so they cannot write underneath before the volume is mounted. Wizard app data lives in bind mounts under the moved folders; a Wizard app that keeps data in a Docker named volume is listed and moved too. The volume is `nofail,headless=true`, unlocked by the chip after boot;
+4. stops Wizard, moves the Wizard home and app data (which hold the agent homes, vault and tokens) onto it, and bind-mounts them back at their old paths, ordered with `RequiresMountsFor=` on Wizard's own units (not the owner's other containers). The emptied folders left on root become immutable mount points (`chattr +i`), so nothing can write underneath while the volume is locked, including containers Docker restarts by itself: their bind mounts fail instead of writing plaintext. Wizard app data lives in bind mounts under the moved folders; a Wizard app that keeps data in a Docker named volume is listed and moved too. The volume is `nofail,headless=true`, unlocked by the chip after boot;
 5. checks every file and keeps the old copy until the owner confirms.
 
-On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` restores the old layout. Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
+On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` copies the current data back to the old folders and removes the mounts (before confirmation it never falls back to the stale old copy). Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
 
 ### VPS
 
