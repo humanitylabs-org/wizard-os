@@ -1,13 +1,19 @@
 # For testers: every merge to main of a Wizard OS component becomes a new For testers (latest) release.
 # Proposed with the DECISIONS amendment of #75 (docs/RELEASE_AUTOMATION.md). Nothing runs until this is merged.
-# Component repos send `repository_dispatch: component-published` from their "Publish public image" workflow once the
-# image of a main commit has published (the train only cuts published, multi-arch images). Uses the existing
-# tools/release_train.py + tools/promote_stable.py: check_release, cut/check, byte-identical mirror into
-# wizard-app-manager, reviewed mirror PR (DECISIONS #96). No upgrade rig, no promotion.
+# Triggers: `repository_dispatch: component-published` from wizard-ux, wizard-agent-service and wizard-app-manager
+# (their release-train-notify.yml, after a green publish/test on main), a 30-minute sweep that runs only when a cut
+# was deferred, and one daily sweep for a dispatch that never arrived. At most one cut per 30 minutes
+# (release_train.py MIN_CUT_INTERVAL): a sooner request is DEFERRED and the next sweep picks it up.
+# Mirror PRs merge on the automated `release-mirror/byte-identical` check (DECISIONS #96 as amended).
+# Runner: GitHub-hosted by default; the wizard-os repository variable RELEASE_RUNNER moves it to a self-hosted
+# runner label later (docs/RELEASE_AUTOMATION.md, "Moving to the Mac").
 name: Release cut (For testers)
 on:
   repository_dispatch:
     types: [component-published]
+  schedule:
+    - cron: "*/30 * * * *"        # deferred-cut sweep: skipped (no runner, no minutes) unless RELEASE_CUT_PENDING=1
+    - cron: "47 3 * * *"          # daily sweep: catches a dispatch that never arrived
   workflow_dispatch:
     inputs:
       dry_run:
@@ -15,27 +21,43 @@ on:
         type: boolean
         default: true
 concurrency:
-  group: release-train          # one train at a time (cut and promote share releases/latest)
+  group: release-train          # one train at a time (cut and promote share releases/latest); a burst queues one run
   cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   cut:
-    runs-on: [self-hosted, Linux, X64, wizard-os, release-train]
+    if: github.event_name != 'schedule' || github.event.schedule == '47 3 * * *' || vars.RELEASE_CUT_PENDING == '1'
+    runs-on: ${{ vars.RELEASE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 70
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}     # the one owner-pasted secret (docs/RELEASE_AUTOMATION.md)
+      WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
+      WIZARD_TRAIN_GIT_NAME: wizardosbuilder
+      WIZARD_TRAIN_GIT_EMAIL: 353326775+wizardosbuilder@users.noreply.github.com
     steps:
       - uses: actions/checkout@v4
-      - name: Cut main's newest published images onto latest
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}   # repo scope on wizard-os + wizard-app-manager
-          WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
+      - name: Token present
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::RELEASE_TRAIN_TOKEN is not set on humanitylabs-org/wizard-os (docs/RELEASE_AUTOMATION.md, Owner setup)"; exit 1; }
+          gh auth setup-git
+      - name: Cut main's newest published components onto latest
+        id: cut
         run: |
           args=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then args="--dry-run"; fi
-          echo "trigger: ${{ github.event.client_payload.repo || 'manual' }} ${{ github.event.client_payload.sha || '' }}"
-          timeout 3600 python3 tools/release_train.py cut $args
+          echo "trigger: ${{ github.event_name }} ${{ github.event.client_payload.repo || '' }} ${{ github.event.client_payload.sha || '' }}"
+          set -o pipefail
+          timeout 3600 python3 tools/release_train.py cut $args | tee "$RUNNER_TEMP/cut.out"
+          if grep -q '^\*\*DEFERRED:' "$RUNNER_TEMP/cut.out"; then echo "deferred=1" >> "$GITHUB_OUTPUT"; else echo "deferred=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Remember a deferred cut for the 30-minute sweep
+        if: always() && steps.cut.outputs.deferred != ''
+        run: |
+          want="${{ steps.cut.outputs.deferred }}"
+          [ "${{ vars.RELEASE_CUT_PENDING }}" = "$want" ] || gh variable set RELEASE_CUT_PENDING -R "$GITHUB_REPOSITORY" --body "$want"
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: release-cut-report
           path: ${{ runner.temp }}/release-train/reports/
+          if-no-files-found: ignore

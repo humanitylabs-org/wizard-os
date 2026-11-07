@@ -92,21 +92,6 @@ class Classification(unittest.TestCase):
         self.assertEqual(self._ride(S, C, [])[0], "feature")
 
 
-class CodexGate(unittest.TestCase):
-    def test_reads_the_latest_codex_state(self):
-        body = lambda sha, st: ('<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 {"code_review":'
-                                f'{{"commit_sha":"{sha}","has_any_findings":false,"has_unresolved_findings":false,'
-                                f'"status":"{st}"}},"security_review":{{"commit_sha":null}}}} -->')
-        comments = [{"user": {"login": "chatgpt-codex-connector[bot]"}, "body": body("a" * 40, "completed")},
-                    {"user": {"login": "someone"}, "body": body("c" * 40, "completed")},          # not Codex
-                    {"user": {"login": "chatgpt-codex-connector[bot]"}, "body": body("b" * 40, "running")}]
-        with mock.patch.object(rt, "gh_json", return_value=comments):
-            self.assertEqual(rt.codex_state("o/r", "1"), {"commit_sha": "b" * 40, "has_any_findings": False,
-                                                          "has_unresolved_findings": False, "status": "running"})
-        with mock.patch.object(rt, "gh_json", return_value=[]):
-            self.assertIsNone(rt.codex_state("o/r", "1"))
-
-
 class Gate(unittest.TestCase):
     def test_force_is_only_for_dry_runs(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(rt, "STATE", Path(d)):
@@ -155,38 +140,197 @@ class Gate(unittest.TestCase):
             self.assertFalse(rt.served("0.0.1.json", rt.hashlib.sha256(body).hexdigest()))
 
 
-class CodexWait(unittest.TestCase):
-    def test_out_of_credits_is_detected_only_from_codex_after_the_pr_opened(self):
-        comments = [
-            {"user": {"login": "chatgpt-codex-connector[bot]"}, "created_at": "2026-10-31T03:02:48Z",
-             "body": "Codex usage limits have been reached for code reviews."},
-            {"user": {"login": "someone"}, "created_at": "2026-10-31T04:00:00Z",
-             "body": "Codex usage limits have been reached for code reviews."},
+class MirrorCheck(unittest.TestCase):
+    """DECISIONS #96 as amended (Nov 2026): the mirror PR merges on an automated byte-identity check, not a click."""
+    REL = b'{"version": "0.3.106"}\n'
+
+    def _check(self, changes, mirror, canonical, base=None):
+        return rt.mirror_problems(changes, lambda f: mirror[f], lambda f: canonical.get(f), lambda f: (base or {}).get(f))
+
+    def test_identical_files_and_an_append_only_readme_pass(self):
+        probs, proofs = self._check(
+            [("A", "releases/0.3.106.json"), ("M", "releases/latest"), ("M", "releases/README.md")],
+            {"releases/0.3.106.json": self.REL, "releases/latest": b"0.3.106\n", "releases/README.md": b"# R\n\n## 0.3.106\n"},
+            {"releases/0.3.106.json": self.REL, "releases/latest": b"0.3.106\n"},
+            {"releases/README.md": b"# R\n"})
+        self.assertEqual(probs, [])
+        self.assertEqual(len(proofs), 3)
+        self.assertIn(rt.hashlib.sha256(self.REL).hexdigest()[:16], proofs[0])
+
+    def test_one_changed_byte_fails(self):
+        probs, _ = self._check([("A", "releases/0.3.106.json")], {"releases/0.3.106.json": self.REL.replace(b"6", b"7")},
+                               {"releases/0.3.106.json": self.REL})
+        self.assertEqual(len(probs), 1)
+        self.assertIn("!= wizard-os", probs[0])
+
+    def test_anything_else_fails(self):
+        cases = [
+            ([("M", "wam/cli.py")], {"wam/cli.py": b"x"}, {}),                                   # outside releases/
+            ([("D", "releases/0.3.90.json")], {"releases/0.3.90.json": b""}, {}),                # a deletion
+            ([("A", "releases/9.9.9.json")], {"releases/9.9.9.json": self.REL}, {}),             # not in wizard-os
+            ([("A", "releases/../x")], {"releases/../x": b""}, {}),
+            ([], {}, {}),                                                                       # empty PR
         ]
-        with mock.patch.object(rt, "gh_json", return_value=comments):
-            self.assertTrue(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:00:00Z"))
-            self.assertFalse(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:30:00Z"))
-        with mock.patch.object(rt, "gh_json", return_value=None):
-            self.assertFalse(rt.codex_out_of_credits("o/r", "1", "2026-10-31T03:00:00Z"))
+        for changes, mirror, canonical in cases:
+            self.assertTrue(self._check(changes, mirror, canonical)[0], changes)
+        probs, _ = self._check([("M", "releases/README.md")], {"releases/README.md": b"# rewritten\n"}, {},
+                               {"releases/README.md": b"# R\n"})
+        self.assertIn("not append-only", probs[0])
 
-    def test_every_merge_wait_ends_inside_the_run_budget(self):
-        """A wrapper `timeout 3600` kills the run with no report; waits must raise Stop before that."""
+    def test_verify_mirror_runs_on_real_git_and_posts_the_status(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin"}
+            git = lambda repo, *a: subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True,  # noqa: E731
+                                                  text=True, env=env).stdout.strip()
+            wos, wam = d / "wos", d / "wam"
+            for r in (wos, wam):
+                (r / "releases").mkdir(parents=True)
+                git(r, "init", "-q", "-b", "main")
+            (wos / "releases" / "0.3.106.json").write_bytes(self.REL)
+            (wos / "releases" / "latest").write_text("0.3.106\n")
+            git(wos, "add", "."); git(wos, "commit", "-qm", "cut")
+            git(wos, "update-ref", "refs/remotes/origin/main", "HEAD")
+            (wam / "releases" / "README.md").write_text("# R\n")
+            git(wam, "add", "."); git(wam, "commit", "-qm", "base")
+            base = git(wam, "rev-parse", "HEAD")
+            (wam / "releases" / "0.3.106.json").write_bytes(self.REL)
+            (wam / "releases" / "latest").write_text("0.3.106\n")
+            (wam / "releases" / "README.md").write_text("# R\n\n## 0.3.106\n")
+            git(wam, "add", "."); git(wam, "commit", "-qm", "mirror")
+            head = git(wam, "rev-parse", "HEAD")
+            real_sh, posted = rt.sh, []
+
+            def fake_sh(cmd, *a, **k):
+                if cmd[:2] == ["git", "-C"] and "fetch" in cmd:
+                    return ""
+                if cmd[:3] == ["gh", "api", "-X"]:
+                    posted.append(cmd)
+                    return ""
+                return real_sh(cmd, *a, **k)
+            with mock.patch.object(rt, "sh", side_effect=fake_sh), \
+                    mock.patch.object(rt, "gh_json", return_value={"headRefOid": head}):
+                proofs = rt.verify_mirror(wam, wos, base, "7", head)
+                self.assertEqual(len(proofs), 3)
+                self.assertIn(f"repos/{rt.WAM}/statuses/{head}", posted[-1])
+                self.assertIn("state=success", posted[-1])
+                self.assertIn(f"context={rt.MIRROR_STATUS}", posted[-1])
+                (wam / "releases" / "latest").write_text("0.3.107\n")
+                git(wam, "commit", "-qam", "drift")
+                bad = git(wam, "rev-parse", "HEAD")
+            with mock.patch.object(rt, "sh", side_effect=fake_sh), \
+                    mock.patch.object(rt, "gh_json", return_value={"headRefOid": bad}):
+                with self.assertRaises(rt.Stop):
+                    rt.verify_mirror(wam, wos, base, "7", bad)
+                self.assertIn("state=failure", posted[-1])
+
+    def test_mirror_merges_need_the_check_and_no_person(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        body = src[src.index("def open_and_merge("):src.index("def mirror_problems(")]
+        self.assertIn("min(time.time() + timeout, run_deadline())", body)   # every wait ends inside the run budget
         self.assertLess(rt.RUN_BUDGET_S, 3600)
+        self.assertIn("verify(n, head)", body)
+        self.assertIn("MIRROR_STATUS", body)
+        self.assertIn('"--match-head-commit", head', body)
+        self.assertNotIn("codex", body.lower())
+        self.assertEqual(src.count("verify=lambda n, h: verify_mirror("), 2)   # cut mirror and promote mirror
+
+
+class AppManagerAndBursts(unittest.TestCase):
+    def test_app_manager_moves_with_source_commit_and_inputs(self):
+        latest = (ROOT / "releases" / "latest").read_text().strip()
+        L = json.loads((ROOT / "releases" / f"{latest}.json").read_text())
+        pub = {"commit": "e" * 40, "ref": "ghcr.io/humanitylabs-org/wizard-app-manager:v4.10.2-wizard.1100-ddddddd",
+               "digest": "sha256:" + "2" * 64, "ci_run": "https://github.com/x/y/actions/runs/2",
+               "architectures": ["amd64", "arm64"], "source_commit": "d" * 40,
+               "image_inputs": L["images"]["wizard-app-manager"]["image_inputs"]}
+        C = rt.candidate_json(L, "9.9.9", {"wizard-app-manager": pub}, "0.0.1", [])
+        self.assertEqual(C["components"]["wizard-app-manager"]["commit"], "e" * 40)
+        im = C["images"]["wizard-app-manager"]
+        self.assertEqual((im["source_commit"], im["digest"]), ("d" * 40, "sha256:" + "2" * 64))
+        self.assertEqual(im["image_inputs"], L["images"]["wizard-app-manager"]["image_inputs"])
+        self.assertIn("App Manager", C["name"])
+        for k in ("wizard-ux", "wizard-agent-service"):
+            self.assertEqual(C["components"][k], L["components"][k])
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "9.9.9.json"
+            p.write_text(json.dumps(C, indent=2) + "\n")
+            r = subprocess.run([sys.executable, str(HERE.parent / "check_release.py"), "--offline", str(p)],
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_wam_tag_follows_image_yml_and_mirror_only_commits_never_move(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin"}
+            git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,  # noqa: E731
+                                            env=env).stdout.strip()
+            git("init", "-q", "-b", "main")
+            (d / ".github" / "workflows").mkdir(parents=True)
+            (d / ".github" / "workflows" / "image.yml").write_text(
+                '      - id: v\n        run: echo "tag=v4.10.2-wizard.$(git rev-list --count HEAD)-$(git rev-parse --short HEAD)" '
+                '>> "$GITHUB_OUTPUT"\n')
+            git("add", "."); git("commit", "-qm", "one")
+            (d / "wam.py").write_text("x\n"); git("add", "."); git("commit", "-qm", "two")
+            a = git("rev-parse", "HEAD")
+            self.assertEqual(rt.wam_image_tag(d, a), f"v4.10.2-wizard.2-{git('rev-parse', '--short', a)}")
+            (d / "releases").mkdir(); (d / "releases" / "latest").write_text("0.3.106\n")
+            git("add", "."); git("commit", "-qm", "mirror")
+            b = git("rev-parse", "HEAD")
+            self.assertTrue(rt.only_releases_changed(d, a, b))
+            (d / "wam.py").write_text("y\n"); git("commit", "-qam", "code")
+            self.assertFalse(rt.only_releases_changed(d, a, git("rev-parse", "HEAD")))
+
+    def test_plan_cuts_the_app_manager_automatically(self):
         src = (HERE.parent / "release_train.py").read_text()
-        body = src[src.index("def open_and_merge("):src.index("def codex_state(")]
-        self.assertIn("min(time.time() + timeout, run_deadline())", body)
-        self.assertIn("codex_out_of_credits(repo, n, opened_iso)", body)
+        i = src.index("def plan(")
+        block = src[i:src.index("def next_version(")]
+        self.assertIn("published_wam(d, L)", block)
+        self.assertNotIn("cut by hand", block)
 
-    def test_out_of_credits_requests_a_non_author_reviewer(self):
-        """No Codex credits must not leave the PR invisible: it goes into a teammate's review queue."""
-        src = (HERE.parent / "release_train.py").read_text()
-        body = src[src.index("def open_and_merge("):src.index("def codex_state(")]
-        self.assertIn("request_reviewers(repo, n)", body)
-        self.assertTrue(rt.FALLBACK_REVIEWERS)
+    def test_at_most_one_cut_per_30_minutes(self):
+        self.assertEqual(rt.MIN_CUT_INTERVAL, 1800)
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "last_cut_age", return_value=600.0), \
+                mock.patch.object(rt, "plan", side_effect=AssertionError("a deferred cut plans nothing")):
+            rep = rt.run(Path(d), False, False, [], False, "cut")
+        self.assertTrue(rep["deferred"])
+        self.assertTrue(rep["outcome"].startswith("DEFERRED: the last For testers cut was 10 min ago"))
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "last_cut_age", return_value=1801.0), \
+                mock.patch.object(rt, "plan", side_effect=rt.Stop("planned")):
+            with self.assertRaises(rt.Stop):
+                rt.run(Path(d), False, False, [], False, "cut")
 
+    def test_last_cut_age_reads_releases_latest_history(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            env = {"GIT_AUTHOR_DATE": "2026-11-07T10:00:00Z", "GIT_COMMITTER_DATE": "2026-11-07T10:00:00Z",
+                   "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin"}
+            run = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, env=env)  # noqa: E731
+            run("init", "-q", "-b", "main")
+            (d / "releases").mkdir(); (d / "releases" / "latest").write_text("0.3.106\n")
+            run("add", "."); run("commit", "-qm", "cut"); run("update-ref", "refs/remotes/origin/main", "HEAD")
+            from datetime import datetime
+            now = datetime.fromisoformat("2026-11-07T10:20:00+00:00").timestamp()
+            self.assertAlmostEqual(rt.last_cut_age(d, now), 1200.0)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_promote_check_is_cheap_and_prints_due(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(rt, "STATE", Path(d)), \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "show", side_effect=lambda repo, ref, f: "0.3.106\n" if f.endswith("latest") else "0.3.102\n"), \
+                mock.patch.object(rt, "soaked_for", return_value=10.0), \
+                mock.patch.object(rt, "plan", side_effect=AssertionError("no component clones")):
+            from io import StringIO
+            with mock.patch("sys.stdout", new=StringIO()) as out:
+                self.assertEqual(rt.main(["--work", d, "promote-soaked", "--check"]), 0)
+            self.assertIn("due=false", out.getvalue())
+            self.assertIn("WAITING", out.getvalue())
 
 
 class ForTestersForEveryone(unittest.TestCase):
@@ -281,3 +425,7 @@ class ForTestersForEveryone(unittest.TestCase):
                              text=True).stdout
         self.assertIn("cut", out)
         self.assertIn("promote-soaked", out)
+
+
+if __name__ == "__main__":
+    unittest.main()
