@@ -32,9 +32,12 @@ jobs:
       due: ${{ steps.gate.outputs.due }}
     env:
       GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
-      WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
     steps:
       - uses: actions/checkout@v4
+      - name: Work dirs
+        run: |
+          echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
+          echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
       - name: Token present
         run: |
           [ -n "$GH_TOKEN" ] || { echo "::error::RELEASE_TRAIN_TOKEN is not set on humanitylabs-org/wizard-os (docs/RELEASE_AUTOMATION.md, Owner setup)"; exit 1; }
@@ -53,13 +56,15 @@ jobs:
     timeout-minutes: 180
     env:
       GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
-      WIZARD_TRAIN_HOME: ${{ runner.temp }}/release-train
       WIZARD_TRAIN_BUDGET_S: "9000"
-      WIZARD_RIG_DIR: ${{ runner.temp }}/rig
       WIZARD_TRAIN_GIT_NAME: wizardosbuilder
       WIZARD_TRAIN_GIT_EMAIL: 353326775+wizardosbuilder@users.noreply.github.com
     steps:
       - uses: actions/checkout@v4
+      - name: Work dirs
+        run: |
+          echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
+          echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
       - run: gh auth setup-git
       - uses: ./.github/actions/upgrade-rig-setup
       - name: Promote latest (upgrade test, promotion PR, checked mirror)
