@@ -37,13 +37,13 @@ Anyone who has **the whole box** for a while and knows what they are doing can r
 - **Secure Boot off.** The box is still encrypted and still unlocks itself, and a pulled disk is still unreadable, but any USB boot with Secure Boot off can reproduce the same PCR 7. Status says so. Turning Secure Boot on asks for the recovery key once, then the owner re-seals.
 - **Boot security updates that change PCR 7:** a firmware or BIOS update (sometimes), a dbx revocation update, the Microsoft 2023 certificate rollout, a shim update that raises its SBAT level (including booting someone's newer shim, such as a newer Debian rescue stick, which can raise the firmware's SBAT level for every later boot), or a kernel signed with an owner-enrolled key (MOK). The next boot asks for the recovery key once, at the box's keyboard and screen; a headless box waits there and is unreachable until someone types it. To stop this happening unattended, a chip-sealed box holds `shim-signed` from automatic upgrades (`apt-mark hold`), does not install `fwupd`, and Wizard never reboots by itself. The owner applies these at the box, enters the recovery key once and re-seals. Status warns when a boot security package changed since the last seal ("The next restart may ask for the recovery key") and when a held one has an update waiting ("A boot security update is waiting: install it at this box").
 - **Dual boot.** Another OS on the same box (Windows Update in particular) applies dbx and Secure Boot certificate updates by itself, which changes PCR 7 for the Linux boot too. A dedicated box has no other OS. On an alongside box the Wizard data volume is `nofail,headless=true`: the box still starts without waiting at a prompt, the Wizard services stay stopped, and a small unit on the unencrypted root shows "Wizard data is locked: enter the recovery key at this box" on the console and login message (Settings cannot show it, because the shell's data is on the locked volume). `wam disk unlock` at the box opens it and starts the held services.
-- **Only Wizard data encrypted (alongside).** Root stays unencrypted, so anyone who can write to root (pull the disk, add a user, key or service, put it back) or edit GRUB gets the data volume unlocked by the chip on the next boot. What stays on the unencrypted root: Docker's images and its own volumes, swap, the system journal and logs, `/tmp`, and anything Wizard data left in free blocks before the move (until that disk is wiped or retired). App data, agent homes, the vault, tokens and backup staging move.
+- **Only Wizard data encrypted (alongside).** Root stays unencrypted, so anyone who can write to root (pull the disk, add a user, key or service, put it back) or edit GRUB gets the data volume unlocked by the chip on the next boot. What stays on the unencrypted root: Docker's images and the owner's other Docker volumes, swap, the system journal and logs, `/tmp`, and anything Wizard data left in free blocks before the move (until that disk is wiped or retired). App data, agent homes, the vault, tokens and backup staging move.
 
 Closing the whole-box gaps needs the later work: a signed boot image (UKI) with a signed PCR 11 policy, an owner PIN, or the network check.
 
 ## Recovery
 
-When the chip withholds the key, the boot screen asks for a passphrase. Typing the recovery key unlocks it. After a deliberate change, the owner runs `wam disk reseal` at the box. It:
+When the chip withholds the key on a dedicated box, the boot screen asks for a passphrase and typing the recovery key unlocks it. On an alongside box the box starts with Wizard stopped and `wam disk unlock` at the box takes the recovery key. After a deliberate change, the owner runs `wam disk reseal` at the box. It:
 
 - runs only from a local console session (a logind session with `Remote=no` on a local tty or serial line), never over SSH or from an agent's pty. This guards against mistakes; it is not a boundary against something that already has root;
 - asks for the recovery key itself (never from an agent, argument or file). On a box where the agent has root, the agent could still capture it while it is typed; keeping it out of agents is a design rule, not a boundary against root;
@@ -72,7 +72,7 @@ It never reads key material. Settings, Security shows one plain line from it:
 |---|---|
 | Encrypted, chip-sealed, recovery key confirmed saved | Disk encrypted, unlocks with this box's security chip |
 | Same, Secure Boot off | Disk encrypted, unlocks with this box's security chip. Secure Boot is off: turn it on for stronger protection |
-| Encrypted, the temporary install key is still on this box (seal failed, or recovery key not confirmed yet). Takes priority over every other row | Not protected yet: the disk key is still stored on this box. Finish setup on this box's screen |
+| Encrypted, the temporary install key is still on this box (seal failed, or recovery key not confirmed yet). Takes priority over every other row | Not protected yet: the disk key is still stored on this box. Finish setup on this box's screen (if it keeps failing, check the security chip is turned on in the firmware settings) |
 | Chip-sealed, but this start unlocked with the recovery key or the chip no longer matches | This box's security chip no longer matches: run `wam disk reseal` at this box |
 | Encrypted, needs a passphrase | Disk encrypted, asks for a passphrase at every start |
 | Only Wizard data encrypted (alongside, after `wam disk encrypt`) | Wizard data encrypted, unlocks with this box's security chip (the same Secure Boot and update notes apply) |
@@ -83,7 +83,7 @@ It never reads key material. Settings, Security shows one plain line from it:
 | Mac, FileVault on | Protected by FileVault on this Mac |
 | Mac, FileVault off | Not encrypted: FileVault is off on this Mac |
 
-When a boot security package changed since the last seal, the line adds: "The next restart may ask for the recovery key."
+When a boot security package or a Secure Boot variable (db, dbx, KEK, SbatLevel, compared by hash with the values at seal time) changed since the last seal, the line adds: "The next restart may ask for the recovery key." When a held boot security package has an update waiting, it adds: "A boot security update is waiting: install it at this box."
 
 ## Per platform
 
@@ -91,11 +91,11 @@ When a boot security package changed since the last seal, the line adds: "The ne
 
 With a TPM 2.0 chip, the installer always encrypts: one LUKS2 volume with LVM for root and swap, `/boot` and the EFI partition outside, and dracut as the initramfs.
 
-1. **Install.** The installer formats with a random temporary passphrase. It exists only in the installer's memory, as a root-only key file on the encrypted root and as a copy of that file inside the first initramfs on `/boot`. `/etc/crypttab` names it as the fallback after the chip. No owner data exists yet.
+1. **Install.** The installer formats with a random temporary passphrase. It exists only in the installer's memory, as a root-only key file on the encrypted root, and inside every initramfs on `/boot` built while it exists (a dracut `install_items` drop-in, so a kernel update before the seal still boots). `/etc/crypttab` names it as the fallback after the chip. No owner data exists yet.
 2. **First boot.** The initramfs finds no chip slot and unlocks with the key file. First-run setup, on the box's screen and before anything else:
    1. seals a chip slot for this real installed boot (not the installer's) and tests it without unlocking (`cryptsetup open --test-passphrase --token-only`);
    2. makes the recovery key and shows it once, with "Write this down or take a photo, then press Enter";
-   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rewrites `/etc/crypttab` to `none`, rebuilds the initramfs without it (checking the new image holds the chip support and no key file) and restarts.
+   3. only after Enter, wipes the temporary passphrase slot, deletes the key file, rewrites `/etc/crypttab` to `none`, removes the dracut drop-in, rebuilds every initramfs without it (`dracut --regenerate-all`, checking each image holds the chip support and no key file) and restarts.
 3. **Second boot.** The chip unlocks the disk with no prompt, and the Tailscale step starts. If the chip ever refuses, the owner has the recovery key they just saved.
 
 If sealing or its test fails, the box keeps the temporary unlock and shows no recovery key. The screen says "This box's security chip could not be used: the disk is not protected yet", setup carries on to Tailscale, status shows the "Not protected yet" line, and every start retries the seal. A later successful retry shows the recovery key on the box's screen without holding up any service, and wipes the temporary key and restarts only after Enter is pressed there. If the box loses power before Enter, the next start replaces the unconfirmed recovery key with a new one. It is never left without a working unlock.
@@ -111,14 +111,15 @@ Root is never re-encrypted in place and existing disks are never repartitioned s
 1. needs a new drive or an empty partition;
 2. takes a verified backup first;
 3. creates a TPM-sealed LUKS2 volume with a recovery key;
-4. stops Wizard, moves the Wizard home and app data (which hold the agent homes, vault and tokens) onto it, and bind-mounts them back at their old paths, ordered with `RequiresMountsFor=` on Wizard's own units (not the owner's other containers). The emptied folders left on root become immutable mount points (`chattr +i`), so nothing can write underneath while the volume is locked, including containers Docker restarts by itself: their bind mounts fail instead of writing plaintext. Wizard app data lives in bind mounts under the moved folders; a Wizard app that keeps data in a Docker named volume is listed and moved too. The volume is `nofail,headless=true`, unlocked by the chip after boot;
-5. checks every file and keeps the old copy until the owner confirms.
+4. stops Wizard, moves the Wizard home and app data (which hold the agent homes, vault and tokens) onto it, and bind-mounts them back at their old paths, ordered with `RequiresMountsFor=` on Wizard's own units (not the owner's other containers). The emptied folders left on root become immutable mount points (`chattr +i`), so nothing can write underneath while the volume is locked, including containers Docker restarts by itself: their bind mounts fail instead of writing plaintext. Wizard app data lives in bind mounts under the moved folders; a Wizard app that keeps data in a Docker named volume is listed and moved too. The volume is `nofail,headless=true`, unlocked by the chip after boot, and its filesystem mount and every bind mount are `nofail` too, so a locked volume never sends the boot to emergency mode. The old copy is renamed aside on root, not deleted;
+5. shows the recovery key once on the box's screen with the same Enter confirmation and saved marker as a dedicated box, holds `shim-signed`, and turns off automatic `fwupd` updates if it is installed;
+6. checks every file and keeps the old copy until the owner confirms.
 
-On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` copies the current data back to the old folders and removes the mounts (before confirmation it never falls back to the stale old copy). Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
+On confirmation it deletes the old copy and trims free space. `wam disk encrypt --rollback` clears the immutable flag, copies the current data back to the old folders and removes the mounts (before confirmation it never falls back to the stale old copy). Both need the same local-console confirmation as `wam disk reseal`. James's Minisforum gets it when its new SSDs arrive, as a separate attended step.
 
 ### VPS
 
-No chip to seal to, and the provider controls the disk (a provider's virtual TPM adds nothing). Wizard reports "Not encrypted by Wizard: relies on your provider's disk encryption" and changes nothing.
+No chip to seal to, and the provider controls the disk (a provider's virtual TPM adds nothing). Many providers do not encrypt at all, and Wizard cannot check. Wizard reports "Not encrypted by Wizard: relies on your provider's disk encryption" and changes nothing.
 
 ### Mac (Wizard for Mac)
 
