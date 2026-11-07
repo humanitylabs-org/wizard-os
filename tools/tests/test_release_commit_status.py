@@ -1,6 +1,6 @@
 """Exercise legacy commit statuses through the production release merge wait loop.
 
-Network, Git mutations, reviewer service and sleep are stubbed. No release is made.
+Network, Git mutations and sleep are stubbed. No release is made.
 """
 import sys
 import unittest
@@ -35,11 +35,8 @@ class CommitStatusAdmission(unittest.TestCase):
                 return {'data': {'repository': {'pullRequest': {'reviewThreads': {'nodes': []}}}}}
             raise AssertionError(args)
 
-        reviewer = {'commit_sha': head, 'status': 'completed',
-                    'has_unresolved_findings': False, 'has_any_findings': False}
         with mock.patch.object(rt, 'sh', side_effect=shell), \
                 mock.patch.object(rt, 'gh_json', side_effect=github), \
-                mock.patch.object(rt, 'codex_state', return_value=reviewer), \
                 mock.patch.object(rt.time, 'sleep'), \
                 mock.patch.object(rt, 'run_deadline', return_value=float('inf')):
             try:
