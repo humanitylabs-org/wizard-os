@@ -71,9 +71,18 @@ whatever the owner set.
 The App Manager runs as the box's owner account. Root work goes through one fixed helper,
 `/usr/local/libexec/wizard-os/os-patch`, installed root-owned by `wam maintain setup`. The installer runs setup, using
 the passwordless sudo that `get.sh` already sets up. The matching `/etc/sudoers.d/wizard-os-maintenance` allows
-exactly five argument lists: `check`, `check --refresh`, `apply`, `native-off`, `native-on`. The helper takes no other
-input, so it cannot run a package name, a path or a shell command it was given. A box without sudo stays `check`, with
-an unprivileged check; Health shows the one command that turns patching on.
+exactly seven argument lists: `check`, `check --refresh`, `apply`, `native-off`, `native-on`, `restart-check`,
+`remove`. The restart lane has its own rule, `/etc/sudoers.d/wizard-os-maintenance-restart-lane`, written only by an
+attended `wam maintain setup --restart-lane`; it allows `restart-service *`, `apply-held` and `reboot`. The helper
+takes no other input, so it cannot run a package name, a path or a shell command it was given. A box without sudo
+stays `check`, with an unprivileged check; Health shows the one command that turns patching on.
+
+Besides the read-only checks, the owner account can do three things through the main rule: force a patch run, pause
+the distribution's own updater (`native-off`), or remove the helper. Nothing else, and no shell.
+
+`wam maintain remove` deletes the helper and both rules, sets `os_security` back to `check`, and records
+`helper_removed: true` in `maintenance.json`. Installer runs then skip setup until the owner runs `wam maintain setup`
+again. What a restore does with that flag is still open: see [BOX_STATE.md](BOX_STATE.md#nightly-maintenance).
 
 ## Safety rules
 
