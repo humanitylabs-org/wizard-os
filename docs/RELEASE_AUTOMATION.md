@@ -51,6 +51,23 @@ owner step below is done.
    (`--match-head-commit`) after every other check is green and no review thread is open. Any mismatch posts a
    failure status and stops the train with the file and both hashes.
 
+5. **Hotfix lane (wizard-os#434), off by default** — `WIZARD_TRAIN_HOTFIX_LANE=1` in the job env turns it on;
+   unset, every release keeps the 30-min limit and the 72h soak. When a merged Wizard UX / Agent Service / App
+   Manager PR closes or references an org issue labelled `hotfix` (updated in the last 30 days; read with
+   `gh search issues` + the issue timeline, compare API for "is this commit in that pin", no clones):
+   - **Cut:** a hotfix PR on a component main but not yet in latest skips the 30-min limit (the step says
+     `hotfix lane: <repo>#<n> waiting; cutting now`).
+   - **Promote:** a latest that carries a hotfix PR not yet in stable moves after **24h** instead of 72h; after
+     **0h** when the hotfix issue is also labelled `breaking` or the PR closes a `release-blocker` issue. Any open
+     `release-blocker` still holds it, and the installed upgrade test still runs first. The promotion record uses
+     `promote_stable.py promote --fast-track` with a `Hotfix lane (wizard-os#434): ...` reason, so
+     `promote_stable.py check` (and its mirrored copy) is unchanged.
+   - Any GitHub read error keeps the normal timing (fails toward waiting).
+   - **To turn it on** (needs a workflow edit, which the builder token can't push): add
+     `WIZARD_TRAIN_HOTFIX_LANE: "1"` to the `cut` job env in `release-cut.yml` and to both `gate` and `promote` job
+     envs in `release-promote.yml`. The promote schedule (every 6h) means "right away" is within 6h unless someone
+     runs the workflow by hand.
+
 ## Runners
 
 - Every release job runs on **GitHub-hosted `ubuntu-latest`** by default: it has gh, git, python3, docker buildx

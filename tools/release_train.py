@@ -565,6 +565,116 @@ def release_blockers() -> list[str]:
     return [f"{x.get('url')} {x.get('title', '')[:80]}" for x in got]
 
 
+# Hotfix lane (wizard-os#434), OFF by default: WIZARD_TRAIN_HOTFIX_LANE=1 turns it on. When a merged component PR
+# closes or references an org issue labelled `hotfix`: its For testers cut skips the MIN_CUT_INTERVAL throttle, and
+# the For everyone soak is HOTFIX_SOAK_HOURS instead of SOAK_HOURS (still no open release-blocker), or 0h when the
+# hotfix issue is also labelled `breaking` or the PR closes a `release-blocker` issue. Any lookup error: normal timing.
+HOTFIX_LANE = os.environ.get("WIZARD_TRAIN_HOTFIX_LANE", "0") == "1"
+HOTFIX_LABEL, BREAKING_LABEL = "hotfix", "breaking"
+HOTFIX_SOAK_HOURS = 24
+HOTFIX_LOOKBACK_DAYS = 30
+_PR_FIELDS = ("number merged mergeCommit{oid} repository{nameWithOwner} "
+              "closingIssuesReferences(first:20){nodes{labels(first:30){nodes{name}}}}")
+HOTFIX_QUERY = ("query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){"
+                "labels(first:30){nodes{name}} timelineItems(first:100,itemTypes:[CROSS_REFERENCED_EVENT,"
+                "CONNECTED_EVENT,CLOSED_EVENT]){nodes{__typename "
+                f"... on CrossReferencedEvent{{source{{... on PullRequest{{{_PR_FIELDS}}}}}}} "
+                f"... on ConnectedEvent{{subject{{... on PullRequest{{{_PR_FIELDS}}}}}}} "
+                f"... on ClosedEvent{{closer{{... on PullRequest{{{_PR_FIELDS}}}}}}}}}}}}}}}}}")
+
+
+def _names(node) -> set[str]:
+    return {str(x.get("name")) for x in ((node or {}).get("labels") or {}).get("nodes") or [] if isinstance(x, dict)}
+
+
+def hotfix_prs_of(issue_url: str, issue: dict) -> list[dict]:
+    """Merged component PRs that close or reference one hotfix issue (its GraphQL `issue` node)."""
+    breaking = BREAKING_LABEL in _names(issue)
+    out: dict[tuple, dict] = {}
+    for ev in ((issue.get("timelineItems") or {}).get("nodes") or []):
+        p = (ev or {}).get("source") or (ev or {}).get("subject") or (ev or {}).get("closer") or {}
+        repo = (p.get("repository") or {}).get("nameWithOwner")
+        oid = (p.get("mergeCommit") or {}).get("oid")
+        if not p.get("merged") or not oid or repo not in FIX_REPOS.values():
+            continue
+        closes_blocker = any(BLOCKER_LABEL in _names(i) for i in ((p.get("closingIssuesReferences") or {}).get("nodes") or []))
+        prev = out.get((repo, p["number"]), {})
+        out[(repo, p["number"])] = {"repo": repo, "number": p["number"], "commit": oid, "issue": issue_url,
+                                    "immediate": bool(prev.get("immediate") or breaking or closes_blocker)}
+    return list(out.values())
+
+
+def hotfix_prs(now: float | None = None) -> list[dict]:
+    """Every merged component PR tied to an org `hotfix` issue updated in the last HOTFIX_LOOKBACK_DAYS. Raises Stop
+    when GitHub can't be read (callers then keep the normal timing)."""
+    since = datetime.fromtimestamp((now if now is not None else time.time()) - HOTFIX_LOOKBACK_DAYS * 86400,
+                                   timezone.utc).strftime("%Y-%m-%d")
+    issues = gh_json(["search", "issues", "--owner", ORG, "--label", HOTFIX_LABEL, "--updated", f">={since}",
+                      "--json", "url,number,repository", "--limit", "50"])
+    if not isinstance(issues, list):
+        raise Stop(f"could not read {HOTFIX_LABEL} issues")
+    out = []
+    for i in issues:
+        repo = (i.get("repository") or {}).get("nameWithOwner") or ""
+        owner, _, name = repo.partition("/")
+        got = gh_json(["api", "graphql", "-f", f"query={HOTFIX_QUERY}", "-F", f"o={owner}", "-F", f"r={name}",
+                       "-F", f"n={i['number']}"])
+        issue = (((got or {}).get("data") or {}).get("repository") or {}).get("issue")
+        if not isinstance(issue, dict):
+            raise Stop(f"could not read {i.get('url')}")
+        out += hotfix_prs_of(i.get("url", ""), issue)
+    return out
+
+
+def contains(repo: str, ref: str, commit: str) -> bool:
+    """Is <commit> in <ref>'s history (GitHub compare, no clone)?"""
+    st = sh(["gh", "api", f"repos/{repo}/compare/{commit}...{ref}", "--jq", ".status"]).strip()
+    return st in ("ahead", "identical")
+
+
+def hotfixes_between(old: dict, new: dict | None) -> list[dict]:
+    """Hotfix PRs in <new> release's component pins (None: each component's main) and not in <old>'s pins."""
+    out = []
+    for h in hotfix_prs():
+        comp = next(c for c, r in FIX_REPOS.items() if r == h["repo"])
+        old_pin = old["components"][comp]["commit"]
+        new_pin = new["components"][comp]["commit"] if new else "main"
+        if contains(h["repo"], new_pin, h["commit"]) and not contains(h["repo"], old_pin, h["commit"]):
+            out.append(h)
+    return out
+
+
+def hotfix_soak(wos: Path, stable: str, latest: str) -> tuple[float, list[dict]]:
+    """(hours latest must soak, hotfixes it carries since stable). Lane off or any lookup error: (SOAK_HOURS, [])."""
+    if not HOTFIX_LANE:
+        return SOAK_HOURS, []
+    try:
+        rel = lambda v: json.loads(show(wos, "origin/main", f"releases/{v}.json"))   # noqa: E731
+        hf = hotfixes_between(rel(stable), rel(latest))
+    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+        say(f"hotfix lane: lookup failed ({e}); normal {SOAK_HOURS}h soak")
+        return SOAK_HOURS, []
+    if not hf:
+        return SOAK_HOURS, []
+    return (0 if any(h["immediate"] for h in hf) else HOTFIX_SOAK_HOURS), hf
+
+
+def pending_hotfixes(wos: Path) -> list[dict]:
+    """Hotfix PRs merged on a component main but not yet in releases/latest. Lane off or lookup error: []."""
+    if not HOTFIX_LANE:
+        return []
+    try:
+        latest = show(wos, "origin/main", "releases/latest").strip()
+        return hotfixes_between(json.loads(show(wos, "origin/main", f"releases/{latest}.json")), None)
+    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+        say(f"hotfix lane: lookup failed ({e}); normal throttle")
+        return []
+
+
+def _hf_names(hf: list[dict]) -> str:
+    return ", ".join(f"{h['repo'].split('/')[1]}#{h['number']}" for h in hf)
+
+
 def soaked_for(version: str, releases: Path, now: float | None = None) -> float | None:
     """Hours <version> has been releases/latest (from git history, the same source promote_stable uses)."""
     import importlib.util
@@ -577,20 +687,23 @@ def soaked_for(version: str, releases: Path, now: float | None = None) -> float 
     return ((now if now is not None else time.time()) - t) / 3600
 
 
-def soak_gate(stable: str, latest: str, releases: Path) -> tuple[bool, str, float | None]:
-    """Is latest due for For everyone? (due, outcome when not due, hours on latest). Cheap: wizard-os only."""
+def soak_gate(stable: str, latest: str, releases: Path) -> tuple[bool, str, float | None, list[dict]]:
+    """Is latest due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the soak).
+    Cheap: wizard-os only (plus GitHub API reads when the hotfix lane is on)."""
     if _key(latest) <= _key(stable):
-        return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None
+        return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None, []
+    need, hf = hotfix_soak(releases.parent, stable, latest)
     hours = soaked_for(latest, releases)
-    if hours is None or hours < SOAK_HOURS:
+    if need > 0 and (hours is None or hours < need):
         return False, (f"WAITING: {latest} has been For testers for "
                        f"{'an unknown time' if hours is None else f'{hours:.0f}h'}; it moves to For everyone "
-                       f"after {SOAK_HOURS}h. Stable stays {stable}."), hours
+                       f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}. "
+                       f"Stable stays {stable}."), hours, hf
     blockers = release_blockers()
     if blockers:
         return False, (f"HELD: {len(blockers)} open {BLOCKER_LABEL} issue(s): " + "; ".join(blockers)
-                       + f". Stable stays {stable}."), hours
-    return True, "", hours
+                       + f". Stable stays {stable}."), hours, hf
+    return True, "", hours, hf
 
 
 def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False,
@@ -602,7 +715,11 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     step = lambda s: (rep["steps"].append(s), say(s))   # noqa: E731
     if mode == "cut" and not dry:
         age = last_cut_age(clone(WOS, work))
-        if age is not None and age < MIN_CUT_INTERVAL:
+        hf = pending_hotfixes(clone(WOS, work)) if age is not None and age < MIN_CUT_INTERVAL else []
+        if hf:
+            rep["hotfixes"] = hf
+            step(f"hotfix lane: {_hf_names(hf)} waiting; cutting now (skips the {MIN_CUT_INTERVAL // 60}-min limit)")
+        elif age is not None and age < MIN_CUT_INTERVAL:
             rep["mode"], rep["deferred"] = mode, True
             rep["outcome"] = (f"DEFERRED: the last For testers cut was {age / 60:.0f} min ago (at most one per "
                               f"{MIN_CUT_INTERVAL // 60} min); the next sweep cuts whatever is newer then.")
@@ -613,12 +730,15 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     stable, latest = p["stable"], p["latest"]
     if mode == "soaked":
         # For everyone takes latest as it is: never a new cut here.
-        due, why, hours = soak_gate(stable, latest, clone(WOS, work) / "releases")
+        due, why, hours, hotfixes = soak_gate(stable, latest, clone(WOS, work) / "releases")
         if not due:
             rep["outcome"] = why
             return rep
         p["candidate"], p["cut"], p["moves"] = latest, False, {}
-        step(f"{latest} soaked {hours:.0f}h on For testers; no open {BLOCKER_LABEL}")
+        if hotfixes:
+            rep["hotfixes"] = hotfixes
+        step(f"{latest} soaked {'an unknown time' if hours is None else f'{hours:.0f}h'} on For testers; no open "
+             f"{BLOCKER_LABEL}{f'; hotfix lane: {_hf_names(hotfixes)}' if hotfixes else ''}")
     step(f"stable {stable}, latest {latest}; waiting fixes: {len(p['waiting_fixes'])}; to move: {sorted(p['moves'])}")
     for m in p["manual"] + p["unpublished"]:
         step(f"not in this train: {m}")
@@ -750,7 +870,9 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     notes = ("Ride-alongs onto Stable: " + "; ".join(f"{x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title'][:80]}"
                                                      for x in prs) + ("; " + "; ".join(items) if items else "")
              + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install.")
-    why = ([f"{V} soaked {SOAK_HOURS}h+ on For testers (latest) with no open {BLOCKER_LABEL} issue (For everyone "
+    why = ([f"{V} carries hotfix {_hf_names(rep['hotfixes'])}: hotfix lane (wizard-os#434), shortened soak with no "
+            f"open {BLOCKER_LABEL} issue, recorded as a fast-track."] if mode == "soaked" and rep.get("hotfixes") else
+           [f"{V} soaked {SOAK_HOURS}h+ on For testers (latest) with no open {BLOCKER_LABEL} issue (For everyone "
             "promotion, normal gate, no fast-track)."] if mode == "soaked" else (p["waiting_fixes"] or ["(none: forced proof run)"]))
     doc = (f"# Promote {V} (release train)\n\n## Why\n\n"
            + ("" if mode == "soaked" else f"Stable {stable} lacked merged Recommended fixes:\n\n")
@@ -770,7 +892,12 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     else:
         sh(["git", "-C", str(wt), "checkout", "-q", "-B", branch_promo])   # dry: stacked on the local cut commit
     evidence = f"https://github.com/{WOS}/blob/main/{evidence_rel}"
-    if mode == "soaked":     # the normal gate: promote_stable itself refuses a release that has not soaked
+    if mode == "soaked" and rep.get("hotfixes"):   # hotfix lane: the soak is waived on the record (DECISIONS #82)
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
+            "--classification", cls, "--reason", f"Hotfix lane (wizard-os#434): {_hf_names(rep['hotfixes'])} "
+            f"(issues {', '.join(sorted({h['issue'] for h in rep['hotfixes']}))}); no open {BLOCKER_LABEL}. " + reason,
+            "--notes", notes], cwd=wt)
+    elif mode == "soaked":     # the normal gate: promote_stable itself refuses a release that has not soaked
         sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence,
             "--notes", notes], cwd=wt)
     else:
@@ -788,7 +915,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                           f"Local commits: {sh(['git', '-C', str(wt), 'log', '--oneline', '-3']).strip()}")
         rep["promotion_record"] = rec
         return rep
-    how = f"after {SOAK_HOURS}h on For testers with no open {BLOCKER_LABEL}" if mode == "soaked" else f"fast-track **{cls}**"
+    how = (f"hotfix lane for {_hf_names(rep['hotfixes'])} with no open {BLOCKER_LABEL}" if mode == "soaked" and rep.get("hotfixes")
+           else f"after {SOAK_HOURS}h on For testers with no open {BLOCKER_LABEL}" if mode == "soaked" else f"fast-track **{cls}**")
     body = (f"Maintenance (release train): promote **{V}** to stable, {how}. Installed upgrade "
             f"{stable} → {V} passed: {evidence_rel}.\n\nRollback: `releases/stable` back to {stable}.")
     rep["promote_pr"] = open_and_merge(WOS, wt, branch_promo, f"Maintenance: promote {V} to stable (release train, {cls})",
@@ -870,7 +998,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             wos = clone(WOS, a.work)
             rel = lambda name: show(wos, "origin/main", f"releases/{name}")   # noqa: E731
-            due, why, hours = soak_gate(rel("stable").strip(), rel("latest").strip(), wos / "releases")
+            due, why, _hours, _hf = soak_gate(rel("stable").strip(), rel("latest").strip(), wos / "releases")
         except Stop as e:
             due, why = False, f"STOPPED: {e}"
         print(f"due={'true' if due else 'false'}")
