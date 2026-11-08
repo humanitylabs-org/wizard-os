@@ -159,17 +159,17 @@ Stable 0.3.76 lacked merged Recommended fixes:
 - wizard-agent-service#264 [fix] Recommended fix: Secret scan passes again (shared-vault staging test's placeholder PEM is not a key)
 - wizard-agent-service#265 [feature] Agents: a turned-off app is refused in plain words; new standard agents start with every app on (Miguel-approved)
 - wizard-agent-service#266 [fix] Recommended fix: a finished run leaves Working at once
-- wizard-app-manager#309 [maintenance] Maintenance: mirror Wizard OS 0.3.74 onto latest (0.3.73 + App Manager main 79272034, quick interface updates)
+- wizard-app-manager#309 [maintenance] Maintenance: mirror WizardOS 0.3.74 onto latest (0.3.73 + App Manager main 79272034, quick interface updates)
 - wizard-app-manager#321 [fix] Recommended fix: app updates fill newly required settings first (or ask the owner)
 - wizard-app-manager#323 [fix] Recommended fix: Connections works on desktop: the phone's list on every screen, two columns when wide, Connect two apps from the list
 - wizard-app-manager#326 [maintenance] Maintenance: mirror stable 0.3.74 (feature fast-track, App Manager main, quick interface updates)
 - wizard-app-manager#328 [feature] Connections: Agents with per-agent on/off switches, one Linked apps list, Restore defaults (Miguel-approved)
-- wizard-app-manager#329 [maintenance] Maintenance: mirror Wizard OS 0.3.75 onto latest (release train)
-- wizard-app-manager#330 [maintenance] Maintenance: mirror Wizard OS stable 0.3.76 (fix) and latest 0.3.77
+- wizard-app-manager#329 [maintenance] Maintenance: mirror WizardOS 0.3.75 onto latest (release train)
+- wizard-app-manager#330 [maintenance] Maintenance: mirror WizardOS stable 0.3.76 (fix) and latest 0.3.77
 - wizard-app-manager#331 [feature] Connections: spacing in the Restore defaults dialog
-- wizard-app-manager#332 [maintenance] Maintenance: mirror Wizard OS 0.3.78 onto latest (release train)
+- wizard-app-manager#332 [maintenance] Maintenance: mirror WizardOS 0.3.78 onto latest (release train)
 - wizard-app-manager#333 [fix] Recommended fix: wam picks up the docker group when the user manager predates it
-- wizard-app-manager#334 [maintenance] Maintenance: mirror Wizard OS 0.3.79 onto latest (release train)
+- wizard-app-manager#334 [maintenance] Maintenance: mirror WizardOS 0.3.79 onto latest (release train)
 - default app ai-connection: wizard-chatgpt f73b8487 0.2.6 -> wizard-chatgpt 5e5f1b2c 0.2.8
 - default app claude-subscription: wizard-claude 43f6a412 0.2.8 -> wizard-claude ee874699 0.2.10
 

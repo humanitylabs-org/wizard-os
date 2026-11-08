@@ -168,12 +168,12 @@ for k, v in (("model.provider", "custom"), ("model.base_url", "http://127.0.0.1:
              ("model.default", "hs-fake"), ("model.api_key", "acceptance-fake-model")):
     sh(["hermes", "config", "set", k, v], name=f"config-set-{k}.txt")
 
-# Wizard OS alongside: the CLI's MCP fixture stands in for the shell's gateway
+# WizardOS alongside: the CLI's MCP fixture stands in for the shell's gateway
 fix = subprocess.Popen([sys.executable, str(H / "mcp_fixture.py"), "--port", "8796"], stdout=open(EV / "mcp.log", "w"),
                        stderr=subprocess.STDOUT, start_new_session=True)
 time.sleep(2)
 rc, linked = wizard("link", "--url", "http://127.0.0.1:8796/mcp", name="wizard-link.json")
-check("Wizard OS linked alongside (wizard link)", rc == 0 and linked.get("ok"), {"exit": rc, "plugin": linked.get(
+check("WizardOS linked alongside (wizard link)", rc == 0 and linked.get("ok"), {"exit": rc, "plugin": linked.get(
     "plugin_installed"), "gateway": linked.get("gateway")}, ["evidence/wizard-link.json"])
 
 # gateway as the installer's systemd user service

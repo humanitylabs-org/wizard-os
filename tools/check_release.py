@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a Wizard OS release file: every pinned commit exists in its repo, every image digest resolves.
+"""Check a WizardOS release file: every pinned commit exists in its repo, every image digest resolves.
 
     python3 tools/check_release.py releases/0.2.0.json          # commits (gh api) + image digests (registry)
     python3 tools/check_release.py releases/0.2.0.json --offline # shape only (CI without network)
@@ -10,7 +10,7 @@ not a release), and that each image was built from its component's pinned commit
 org.opencontainers.image.revision). The installer (wizard-app-manager get.sh) installs exactly these pins and reads
 back what runs; releases/stable names the release a plain `curl -fsSL aiwizards.com/os.sh | bash` installs.
 
-A release file names exactly what one Wizard OS version is: the commit of each component repo, the image digests
+A release file names exactly what one WizardOS version is: the commit of each component repo, the image digests
 those commits produced, and the default app in every parking spot (with the index version it resolves to).
 Exit 0 = everything checked out; 1 = something is missing (each problem printed); 2 = usage / unreadable file.
 """

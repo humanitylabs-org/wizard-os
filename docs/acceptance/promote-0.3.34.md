@@ -4,7 +4,7 @@ Fast-tracked feature promotion under DECISIONS #93 (launch phase). Stable moves 
 
 ## Box
 
-Wipeable demo VPS (Ubuntu 24.04, tailnet host `demo-1`). Stock Hermes v0.22.5 installed as root with Telegram, then Wizard OS installed alongside by the owner pasting the private install prompt into Telegram (stable 0.3.32). The box started with no Tailscale: the installer installed it and the owner signed in from the link it sent.
+Wipeable demo VPS (Ubuntu 24.04, tailnet host `demo-1`). Stock Hermes v0.22.5 installed as root with Telegram, then WizardOS installed alongside by the owner pasting the private install prompt into Telegram (stable 0.3.32). The box started with no Tailscale: the installer installed it and the owner signed in from the link it sent.
 
 ## Upgrade 0.3.32 → 0.3.34 (same box, no wipe)
 

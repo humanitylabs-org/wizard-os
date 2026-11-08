@@ -1,8 +1,8 @@
 {
   "version": "0.2.0",
-  "name": "Wizard OS 0.2.0",
+  "name": "WizardOS 0.2.0",
   "date": "2026-10-11",
-  "about": "One Wizard OS version: the commit of every component repo, the images those commits produced, and the default app in each parking spot. Check with: python3 tools/check_release.py releases/0.2.0.json",
+  "about": "One WizardOS version: the commit of every component repo, the images those commits produced, and the default app in each parking spot. Check with: python3 tools/check_release.py releases/0.2.0.json",
   "install": {
     "command": "curl -fsSL aiwizards.com/os.sh | bash",
     "modes": {

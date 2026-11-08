@@ -26,7 +26,7 @@ Merged on App Manager main after the first cut of this PR (55655c9c..79272034), 
 - Maintenance: #313, #314 (0.3.73 mirrors), #315 (portable CI)
 
 Features through 55655c9c:
-- wizard-app-manager#231 [feature] release: mirror Wizard OS 0.3.49 latest (backup permission repair)
+- wizard-app-manager#231 [feature] release: mirror WizardOS 0.3.49 latest (backup permission repair)
 - wizard-app-manager#232 [feature] Store: install from share links (source: link) and record install source
 - wizard-app-manager#242 [feature] fix(installer): wait for Ubuntu automatic update locks
 - wizard-app-manager#249 [feature] Strong suggestion: alongside boxes turn on the Claude account broker and reload the dashboard after the plugin refresh

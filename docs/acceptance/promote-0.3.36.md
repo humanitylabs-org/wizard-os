@@ -4,7 +4,7 @@ Fast-tracked fix promotion (DECISIONS #82). Stable moves from 0.3.34 to 0.3.36.
 
 ## Box
 
-Demo VPS (Ubuntu 24.04, tailnet host `demo`), stock Hermes v0.22.5 as root with Telegram. Wizard OS 0.3.34 was installed alongside by the owner through the Telegram install prompt, with Tailscale installed and signed in by the installer.
+Demo VPS (Ubuntu 24.04, tailnet host `demo`), stock Hermes v0.22.5 as root with Telegram. WizardOS 0.3.34 was installed alongside by the owner through the Telegram install prompt, with Tailscale installed and signed in by the installer.
 
 ## Upgrades on the same box (no wipe)
 

@@ -238,7 +238,7 @@ Status: decided, not built. The App Manager source setting, banner and return pa
 still to implement.
 ## PR pipeline board
 
-[Wizard OS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
+[WizardOS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
 only) shows every pull request in the repos a release pins, plus wizard-os and try-wizard,
 in one of six columns: **Draft → In review → Merged → On Latest → On Stable**, or
 **Dropped**. Each card carries its **Tier** (from the `tier:` label) and **Opened by**, so

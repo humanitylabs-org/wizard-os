@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Acceptance for `wizard hermes update --stable` (docs/HERMES_STABLE.md step 4): one fresh Lima VM on Thales with
-# stock Hermes FROM_TAG from the official installer, linked to Wizard OS (alongside mode), seeded with chat sessions
+# stock Hermes FROM_TAG from the official installer, linked to WizardOS (alongside mode), seeded with chat sessions
 # and a cron job, then: dry run (Hermes home hash unchanged), busy box (no quiet moment, nothing changed), forced
 # failure (automatic rollback to FROM_TAG with history intact), real update to TO_TAG (exact commit, history and cron
 # intact).

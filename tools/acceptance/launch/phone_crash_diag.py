@@ -28,7 +28,7 @@ MARKER = 'Synthetic WebView diagnostic ready'
 # WebView. This fixture deliberately meets that read-only check; never report it
 # as a real shell or second-owner pairing result. No APIs, tokens or owner data.
 STRESS_PAGE = b'''<!doctype html><meta name="viewport" content="width=device-width">
-<title>Wizard OS - synthetic crash diagnostic</title><!-- core/ fixture only -->
+<title>WizardOS - synthetic crash diagnostic</title><!-- core/ fixture only -->
 <style>body{background:#101019;color:white}#tiles{display:grid;grid-template-columns:repeat(12,1fr)}
 .tile{height:16px;background:linear-gradient(40deg,#362c70,#72549b);filter:blur(.2px);will-change:transform}
 canvas{width:95%;height:180px}#tiles{animation:move 1s infinite alternate}@keyframes move{to{transform:translateY(10px)}}</style>

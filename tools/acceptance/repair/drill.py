@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Broken-box drill for docs/REPAIR_KIT.md (wizard-os#93).
 
-Builds a disposable Ubuntu VM with Lima, installs Wizard OS from the public installer, then breaks it in known ways
+Builds a disposable Ubuntu VM with Lima, installs WizardOS from the public installer, then breaks it in known ways
 and repairs each break with ONLY the commands the repair kit prints for that failure. Every phase is
 inject -> confirm broken -> kit recipe -> confirm recovered, with logs and a receipt.
 
@@ -91,7 +91,7 @@ wait_healthy() {
   printf 'health probe failed: %s\n' "$u" >&2
   return 1
 }
-install_state() { bash -c "$1" 2>/dev/null | sed -n 's/^Wizard OS install: //p' | head -1; }
+install_state() { bash -c "$1" 2>/dev/null | sed -n -E 's/^Wizard ?OS install: //p' | head -1; }
 '''
 
 
@@ -237,7 +237,7 @@ class Drill:
                             "bash -s start", 300)
             self.guest_root("install-wait", f'''
 for i in $(seq 1 270); do
-  out="$(curl -fsSL {OS_SH} | bash -s status 2>&1)"; st="$(printf '%s\\n' "$out" | sed -n 's/^Wizard OS install: //p' | head -1)"
+  out="$(curl -fsSL {OS_SH} | bash -s status 2>&1)"; st="$(printf '%s\\n' "$out" | sed -n -E 's/^Wizard ?OS install: //p' | head -1)"
   case "$st" in running|needs_owner) sleep 10 ;; *) break ;; esac
 done
 printf '%s\\n' "$out"; tail -n 40 /root/.wizard-os/install.log 2>/dev/null
@@ -333,7 +333,7 @@ echo "final: $st"; {RECIPE_A_STATUS}; grep -o '"version": *"[^"]*"' ~/.wizard-os
                          f"{v.get('recovered')} | **{'PASS' if v.get('pass') else 'FAIL'}** |"
                          for k, v in self.receipt["drills"].items())
         (self.ev / "RECEIPT.md").write_text(
-            f"# Repair-kit drill {self.run_id}\n\nVM `{self.vm}`, Wizard OS {self.release} from the public installer, "
+            f"# Repair-kit drill {self.run_id}\n\nVM `{self.vm}`, WizardOS {self.release} from the public installer, "
             f"state **{self.receipt.get('state')}**.\n\n| Drill | Recipe | Broken confirmed | Repair exit | "
             f"Recovered | Result |\n|---|---|---|---|---|---|\n{rows}\n\nLogs: one `<step>.log` per step; "
             "`receipt.json` has exits and timestamps.\n")

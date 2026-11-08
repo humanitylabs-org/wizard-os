@@ -174,7 +174,7 @@ try {
   r = await call('DELETE', '/wizard/mcp', { headers: { Authorization: 'Bearer probe-mcp-token', 'Mcp-Session-Id': mcpSession } })
   check('DELETE /wizard/mcp', 'end session', r.status === 200, r)
 
-  // files (Wizard OS box mode: mediaRoot)
+  // files (WizardOS box mode: mediaRoot)
   r = await call('POST', '/wizard/files/upload', { headers: { 'Content-Type': 'application/octet-stream', 'X-Wizard-Filename': 'notes.txt', 'X-Wizard-Mime': 'text/plain' }, body: Buffer.from('hello files') })
   const fileId = r.json?.file?.id
   check('POST /wizard/files/upload', 'bytes -> file', r.status === 201 && /^wf_[0-9a-f]{32}$/u.test(fileId || '') && !r.text.includes(dir), r)
@@ -287,7 +287,7 @@ try {
   r = await call('POST', `/wizard/hermes/v1/runs/${approvalRun}/approval`, { headers: J, body: JSON.stringify({ choice: 'deny', request_id: run?.approval?.request_id }) })
   check('POST /wizard/hermes/v1/runs/{id}/approval', 'answer', r.status === 200 && r.json?.accepted === true, r)
 
-  // resumable uploads and shares (Wizard OS box mode: mediaRoot)
+  // resumable uploads and shares (WizardOS box mode: mediaRoot)
   const bytes = Buffer.from('resumable upload body, two chunks')
   const digest = createHash('sha256').update(bytes).digest('hex')
   const uploadBody = { client_upload_id: 'probe-upload-1', filename: 'notes.txt', mime: 'text/plain', bytes: bytes.length, sha256: digest }

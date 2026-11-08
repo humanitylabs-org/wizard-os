@@ -5,7 +5,7 @@ done-when of [#93](https://github.com/humanitylabs-org/wizard-os/issues/93): a f
 and the runbook repairs a deliberately broken test box.
 
 `drill.py` builds a disposable Ubuntu 24.04 VM with Lima (pinned cloud image, checked by sha256, no host mounts, no
-credentials, no forwarded ports), installs Wizard OS with the public command
+credentials, no forwarded ports), installs WizardOS with the public command
 (`curl -fsSL https://aiwizards.com/os.sh | bash -s start`, `WIZARD_RELEASE` pinned, default 0.3.32) and waits on
 its own `bash -s status`. Then, for each failure, it runs four steps as the box owner:
 

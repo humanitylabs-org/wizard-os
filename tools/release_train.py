@@ -368,7 +368,7 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
             d["default_apps"][slot]["commit"] = pub["commit"]
         label = {"wizard-ux": "Wizard UX", "wizard-agent-service": "Agent Service"}.get(comp, "App Manager")
         names.append(f"{label} {old[:8]} -> {pub['commit'][:8]}")
-    d["name"] = f"Wizard OS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
+    d["name"] = f"WizardOS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
     d["about"] = (f"Latest {L['version']} with " + ", ".join(names) + ". Cut by the release train for merged "
                   "Recommended fixes: " + "; ".join(notes) + f". Stable stays {stable} until the installed upgrade test passes.")
     d["notes"] = f"Latest. Exactly {L['version']} except " + ", ".join(names) + "."
@@ -819,7 +819,7 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                      f"`releases/latest` back to {latest}.")
             mbase = sh(["git", "-C", str(wam), "rev-parse", "origin/main"]).strip()
             rep["mirror_pr"] = open_and_merge(WAM, mwt, f"release/{V}-mirror-train",
-                                              f"Maintenance: mirror Wizard OS {V} onto latest (release train)", mbody,
+                                              f"Maintenance: mirror WizardOS {V} onto latest (release train)", mbody,
                                               "tier: maintenance", need_checks=True,
                                               verify=lambda n, h: verify_mirror(wam, wos, mbase, n, h))
             step(f"cut merged {rep['cut_pr']}, mirror merged {rep['mirror_pr']}")
@@ -936,7 +936,7 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     sh(["git", *IDENTITY, "-C", str(mwt), "commit", "-qm", f"Mirror stable {V} (release train)"], env={"LEFTHOOK": "0"})
     pbase = sh(["git", "-C", str(wam), "rev-parse", "origin/main"]).strip()
     rep["promote_mirror_pr"] = open_and_merge(WAM, mwt, f"promote/{V}-mirror-train",
-                                              f"Maintenance: mirror Wizard OS stable {V} (release train, {cls})",
+                                              f"Maintenance: mirror WizardOS stable {V} (release train, {cls})",
                                               body.replace("promote **", "mirror stable **"), "tier: maintenance",
                                               need_checks=True, verify=lambda n, h: verify_mirror(wam, wos, pbase, n, h))
     wait_public("stable", hashlib.sha256((V + "\n").encode()).hexdigest())

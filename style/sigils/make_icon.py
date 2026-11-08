@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export a Wizard OS app icon (a sigil) for an app.
+"""Export a WizardOS app icon (a sigil) for an app.
 
     python3 -m venv .venv && .venv/bin/pip install skia-pathops fonttools resvg-py
     .venv/bin/python make_icon.py <app-id> --out <app repo>          # app already in palette.REGISTRY

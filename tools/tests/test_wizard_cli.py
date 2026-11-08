@@ -32,7 +32,7 @@ def free_port():
 
 
 class Box:
-    """A throwaway Wizard OS home plus running fixture servers."""
+    """A throwaway WizardOS home plus running fixture servers."""
 
     def __init__(self):
         self.dir = Path(tempfile.mkdtemp(prefix="wizard-cli-test-"))
@@ -332,7 +332,7 @@ class InstallTest(unittest.TestCase):
         before = foreign.read_text()
         p = self.install()
         self.assertEqual(p.returncode, 1)
-        self.assertIn("not the Wizard OS CLI", p.stderr)
+        self.assertIn("not the WizardOS CLI", p.stderr)
         self.assertEqual(foreign.read_text(), before)
         p = self.install("--name", "wizard-os")
         self.assertEqual(p.returncode, 0, p.stderr)
