@@ -42,6 +42,7 @@ The shared map of WizardOS: how the pieces fit, the contracts between them, and 
 - [`WIZARD_CLI.md`](spec/WIZARD_CLI.md): the generic `wizard` CLI (`apps list`, `tools`, `call`) for people and scripts; `--json` output and exit codes.
 - [`SHELL.md`](spec/SHELL.md): the shell slot (Wizard UX as the system front end) and how owners customize it without forking (proposed).
 - [`PAGES.md`](spec/PAGES.md): pages, the agent-made reports, dashboards and shared docs that live in Files and need no container (proposed).
+- [`BOX_STATE.md`](spec/BOX_STATE.md): where a box keeps state and what backup and restore do with each place (draft inventory, #425).
 
 ## Tools
 
