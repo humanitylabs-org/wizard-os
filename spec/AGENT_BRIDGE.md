@@ -1,10 +1,10 @@
-# Agent bridge: how every agent on a box knows Wizard OS and uses its apps
+# Agent bridge: how every agent on a box knows WizardOS and uses its apps
 
 **Status:** proposed by Archimedes, 11 Oct 2026 (DECISIONS #40). Owner: Archimedes (Agent Service items moved from Jan to Archimedes by James, 11 Oct).
 
 ## The problem
 
-The first release end-to-end test (Telos, 10 Oct) passed only because the agent spent about 4 minutes digging through the box: it grepped skills, read `apps.json` by hand, found the skill file with `find /`, and wrote its own MCP client. On a fresh Hermes, or on a weak model, step 3 fails. The per-run "you are inside Wizard OS" block (wizard-agent-service#2) tells the agent the apps exist, but it hands over URLs and file paths, and a weak model has to turn those into working calls itself.
+The first release end-to-end test (Telos, 10 Oct) passed only because the agent spent about 4 minutes digging through the box: it grepped skills, read `apps.json` by hand, found the skill file with `find /`, and wrote its own MCP client. On a fresh Hermes, or on a weak model, step 3 fails. The per-run "you are inside WizardOS" block (wizard-agent-service#2) tells the agent the apps exist, but it hands over URLs and file paths, and a weak model has to turn those into working calls itself.
 
 **Rule:** an installed app must reach the agent as **real callable tools plus a short, fixed orientation**. The agent should never need to read files, write clients or guess. If DeepSeek Flash can't do it on the first try, the bridge is wrong.
 
@@ -33,9 +33,9 @@ Progressive disclosure from start to finish. Nothing about an individual app goe
 - **One door to guard.** Each agent's app ticks (#58) are enforced here, and every app call is logged here. The gateway also holds a per-app key so providers know the call came through it ([PERMISSIONS.md](PERMISSIONS.md)).
 - Harnesses without deferral get the gateway's `wizard_apps` + `wizard_call` pair (two tools, constant size) instead of the full list.
 
-### 3. Orientation: a fixed Wizard OS kernel, with no per-app list
+### 3. Orientation: a fixed WizardOS kernel, with no per-app list
 
-- **Short and fixed** (under 900 characters, the same on every box): you are the owner's agent inside Wizard OS; the files root is `media/`; installed apps do jobs; when a request matches a `wizard-job-*` skill, load it first, then the app's skill, then call its tools through the `wizard` server; never search the disk or write your own client for an app; save only pointer skills. For Hermes it also names the two shipped system skills: `wizard-builder` (build or change an app) and `wizard-guide` (how to use Wizard: the first chat, reminders, tips, My skin, the Store and connectors, change requests). Both ship in wizard-app-manager `system-skills/` and are registered as one `skills.external_dirs` entry.
+- **Short and fixed** (under 900 characters, the same on every box): you are the owner's agent inside WizardOS; the files root is `media/`; installed apps do jobs; when a request matches a `wizard-job-*` skill, load it first, then the app's skill, then call its tools through the `wizard` server; never search the disk or write your own client for an app; save only pointer skills. For Hermes it also names the two shipped system skills: `wizard-builder` (build or change an app) and `wizard-guide` (how to use Wizard: the first chat, reminders, tips, My skin, the Store and connectors, change requests). Both ship in wizard-app-manager `system-skills/` and are registered as one `skills.external_dirs` entry.
 - **Hermes, every surface** (Wizard, Telegram, CLI, cron): the `wizard-os` Hermes plugin registers the kernel as a system-prompt section through Hermes' stock plugin API (`register_system_prompt_section`). It's frozen per session, so it's cache-safe. It doesn't touch `SOUL.md`, memory or Hermes core, and removing the plugin removes it.
 - **Other harnesses:** the Agent Service sends the same kernel in per-run `instructions` when the harness has no plugin.
 - **Mid-thread installs:** the Agent Service adds a one-line delta to that run only ("new app: X for job Y, load `wizard-job-Y`"). The rest of the session stays byte-stable.
@@ -96,7 +96,7 @@ Hermes `state.db` reads, as of wizard-agent-service `feature/agent-bridge`:
 - **Remain, read-only, only when `WIZARD_HERMES_STATE_PATH` is set** (stock Hermes serves none of them over HTTP):
   1. Archived threads: `/api/sessions` never lists archived sessions.
   2. Turns running on other surfaces (Telegram, TUI, cron), used to hold queued Wizard runs. Without the path, the queue counts only its own runs, and Hermes still serialises turns per session.
-  3. The Helm closure overlay in the canonical listing (`read-human-sessions.py`), used only when a Helm DB is present. It is James's box only and is not part of Wizard OS.
+  3. The Helm closure overlay in the canonical listing (`read-human-sessions.py`), used only when a Helm DB is present. It is James's box only and is not part of WizardOS.
   4. Thread-title authority (`title_source`, whether you or the agent named the thread). `/api/sessions/<id>` serves the title but not its source, so agent titling is off without the path.
   5. Session route truth (model and lineage, `session-truth.mjs`), used to annotate the thread list.
 
@@ -106,7 +106,7 @@ A session-search or grants service is out of scope here; the agent-state proposa
 
 ## Installing over an existing Hermes ("alongside" mode, James 11 Oct)
 
-`os.sh` detects an existing Hermes (`~/.hermes/config.yaml` plus a running API server) and offers **alongside** mode. Wizard OS runs next to the owner's Hermes and never moves or migrates it:
+`os.sh` detects an existing Hermes (`~/.hermes/config.yaml` plus a running API server) and offers **alongside** mode. WizardOS runs next to the owner's Hermes and never moves or migrates it:
 
 1. Install Runtipi with the Wizard App Manager (unchanged), on ports that don't fight an existing web server.
 2. Run the Agent Service + Wizard UX against the owner's Hermes API (`HERMES_ORIGIN=http://127.0.0.1:8642`) instead of the `hermes-agent` app. The `agent` slot is marked "external: host Hermes".
@@ -119,7 +119,7 @@ A session-search or grants service is out of scope here; the agent-state proposa
 5. Leave alone: `SOUL.md`, memory, sessions, other skills, providers and every existing `mcp_servers` entry.
 6. Prove it with `wizard doctor`, which runs one gate request.
 
-Migrating the owner's Hermes into Wizard OS (option B) comes later, as its own command.
+Migrating the owner's Hermes into WizardOS (option B) comes later, as its own command.
 
 ## What this replaces
 

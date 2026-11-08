@@ -5,13 +5,13 @@ Implementation proposal for review; no release or live configuration change is a
 ## Existing behaviour
 
 App Manager #305 added an independent app-update mode (`auto` by default, `ask` saved in
-`app-updates.json`), nightly updates, per-app holds, verification and rollback. Wizard OS
+`app-updates.json`), nightly updates, per-app holds, verification and rollback. WizardOS
 updates have a separate mode. The shell currently exposes only that system-release mode;
 choosing Ask me there does not turn app updates off.
 
 ## Owner control
 
-Settings → About & updates names the two scopes separately: **Wizard OS updates** and
+Settings → About & updates names the two scopes separately: **WizardOS updates** and
 **App updates**. App updates offers **Automatic** and **Manual**, shows the effective
 saved choice and explains the default without calling it consent. Manual disables the
 nightly timer and an automatic run checks the saved mode again before each app starts. An app
@@ -61,7 +61,7 @@ own package or supported custom view, not edits inside a disposable container.
 
 - Open Settings on phone and desktop, read status, then reconcile the installer timer:
   `app-updates.json` remains absent if unset, or byte-identical if present. Status makes no
-  upstream request or source-inventory write. Changing app mode leaves the Wizard OS mode unchanged.
+  upstream request or source-inventory write. Changing app mode leaves the WizardOS mode unchanged.
 - Manual survives installer timer reconciliation; queued automatic work cannot start another
   app after the owner switches to Manual. Manual Update now still works without changing mode.
 - Invalid/foreign browser writes cannot change policy or trigger updates; failed readback is

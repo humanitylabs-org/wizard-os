@@ -1,6 +1,6 @@
 # Disk encryption
 
-**Decision #112 (James, 7 Nov 2026).** Wizard OS encrypts the owner's disk by default. The key is sealed in the box's security chip (TPM 2.0), so the box unlocks itself on normal restarts and stays always-on. A one-time recovery key is the way back in when the chip says no. Network-check unlock is a later optional feature, not part of the standard.
+**Decision #112 (James, 7 Nov 2026).** WizardOS encrypts the owner's disk by default. The key is sealed in the box's security chip (TPM 2.0), so the box unlocks itself on normal restarts and stays always-on. A one-time recovery key is the way back in when the chip says no. Network-check unlock is a later optional feature, not part of the standard.
 
 ## The model
 

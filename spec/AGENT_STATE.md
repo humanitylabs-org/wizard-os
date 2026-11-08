@@ -4,7 +4,7 @@
 
 Hermes is the agent today. A box will often run more than one agent: a frontier Hermes for building, a lean private agent on a Tinfoil model, a Pi or Claude Code agent someone is trying out. Each agent learns as it works. It writes skills, keeps memories, and builds up session history.
 
-Wizard OS owns **where** that state lives and **who** may read it. The agent owns **how** it uses its own state. That keeps three promises:
+WizardOS owns **where** that state lives and **who** may read it. The agent owns **how** it uses its own state. That keeps three promises:
 
 - **No lock-in.** Switching agents, or running two side by side, doesn't throw away what the first one learned. The new agent can look it up.
 - **Owner-controlled sharing.** Standard agents read each other on demand by default. The owner can silo any one; private agents stay sealed.
@@ -110,7 +110,7 @@ Why not give agents each other's database files: SQLite with a write-ahead log a
 ## 5. Memory: opinionated by default
 
 - **Each agent keeps its own memory engine.** Memory is wired into the harness's turn loop (what gets recalled into the prompt, when facts are written), so we don't replace it. The gateway reads only the always-loaded files listed in section 4. Other memory engines are not exposed by these tools.
-- **One opinionated default.** The Wizard OS Hermes app ships with the holographic fact store turned on (`memory.provider: holographic`), the setup we run ourselves and install for clients. Owners can change it, but nobody has to choose among Hermes' eight memory backends to get started.
+- **One opinionated default.** The WizardOS Hermes app ships with the holographic fact store turned on (`memory.provider: holographic`), the setup we run ourselves and install for clients. Owners can change it, but nobody has to choose among Hermes' eight memory backends to get started.
 - **Same engine at Wizard level.** Agent History uses that same holographic method for facts, so a lean agent with no memory of its own still gets good recall through Agent History.
 - **Later, optional:** a `wizard` memory provider plugin (stock Hermes plugin API) could point Hermes' memory at Agent History instead of its own store. Only if usage shows one shared memory beats per-agent memory.
 

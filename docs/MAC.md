@@ -1,8 +1,8 @@
 # The mass-market Mac path (later)
 
-> **Two separate things.** The **desktop UX** (the desktop paradigm in `wizard-ux`, and the native desktop app with its Caps Lock / Right ⌘ hotkeys) is James + Archimedes's work, in progress now. The **Mac installer** (a VM that runs the whole Wizard OS stack on a Mac) is described below and comes later, once the App Manager, Agent Service and UX work together on Linux.
+> **Two separate things.** The **desktop UX** (the desktop paradigm in `wizard-ux`, and the native desktop app with its Caps Lock / Right ⌘ hotkeys) is James + Archimedes's work, in progress now. The **Mac installer** (a VM that runs the whole WizardOS stack on a Mac) is described below and comes later, once the App Manager, Agent Service and UX work together on Linux.
 
-The Mac is where most people try Wizard. Wizard for Mac (`try-wizard`) is a native app that runs the full Wizard OS Linux stack in a small VM and shows the Wizard UX in a native window. It also has system-wide keys:
+The Mac is where most people try Wizard. Wizard for Mac (`try-wizard`) is a native app that runs the full WizardOS Linux stack in a small VM and shows the Wizard UX in a native window. It also has system-wide keys:
 
 - **Caps Lock:** the Wizard key, with launcher and search.
 - **Right ⌘:** talk to your Wizard (orb).

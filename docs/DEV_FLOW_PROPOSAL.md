@@ -1,6 +1,6 @@
 # Proposal: dev flow after the stable release
 
-**Status: tabled.** This is a proposal, not the current process. The team rules in `AGENTS.md` still apply. Revisit it once Wizard OS has a stable release, and adopt it by a PR that updates `AGENTS.md`.
+**Status: tabled.** This is a proposal, not the current process. The team rules in `AGENTS.md` still apply. Revisit it once WizardOS has a stable release, and adopt it by a PR that updates `AGENTS.md`.
 
 Drafted by Miguel with Oscar, 1 Nov 2026.
 

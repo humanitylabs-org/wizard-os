@@ -1,6 +1,6 @@
 # Private model providers
 
-Status: **Direction approved by James (20 Oct 2026), details proposed**, DECISIONS #66. Extends [AGENTS.md](AGENTS.md) §2, §6 and §8 and [AI_CONNECTIONS.md](AI_CONNECTIONS.md). Written for the target Wizard OS box, where every agent, the main one included, runs in its own container.
+Status: **Direction approved by James (20 Oct 2026), details proposed**, DECISIONS #66. Extends [AGENTS.md](AGENTS.md) §2, §6 and §8 and [AI_CONNECTIONS.md](AI_CONNECTIONS.md). Written for the target WizardOS box, where every agent, the main one included, runs in its own container.
 
 ## The rule
 
@@ -47,7 +47,7 @@ private_inference:
 - It mints one **client token** per private agent through a box-only route the Agent Service calls (`POST /api/private-clients {agent}` → `{token}`, `DELETE /api/private-clients/<agent>`). A token works only on the relay.
 - `/api/connection` (wizard.ai-connection/2) lists its models. The Agent Service offers only those to the private agent.
 
-### 2. In-seal client (owned by Wizard OS, one per private agent)
+### 2. In-seal client (owned by WizardOS, one per private agent)
 
 A small sidecar in the private agent's own compose that does the provider-specific privacy work inside the seal. It presents a plain OpenAI-compatible endpoint to that agent's Hermes.
 

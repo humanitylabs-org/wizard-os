@@ -288,7 +288,7 @@ allowances and the check-to-deploy race work **regardless of the switch**; turni
    verify on every read including start-time enforcement; legacy entries become "unverified" until the owner
    re-accepts them on a device; clear on uninstall and on failed install. Needs a change to the Runtipi fork's
    `wizard-networks.ts`, so it is not part of this inert change. First grant issuance currently chmods the entire
-   Wizard OS home 0700: restrict key custody changes to the key directory and prove unrelated home permissions
+   WizardOS home 0700: restrict key custody changes to the key directory and prove unrelated home permissions
    stay unchanged before enablement.
 6. **Grant UI hardening (hard precondition for grants):** serve "Allow host access" from an origin that renders no agent
    content, with a WebAuthn user-verification step bound to (app, risks, recipe hash); today a grant proves the owner's
