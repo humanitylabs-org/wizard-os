@@ -427,5 +427,100 @@ class ForTestersForEveryone(unittest.TestCase):
         self.assertIn("promote-soaked", out)
 
 
+class HotfixLane(unittest.TestCase):
+    """wizard-os#434, behind WIZARD_TRAIN_HOTFIX_LANE=1 (off by default): a merged PR that closes or references a
+    `hotfix` issue skips the 30-min cut limit and reaches For everyone after 24h (0h with `breaking` or a closed
+    release-blocker), still held by any open release-blocker."""
+    UX = "humanitylabs-org/wizard-ux"
+
+    def rel(self, ux):
+        return {"components": {c: {"commit": ux if c == "wizard-ux" else "s" * 40} for c in rt.FIX_REPOS}}
+
+    def issue(self, labels=(), merged=True, repo=UX, closes=()):
+        pr = {"number": 7, "merged": merged, "mergeCommit": {"oid": "h" * 40}, "repository": {"nameWithOwner": repo},
+              "closingIssuesReferences": {"nodes": [{"labels": {"nodes": [{"name": n} for n in c]}} for c in closes]}}
+        return {"labels": {"nodes": [{"name": n} for n in ("hotfix", *labels)]},
+                "timelineItems": {"nodes": [{"__typename": "CrossReferencedEvent", "source": pr},
+                                            {"__typename": "ClosedEvent", "closer": pr}, {"__typename": "X"}]}}
+
+    def test_off_by_default(self):
+        env = {k: v for k, v in __import__("os").environ.items() if k != "WIZARD_TRAIN_HOTFIX_LANE"}
+        out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.HOTFIX_LANE)"],
+                             cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
+        self.assertEqual(out, "False")
+        with mock.patch.object(rt, "HOTFIX_LANE", False), \
+                mock.patch.object(rt, "gh_json", side_effect=AssertionError("no GitHub reads while off")):
+            self.assertEqual(rt.hotfix_soak(Path("."), "0.3.102", "0.3.106"), (72, []))
+            self.assertEqual(rt.pending_hotfixes(Path(".")), [])
+
+    def test_finds_merged_component_prs_and_what_makes_them_immediate(self):
+        got = rt.hotfix_prs_of("u", self.issue())
+        self.assertEqual(got, [{"repo": self.UX, "number": 7, "commit": "h" * 40, "issue": "u", "immediate": False}])
+        self.assertTrue(rt.hotfix_prs_of("u", self.issue(labels=["breaking"]))[0]["immediate"])
+        self.assertTrue(rt.hotfix_prs_of("u", self.issue(closes=[["bug", "release-blocker"]]))[0]["immediate"])
+        self.assertFalse(rt.hotfix_prs_of("u", self.issue(closes=[["bug"]]))[0]["immediate"])
+        self.assertEqual(rt.hotfix_prs_of("u", self.issue(merged=False)), [])
+        self.assertEqual(rt.hotfix_prs_of("u", self.issue(repo="humanitylabs-org/wizard-os")), [])
+
+    def gate(self, hours, immediate=False, blockers=(), in_latest=True, lookup_fails=False):
+        hf = [{"repo": self.UX, "number": 7, "commit": "h" * 40, "issue": "u", "immediate": immediate}]
+        rels = {"releases/0.3.102.json": self.rel("a" * 40), "releases/0.3.106.json": self.rel("b" * 40)}
+        with mock.patch.object(rt, "HOTFIX_LANE", True), \
+                mock.patch.object(rt, "show", side_effect=lambda d, ref, f: json.dumps(rels[f])), \
+                mock.patch.object(rt, "hotfix_prs", side_effect=rt.Stop("down") if lookup_fails else None, return_value=hf), \
+                mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: ref == "b" * 40 and in_latest), \
+                mock.patch.object(rt, "soaked_for", return_value=hours), \
+                mock.patch.object(rt, "release_blockers", return_value=list(blockers)):
+            return rt.soak_gate("0.3.102", "0.3.106", Path("/nonexistent/releases"))
+
+    def test_a_hotfix_reaches_for_everyone_after_24h(self):
+        due, why, _, hf = self.gate(20.0)
+        self.assertFalse(due)
+        self.assertIn("after 24h (hotfix lane: wizard-ux#7)", why)
+        due, why, _, hf = self.gate(24.5)
+        self.assertTrue(due, why)
+        self.assertEqual(len(hf), 1)
+
+    def test_breaking_or_a_closed_release_blocker_promotes_right_away_but_open_blockers_still_hold(self):
+        self.assertTrue(self.gate(0.2, immediate=True)[0])
+        self.assertTrue(self.gate(None, immediate=True)[0])
+        due, why, _, _ = self.gate(0.2, immediate=True, blockers=["x other"])
+        self.assertFalse(due)
+        self.assertTrue(why.startswith("HELD: 1 open release-blocker"))
+
+    def test_no_hotfix_or_a_failed_lookup_keeps_72h(self):
+        due, why, _, hf = self.gate(30.0, in_latest=False)
+        self.assertFalse(due)
+        self.assertIn("after 72h.", why)
+        self.assertEqual(hf, [])
+        due, why, _, _ = self.gate(30.0, lookup_fails=True)
+        self.assertFalse(due)
+        self.assertIn("after 72h.", why)
+
+    def test_a_pending_hotfix_skips_the_30_minute_limit(self):
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "last_cut_age", return_value=600.0), \
+                mock.patch.object(rt, "pending_hotfixes", return_value=[{"repo": self.UX, "number": 7}]), \
+                mock.patch.object(rt, "plan", side_effect=rt.Stop("planned")):
+            with self.assertRaises(rt.Stop):
+                rt.run(Path(d), False, False, [], False, "cut")
+        with mock.patch.object(rt, "HOTFIX_LANE", True), \
+                mock.patch.object(rt, "show", side_effect=lambda d, ref, f: "0.3.106\n" if f == "releases/latest"
+                                  else json.dumps(self.rel("b" * 40))), \
+                mock.patch.object(rt, "hotfix_prs", return_value=[{"repo": self.UX, "number": 7, "commit": "h" * 40,
+                                                                  "issue": "u", "immediate": False}]), \
+                mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: ref == "main"):
+            self.assertEqual([h["number"] for h in rt.pending_hotfixes(Path("."))], [7])
+
+    def test_hotfix_promotion_is_recorded_as_a_fast_track_after_the_upgrade_test(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        i = src.index('if mode == "soaked" and rep.get("hotfixes"):')
+        block = src[i:src.index('elif mode == "soaked":', i)]
+        self.assertIn("--fast-track", block)
+        self.assertIn("Hotfix lane (wizard-os#434)", block)
+        self.assertLess(src.index('rig.get("passed")'), i)
+
+
 if __name__ == "__main__":
     unittest.main()
