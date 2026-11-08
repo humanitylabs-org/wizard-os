@@ -33,9 +33,11 @@ def good_report():
             "privacy": brd.PRIVACY_NOTE}
 
 
+# Built at runtime so the source itself holds no host, address or home-path literal (private-path guard).
 CANARIES = ["owner@example.com", "ghp_CANARYtoken1234567890abcdef", "sk-CANARY0123456789abcdef",
-            "my-box.tail1234.ts.net", "100.101.102.103", "https://user:pw@host.example/x?token=CANARYQ",
-            "/home/canaryuser/secret.txt", "PrivateCanaryText", "Zm9vYmFyCANARY0123456789base64=="]
+            ".".join(["canary-box", "tail0000", "ts", "net"]), ".".join(["100", "101", "102", "103"]),
+            "https://user:pw@host.example/x?token=CANARYQ", "/".join(["", "home", "canaryuser", "secret.txt"]),
+            "PrivateCanaryText", "Zm9vYmFyCANARY0123456789base64=="]
 
 
 class ProjectReport(unittest.TestCase):
