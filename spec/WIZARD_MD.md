@@ -65,7 +65,7 @@ recommends:                 # optional for non-AI apps; declared AI model is bin
   agent: hermes
   model: claude-opus-5-5
 
-system: false               # true = installed with Wizard OS, hidden from the
+system: false               # true = installed with WizardOS, hidden from the
                             # launcher, known to the agent, replaceable by any
                             # app that provides the same slot
 
@@ -231,7 +231,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 - **Why an index, not per-box search:** a box that searches GitHub itself stops at 100 apps (one result page) and 1,000 at best (GitHub's cap), and every box re-clones every app. The index does the search once; a box only fetches the apps its owner installs. Work grows with publishes, not with apps × boxes.
 - **Local store (App Manager):** on install, the App Manager fetches that one app at the commit the index lists, re-runs the checker, and writes it into Runtipi's normal per-app layout, fetching on demand inside the App Manager's thin Runtipi fork (DECISIONS #32), so there is no separate sync job.
 - **Installed registry (App Manager):** on install/update/remove, write `~/.wizard-os/apps.json` (id, type, version, MCP URL, skill path, view route, provides, system, health).
-- **Agent Service (Jan):** reads `apps.json`, registers each MCP with the agent, links each shipped skill, regenerates pointer skills, and injects the installed-app list into the Wizard OS meta-instructions. Hermes stays unmodified.
+- **Agent Service (Jan):** reads `apps.json`, registers each MCP with the agent, links each shipped skill, regenerates pointer skills, and injects the installed-app list into the WizardOS meta-instructions. Hermes stays unmodified.
 - **Wizard UX (James):** the Apps screen searches the index and installs through the App Manager; the launcher reads `apps.json` (non-system apps) and opens views at `/apps/<id>/`.
 - **`wizard` CLI:** `wizard apps list --json` reads the same file; one generic CLI, no per-app CLIs.
 

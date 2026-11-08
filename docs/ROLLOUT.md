@@ -1,4 +1,4 @@
-# Wizard OS rollout
+# WizardOS rollout
 
 **9 Oct 2026.** What ships when, from the Dev Council and James's follow-up decisions. Each line has an owner and a "done when". Status: ✅ done · 🔨 in progress · ⏳ next · 💤 parked.
 

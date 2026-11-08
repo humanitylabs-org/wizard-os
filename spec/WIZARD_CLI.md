@@ -63,7 +63,7 @@ It also adds `WIZARD_MCP_TOKEN` to the Hermes `.env`, plus `API_SERVER_KEY` only
 
 `unlink` removes exactly those entries and the plugin, then restores `config.yaml` byte for byte. If the owner edited the file in between, their edits are kept and only Wizard's entries are removed. Values are never printed.
 
-**A failed link leaves nothing behind.** `linked.json` is a write-ahead journal: it is saved (fsync'd, 0600) before the first edit, and each edit is added to it before it is made. If any step fails (a config edit, `hermes plugins install`, the `.env`), `link` rolls everything back to the backed-up bytes and exits non-zero with `"stage": "rolled_back"`. If the process is killed mid-way, the journal stays in state `linking`: `doctor` reports `no unfinished link` as FAIL, and the next `wizard unlink` or `wizard link` rolls it back first. Owner edits made in between are kept; only Wizard OS's keys are removed. Fault-injection tests cover a failure and a kill before and after every step (`tools/tests/test_wizard_link.py`).
+**A failed link leaves nothing behind.** `linked.json` is a write-ahead journal: it is saved (fsync'd, 0600) before the first edit, and each edit is added to it before it is made. If any step fails (a config edit, `hermes plugins install`, the `.env`), `link` rolls everything back to the backed-up bytes and exits non-zero with `"stage": "rolled_back"`. If the process is killed mid-way, the journal stays in state `linking`: `doctor` reports `no unfinished link` as FAIL, and the next `wizard unlink` or `wizard link` rolls it back first. Owner edits made in between are kept; only WizardOS's keys are removed. Fault-injection tests cover a failure and a kill before and after every step (`tools/tests/test_wizard_link.py`).
 
 `doctor` checks:
 - the link;
@@ -81,7 +81,7 @@ wizard hermes status [--release V|FILE|URL] [--json]
 wizard hermes update --stable [--dry-run] [--release V|FILE|URL] [--quiet-timeout S] [--health-timeout S] [--no-chat] [--json]
 ```
 
-On an alongside box the owner installed Hermes, so Wizard OS does not move it on its own. These two commands carry out step 4 of [HERMES_STABLE](../docs/HERMES_STABLE.md) (DECISIONS #74). `status` compares the running Hermes with the release that Wizard stable pins. `update --stable` moves Hermes to exactly that release, and only when the owner runs it.
+On an alongside box the owner installed Hermes, so WizardOS does not move it on its own. These two commands carry out step 4 of [HERMES_STABLE](../docs/HERMES_STABLE.md) (DECISIONS #74). `status` compares the running Hermes with the release that Wizard stable pins. `update --stable` moves Hermes to exactly that release, and only when the owner runs it.
 
 **Which release.** The command reads the `hermes` block (`tag`, `commit`) of the release file that `releases/stable` names. Both files come from the same place `get.sh` uses: `$WIZARD_RELEASE_BASE`, which defaults to `wizard-app-manager/main/releases`. `--release` picks another version, a local file or a URL, which is how a candidate is tested before promotion. The command refuses to run in any of these cases:
 
@@ -97,7 +97,7 @@ The last check guards against the trap PR #149 found: the published v0.21.6 imag
 - the checkout has no venv;
 - `install-stamp.json` hands updates to another mechanism (for example `updateMechanism: external`).
 
-It also refuses, again with exit 10, when the checkout has local changes or when the target is not proven to descend from the running commit. On a shallow installer clone it completes the tag's history before proving ancestry; commit dates are never ordering evidence. Wizard OS never moves a Hermes backwards.
+It also refuses, again with exit 10, when the checkout has local changes or when the target is not proven to descend from the running commit. On a shallow installer clone it completes the tag's history before proving ancestry; commit dates are never ordering evidence. WizardOS never moves a Hermes backwards.
 
 **Order of work.**
 

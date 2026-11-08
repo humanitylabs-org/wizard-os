@@ -14,7 +14,7 @@ owner step below is done.
 - Updates are always automatic on both channels (wizard-app-manager#465; the nightly
   `wam updates --apply-if-auto` follows the box's channel since #464, Refs #458).
 - New work ships behind off-by-default feature switches. Testers turn them on in Settings › Appearance › Try new
-  features or with the Wizard OS Tracker app's Try it (same state; wizard-app-manager#466 owner-only same-origin
+  features or with the WizardOS Tracker app's Try it (same state; wizard-app-manager#466 owner-only same-origin
   route); on For everyone they stay off and can't be flipped (wizard-ux#1144 + #466).
 - To stop a release reaching everyone: open (or label) any org issue `release-blocker`. The promoter holds until
   every such issue is closed, and says so in its report.
@@ -128,7 +128,7 @@ minutes.
 > onto For testers automatically, at most once per 30 minutes. A For testers release is promoted to For everyone
 > automatically after 72h on latest if no `release-blocker` issue is open and the installed upgrade test from the
 > current stable passes. Updates are always automatic. Feature switches live in Settings (For testers only) and the
-> Wizard OS Tracker app, and only work on For testers. The Recommended-fix fast-track (`release_train.py run`,
+> WizardOS Tracker app, and only work on For testers. The Recommended-fix fast-track (`release_train.py run`,
 > DECISIONS #93 owner rule) stays. Release mirror PRs into wizard-app-manager merge on the automated
 > `release-mirror/byte-identical` check instead of a per-cut non-author review (#96 clause 4 amended for mirrors
 > only: their content is already reviewed in wizard-os, and the check proves the bytes are the same).

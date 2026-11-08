@@ -1,6 +1,6 @@
 # wizard-os
 
-The shared map of Wizard OS: how the pieces fit, the contracts between them, and what's next. James, Jan and Miguel's agents all build against this repo. Agreed at the Wizard Dev Council, 9 Oct 2026.
+The shared map of WizardOS: how the pieces fit, the contracts between them, and what's next. James, Jan and Miguel's agents all build against this repo. Agreed at the Wizard Dev Council, 9 Oct 2026.
 
 **Agents:** read [`AGENTS.md`](AGENTS.md) first.
 
@@ -9,7 +9,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 | Repo | What |
 |---|---|
 | `wizard-ux` | The front end everywhere: phone app, desktop UX, and the native desktop app's hotkeys. Includes the Apps screen. |
-| `wizard-agent-service` | The service between any front end and the agent. Adds the Wizard OS instructions and the installed apps; Hermes stays unmodified. |
+| `wizard-agent-service` | The service between any front end and the agent. Adds the WizardOS instructions and the installed apps; Hermes stays unmodified. |
 | `wizard-app-manager` | A **thin fork** of Runtipi (DECISIONS #32): a small backend patch that installs apps straight from the index, re-checks `wizard.md` and writes `apps.json`. The frontend is stock Runtipi (admin/break-glass); the image is a drop-in for `runtipi/runtipi`. |
 | `wizard-app-index` | The shared app catalog: [apps.aiwizards.com](https://apps.aiwizards.com) (API) and [aiwizards.com/wizard-apps](https://www.aiwizards.com/wizard-apps) (store page). Publish + topic crawl; a rebuildable cache. |
 | `wizard-app-store` | Legacy hand-maintained Runtipi store. Every app in it now has its own repo; kept until boxes move to the App Manager. |
@@ -35,7 +35,7 @@ The shared map of Wizard OS: how the pieces fit, the contracts between them, and
 - [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
 - [`AGENTS.md`](spec/AGENTS.md): more than one agent on a box — agent folder, harness / model provider / permissions, the `/wizard/v1/agents` API, per-agent chats (MVP, approved 14 Oct).
-- [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the Wizard OS kernel text and app skills; install alongside an existing Hermes (proposed).
+- [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the WizardOS kernel text and app skills; install alongside an existing Hermes (proposed).
 - [`DISK_ENCRYPTION.md`](spec/DISK_ENCRYPTION.md): owner data on LUKS2 sealed to the box's TPM 2.0 chip (PCR 7), a one-time recovery key, status lines and per-platform behaviour (#112).
 - [`HOST_HOP.md`](spec/HOST_HOP.md): Machines roles (main, standby, helper), moving a Wizard to another machine, and the client Wizards list (proposed).
 - [`CONNECTORS.md`](spec/CONNECTORS.md): account custody, Contains private data labels, preferred privacy-model routing and prompt-injection containment (direction approved, contract proposed); [YouTube Music + simulated-chat MVP and release gates](docs/CONNECTORS_MVP.md).

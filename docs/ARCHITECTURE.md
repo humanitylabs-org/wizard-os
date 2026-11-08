@@ -1,4 +1,4 @@
-# Wizard OS architecture
+# WizardOS architecture
 
 **Version 1.0 · 9 Oct 2026.** Written from the Wizard Dev Council (James, Jan, Miguel, 9 Oct 2026) and the earlier architecture plan. Decisions are logged in [DECISIONS.md](DECISIONS.md).
 
@@ -13,7 +13,7 @@ A personal AI server you run by talking to it. You install it on your Mac to try
      │
   Wizard UX ─────────────── one web front end; thin native shells add hotkeys, mic, files
      │  /wizard/... API
-  Wizard Agent Service ──── adds "you are an agent inside Wizard OS", connects installed apps,
+  Wizard Agent Service ──── adds "you are an agent inside WizardOS", connects installed apps,
      │                      handles threads, runs, files, voice. The agent is unmodified.
   Agent (Hermes today) ──── reasons and acts
      │  MCP over HTTP
@@ -35,7 +35,7 @@ The shells add what a browser can't (hotkeys, background mic, file sharing) thro
 Wizard UX is the **shell**: a system app filling the `shell` slot, always exactly one per box. Other screens are views (normal apps). Owners reshape it through settings, layout, theme and overlay files rather than forks ([spec/SHELL.md](../spec/SHELL.md)).
 
 **Wizard Agent Service** (`wizard-agent-service`). The only thing the UX talks to.
-- It proxies the agent, and adds the Wizard OS instructions on the way in, so Hermes itself stays stock.
+- It proxies the agent, and adds the WizardOS instructions on the way in, so Hermes itself stays stock.
 - On every change to `apps.json` it connects each app's MCP and skill and tells the agent what's installed. That's the "knowledge transfer on install".
 - It also keeps one short **pointer skill** per job type, for example "short-form video → DeFleur Video". The app's full skill stays with the app.
 - It owns the versioned `/wizard/...` API.
