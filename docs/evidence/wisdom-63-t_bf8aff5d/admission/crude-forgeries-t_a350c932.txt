@@ -1,2 +1,0 @@
-qa63-haiku-forged.zip 400 {'error': "Authoring receipt rejected: qa-empty-hub workflow is None, installed workflow requires 'wisdom.collection-authoring'. No output admitted. R changed False
-qa63-haiku-run2-injected.zip 400 {'error': "Authoring receipt rejected: qa-empty-hub workflow is None, installed workflow requires 'wisdom.collection-authoring'. No output admitted. R changed False
