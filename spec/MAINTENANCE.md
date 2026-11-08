@@ -80,7 +80,8 @@ stays `check`, with an unprivileged check; Health shows the one command that tur
 Besides the read-only checks, the owner account can do three things through the main rule: force a patch run, pause
 the distribution's own updater (`native-off`), or remove the helper. Nothing else, and no shell.
 
-`wam maintain remove` deletes the helper and both rules, sets `os_security` back to `check`, and records
+`wam maintain remove` deletes the helper and both rules, sets `os_security` back to `check`, turns off `quiet_restarts`, `held_platform` and
+`quiet_reboot`, and records
 `helper_removed: true` in `maintenance.json`. Installer runs then skip setup until the owner runs `wam maintain setup`
 again. What a restore does with that flag is still open: see [BOX_STATE.md](BOX_STATE.md#nightly-maintenance).
 
