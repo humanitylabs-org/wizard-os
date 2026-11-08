@@ -16,14 +16,16 @@ It prints one line per piece with a plain status:
     merged      the issue is open but a PR that mentions it is merged (someone should check it and close it)
     in review   an open PR mentions it
     no PR yet   nothing is moving on it
+    unreadable  GitHub would not return the piece's issue (moved, renamed, deleted or no access); the
+                other pieces are still reported, and the error is printed on the next line
 
 It also flags checklist drift: a ticked box whose issue is still open, or an unticked box whose issue is
 closed. That is the cue to update the goal by hand; the tool never edits it.
 
 It only reads, through `gh api` (so private repos work with the caller's own login). It never writes,
 comments, ticks boxes or changes settings, and nothing runs it automatically. Exit 0 = read fine and no
-drift, 1 = some checkbox disagrees with its issue (each printed), 2 = GitHub could not be read or the goal
-has no Pieces list.
+drift, 1 = some checkbox disagrees with its issue (each printed), 2 = GitHub could not be read (the goal,
+or at least one piece) or the goal has no Pieces list.
 """
 from __future__ import annotations
 
@@ -136,8 +138,18 @@ def check_goal(number: int, repo: str = f"{ORG}/{REPO}", get=None) -> dict:
     return {
         "goal": f"{repo}#{number}",
         "title": goal.get("title", ""),
-        "pieces": [check_piece(p, get) for p in pieces],
+        "pieces": [_check_or_unreadable(p, get) for p in pieces],
     }
+
+
+def _check_or_unreadable(piece: dict, get) -> dict:
+    """check_piece, but a piece GitHub will not return is kept as 'unreadable' instead of ending the report."""
+    try:
+        return check_piece(piece, get)
+    except FetchError as e:
+        out = dict(piece)
+        out.update({"issue_state": None, "status": "unreadable", "prs": [], "drift": None, "error": str(e)})
+        return out
 
 
 def _pr_ref(goal_repo: str, pr: dict) -> str:
@@ -162,8 +174,10 @@ def main(argv=None, get=None) -> int:
         print(f"{result['goal']} has no Pieces checklist (lines like '- [ ] owner/repo#N — title')", file=sys.stderr)
         return 2
     drift = [p for p in result["pieces"] if p["drift"]]
+    unreadable = [p for p in result["pieces"] if p["status"] == "unreadable"]
     if a.json:
         result["drift"] = len(drift)
+        result["unreadable"] = len(unreadable)
         print(json.dumps(result, indent=2))
     else:
         print(f"{result['goal']} {result['title']}")
@@ -172,11 +186,15 @@ def main(argv=None, get=None) -> int:
             print(f"  {p['status']:<10} {p['repo']}#{p['number']} {p['title']}  [PRs: {prs}]")
             if p["drift"]:
                 print(f"  {'DRIFT':<10} {p['repo']}#{p['number']}: {p['drift']}")
+            if p.get("error"):
+                print(f"  {'ERROR':<10} {p['repo']}#{p['number']}: could not read GitHub: {p['error']}")
         counts = {}
         for p in result["pieces"]:
             counts[p["status"]] = counts.get(p["status"], 0) + 1
-        summary = ", ".join(f"{counts[s]} {s}" for s in ("done", "merged", "in review", "no PR yet") if s in counts)
+        summary = ", ".join(f"{counts[s]} {s}" for s in ("done", "merged", "in review", "no PR yet", "unreadable") if s in counts)
         print(f"{len(result['pieces'])} pieces: {summary}; {len(drift)} checkbox drift")
+    if unreadable:
+        return 2
     return 1 if drift else 0
 
 

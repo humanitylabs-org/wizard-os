@@ -146,6 +146,25 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("could not read GitHub", err)
 
+    def test_one_unreadable_piece_does_not_hide_the_others(self):
+        # Goal #420 links humanitylabs-org/wizard-shopping-history#2, which GitHub answers with 404;
+        # the report used to stop there and print nothing about the other pieces.
+        body = GOAL_BODY + "- [ ] humanitylabs-org/gone-repo#7 — Repo moved or private\n"
+        with mock.patch.dict(ISSUES, {"repos/humanitylabs-org/wizard-os/issues/419": {"title": "UX refactor", "body": body}}):
+            code, out, err = run(["419"])
+            jcode, jout, _ = run(["419", "--json"])
+        self.assertEqual(code, 2)
+        self.assertEqual(err, "")
+        self.assertIn("done       humanitylabs-org/wizard-ux#1 One", out)
+        self.assertIn("unreadable humanitylabs-org/gone-repo#7 Repo moved or private  [PRs: -]", out)
+        self.assertIn("ERROR      humanitylabs-org/gone-repo#7: could not read GitHub: repos/humanitylabs-org/gone-repo/issues/7: HTTP 404", out)
+        self.assertIn("6 pieces: 2 done, 1 merged, 1 in review, 1 no PR yet, 1 unreadable; 2 checkbox drift", out)
+        self.assertEqual(jcode, 2)
+        data = json.loads(jout)
+        self.assertEqual(data["unreadable"], 1)
+        self.assertEqual(data["pieces"][-1]["status"], "unreadable")
+        self.assertIn("HTTP 404", data["pieces"][-1]["error"])
+
     def test_never_writes(self):
         src = (Path(__file__).resolve().parents[1] / "goal_pieces.py").read_text()
         for verb in ("--method", "-X", "POST", "PATCH", "PUT", "DELETE", "issue edit", "issue comment"):
