@@ -141,5 +141,36 @@ class Main(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class OwnFormsTest(unittest.TestCase):
+    """wizard-os's own issue forms (#418) must pass the checker other repos are measured by."""
+
+    FORMS = Path(__file__).resolve().parents[2] / ".github" / "ISSUE_TEMPLATE"
+
+    def test_bug_form_has_the_five_fields(self):
+        form = cbf.parse_form((self.FORMS / "bug.yml").read_text(encoding="utf-8"))
+        self.assertTrue(cbf.is_bug_form(form))
+        self.assertEqual(cbf.missing_fields(form), [])
+
+    def test_goal_form_is_a_form_but_not_the_bug_form(self):
+        form = cbf.parse_form((self.FORMS / "goal.yml").read_text(encoding="utf-8"))
+        self.assertTrue(form["is_form"])
+        self.assertEqual(form["labels"], ["goal"])
+        self.assertIn("Done when", form["fields"])
+        self.assertFalse(cbf.is_bug_form(form))
+
+    def test_check_repo_passes_on_these_files(self):
+        files = {p.name: p.read_text(encoding="utf-8") for p in self.FORMS.glob("*.yml")}
+
+        def get(path):
+            if path.endswith("/contents/" + cbf.FORM_DIR):
+                return [{"type": "file", "path": f"{cbf.FORM_DIR}/{n}"} for n in sorted(files)]
+            name = path.rsplit("/", 1)[1]
+            return {"content": base64.b64encode(files[name].encode()).decode()}
+
+        r = cbf.check_repo("wizard-os", get)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["form"], f"{cbf.FORM_DIR}/bug.yml")
+
+
 if __name__ == "__main__":
     unittest.main()
