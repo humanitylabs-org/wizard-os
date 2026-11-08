@@ -15,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 VARIANT = re.compile(
     r"(?:(?<![\w/.~-])|(?<=\\[ntr]))wizard(?:[ \t\u00a0\u2009\u202f]+|[ \t\u00a0]*[-\u2010\u2011\u2013\u2014][ \t\u00a0]*)os(?![\w/-])",
     re.IGNORECASE)
-# Captured evidence records are kept exactly as captured.
-SKIP = re.compile(r"(^|/)evidence/")
+# Kept byte-for-byte: captured evidence and published release records (their sha256 is cited in release notes).
+SKIP = re.compile(r"(^|/)evidence/|^releases/")
 
 
 def misspells(line: str) -> bool:
