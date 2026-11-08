@@ -80,7 +80,7 @@ class Files(unittest.TestCase):
         problems = cmd.check(BASE, get, head)["problems"]
         self.assertTrue(any("99 bytes, feed says 100" in p for p in problems), problems)
         self.assertTrue(any("newest DMG" in p and "404" in p for p in problems), problems)
-        self.assertTrue(any("first Wizard OS part answers 403" in p for p in problems), problems)
+        self.assertTrue(any("first WizardOS part answers 403" in p for p in problems), problems)
 
     def test_os_parts_must_add_up(self):
         bad = json.dumps({"version": "0.4.0", "bytes": 31, "parts": [{"url": "a", "bytes": 30}]})

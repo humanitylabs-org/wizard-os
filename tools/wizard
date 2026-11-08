@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""wizard: the generic Wizard OS CLI. List installed apps, read their MCP tools, call one.
+"""wizard: the generic WizardOS CLI. List installed apps, read their MCP tools, call one.
 
     wizard apps list [--json]
     wizard tools <app>[.<tool>] [--json]
@@ -481,7 +481,7 @@ def hcfg_get(home: Path, key: str):
 def raw_config(home: Path) -> dict:
     """The owner's config.yaml as written (PyYAML when present; {} if unreadable)."""
     try:
-        import yaml  # python3-yaml ships with Wizard OS boxes; only used to read
+        import yaml  # python3-yaml ships with WizardOS boxes; only used to read
         return yaml.safe_load((home / "config.yaml").read_text(encoding="utf-8")) or {}
     except Exception:  # noqa: BLE001
         return {}
@@ -498,7 +498,7 @@ def raw_get(cfg: dict, key: str):
 
 # A minimal-diff YAML edit: ruamel (Hermes' own dependency, run in Hermes' venv) computes the edited document, and
 # only the lines that changed are spliced into the original bytes, so comments, blank lines, quoting and every
-# key Wizard OS doesn't own stay exactly as the owner wrote them. (`hermes config set` would also normalise
+# key WizardOS doesn't own stay exactly as the owner wrote them. (`hermes config set` would also normalise
 # unrelated lines and materialise defaults.)
 _EDITOR = r"""
 import difflib, io, json, sys
@@ -771,7 +771,7 @@ def restore_bytes(src: Path, dst: Path) -> None:
 
 def rollback_link(rec: dict) -> dict:
     """Undo an unfinished link from its journal. Files still in a state link itself produced get their backed-up
-    bytes back; anything the owner changed meanwhile keeps the owner's edits and loses only Wizard OS's."""
+    bytes back; anything the owner changed meanwhile keeps the owner's edits and loses only WizardOS's."""
     home = Path(rec["hermes_home"])
     cfgp, envp, bdir = home / "config.yaml", home / ".env", Path(rec["backup"])
     for stray in (home / "config.yaml.wizard-tmp", home / ".env.wizard-tmp"):
@@ -785,7 +785,7 @@ def rollback_link(rec: dict) -> dict:
     backup_ok = sha256_file(backup_cfg) == rec.get("config_sha_before")
     if backup_ok and sha256_file(cfgp) in (rec.get("known_config_shas") or []):
         restore_bytes(backup_cfg, cfgp)   # only link touched it: the owner's original bytes go straight back
-    else:   # the owner edited it too: reverse only Wizard OS's keys, keep theirs
+    else:   # the owner edited it too: reverse only WizardOS's keys, keep theirs
         for e in reversed(rec.get("edits") or []):
             if e["before"]["present"]:
                 hcfg_set(home, e["key"], e["before"]["value"])
@@ -845,7 +845,7 @@ def cmd_link(ns) -> dict:
     except KeyError:
         existing = None
     if existing is not None and not (isinstance(existing, dict) and "/wizard/mcp" in str(existing.get("url", ""))):
-        raise Fail("usage", f"this Hermes already has an MCP server called '{MCP_NAME}' that isn't Wizard OS; "
+        raise Fail("usage", f"this Hermes already has an MCP server called '{MCP_NAME}' that isn't WizardOS; "
                             "left it alone (rename it, then link)")
     stamp = _t.strftime("%Y%m%dT%H%M%SZ", _t.gmtime())
     bdir = osh / "link-backup" / stamp
@@ -1097,7 +1097,7 @@ def cmd_unlink(ns) -> dict:
     return {"ok": True, "linked": False, "config_byte_identical": byte_identical, "env_restored": env_ok,
             "reversed": [e["key"] for e in rec["edits"]], "plugin_removed": bool(rec.get("plugin_installed")),
             "env_removed": rec.get("env_added") or [], "gateway_restarted": restarted,
-            "note": "" if byte_identical else "the owner edited config.yaml after linking; only Wizard OS keys were reversed"}
+            "note": "" if byte_identical else "the owner edited config.yaml after linking; only WizardOS keys were reversed"}
 
 
 def _check(rows: list, name: str, ok: bool, detail: str = "") -> bool:
@@ -1135,7 +1135,7 @@ def cmd_doctor(ns) -> dict:
         dirs = [str(Path(d).expanduser()) for d in raw_get(cfg, "skills.external_dirs") or []]
     except KeyError:
         dirs = []
-    _check(rows, "Hermes reads the Wizard OS skills", str(os_home() / "skills") in dirs, str(os_home() / "skills"))
+    _check(rows, "Hermes reads the WizardOS skills", str(os_home() / "skills") in dirs, str(os_home() / "skills"))
     try:
         enabled = raw_get(cfg, "plugins.enabled") or []
     except KeyError:
@@ -1261,7 +1261,7 @@ NOT_FINAL_TAG = re.compile(r"(^|[.-])(rc|canary|abandoned|alpha|beta|dev)([.\d-]
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 BACKUP_FILES = ("config.yaml", ".env", "auth.json", "SOUL.md", "cron/jobs.json")
 BACKUP_DIRS = ("skills", "memories")
-CHECK_PROMPT = "This is an automatic Wizard OS check after a Hermes update. Reply with the single word: READY"
+CHECK_PROMPT = "This is an automatic WizardOS check after a Hermes update. Reply with the single word: READY"
 EXIT.update({"update_refused": 10, "update_by_hand": 10, "not_quiet": 11, "update_rolled_back": 12,
              "rollback_failed": 13})
 
@@ -1349,7 +1349,7 @@ def hermes_install(home: Path) -> dict:
     repo = next((Path(c) for c in cands if c and (Path(c) / ".git").exists() and (Path(c) / "pyproject.toml").is_file()),
                 None)
     if repo is None:
-        raise Fail("update_by_hand", f"this Hermes ({exe}) is not a git checkout that Wizard OS can move; update it by "
+        raise Fail("update_by_hand", f"this Hermes ({exe}) is not a git checkout that WizardOS can move; update it by "
                    "hand to the Wizard stable tag (`wizard hermes status` names it)")
     if venv is None and (repo / "venv" / "pyvenv.cfg").is_file():
         venv = repo / "venv"
@@ -1944,7 +1944,7 @@ def prove_forward(repo: Path, current: str, pin: dict) -> str:
         _git(repo, "fetch", "--unshallow", "--no-tags", "origin", f"refs/tags/{pin['tag']}", timeout=900)
     if _run(["git", "-C", repo, "merge-base", "--is-ancestor", current, pin["commit"]], check=False).returncode:
         raise Fail("update_refused", f"{pin['tag']} is not proven newer than what this Hermes runs "
-                   f"({current[:10]}); Wizard OS never moves a Hermes backwards")
+                   f"({current[:10]}); WizardOS never moves a Hermes backwards")
     return "ancestry: the running commit is an ancestor of the pinned one"
 
 

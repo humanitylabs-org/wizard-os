@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Sync the Wizard OS PR pipeline board (a GitHub Project in humanitylabs-org).
+"""Sync the WizardOS PR pipeline board (a GitHub Project in humanitylabs-org).
 
-One card per pull request across the repos Wizard OS releases are built from.
+One card per pull request across the repos WizardOS releases are built from.
 The Status column says where the change is:
 
   Draft      -> draft PR
@@ -29,8 +29,8 @@ import sys
 import time
 
 ORG = "humanitylabs-org"
-TITLE = "Wizard OS · PR pipeline"
-DESCRIPTION = ("Every Wizard OS pull request and where it is: Draft, In review, Merged, "
+TITLE = "WizardOS · PR pipeline"
+DESCRIPTION = ("Every WizardOS pull request and where it is: Draft, In review, Merged, "
                "On Latest, On Stable, Dropped. Synced by wizard-os tools/pr_board.py.")
 STAGES = [  # (name, colour, description)
     ("Draft", "GRAY", "Draft PR, still being worked on"),

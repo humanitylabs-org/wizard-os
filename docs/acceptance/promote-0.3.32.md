@@ -71,14 +71,14 @@ Strictly read, #82 would give this release a 72h soak (until 24 Oct 16:39 UTC) b
 
 ## Redone on 22 Oct (03:20–05:05 UTC): one-step upgrade and fresh install
 
-The two tests above that couldn't run on 22 Oct were redone over the box's key-only tailnet SSH (port 2222). Before each install the box was wiped: Wizard OS, the `wizard` user and Docker were removed, and the OS, SSH and the Tailscale login were kept. Every install used the public `https://www.aiwizards.com/os.sh` as root (same bytes each time, sha256 `40719c75…b2db3`). Browser checks ran in headless system Chrome over Tailscale HTTPS against `:8796`. Screenshots are in the operator cache as `demo-retest-*.png` and were judged with vision.
+The two tests above that couldn't run on 22 Oct were redone over the box's key-only tailnet SSH (port 2222). Before each install the box was wiped: WizardOS, the `wizard` user and Docker were removed, and the OS, SSH and the Tailscale login were kept. Every install used the public `https://www.aiwizards.com/os.sh` as root (same bytes each time, sha256 `40719c75…b2db3`). Browser checks ran in headless system Chrome over Tailscale HTTPS against `:8796`. Screenshots are in the operator cache as `demo-retest-*.png` and were judged with vision.
 
 **A. Fresh 0.3.25, then one step to stable 0.3.32: PASS**
 
 | Check | Result |
 |---|---|
 | Fresh `WIZARD_RELEASE=0.3.25 bash -s start` | done, exit 0. Outcome `ok`. 25/25 release checks ok. Troubleshooter `ready`. No `updates.json`, and `wam updates` reports `mode: auto` with the nightly timer (the 0.3.25 default when the owner never chose). |
-| Owner upgrade path | 0.3.25 has no `store-install/_updates` route (404), so Settings → Updates can't drive the update. The owner path is the installer rerun with no `WIZARD_RELEASE` (stable). Its step read "Installing Wizard OS 0.3.32 (App Manager 66d06b4504b2)". |
+| Owner upgrade path | 0.3.25 has no `store-install/_updates` route (404), so Settings → Updates can't drive the update. The owner path is the installer rerun with no `WIZARD_RELEASE` (stable). Its step read "Installing WizardOS 0.3.32 (App Manager 66d06b4504b2)". |
 | After the upgrade | done, exit 0. Outcome `ok`. `release.json` reads 0.3.32 `pinned`, 25/25 ok. The `store-data` and `store-install` Serve routes are mounted. The troubleshooter, guardian, store-data and api units are active. |
 | Shell | 200 |
 | Troubleshooter | `/troubleshoot/` returns 200 with "All working", and the details sheet lists every check. `WizOpenApp('troubleshooter')` opens it as a hosted shell window. |

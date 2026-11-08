@@ -6,9 +6,9 @@
     python3 tools/check_mac_downloads.py --base URL # another mirror with the same layout
 
 It answers one question a self-installer depends on: does the download page, the in-app update feed and the
-first-install Wizard OS feed agree, and does every file they name answer? The layout is try-wizard
+first-install WizardOS feed agree, and does every file they name answer? The layout is try-wizard
 `next/mac/DOWNLOADS.md`: `mac/appcast.xml` (Sparkle feed), `index.html` (landing page with the DMG links),
-`os/latest.json` (Wizard OS image in parts).
+`os/latest.json` (WizardOS image in parts).
 
 Problems it reports:
 - the update feed and the download page offer different builds (a new install and an updated install end up
@@ -147,9 +147,9 @@ def check(base: str = DEFAULT_BASE, get=http_get, head=http_head) -> dict:
             url = urllib.parse.urljoin(f"{base}/os/latest.json", first)
             status, size = head(url)
             if status != 200:
-                problems.append(f"first Wizard OS part answers {status}: {url}")
+                problems.append(f"first WizardOS part answers {status}: {url}")
             elif size is not None and parts[0].get("bytes") not in (None, size):
-                problems.append(f"first Wizard OS part is {size} bytes, latest.json says {parts[0]['bytes']}")
+                problems.append(f"first WizardOS part is {size} bytes, latest.json says {parts[0]['bytes']}")
 
     return {"base": base, "feed": feed, "page": page, "os": os_info, "problems": problems}
 
@@ -173,10 +173,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"download DMG: {d['version']} (build {d['build']})  {d['url']}")
         if result["os"]:
             o = result["os"]
-            print(f"Wizard OS   : {o['version']} in {o['parts']} parts, {o['bytes']} bytes")
+            print(f"WizardOS   : {o['version']} in {o['parts']} parts, {o['bytes']} bytes")
         for p in result["problems"]:
             print(f"PROBLEM: {p}")
-        print("OK: download page, update feed and Wizard OS feed agree" if not result["problems"]
+        print("OK: download page, update feed and WizardOS feed agree" if not result["problems"]
               else f"{len(result['problems'])} problem(s)")
     return 1 if result["problems"] else 0
 

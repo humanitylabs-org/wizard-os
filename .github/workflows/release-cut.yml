@@ -1,4 +1,4 @@
-# For testers: every merge to main of a Wizard OS component becomes a new For testers (latest) release.
+# For testers: every merge to main of a WizardOS component becomes a new For testers (latest) release.
 # Proposed with the DECISIONS amendment of #75 (docs/RELEASE_AUTOMATION.md). Nothing runs until this is merged.
 # Triggers: `repository_dispatch: component-published` from wizard-ux, wizard-agent-service and wizard-app-manager
 # (their release-train-notify.yml, after a green publish/test on main), a 30-minute sweep that runs only when a cut
