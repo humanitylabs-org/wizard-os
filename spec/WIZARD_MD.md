@@ -36,6 +36,7 @@ type: service               # agent | service | view | external (how it runs)
 category: app               # agent | interface | app | system (store shelf; optional)
 version: 0.6.5
 summary: Edit a talking-head video into a finished vertical short.
+whats_new: Captions follow the speaker.   # optional; one line on what changed in this version
 icon: icon.png              # optional; square PNG/JPEG, 512x512 recommended
 license: MIT
 source: https://github.com/humanitylabs-org/defleur-video
@@ -205,6 +206,7 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 7. Every `needs` entry is a known device permission (including `home-network`), `credentials:<provider>`, a non-null default app ID, or an explicit `provides` capability from the source defaults. The spec/index checkers carry an offline snapshot of `wizard-app-manager/wam/defaults.json` (app IDs and explicit `provides` only). Slot aliases, null placeholders and a candidate's own `provides` do not extend that vocabulary. This is manifest validation, not proof a provider is installed or permission to install it.
 8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
 8c. `home_screen`, if present, is a mapping with only `offline` (boolean), `position_keys` (list as above) and `route_state` (name as above); a non-empty declaration requires a declared `view` with path and port.
+8d. `whats_new`, if present, is one line of 1–140 characters without line breaks or control characters. It says what changed in this version, in words the owner understands. Settings > About & updates shows it next to an app's pending update and right after the update installed (wizard-ux#1191). The App Manager reads it from the App Store's copy of the app, so it always describes the version that copy installs. Apps without it show "no notes".
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
