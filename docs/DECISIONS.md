@@ -2,7 +2,7 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
-## 7 Nov 2026 — James and Miguel: the Tame the Chaos pipeline (call; goal [#418](https://github.com/humanitylabs-org/wizard-os/issues/418))
+## 7 and 9 Nov 2026 — James and Miguel: the Tame the Chaos pipeline (calls; goal [#418](https://github.com/humanitylabs-org/wizard-os/issues/418))
 
 | # | Decision | Status |
 |---|---|---|
@@ -10,6 +10,7 @@ Newest first. **Locked** = the named owners agreed. **Approved by James, confirm
 | 109 | **Reviews and rhythm.** The agent of whoever opened the issue does the AI review; a goal's owner or any non-opener reviews the human step. Metrics (time per step, kick-backs, AI-review rounds) are reviewed daily at first, then weekly, with a weekly stand-up that includes Jan. When the standardized pipeline goal is done it is replaced by an optimized-pipeline goal with targets. | James and Miguel, 7 Nov |
 | 110 | **Channels and releases.** For testers (every merge, switched off) and For everyone (promoted about every 3 days) replace Latest and Stable; updates are automatic. James, Jan, Miguel and Robert are testers first; opt-in users later. Experiments merge switched off. Bug reporters update first. Miguel's Tracker app signs in with GitHub (no token) and is the review surface; GitHub stays the backend for now. | James and Miguel, 7 Nov |
 | 111 | **The builder's AGENTS.md.** The builder keeps no memory and reads the repo fresh each run, so `AGENTS.md` is its instruction set and changes only by pull request reviewed by James or Miguel. Every issue states its "done when" so AI review has something to judge against. | Proposed by Archimedes from the call; James and Miguel to confirm |
+| 112 | **Features return, split by repo; bugs ship faster; hotfix lane.** Amends #108 and #109 after the 9 Nov 2026 call. Issues are goal, bug or feature; a feature is core (platform repos, human-gated before the builder starts) or app (builder starts at once), decided by repo. Bugs: the opener QAs and approves, then it merges, until stable. AI review stays for now to measure kick-backs. Goals are human threads; the builder tags features and bugs to goals and a person samples tags. A `hotfix` label jumps the queue and is reviewed afterwards. Reporter inside the Tracker for now (feature or bug, then repo); a lighter public one is split out later. GitHub-hosted Mac runners are to be checked for Mac builds; whether they can run the Try WizardOS VM is unverified. | James and Miguel, 9 Nov call; hotfix lane and tag sampling proposed by Archimedes, James and Miguel to confirm |
 
 ## 5 Nov 2026 — James: owner proof amendments ([spec/OWNER_PROOF.md](../spec/OWNER_PROOF.md))
 
