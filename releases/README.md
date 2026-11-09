@@ -238,7 +238,7 @@ Status: decided, not built. The App Manager source setting, banner and return pa
 still to implement.
 ## PR pipeline board
 
-[Wizard OS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
+[WizardOS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) (org members
 only) shows every pull request in the repos a release pins, plus wizard-os and try-wizard,
 in one of six columns: **Draft → In review → Merged → On Latest → On Stable**, or
 **Dropped**. Each card carries its **Tier** (from the `tier:` label) and **Opened by**, so
@@ -272,4 +272,4 @@ installer-contract checks, and `stable` only through `tools/promote_stable.py pr
 
 ## Phone app pointer
 
-`phone/latest.json` names the one shared Wizard OS Android release every box mirrors. App Manager's hourly `wam phone-sync` fetches it, checks the signer, size and SHA-256 of the GitHub release asset, and writes the box's same-origin phone update feed. Boxes on a snapshot older than `min_box_snapshot` skip it. Only advance it to a release whose exact APK has no owner address built in and has passed the upgrade checks in wizard-ux `docs/phone-canonical-release.md`.
+`phone/latest.json` names the one shared WizardOS Android release every box mirrors. App Manager's hourly `wam phone-sync` fetches it, checks the signer, size and SHA-256 of the GitHub release asset, and writes the box's same-origin phone update feed. Boxes on a snapshot older than `min_box_snapshot` skip it. Only advance it to a release whose exact APK has no owner address built in and has passed the upgrade checks in wizard-ux `docs/phone-canonical-release.md`.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Weak-model gate for the Wizard OS agent bridge (spec/AGENT_BRIDGE.md, "Proof").
+"""Weak-model gate for the WizardOS agent bridge (spec/AGENT_BRIDGE.md, "Proof").
 
 Sends eight plain, job-worded requests to a real Hermes (fresh session each) and checks the FIRST
 app-relevant tool call. Pass = the expected `<app>__<tool>` first in at least 7 of 8, with zero

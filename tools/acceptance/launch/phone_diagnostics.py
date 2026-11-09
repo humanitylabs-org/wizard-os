@@ -10,7 +10,7 @@ import zlib
 
 # Fail closed: new/dynamic labels are redacted, not guessed to be non-secret.
 SAFE_LABELS = frozenset({
-    'Connect to your Wizard', 'Change Wizard', 'Connect', 'Chats', 'Wizard OS',
+    'Connect to your Wizard', 'Change Wizard', 'Connect', 'Chats', 'WizardOS',
     'Wizard address', 'Scan QR code', 'Back to your Wizard', 'Keep current Wizard',
     'Checking your Wizard…', 'Attach photos or files', 'Settings', 'Home',
     "Couldn't reach that Wizard. Check the address and that Tailscale is on, then try again.",

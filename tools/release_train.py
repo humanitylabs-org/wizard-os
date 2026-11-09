@@ -5,6 +5,25 @@
     python3 tools/release_train.py run                      # cut -> mirror -> upgrade test -> promote (or stop)
     python3 tools/release_train.py run --dry-run            # everything local; stops before any push or merge
     python3 tools/release_train.py run --dry-run --force    # same, even when no fix is waiting (proves the path)
+    python3 tools/release_train.py cut [--dry-run]          # For testers: cut + mirror main's newest published images
+    python3 tools/release_train.py promote-soaked [--dry-run]   # For everyone: latest after 72h, no release-blocker
+
+For testers / For everyone (Miguel + James, Nov 2026; proposed DECISIONS amendment of #75 in docs/RELEASE_AUTOMATION.md):
+`cut` is what .github/workflows/release-cut.yml runs after any component merge to main publishes: every newer
+published Wizard UX / Agent Service main commit, and the newest green App Manager main commit (with its newest
+published image), is cut onto latest (not only Recommended fixes), mirrored, and it stops there (no rig, no
+promotion). At most one cut per MIN_CUT_INTERVAL (30 min): a cut asked for sooner is DEFERRED and the workflow's
+30-minute sweep picks it up. `promote-soaked` is what .github/workflows/release-promote.yml runs on a
+schedule: when releases/latest has been latest for >= SOAK_HOURS (promote_stable.latest_since) and no issue labelled
+`release-blocker` is open anywhere in the org, it runs the same installed upgrade test from the current Stable and
+promotes WITHOUT --fast-track (the normal soaked gate), then mirrors. Anything missing: it waits and says why.
+`promote-soaked --check` only answers whether that is due (no clones of the components, no rig).
+
+Mirror PRs into wizard-app-manager merge on an automated check, not a person (DECISIONS #96 as amended, Nov 2026):
+`verify_mirror` proves every file the mirror PR changes is byte-identical (sha256) to the same file on wizard-os
+main, and that releases/README.md only gained lines at the end; it posts the commit status
+`release-mirror/byte-identical` on the PR head, and the train merges only that exact head after every other check
+passed.
 
 What `run` does, in order, and where it stops:
 
@@ -12,10 +31,11 @@ What `run` does, in order, and where it stops:
    the App Manager that Stable's pinned commits lack. None: report "nothing to release" and stop.
 2. Pick the candidate. If `releases/latest` already carries every waiting fix, the candidate is latest itself.
    Otherwise cut the next patch release onto latest: latest's JSON with Wizard UX / Agent Service moved to the newest
-   main commit whose public image published (push run green on main, multi-arch digest from the registry). App
-   Manager fixes are reported for a manual cut (its image/maintenance-branch provenance needs a person), never
-   auto-cut. `tools/check_release.py` (online) and `promote_stable.py cut/check` must pass; then the wizard-os PR and
-   the byte-identical wizard-app-manager mirror PR are opened and merged (the mirror waits for its own CI).
+   main commit whose public image published (push run green on main, multi-arch digest from the registry), and the App
+   Manager to its newest main commit with a green `test` run (its image: the newest published `image` run at or before
+   it, pinned with source_commit + image_inputs, so check_release proves no image input changed since). App Manager
+   commits that only touch releases/ (the mirror itself) never count as a move. `tools/check_release.py` (online) and `promote_stable.py cut/check` must pass; then the wizard-os PR and
+   the byte-identical wizard-app-manager mirror PR are opened and merged (after its CI and `verify_mirror`).
 3. Run the documented installed upgrade test from the CURRENT Stable to the candidate on a disposable KVM guest
    (tools/acceptance/upgrade-rig/kvm_upgrade.py, public os.sh). Failed: report and stop; Stable does not move.
 4. Classify honestly: `fix` only when every change between Stable and the candidate is a Recommended fix or
@@ -31,7 +51,8 @@ Never promotes without a passed upgrade test; never touches a real box. `--dry-r
 release directory to the guest (WIZARD_RELEASE_BASE, disclosed in the report), commits the cut and promotion only in
 a scratch clone, runs `promote_stable.py check`, and stops before any push, PR or merge.
 
-State and reports: ~/.wizard-os/release-train/ (reports/<stamp>.md|json, last.md). Needs gh (repo scope), git,
+State and reports: ~/.wizard-os/release-train/ (reports/<stamp>.md|json, last.md). Needs gh (RELEASE_TRAIN_TOKEN, see
+docs/RELEASE_AUTOMATION.md), git,
 docker (buildx imagetools), and the KVM rig's tools for step 3.
 """
 from __future__ import annotations
@@ -55,17 +76,20 @@ from pathlib import Path
 
 ORG = "humanitylabs-org"
 WOS, WAM = f"{ORG}/wizard-os", f"{ORG}/wizard-app-manager"
-# Non-author reviewers asked when Codex cannot review, so the PR lands in their GitHub review queue.
-FALLBACK_REVIEWERS = [r for r in os.environ.get("WIZARD_TRAIN_REVIEWERS", "defleur-agents").split(",") if r.strip()]
 # image component -> (repo, default_apps slot that pins the same commit)
 IMAGE_COMPONENTS = {"wizard-ux": (f"{ORG}/wizard-ux", "shell"),
                     "wizard-agent-service": (f"{ORG}/wizard-agent-service", "agent-service")}
 FIX_REPOS = {**{c: r for c, (r, _) in IMAGE_COMPONENTS.items()}, "wizard-app-manager": WAM}
 PUBLISH_WORKFLOW = "Publish public image"
+WAM_IMAGE_WORKFLOW, WAM_TEST_WORKFLOW = "image", "test"     # wizard-app-manager .github/workflows/image.yml, test.yml
+MIRROR_STATUS = "release-mirror/byte-identical"
+MIN_CUT_INTERVAL = int(os.environ.get("WIZARD_TRAIN_MIN_CUT_INTERVAL", "1800"))   # at most one For testers cut per 30 min
 STATE = Path(os.environ.get("WIZARD_TRAIN_HOME", Path.home() / ".wizard-os" / "release-train"))
 RIG = Path(__file__).resolve().parent / "acceptance" / "upgrade-rig" / "kvm_upgrade.py"
 PUBLIC_MIRROR = f"https://raw.githubusercontent.com/{WAM}/main/releases"
-IDENTITY = ["-c", "user.name=Oscar", "-c", "user.email=262056908+oscarhenrycollins@users.noreply.github.com"]
+# Who the train's commits are by. The workflows set the token owner's identity (wizardosbuilder); a host run keeps Oscar's.
+IDENTITY = ["-c", f"user.name={os.environ.get('WIZARD_TRAIN_GIT_NAME', 'Oscar')}",
+            "-c", f"user.email={os.environ.get('WIZARD_TRAIN_GIT_EMAIL', '262056908+oscarhenrycollins@users.noreply.github.com')}"]
 VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,40}")
 
 
@@ -97,18 +121,10 @@ class Stop(Exception):
 # with a Stop (and so a report) before this budget runs out. Override with WIZARD_TRAIN_BUDGET_S.
 RUN_BUDGET_S = float(os.environ.get("WIZARD_TRAIN_BUDGET_S", "3300"))
 RUN_STARTED = time.time()
-CODEX_OUT_OF_CREDITS = "usage limits have been reached"
 
 
 def run_deadline() -> float:
     return RUN_STARTED + RUN_BUDGET_S
-
-
-def codex_out_of_credits(repo: str, n: str, since: str) -> bool:
-    """Did the Codex connector answer on this PR, after `since` (ISO time), that it has no review credits left?"""
-    comments = gh_json(["api", f"repos/{repo}/issues/{n}/comments", "--paginate"]) or []
-    return any("codex" in (c.get("user") or {}).get("login", "") and c.get("created_at", "") >= since
-               and CODEX_OUT_OF_CREDITS in c.get("body", "") for c in comments)
 
 
 # ---------------------------------------------------------------- repos
@@ -210,10 +226,72 @@ def published(repo: str, repo_dir: Path, limit: int = 40) -> dict | None:
     return None
 
 
+def wam_image_tag(repo_dir: Path, sha: str) -> str | None:
+    """The versioned tag wizard-app-manager's image.yml gives the image of `sha` (v<runtipi>-wizard.<count>-<short>)."""
+    wf = sh(["git", "-C", str(repo_dir), "show", f"{sha}:.github/workflows/image.yml"], check=False)
+    m = re.search(r'tag=(v[0-9A-Za-z.+-]*-wizard\.)\$\(git rev-list --count HEAD\)-\$\(git rev-parse --short HEAD\)', wf)
+    if not m:
+        return None
+    count = sh(["git", "-C", str(repo_dir), "rev-list", "--count", sha]).strip()
+    short = sh(["git", "-C", str(repo_dir), "rev-parse", "--short", sha]).strip()
+    return f"{m.group(1)}{count}-{short}"
+
+
+def only_releases_changed(repo_dir: Path, base: str, head: str) -> bool:
+    """True when base..head touches nothing outside releases/ (the App Manager's mirror merges)."""
+    names = sh(["git", "-C", str(repo_dir), "diff", "--name-only", base, head]).split()
+    return all(n.startswith("releases/") for n in names)
+
+
+def published_wam(repo_dir: Path, latest: dict, limit: int = 40) -> dict | None:
+    """App Manager: the newest main commit whose `test` push run is green and that changes more than releases/ since
+    latest's pin, plus the newest published multi-arch image at or before it (image.yml only runs when image inputs
+    change, so the image is usually from an earlier commit: pinned as source_commit with latest's image_inputs, and
+    check_release proves no input changed in between). None: nothing newer to cut, or no publishable image yet."""
+    l_c = latest["components"]["wizard-app-manager"]["commit"]
+    tests = gh_json(["run", "list", "-R", WAM, "--workflow", WAM_TEST_WORKFLOW, "--branch", "main", "--event", "push",
+                     "-L", str(limit), "--json", "headSha,conclusion,status"])
+    head = next((r["headSha"] for r in tests if r.get("conclusion") == "success"
+                 and is_ancestor(repo_dir, r["headSha"], "origin/main")), None)
+    if not head or head == l_c or is_ancestor(repo_dir, head, l_c) or only_releases_changed(repo_dir, l_c, head):
+        return None
+    images = gh_json(["run", "list", "-R", WAM, "--workflow", WAM_IMAGE_WORKFLOW, "--branch", "main", "--event", "push",
+                      "-L", str(limit), "--json", "databaseId,headSha,conclusion,url"])
+    for r in images:
+        if r.get("conclusion") != "success" or not is_ancestor(repo_dir, r["headSha"], head):
+            continue
+        jobs = gh_json(["run", "view", str(r["databaseId"]), "-R", WAM, "--json", "jobs"]).get("jobs", [])
+        if not {"publish", "attest"} <= {str(j.get("name")) for j in jobs if j.get("conclusion") == "success"}:
+            continue
+        tag = wam_image_tag(repo_dir, r["headSha"])
+        if not tag:
+            continue
+        ref = f"ghcr.io/{WAM}:{tag}"
+        raw = sh(["docker", "buildx", "imagetools", "inspect", ref, "--format", "{{json .Manifest}}"], check=False)
+        try:
+            man = json.loads(raw)
+        except ValueError:
+            continue
+        if not {"amd64", "arm64"} <= {str((m.get("platform") or {}).get("architecture")) for m in man.get("manifests", [])}:
+            continue
+        return {"commit": head, "ref": ref, "digest": man["digest"], "ci_run": r["url"], "architectures": ["amd64", "arm64"],
+                "source_commit": r["headSha"],
+                "image_inputs": list(latest["images"]["wizard-app-manager"].get("image_inputs") or [])}
+    return None
+
+
+def last_cut_age(wos: Path, now: float | None = None) -> float | None:
+    """Seconds since releases/latest last changed on wizard-os main (the last For testers cut)."""
+    t = sh(["git", "-C", str(wos), "log", "-1", "--format=%ct", "origin/main", "--", "releases/latest"]).strip()
+    return ((now if now is not None else time.time()) - int(t)) if t else None
+
+
 # ---------------------------------------------------------------- plan
 
 
-def plan(work: Path) -> dict:
+def plan(work: Path, any_merge: bool = False) -> dict:
+    """What the train would do. any_merge (For testers `cut`): also move every image component whose newest published
+    main commit is newer than latest's pin, fix or not."""
     wos = clone(WOS, work)
     rel = lambda name: show(wos, "origin/main", f"releases/{name}")   # noqa: E731
     stable, latest = rel("stable").strip(), rel("latest").strip()
@@ -238,10 +316,20 @@ def plan(work: Path) -> dict:
                 out["moves"][comp] = pub
             out["unpublished"] += [f"{repo}#{x['number']} {x['title']} (image not published yet)"
                                    for x in missing if x not in ready]
-        elif missing:
-            out["manual"] += [f"{repo}#{x['number']} {x['title']} (App Manager: cut by hand)" for x in missing]
+        elif missing:   # the App Manager: its newest green main commit + newest published image
+            pub = published_wam(d, L)
+            info["published"] = pub
+            ready = [x for x in missing if pub and is_ancestor(d, x["commit"], pub["commit"])]
+            if ready:
+                out["moves"][comp] = pub
+            out["unpublished"] += [f"{repo}#{x['number']} {x['title']} (not on a green main with a published image yet)"
+                                   for x in missing if x not in ready]
         out["waiting_fixes"] += [f"{repo}#{x['number']} {x['title']}" for x in on_latest + ready]
         out["components"][comp] = info
+        if any_merge and comp not in out["moves"]:
+            pub = info.get("published") or (published(repo, d) if comp in IMAGE_COMPONENTS else published_wam(d, L))
+            if pub and pub["commit"] != l_c and not is_ancestor(d, pub["commit"], l_c):
+                out["moves"][comp] = pub
     if out["moves"]:
         out["candidate"], out["cut"] = next_version(wos), True
     elif out["waiting_fixes"] and _key(latest) > _key(stable):
@@ -264,7 +352,7 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
     d["date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     names = []
     for comp, pub in moves.items():
-        repo, slot = IMAGE_COMPONENTS[comp]
+        repo, slot = IMAGE_COMPONENTS.get(comp) or (FIX_REPOS[comp], None)
         old = d["components"][comp]["commit"]
         mine = [n for n in notes if n.startswith(repo + "#")]
         d["components"][comp].update(commit=pub["commit"], branch="main",
@@ -274,10 +362,13 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
         im.update(ref=pub["ref"], digest=pub["digest"], ci_run=pub["ci_run"], architectures=pub["architectures"])
         for k in ("source_commit", "image_inputs", "note"):
             im.pop(k, None)
-        if slot in d.get("default_apps", {}) and d["default_apps"][slot]:
+        if pub.get("source_commit"):     # App Manager: image built from an earlier commit, inputs proven unchanged
+            im.update(source_commit=pub["source_commit"], image_inputs=pub["image_inputs"])
+        if slot and slot in d.get("default_apps", {}) and d["default_apps"][slot]:
             d["default_apps"][slot]["commit"] = pub["commit"]
-        names.append(f"{'Wizard UX' if comp == 'wizard-ux' else 'Agent Service'} {old[:8]} -> {pub['commit'][:8]}")
-    d["name"] = f"Wizard OS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
+        label = {"wizard-ux": "Wizard UX", "wizard-agent-service": "Agent Service"}.get(comp, "App Manager")
+        names.append(f"{label} {old[:8]} -> {pub['commit'][:8]}")
+    d["name"] = f"WizardOS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
     d["about"] = (f"Latest {L['version']} with " + ", ".join(names) + ". Cut by the release train for merged "
                   "Recommended fixes: " + "; ".join(notes) + f". Stable stays {stable} until the installed upgrade test passes.")
     d["notes"] = f"Latest. Exactly {L['version']} except " + ", ".join(names) + "."
@@ -325,18 +416,24 @@ def ride_alongs(work: Path, S: dict, C: dict) -> tuple[str, list[str], list[dict
 
 
 def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, label: str, need_checks: bool,
-                   timeout: float = 3600) -> str:
+                   timeout: float = 3600, verify=None) -> str:
+    """Push, open, wait for every check on this exact head (need_checks), then merge that head. `verify(n, head)`
+    (the App Manager mirror: verify_mirror) is the automated non-author check of DECISIONS #96 as amended: it must
+    pass, and post its status, before the merge."""
     sh(["git", "-C", str(wt), "push", "-q", "-f", "origin", f"HEAD:refs/heads/{branch}"])
     url = sh(["gh", "pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", title, "--body", body]).strip()
     n = url.rstrip("/").rsplit("/", 1)[1]
     sh(["gh", "api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={label}"], check=False)
     head = sh(["git", "-C", str(wt), "rev-parse", "HEAD"]).strip()
-    deadline, opened, nudged = min(time.time() + timeout, run_deadline()), time.time(), False
-    opened_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    deadline = min(time.time() + timeout, run_deadline())
+    if verify:
+        verify(n, head)          # raises Stop (and posts a failure status) unless byte-identical
     while need_checks:
         time.sleep(30)
         checks = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup"])["statusCheckRollup"]
-        states = [(c.get("name"), c.get("status"), c.get("conclusion")) for c in checks]
+        states = [(c.get("name") or c.get("context"),
+                   c.get("status") or ("PENDING" if c.get("state") == "PENDING" else "COMPLETED"),
+                   c.get("conclusion") or c.get("state")) for c in checks]
         if any(s == "COMPLETED" and c not in ("SUCCESS", "SKIPPED", "NEUTRAL") for _, s, c in states):
             raise Stop(f"{url}: a check failed: {[x for x in states if x[2] not in ('SUCCESS', 'SKIPPED', 'NEUTRAL', None, '')]}")
         if states and all(s == "COMPLETED" for _, s, _ in states):
@@ -347,22 +444,8 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
                             if not t["isResolved"]]
             if open_threads:
                 raise Stop(f"{url}: {len(open_threads)} unresolved review finding(s); a person must look")
-            # DECISIONS #96: a release that reaches every install needs a non-author review, and an agent counts.
-            # On the App Manager mirror that is Codex: wait for its review of this exact head, clean.
-            state = codex_state(repo, n)
-            if state is None or state.get("commit_sha") != head or state.get("status") != "completed":
-                if codex_out_of_credits(repo, n, opened_iso):
-                    request_reviewers(repo, n)
-                    raise Stop(f"{url}: Codex is out of review credits, so no non-author review of {head[:8]} "
-                               f"(DECISIONS #96); review requested from {', '.join(FALLBACK_REVIEWERS)}; they review and merge")
-                if time.time() - opened > 600 and not nudged:
-                    sh(["gh", "pr", "comment", n, "-R", repo, "-b", "@codex review"], check=False)
-                    nudged = True
-                if time.time() > deadline:
-                    raise Stop(f"{url}: no completed Codex review of {head[:8]} yet; merge it after the review")
-                continue
-            if state.get("has_unresolved_findings") or state.get("has_any_findings"):
-                raise Stop(f"{url}: Codex found something in the release mirror; a person must look")
+            if verify and not any(name == MIRROR_STATUS and c == "SUCCESS" for name, _, c in states):
+                raise Stop(f"{url}: {MIRROR_STATUS} is not green on {head[:8]}")
             break
         if time.time() > deadline:
             raise Stop(f"{url}: checks still running after {timeout // 60:.0f} min")
@@ -370,23 +453,61 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
     return url
 
 
-def request_reviewers(repo: str, n: str) -> None:
-    """Put the PR in a teammate's review queue instead of leaving it for someone to notice."""
-    for r in FALLBACK_REVIEWERS:
-        sh(["gh", "pr", "edit", n, "-R", repo, "--add-reviewer", r.strip()], check=False)
+def mirror_problems(changes: list[tuple[str, str]], mirror_file, canonical_file, base_file) -> tuple[list[str], list[str]]:
+    """The byte-identity proof for a release mirror PR (pure, so tests drive it without GitHub).
+    changes: (git status letter, path) of base..head in wizard-app-manager. mirror_file(path) -> bytes at the PR head,
+    canonical_file(path) -> bytes on wizard-os main (None: absent), base_file(path) -> bytes at the PR base.
+    Returns (problems, proofs). Every changed path must be under releases/, added or modified, and sha256-equal to
+    wizard-os main's file at the same path; releases/README.md (wizard-app-manager's own provenance log) may only
+    gain lines at its end."""
+    problems, proofs = [], []
+    if not changes:
+        problems.append("the mirror PR changes nothing")
+    for status, path in changes:
+        if not path.startswith("releases/") or ".." in path.split("/"):
+            problems.append(f"{path}: outside releases/")
+            continue
+        if status not in ("A", "M"):
+            problems.append(f"{path}: {status} (a mirror only adds or updates files)")
+            continue
+        got = mirror_file(path)
+        if path == "releases/README.md":
+            old = base_file(path) or b""
+            if got.startswith(old) and len(got) > len(old):
+                proofs.append(f"{path}: append-only (+{len(got) - len(old)} bytes)")
+            else:
+                problems.append(f"{path}: not append-only")
+            continue
+        want = canonical_file(path)
+        if want is None:
+            problems.append(f"{path}: not in wizard-os main")
+            continue
+        a, b = hashlib.sha256(got).hexdigest(), hashlib.sha256(want).hexdigest()
+        (proofs if a == b else problems).append(f"{path}: sha256 {a[:16]}" + ("" if a == b else f" != wizard-os {b[:16]}"))
+    return problems, proofs
 
 
-def codex_state(repo: str, n: str) -> dict | None:
-    """The latest `codex-review-state` the Codex connector left on the PR (None: no review yet)."""
-    comments = gh_json(["api", f"repos/{repo}/issues/{n}/comments", "--paginate"]) or []
-    for c in reversed(comments):
-        m = re.search(r"codex-review-state:v1 (\{.*?\}) -->", c.get("body", ""), re.S)
-        if m and "codex" in (c.get("user") or {}).get("login", ""):
-            try:
-                return json.loads(m.group(1)).get("code_review")
-            except ValueError:
-                return None
-    return None
+def verify_mirror(wam_dir: Path, wos_dir: Path, base: str, n: str, head: str) -> list[str]:
+    """Prove mirror PR #n (head) byte-identical to wizard-os main and post MIRROR_STATUS on its head."""
+    sh(["git", "-C", str(wos_dir), "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main"])
+    gh_head = gh_json(["pr", "view", n, "-R", WAM, "--json", "headRefOid"]).get("headRefOid")
+    raw = sh(["git", "-C", str(wam_dir), "diff", "--name-status", "--no-renames", base, head])
+    changes = [tuple(line.split("\t", 1)) for line in raw.splitlines() if "\t" in line]
+    blob = lambda d, ref, path: subprocess.run(["git", "-C", str(d), "show", f"{ref}:{path}"],   # noqa: E731
+                                               capture_output=True).stdout if subprocess.run(
+        ["git", "-C", str(d), "cat-file", "-e", f"{ref}:{path}"], capture_output=True).returncode == 0 else None
+    problems, proofs = mirror_problems(changes, lambda f: blob(wam_dir, head, f) or b"",
+                                       lambda f: blob(wos_dir, "origin/main", f), lambda f: blob(wam_dir, base, f))
+    if gh_head != head:
+        problems.insert(0, f"PR head is {str(gh_head)[:8]}, the train pushed {head[:8]}")
+    wos_main = sh(["git", "-C", str(wos_dir), "rev-parse", "origin/main"]).strip()
+    ok = not problems
+    desc = (f"{len(proofs)} file(s) identical to wizard-os main@{wos_main[:8]}" if ok else problems[0])[:140]
+    sh(["gh", "api", "-X", "POST", f"repos/{WAM}/statuses/{head}", "-f", f"state={'success' if ok else 'failure'}",
+        "-f", f"context={MIRROR_STATUS}", "-f", f"description={desc}"], check=False)
+    if not ok:
+        raise Stop(f"mirror PR {WAM}#{n} is not byte-identical to wizard-os main: {'; '.join(problems)}")
+    return proofs
 
 
 def served(name: str, sha256: str) -> bool:
@@ -424,6 +545,20 @@ def serve(directory: Path):
         srv.shutdown()
 
 
+# Published release records never change (boxes and release notes cite their sha256; wizard-os#416).
+# releases/SHA256SUMS lists every one; tools/tests/test_published_releases.py fails when a listed file changes.
+SUMS = "SHA256SUMS"
+
+
+def record_published(releases: Path, name: str) -> None:
+    """Append <name> (relative to releases/) to releases/SHA256SUMS once."""
+    f = releases / SUMS
+    lines = f.read_text().splitlines() if f.is_file() else []
+    if not any(x.endswith(f"  {name}") for x in lines):
+        with open(f, "a") as fh:
+            fh.write(f"{sha(releases / name)}  {name}\n")
+
+
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -431,17 +566,238 @@ def sha(path: Path) -> str:
 # ---------------------------------------------------------------- run
 
 
-def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False) -> dict:
+BLOCKER_LABEL = "release-blocker"
+SOAK_HOURS = 72          # same as promote_stable.SOAK_HOURS (DECISIONS #75); test_release_train checks they match
+
+
+def release_blockers() -> list[str]:
+    """Open issues labelled release-blocker anywhere in the org. Fails closed: an unreadable answer stops promotion."""
+    got = gh_json(["search", "issues", "--owner", ORG, "--label", BLOCKER_LABEL, "--state", "open",
+                   "--json", "url,title", "--limit", "50"])
+    if not isinstance(got, list):
+        raise Stop(f"could not read open {BLOCKER_LABEL} issues")
+    return [f"{x.get('url')} {x.get('title', '')[:80]}" for x in got]
+
+
+# Hotfix lane (wizard-os#434), OFF by default: WIZARD_TRAIN_HOTFIX_LANE=1 turns it on. When a merged component PR
+# closes or references an org issue labelled `hotfix`: its For testers cut skips the MIN_CUT_INTERVAL throttle, and
+# the For everyone soak is HOTFIX_SOAK_HOURS instead of SOAK_HOURS (still no open release-blocker), or 0h when the
+# hotfix issue is also labelled `breaking` or the PR closes a `release-blocker` issue. Any lookup error: normal timing.
+HOTFIX_LANE = os.environ.get("WIZARD_TRAIN_HOTFIX_LANE", "0") == "1"
+HOTFIX_LABEL, BREAKING_LABEL = "hotfix", "breaking"
+HOTFIX_SOAK_HOURS = 24
+HOTFIX_LOOKBACK_DAYS = 30
+_PR_FIELDS = ("number merged mergeCommit{oid} repository{nameWithOwner} "
+              "closingIssuesReferences(first:20){nodes{labels(first:30){nodes{name}}}}")
+HOTFIX_QUERY = ("query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){"
+                "labels(first:30){nodes{name}} timelineItems(first:100,itemTypes:[CROSS_REFERENCED_EVENT,"
+                "CONNECTED_EVENT,CLOSED_EVENT]){nodes{__typename "
+                f"... on CrossReferencedEvent{{source{{... on PullRequest{{{_PR_FIELDS}}}}}}} "
+                f"... on ConnectedEvent{{subject{{... on PullRequest{{{_PR_FIELDS}}}}}}} "
+                f"... on ClosedEvent{{closer{{... on PullRequest{{{_PR_FIELDS}}}}}}}}}}}}}}}}}")
+
+
+def _names(node) -> set[str]:
+    return {str(x.get("name")) for x in ((node or {}).get("labels") or {}).get("nodes") or [] if isinstance(x, dict)}
+
+
+def hotfix_prs_of(issue_url: str, issue: dict) -> list[dict]:
+    """Merged component PRs that close or reference one hotfix issue (its GraphQL `issue` node)."""
+    breaking = BREAKING_LABEL in _names(issue)
+    out: dict[tuple, dict] = {}
+    for ev in ((issue.get("timelineItems") or {}).get("nodes") or []):
+        p = (ev or {}).get("source") or (ev or {}).get("subject") or (ev or {}).get("closer") or {}
+        repo = (p.get("repository") or {}).get("nameWithOwner")
+        oid = (p.get("mergeCommit") or {}).get("oid")
+        if not p.get("merged") or not oid or repo not in FIX_REPOS.values():
+            continue
+        closes_blocker = any(BLOCKER_LABEL in _names(i) for i in ((p.get("closingIssuesReferences") or {}).get("nodes") or []))
+        prev = out.get((repo, p["number"]), {})
+        out[(repo, p["number"])] = {"repo": repo, "number": p["number"], "commit": oid, "issue": issue_url,
+                                    "immediate": bool(prev.get("immediate") or breaking or closes_blocker)}
+    return list(out.values())
+
+
+def hotfix_prs(now: float | None = None) -> list[dict]:
+    """Every merged component PR tied to an org `hotfix` issue updated in the last HOTFIX_LOOKBACK_DAYS. Raises Stop
+    when GitHub can't be read (callers then keep the normal timing)."""
+    since = datetime.fromtimestamp((now if now is not None else time.time()) - HOTFIX_LOOKBACK_DAYS * 86400,
+                                   timezone.utc).strftime("%Y-%m-%d")
+    issues = gh_json(["search", "issues", "--owner", ORG, "--label", HOTFIX_LABEL, "--updated", f">={since}",
+                      "--json", "url,number,repository", "--limit", "50"])
+    if not isinstance(issues, list):
+        raise Stop(f"could not read {HOTFIX_LABEL} issues")
+    out = []
+    for i in issues:
+        repo = (i.get("repository") or {}).get("nameWithOwner") or ""
+        owner, _, name = repo.partition("/")
+        got = gh_json(["api", "graphql", "-f", f"query={HOTFIX_QUERY}", "-F", f"o={owner}", "-F", f"r={name}",
+                       "-F", f"n={i['number']}"])
+        issue = (((got or {}).get("data") or {}).get("repository") or {}).get("issue")
+        if not isinstance(issue, dict):
+            raise Stop(f"could not read {i.get('url')}")
+        out += hotfix_prs_of(i.get("url", ""), issue)
+    return out
+
+
+def contains(repo: str, ref: str, commit: str) -> bool:
+    """Is <commit> in <ref>'s history (GitHub compare, no clone)?"""
+    st = sh(["gh", "api", f"repos/{repo}/compare/{commit}...{ref}", "--jq", ".status"]).strip()
+    return st in ("ahead", "identical")
+
+
+def hotfixes_between(old: dict, new: dict | None) -> list[dict]:
+    """Hotfix PRs in <new> release's component pins (None: each component's main) and not in <old>'s pins."""
+    out = []
+    for h in hotfix_prs():
+        comp = next(c for c, r in FIX_REPOS.items() if r == h["repo"])
+        old_pin = old["components"][comp]["commit"]
+        new_pin = new["components"][comp]["commit"] if new else "main"
+        if contains(h["repo"], new_pin, h["commit"]) and not contains(h["repo"], old_pin, h["commit"]):
+            out.append(h)
+    return out
+
+
+def hotfix_soak(wos: Path, stable: str, latest: str) -> tuple[float, list[dict]]:
+    """(hours latest must soak, hotfixes it carries since stable). Lane off or any lookup error: (SOAK_HOURS, [])."""
+    if not HOTFIX_LANE:
+        return SOAK_HOURS, []
+    try:
+        rel = lambda v: json.loads(show(wos, "origin/main", f"releases/{v}.json"))   # noqa: E731
+        hf = hotfixes_between(rel(stable), rel(latest))
+    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+        say(f"hotfix lane: lookup failed ({e}); normal {SOAK_HOURS}h soak")
+        return SOAK_HOURS, []
+    if not hf:
+        return SOAK_HOURS, []
+    return (0 if any(h["immediate"] for h in hf) else HOTFIX_SOAK_HOURS), hf
+
+
+def pending_hotfixes(wos: Path) -> list[dict]:
+    """Hotfix PRs merged on a component main but not yet in releases/latest. Lane off or lookup error: []."""
+    if not HOTFIX_LANE:
+        return []
+    try:
+        latest = show(wos, "origin/main", "releases/latest").strip()
+        return hotfixes_between(json.loads(show(wos, "origin/main", f"releases/{latest}.json")), None)
+    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+        say(f"hotfix lane: lookup failed ({e}); normal throttle")
+        return []
+
+
+def _hf_names(hf: list[dict]) -> str:
+    return ", ".join(f"{h['repo'].split('/')[1]}#{h['number']}" for h in hf)
+
+
+# Soak by cut age (wizard-os#416), OFF by default: WIZARD_TRAIN_SOAK_BY_CUT=1 turns it on. While cuts keep landing,
+# the current latest is always minutes old, so "latest soaked 72h" never fires. With the switch on, For everyone takes
+# the newest release above stable that was FIRST named on releases/latest SOAK_HOURS or more ago ("72h" then means
+# "cut 72h ago"). promote_stable.py promote accepts any version from that history; the upgrade test still runs on it.
+SOAK_BY_CUT = os.environ.get("WIZARD_TRAIN_SOAK_BY_CUT", "0") == "1"
+
+
+def latest_history(wos: Path, ref: str = "origin/main") -> dict[str, float]:
+    """version -> unix time releases/latest first named it on <ref>. Reads git objects only, so it works in the
+    train's --no-checkout clone (where there is no releases/ folder on disk). Unreadable history raises Stop."""
+    out = sh(["git", "-C", str(wos), "log", "--reverse", "--format=%H %ct", ref, "--", "releases/latest"])
+    first: dict[str, float] = {}
+    for line in out.splitlines():
+        commit, ct = line.split(" ", 1)
+        v = sh(["git", "-C", str(wos), "show", f"{commit}:releases/latest"], check=False).strip()
+        if v and v not in first:
+            first[v] = float(ct)
+    return first
+
+
+def soaked_for(version: str, wos: Path, now: float | None = None) -> float | None:
+    """Hours since releases/latest first named <version> on wizard-os main (git history, as promote_stable reads it).
+    None: no commit of releases/latest names it."""
+    t = latest_history(wos).get(version)
+    return None if t is None else ((now if now is not None else time.time()) - t) / 3600
+
+
+def due_by_cut(stable: str, latest: str, wos: Path, now: float | None = None) -> tuple[str, float] | None:
+    """(newest version above stable cut onto latest >= SOAK_HOURS ago, its hours), or None. Only real releases count."""
+    now = now if now is not None else time.time()
+    best = None
+    for v, t in latest_history(wos).items():
+        hours = (now - t) / 3600
+        if _key(stable) < _key(v) <= _key(latest) and hours >= SOAK_HOURS and (best is None or _key(v) > _key(best[0])):
+            if subprocess.run(["git", "-C", str(wos), "cat-file", "-e", f"origin/main:releases/{v}.json"],
+                              capture_output=True).returncode == 0:
+                best = (v, hours)
+    return best
+
+
+def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | None, list[dict], str]:
+    """Is a release due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the
+    soak, the version to promote). <wos> is the wizard-os clone (git objects; no checkout needed).
+    Cheap: wizard-os only (plus GitHub API reads when the hotfix lane is on)."""
+    if _key(latest) <= _key(stable):
+        return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None, [], latest
+    need, hf = hotfix_soak(wos, stable, latest)
+    hours = soaked_for(latest, wos)
+    version = latest
+    if need > 0 and hours is None:
+        # Never "an unknown time": a gate that cannot measure the soak must say so and stop (wizard-os#416).
+        raise Stop(f"can't tell how long {latest} has been For testers: no commit of releases/latest on "
+                   f"origin/main names it (in {wos}). Stable stays {stable}.")
+    if need > 0 and hours < need:
+        older = due_by_cut(stable, latest, wos) if SOAK_BY_CUT else None
+        if older is None:
+            return False, (f"WAITING: {latest} has been For testers for {hours:.0f}h; it moves to For everyone "
+                           f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}. "
+                           f"Stable stays {stable}."), hours, hf, latest
+        # soak by cut age: the older release takes the normal soaked gate (no hotfix waiver applies to it)
+        version, hours, hf = older[0], older[1], []
+    blockers = release_blockers()
+    if blockers:
+        return False, (f"HELD: {len(blockers)} open {BLOCKER_LABEL} issue(s): " + "; ".join(blockers)
+                       + f". Stable stays {stable}."), hours, hf, version
+    return True, "", hours, hf, version
+
+
+def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False,
+        mode: str = "train") -> dict:
+    """mode "train": today's fix train. "cut": For testers (cut + mirror any newer published main, then stop).
+    "soaked": For everyone (promote latest after SOAK_HOURS with no release-blocker; normal gate, no fast-track)."""
     rep: dict = {"started": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "dry_run": dry, "force": force,
                  "steps": []}
     step = lambda s: (rep["steps"].append(s), say(s))   # noqa: E731
-    p = plan(work)
+    if mode == "cut" and not dry:
+        age = last_cut_age(clone(WOS, work))
+        hf = pending_hotfixes(clone(WOS, work)) if age is not None and age < MIN_CUT_INTERVAL else []
+        if hf:
+            rep["hotfixes"] = hf
+            step(f"hotfix lane: {_hf_names(hf)} waiting; cutting now (skips the {MIN_CUT_INTERVAL // 60}-min limit)")
+        elif age is not None and age < MIN_CUT_INTERVAL:
+            rep["mode"], rep["deferred"] = mode, True
+            rep["outcome"] = (f"DEFERRED: the last For testers cut was {age / 60:.0f} min ago (at most one per "
+                              f"{MIN_CUT_INTERVAL // 60} min); the next sweep cuts whatever is newer then.")
+            return rep
+    p = plan(work, any_merge=(mode == "cut")) if mode != "soaked" else plan(work)
+    rep["mode"] = mode
     rep["plan"] = {k: v for k, v in p.items() if k != "components"}
     stable, latest = p["stable"], p["latest"]
+    if mode == "soaked":
+        # For everyone takes latest as it is: never a new cut here.
+        due, why, hours, hotfixes, version = soak_gate(stable, latest, clone(WOS, work))
+        if not due:
+            rep["outcome"] = why
+            return rep
+        p["candidate"], p["cut"], p["moves"] = version, False, {}
+        if hotfixes:
+            rep["hotfixes"] = hotfixes
+        step(f"{version} soaked {'0h (immediate hotfix)' if hours is None else f'{hours:.0f}h'} on For testers; no open "
+             f"{BLOCKER_LABEL}{f'; hotfix lane: {_hf_names(hotfixes)}' if hotfixes else ''}"
+             f"{f' (soak by cut age, wizard-os#416: latest {latest} is newer)' if version != latest else ''}")
     step(f"stable {stable}, latest {latest}; waiting fixes: {len(p['waiting_fixes'])}; to move: {sorted(p['moves'])}")
     for m in p["manual"] + p["unpublished"]:
         step(f"not in this train: {m}")
     if not p["candidate"]:
+        if mode == "cut":
+            rep["outcome"] = f"nothing to cut: latest {latest} already pins main's newest published images"
+            return rep
         if not force:
             rep["outcome"] = "nothing to release: no merged Recommended fix is missing from Stable (or none is publishable yet)"
             return rep
@@ -476,11 +832,12 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                 continue
             sh([sys.executable, "-m", "unittest", "discover", "-s", "tools/tests", "-p", pattern], cwd=wt, timeout=900)
         sh(["git", "-C", str(wt), "checkout", "-q", "-B", branch_cut])
-        sh(["git", *IDENTITY, "-C", str(wt), "add", f"releases/{V}.json", "releases/latest"])
+        record_published(wt / "releases", f"{V}.json")
+        sh(["git", *IDENTITY, "-C", str(wt), "add", f"releases/{V}.json", "releases/latest", f"releases/{SUMS}"])
         sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Cut {V} onto latest (release train): {C['name']}"])
         step(f"cut {V}: check_release ok, channels ok ({'local only' if dry else 'pushing'})")
     else:
-        C = L
+        C = L if V == latest else json.loads((wt / "releases" / f"{V}.json").read_text())   # soak by cut age
     cls, items, prs = ride_alongs(work, S, C)
     rep["classification"], rep["ride_alongs"] = cls, items
     rep["prs"] = [{**x, "tier": tier(x)} for x in prs]
@@ -510,15 +867,22 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
             rep["cut_pr"] = open_and_merge(WOS, wt, branch_cut, f"Maintenance: cut {V} onto latest (release train)",
                                            body, "tier: maintenance", need_checks=False)
             mbody = (f"Maintenance: mirror **{V}** onto latest, byte-identical to canonical ({rep['cut_pr']}). "
-                     f"`releases/{V}.json` sha256 `{sha(rel_json)}`. Stable unchanged ({stable}).\n\nRollback: "
+                     f"`releases/{V}.json` sha256 `{sha(rel_json)}`. Stable unchanged ({stable}). Merged on the automated "
+                     f"`{MIRROR_STATUS}` check (DECISIONS #96 as amended).\n\nRollback: "
                      f"`releases/latest` back to {latest}.")
+            mbase = sh(["git", "-C", str(wam), "rev-parse", "origin/main"]).strip()
             rep["mirror_pr"] = open_and_merge(WAM, mwt, f"release/{V}-mirror-train",
-                                              f"Maintenance: mirror Wizard OS {V} onto latest (release train)", mbody,
-                                              "tier: maintenance", need_checks=True)
+                                              f"Maintenance: mirror WizardOS {V} onto latest (release train)", mbody,
+                                              "tier: maintenance", need_checks=True,
+                                              verify=lambda n, h: verify_mirror(wam, wos, mbase, n, h))
             step(f"cut merged {rep['cut_pr']}, mirror merged {rep['mirror_pr']}")
             wait_public(f"{V}.json", sha(rel_json))
+    if mode == "cut":
+        rep["outcome"] = (f"CUT {V} onto For testers (latest){' (dry run, local only)' if dry else ''}; For everyone "
+                          f"stays {stable} until {V} has soaked {SOAK_HOURS}h with no {BLOCKER_LABEL}.")
+        return rep
     # Features go to early testers first: a feature candidate stays on Latest for the normal soak (owner rule).
-    if cls != "fix" and not feature_fast_track:
+    if cls != "fix" and not feature_fast_track and mode != "soaked":
         rep["outcome"] = (f"ON LATEST ONLY: {V} carries features, so it soaks 72h on Latest before Stable "
                           f"(promote_stable.py promote {V} --from {stable} after the soak and an upgrade test). "
                           f"Stable stays {stable}.")
@@ -559,8 +923,13 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     notes = ("Ride-alongs onto Stable: " + "; ".join(f"{x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title'][:80]}"
                                                      for x in prs) + ("; " + "; ".join(items) if items else "")
              + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install.")
-    doc = (f"# Promote {V} (release train)\n\n## Why\n\nStable {stable} lacked merged Recommended fixes:\n\n"
-           + "\n".join(f"- {x}" for x in (p["waiting_fixes"] or ["(none: forced proof run)"]))
+    why = ([f"{V} carries hotfix {_hf_names(rep['hotfixes'])}: hotfix lane (wizard-os#434), shortened soak with no "
+            f"open {BLOCKER_LABEL} issue, recorded as a fast-track."] if mode == "soaked" and rep.get("hotfixes") else
+           [f"{V} soaked {SOAK_HOURS}h+ on For testers (latest) with no open {BLOCKER_LABEL} issue (For everyone "
+            "promotion, normal gate, no fast-track)."] if mode == "soaked" else (p["waiting_fixes"] or ["(none: forced proof run)"]))
+    doc = (f"# Promote {V} (release train)\n\n## Why\n\n"
+           + ("" if mode == "soaked" else f"Stable {stable} lacked merged Recommended fixes:\n\n")
+           + "\n".join(f"- {x}" for x in why)
            + f"\n\n## What changes ({stable} → {V})\n\n**Classification: {cls}**"
            + (" (every change is a Recommended fix or maintenance)." if cls == "fix" else
               " (launch-phase fast-track, DECISIONS #93): it carries changes that are not provably fixes.")
@@ -576,21 +945,33 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     else:
         sh(["git", "-C", str(wt), "checkout", "-q", "-B", branch_promo])   # dry: stacked on the local cut commit
     evidence = f"https://github.com/{WOS}/blob/main/{evidence_rel}"
-    sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
+    if mode == "soaked" and rep.get("hotfixes"):   # hotfix lane: the soak is waived on the record (DECISIONS #82)
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
+            "--classification", cls, "--reason", f"Hotfix lane (wizard-os#434): {_hf_names(rep['hotfixes'])} "
+            f"(issues {', '.join(sorted({h['issue'] for h in rep['hotfixes']}))}); no open {BLOCKER_LABEL}. " + reason,
+            "--notes", notes], cwd=wt)
+    elif mode == "soaked":     # the normal gate: promote_stable itself refuses a release that has not soaked
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence,
+            "--notes", notes], cwd=wt)
+    else:
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
         "--classification", cls, "--reason", reason, "--notes", notes], cwd=wt)
     sh([sys.executable, "tools/promote_stable.py", "check"], cwd=wt)
     rec = json.loads((wt / "releases" / "promotions" / f"{V}.json").read_text())
-    if rec.get("fast_track", {}).get("classification") != cls:
+    record_published(wt / "releases", f"promotions/{V}.json")
+    if mode != "soaked" and rec.get("fast_track", {}).get("classification") != cls:
         raise Stop("the promotion record's classification does not match the computed one")
     sh(["git", *IDENTITY, "-C", str(wt), "add", "releases", evidence_rel])
-    sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Promote {V} to stable ({cls} fast-track, release train)"])
+    sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Promote {V} to stable ({'soaked ' + str(SOAK_HOURS) + 'h, no release-blocker' if mode == 'soaked' else cls + ' fast-track'}, release train)"])
     step(f"promotion record ok ({cls}); channels ok")
     if dry:
         rep["outcome"] = (f"DRY RUN complete: {V} would be promoted ({cls}); stopped before any push, PR or merge. "
                           f"Local commits: {sh(['git', '-C', str(wt), 'log', '--oneline', '-3']).strip()}")
         rep["promotion_record"] = rec
         return rep
-    body = (f"Maintenance (release train): promote **{V}** to stable, fast-track **{cls}**. Installed upgrade "
+    how = (f"hotfix lane for {_hf_names(rep['hotfixes'])} with no open {BLOCKER_LABEL}" if mode == "soaked" and rep.get("hotfixes")
+           else f"after {SOAK_HOURS}h on For testers with no open {BLOCKER_LABEL}" if mode == "soaked" else f"fast-track **{cls}**")
+    body = (f"Maintenance (release train): promote **{V}** to stable, {how}. Installed upgrade "
             f"{stable} → {V} passed: {evidence_rel}.\n\nRollback: `releases/stable` back to {stable}.")
     rep["promote_pr"] = open_and_merge(WOS, wt, branch_promo, f"Maintenance: promote {V} to stable (release train, {cls})",
                                        body, "tier: maintenance", need_checks=False)
@@ -603,14 +984,15 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     with open(mwt / "releases" / "README.md", "a") as fh:
         fh.write(f"\n## stable {V}\n\nCanonical: {rep['promote_pr']} (release train). `releases/stable` → {V}; "
                  f"`promotions/{V}.json` sha256 `{sha(mwt / 'releases' / 'promotions' / f'{V}.json')}`.\n"
-                 f"Fast-tracked as **{cls}**. Installed upgrade {stable} → {V} passed: wizard-os {evidence_rel}.\n")
+                 f"{'Soaked ' + str(SOAK_HOURS) + 'h on For testers' if mode == 'soaked' else 'Fast-tracked as **' + cls + '**'}. Installed upgrade {stable} → {V} passed: wizard-os {evidence_rel}.\n")
     sh(["git", "-C", str(mwt), "checkout", "-q", "-B", f"promote/{V}-mirror-train"])
     sh(["git", *IDENTITY, "-C", str(mwt), "add", "releases"])
     sh(["git", *IDENTITY, "-C", str(mwt), "commit", "-qm", f"Mirror stable {V} (release train)"], env={"LEFTHOOK": "0"})
+    pbase = sh(["git", "-C", str(wam), "rev-parse", "origin/main"]).strip()
     rep["promote_mirror_pr"] = open_and_merge(WAM, mwt, f"promote/{V}-mirror-train",
-                                              f"Maintenance: mirror Wizard OS stable {V} (release train, {cls})",
+                                              f"Maintenance: mirror WizardOS stable {V} (release train, {cls})",
                                               body.replace("promote **", "mirror stable **"), "tier: maintenance",
-                                              need_checks=True)
+                                              need_checks=True, verify=lambda n, h: verify_mirror(wam, wos, pbase, n, h))
     wait_public("stable", hashlib.sha256((V + "\n").encode()).hexdigest())
     rep["outcome"] = f"PROMOTED {V} to stable ({cls}); was {stable}."
     return rep
@@ -638,6 +1020,14 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
+    for name, what in (("cut", "For testers: cut + mirror main's newest published images onto latest, then stop"),
+                       ("promote-soaked", "For everyone: promote latest after 72h with no open release-blocker")):
+        x = sub.add_parser(name, help=what)
+        x.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
+        x.add_argument("--keep-guest", action="store_true")
+        if name == "promote-soaked":
+            x.add_argument("--check", action="store_true",
+                           help="only say whether a promotion is due (prints due=true|false; no component clones, no rig)")
     r = sub.add_parser("run")
     r.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
     r.add_argument("--force", action="store_true", help="go on even when no fix is waiting (proof runs)")
@@ -658,12 +1048,26 @@ def main(argv: list[str] | None = None) -> int:
     except OSError:
         print("another release train is running")
         return 0
+    if a.cmd == "promote-soaked" and a.check:
+        try:
+            wos = clone(WOS, a.work)
+            rel = lambda name: show(wos, "origin/main", f"releases/{name}")   # noqa: E731
+            due, why, _hours, _hf, version = soak_gate(rel("stable").strip(), rel("latest").strip(), wos)
+            if due:
+                why = f"due: {version} has soaked with no release-blocker; run promote-soaked"
+        except Stop as e:
+            due, why = False, f"STOPPED: {e}"
+        print(f"due={'true' if due else 'false'}")
+        print(why or "due: latest has soaked with no release-blocker; run promote-soaked")
+        return 0
     if a.cmd == "plan":
         p = plan(a.work)
         print(json.dumps({k: v for k, v in p.items() if k != "components"}, indent=2, default=str))
         return 0
     try:
-        rep = run(a.work, a.dry_run, a.force, ["--keep"] if a.keep_guest else [], a.feature_fast_track)
+        mode = {"cut": "cut", "promote-soaked": "soaked"}.get(a.cmd, "train")
+        rep = run(a.work, a.dry_run, getattr(a, "force", False), ["--keep"] if a.keep_guest else [],
+                  a.feature_fast_track if a.cmd == "run" else False, mode)
         code = 0 if not str(rep.get("outcome", "")).startswith("STOPPED") else 1
     except Stop as e:
         rep, code = {"outcome": f"STOPPED: {e}", "dry_run": a.dry_run}, 1

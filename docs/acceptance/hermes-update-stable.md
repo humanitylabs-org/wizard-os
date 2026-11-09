@@ -7,7 +7,7 @@
 - To: **v0.21.6** (`818c13be1dc4fd28987e1e881a9408224afd4535`), the tag commit. It is not `a28a5d03`, which is the commit the published v0.21.6 image was built from (the PR #149 finding).
 - Pin source: today's Wizard stable release file, 0.3.32, with its `hermes` block pointed at v0.21.6 and passed through `--release`. That is the same code path `releases/stable` uses. **This promotes nothing**: Wizard stable still pins v2026.9.24.
 - Model: the deterministic fake model from PR #149 (`fake_model.py`). No accounts and no paid inference were used.
-- Wizard OS alongside: `wizard link` was run against the CLI's own MCP test fixture, which stood in for the shell's gateway. The wizard-os plugin was installed and the MCP server registered.
+- WizardOS alongside: `wizard link` was run against the CLI's own MCP test fixture, which stood in for the shell's gateway. The wizard-os plugin was installed and the MCP server registered.
 - Evidence on Thales: `$WIZARD_WORK_ROOT/wizard-os/hermes-update-stable/runs/20261023T005358Z/`, containing `RECEIPT.md`, `results.json`, `run.log` and 25 files in `evidence/`. The command's own receipts are `evidence/C-receipt.json` and `evidence/D-receipt.json`; inside the VM they were `~/.wizard-os/hermes-update/20261023T010224Z/` and `…/20261023T010643Z/`.
 - Harness: `tools/acceptance/hermes-update/run.sh` (host) and `guest.py` (in the VM). It ran under Thales' shared heavy-work lock. The `wizard_heavy_submit` queue refused admission from a Kanban worker (409), so the run took the same lock file directly, as PR #149's `locked.py` does.
 

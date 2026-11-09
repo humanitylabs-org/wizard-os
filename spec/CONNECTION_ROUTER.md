@@ -117,7 +117,7 @@ For Claude this is the pattern Wisdom's helper service already runs: `claude -p`
 
 ## Exporting an app
 
-An app that talks only to the router can run outside Wizard OS. A small stand-in router with the same API, filled from a config file of API keys and a fixed routing table, lets a Wizard app run as an ordinary web service on a client's server. Later; the API above is designed so the stand-in needs no shell, App Manager or agent.
+An app that talks only to the router can run outside WizardOS. A small stand-in router with the same API, filled from a config file of API keys and a fixed routing table, lets a Wizard app run as an ordinary web service on a client's server. Later; the API above is designed so the stand-in needs no shell, App Manager or agent.
 
 ## Rollout
 

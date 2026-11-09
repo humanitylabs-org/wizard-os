@@ -1,0 +1,82 @@
+# For everyone: promote the newest For testers (latest) release to For everyone (stable) once it has been latest for
+# >= 72h and no issue labelled `release-blocker` is open in the org. Proposed with the DECISIONS amendment of #75
+# (docs/RELEASE_AUTOMATION.md). Nothing runs until this is merged. A cheap gate (`promote-soaked --check`, wizard-os
+# only) runs first; only when a promotion is due does the job enable KVM, install qemu and run
+# tools/release_train.py promote-soaked: the installed upgrade test from the current stable on a disposable KVM
+# guest, then `promote_stable.py promote` WITHOUT --fast-track (promote_stable's own 72h soak gate), then the
+# byte-identity-checked mirror.
+# Runners: the gate on RELEASE_RUNNER (default GitHub-hosted); the promote job, the only one needing KVM, on
+# RELEASE_UPGRADE_RUNNER (default GitHub-hosted ubuntu-latest, which has /dev/kvm; .github/actions/upgrade-rig-setup
+# applies GitHub's documented udev rule). Set it to a self-hosted x86_64 Linux/KVM runner label to move only that job.
+name: Release promote (For everyone)
+on:
+  schedule:
+    - cron: "17 */6 * * *"        # every 6h; a release moves 72-78h after it reached For testers
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Local only: stop before any push, PR or merge"
+        type: boolean
+        default: true
+concurrency:
+  group: release-train
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  gate:
+    # Cheap (wizard-os only, seconds): is latest 72h old with no open release-blocker?
+    runs-on: ${{ vars.RELEASE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    outputs:
+      due: ${{ steps.gate.outputs.due }}
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work dirs
+        run: |
+          echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
+          echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
+      - name: Token present
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::RELEASE_TRAIN_TOKEN is not set on humanitylabs-org/wizard-os (docs/RELEASE_AUTOMATION.md, Owner setup)"; exit 1; }
+          gh auth setup-git
+      - name: Is a promotion due? (72h on latest, no open release-blocker)
+        id: gate
+        run: |
+          set -o pipefail
+          python3 tools/release_train.py promote-soaked --check | tee "$RUNNER_TEMP/gate.out"
+          if grep -q '^due=true' "$RUNNER_TEMP/gate.out"; then echo "due=true" >> "$GITHUB_OUTPUT"; else echo "due=false" >> "$GITHUB_OUTPUT"; fi
+  promote:
+    # The only job that needs KVM: the installed upgrade test, then promotion + checked mirror.
+    needs: gate
+    if: needs.gate.outputs.due == 'true'
+    runs-on: ${{ vars.RELEASE_UPGRADE_RUNNER || 'ubuntu-latest' }}   # x86_64 Linux with /dev/kvm
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
+      WIZARD_TRAIN_BUDGET_S: "9000"
+      WIZARD_TRAIN_GIT_NAME: wizardosbuilder
+      WIZARD_TRAIN_GIT_EMAIL: 353326775+wizardosbuilder@users.noreply.github.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work dirs
+        run: |
+          echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
+          echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
+      - run: gh auth setup-git
+      - uses: ./.github/actions/upgrade-rig-setup
+      - name: Promote latest (upgrade test, promotion PR, checked mirror)
+        run: |
+          args=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then args="--dry-run"; fi
+          timeout 9600 python3 tools/release_train.py promote-soaked $args
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-promote-report
+          path: |
+            ${{ runner.temp }}/release-train/reports/
+            ${{ runner.temp }}/rig/runs/*/report.*
+          if-no-files-found: ignore

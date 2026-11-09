@@ -36,7 +36,7 @@ Stable 0.3.72 lacked merged Recommended fixes:
 - wizard-agent-service#222 [feature] Land live release (owned open work check + recovery fixes) onto main
 - wizard-agent-service#223 [feature] fix: acknowledge legacy heavy results once on upgrade
 - wizard-agent-service#227 [maintenance] Maintenance: agent parity entry for Stop on send (wizard-ux#649)
-- wizard-agent-service#230 [feature] Strong suggestion: Own response style sends Wizard OS facts only
+- wizard-agent-service#230 [feature] Strong suggestion: Own response style sends WizardOS facts only
 - wizard-agent-service#233 [maintenance] Maintenance: parity entry for pinned chats sync
 - wizard-agent-service#237 [fix] Recommended fix: every picture or file an agent sends shows in chats
 - wizard-agent-service#238 [fix] Recommended fix: shared lists keep every device's edit (item operations on ui-preferences)

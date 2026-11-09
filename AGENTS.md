@@ -1,6 +1,6 @@
 # Agents working on wizard-os
 
-This repo is the shared map of Wizard OS: architecture, decisions, contracts (`spec/`), style, and the checker for apps. It holds no runtime code. Read the team rules below before you start. This file is also their canonical copy.
+This repo is the shared map of WizardOS: architecture, decisions, contracts (`spec/`), style, and the checker for apps. It holds no runtime code. Read the team rules below before you start. This file is also their canonical copy.
 
 ## This repo
 
@@ -18,11 +18,11 @@ This repo is the shared map of Wizard OS: architecture, decisions, contracts (`s
    - Run `git diff --check`.
    - Make sure every link you added resolves.
    - If you touched `tools/check_wizard_md.py` or `spec/WIZARD_MD.md`, run the checker against a real app repo. Keep its rules identical to the copies in wizard-app-manager and wizard-app-index, and change all three together.
-7. Changing the team rules below? Edit them here first. Then copy the block, unchanged, into the `AGENTS.md` of every other Wizard OS repo in the same round of PRs.
+7. Changing the team rules below? Edit them here first. Then copy the block, unchanged, into the `AGENTS.md` of every other WizardOS repo in the same round of PRs.
 
 ## How WizardOS is built now (the 7 and 9 Nov 2026 calls)
 
-James and Miguel's 7 and 9 Nov 2026 calls are the source of truth for this section; where it conflicts with the team rules below, this section wins from the **cutover** onward (DECISIONS #108-#112). Until the cutover, the team rules below still apply and `main` keeps moving through PRs. The cutover is one permission change: only the builder (`wizardosbuilder`) can merge, for humans and for every other agent. James and Miguel set its date once the Tracker and the builder are running.
+James and Miguel's 7 and 9 Nov 2026 calls are the source of truth for this section; where it conflicts with the team rules below, this section wins from the **cutover** onward (DECISIONS #108-#111 and #113). Until the cutover, the team rules below still apply and `main` keeps moving through PRs. The cutover is one permission change: only the builder (`wizardosbuilder`) can merge, for humans and for every other agent. James and Miguel set its date once the Tracker and the builder are running.
 
 - **Three kinds of issue; the kind sets the rules.** A **goal** is a big outcome that James sets; each has one owner who steers it, and it runs a week or longer. A **bug** is anything wrong or worse than it should be; anyone on the team and their agents can file one. A **feature** is something new (label `feature`). Small pieces of a goal are checklist items on the goal, never separate issues. Whether a feature is core or app is decided by its repo, not by a new type: **core** is wizard-ux, agent-service, app-manager and the other platform repos; **app** is Messenger, Calendar and every other app repo. Every issue lives in exactly one repo, chosen when it is filed.
 - **Every issue says when it is done.** A goal states "done when"; a bug states what happens, what should happen, how to see it, a screenshot, and the version or device. The reviewing agent judges against that text, because the builder reads only the repo and the issue and never your memory.
@@ -56,10 +56,10 @@ Machine-specific paths and hosts come from env vars: `WIZARD_WORK_ROOT`,
 paths or tailnet hostnames; the tracked-file portable-paths guard in the normal
 test/CI command enforces this. Historical evidence/receipts are explicitly exempt.
 
-<!-- wizard-os-team-rules v4 (24 Oct 2026). Same text in every Wizard OS repo; the canonical copy is humanitylabs-org/wizard-os AGENTS.md. Change it there first, then copy the block to every repo in one round of PRs. -->
-## Wizard OS team rules (identical in every repo)
+<!-- wizard-os-team-rules v4 (24 Oct 2026). Same text in every WizardOS repo; the canonical copy is humanitylabs-org/wizard-os AGENTS.md. Change it there first, then copy the block to every repo in one round of PRs. -->
+## WizardOS team rules (identical in every repo)
 
-Wizard OS is built by James, Jan and Miguel together with their agents. Archimedes commits as `defleur-agents` and Oscar as `oscarhenrycollins`. Every repo belongs to Wizard OS as a whole, and no repo belongs to one person. Make the change that is best for the whole system, and build on each other's work.
+WizardOS is built by James, Jan and Miguel together with their agents. Archimedes commits as `defleur-agents` and Oscar as `oscarhenrycollins`. Every repo belongs to WizardOS as a whole, and no repo belongs to one person. Make the change that is best for the whole system, and build on each other's work.
 
 ### Branches
 
@@ -117,7 +117,7 @@ Every change reaches `main` one of two ways: **propose a fix** (`tier: recommend
 
 ### Tracking
 
-**The [Wizard OS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) board is the source of truth for where every PR is**, across all repos: Draft → In review → Merged → On Latest → On Stable, or Dropped. wizard-os `tools/pr_board.py` syncs it every 15 minutes from the PRs and the release pointers, so nobody moves cards by hand; keep the tier label right and the board stays right. Check it before asking someone where a change is, and link it in status updates instead of listing PRs.
+**The [WizardOS · PR pipeline](https://github.com/orgs/humanitylabs-org/projects/1) board is the source of truth for where every PR is**, across all repos: Draft → In review → Merged → On Latest → On Stable, or Dropped. wizard-os `tools/pr_board.py` syncs it every 15 minutes from the PRs and the release pointers, so nobody moves cards by hand; keep the tier label right and the board stays right. Check it before asking someone where a change is, and link it in status updates instead of listing PRs.
 
 ### Merging
 

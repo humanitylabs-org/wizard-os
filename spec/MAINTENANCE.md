@@ -1,6 +1,6 @@
 # System maintenance
 
-Every Wizard OS box keeps itself patched and backed up. Neither the owner nor the agent has to do anything. The box
+Every WizardOS box keeps itself patched and backed up. Neither the owner nor the agent has to do anything. The box
 runs one platform-owned job each night, `wam maintain run`, from the App Manager. It is not a Hermes cron job or a
 skill, and it keeps working while the agent is down. Implementation: `wam/maintain.py` and `wam/os_patch.py` in
 wizard-app-manager.
@@ -13,13 +13,13 @@ All steps share one maintenance lease, one owner-visible history and one Health 
 |---|---|---|
 | OS security patches | `wam maintain` → `os_patch` | slice 1 (this spec) |
 | Backups: catch up a missed one, report whether the last one succeeded and was read back | `wam backup` (wizard-app-manager #61) keeps its own schedule and lock | slice 2 |
-| The owner's Automatic Wizard OS update (stable, promoted releases), only when quiet | `wam updates` (`apply_if_auto`) | slice 3: replaces the separate 03:30 timer |
+| The owner's Automatic WizardOS update (stable, promoted releases), only when quiet | `wam updates` (`apply_if_auto`) | slice 3: replaces the separate 03:30 timer |
 | Hermes and app updates | `wam hermes update`, `wam app update` | stay explicit for now |
 | Repair | Troubleshooter guardian (report-only until the owner turns repairs on) | unchanged |
 | Quiet restarts and reboots | not offered | gated, see [Restarts](#restarts) |
 
 The timer fires at 02:00 box-local time, with up to 45 minutes of random delay. That is after the 00:00 backup and
-before the 03:30 Wizard OS update window. A missed night runs at the next boot (`Persistent=true`).
+before the 03:30 WizardOS update window. A missed night runs at the next boot (`Persistent=true`).
 The maintenance timer is always on, even with OS patching `off`: it owns the nightly backup check and the Automatic
 update. Installing it retires `wizard-os-update.timer`, and `wam updates` never reinstalls that timer while it exists.
 A daily backup older than 26 hours (weekly: 7 days) is caught up with `wam backup run --scheduled`. Health shows
@@ -71,9 +71,19 @@ whatever the owner set.
 The App Manager runs as the box's owner account. Root work goes through one fixed helper,
 `/usr/local/libexec/wizard-os/os-patch`, installed root-owned by `wam maintain setup`. The installer runs setup, using
 the passwordless sudo that `get.sh` already sets up. The matching `/etc/sudoers.d/wizard-os-maintenance` allows
-exactly five argument lists: `check`, `check --refresh`, `apply`, `native-off`, `native-on`. The helper takes no other
-input, so it cannot run a package name, a path or a shell command it was given. A box without sudo stays `check`, with
-an unprivileged check; Health shows the one command that turns patching on.
+exactly seven argument lists: `check`, `check --refresh`, `apply`, `native-off`, `native-on`, `restart-check`,
+`remove`. The restart lane has its own rule, `/etc/sudoers.d/wizard-os-maintenance-restart-lane`, written only by an
+attended `wam maintain setup --restart-lane`; it allows `restart-service *`, `apply-held` and `reboot`. The helper
+takes no other input, so it cannot run a package name, a path or a shell command it was given. A box without sudo
+stays `check`, with an unprivileged check; Health shows the one command that turns patching on.
+
+Besides the read-only checks, the owner account can do three things through the main rule: force a patch run, pause
+the distribution's own updater (`native-off`), or remove the helper. Nothing else, and no shell.
+
+`wam maintain remove` deletes the helper and both rules, sets `os_security` back to `check`, turns off `quiet_restarts`, `held_platform` and
+`quiet_reboot`, and records
+`helper_removed: true` in `maintenance.json`. Installer runs then skip setup until the owner runs `wam maintain setup`
+again. What a restore does with that flag is still open: see [BOX_STATE.md](BOX_STATE.md#nightly-maintenance).
 
 ## Safety rules
 
@@ -110,6 +120,6 @@ Until then, the restart lane reports what needs a restart. Owners restart from H
 
 ## Rollout
 
-Ships in a normal Wizard OS release. The installer runs `wam maintain setup` and `wam maintain --ensure-timer`.
+Ships in a normal WizardOS release. The installer runs `wam maintain setup` and `wam maintain --ensure-timer`.
 Existing boxes get it on update. Alongside boxes, where Hermes runs on the host, follow the same path. Containerized
 Hermes boxes are unaffected: the step patches the host OS, not the containers.

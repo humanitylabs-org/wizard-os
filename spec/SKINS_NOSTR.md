@@ -67,7 +67,7 @@ Addressable (`d` = slug), so republishing replaces the previous version on relay
 | `server` | yes, ≥ 1 | Blossom base URL(s) holding the files |
 | `a` + marker `fork` | no | `["a", "30117:<parent pubkey>:<parent d>", <relay hint>, "fork"]` |
 | `p` | with `a` | parent author |
-| `alt` | yes | `Wizard OS skin: <name>` (NIP-31) |
+| `alt` | yes | `WizardOS skin: <name>` (NIP-31) |
 
 `content` is `{"schema":1}`. Clients ignore events with any other schema, unknown `base`, `ux` above what they support, missing `skin.css`, or a file over its cap.
 
@@ -84,7 +84,7 @@ Addressable (`d` = slug), so republishing replaces the previous version on relay
     ["file", "preview.webp", "<sha256>", "image/webp", "38811"],
     ["server", "https://blossom.aiwizards.com"],
     ["a", "30117:<parent hex>:nebula-warm", "wss://relay.aiwizards.com", "fork"], ["p", "<parent hex>"],
-    ["alt", "Wizard OS skin: Nebula Remix"]
+    ["alt", "WizardOS skin: Nebula Remix"]
   ],
   "content": "{\"schema\":1}",
   "id": "<sha256 of the NIP-01 serialisation>",

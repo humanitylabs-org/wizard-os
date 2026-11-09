@@ -37,10 +37,10 @@ media/Pages/
 
 ```json
 {
-  "title": "Wizard OS · Pages",
+  "title": "WizardOS · Pages",
   "kind": "report",
   "thread": "<session id>",
-  "project": "Wizard OS",
+  "project": "WizardOS",
   "status": "ready",
   "created": "2026-10-10T19:30:00Z",
   "updated": "2026-10-10T19:30:00Z",

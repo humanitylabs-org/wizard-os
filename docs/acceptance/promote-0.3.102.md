@@ -31,22 +31,22 @@ Not pinned by a release (they reach boxes through the nightly app updates from t
 - wizard-agent-service#284 [fix] Recommended fix: Import keeps host-shared paths on the host (main, conflict resolved)
 - wizard-agent-service#285 [feature] Show routed agents' notes paths as their notebook, not [private attachment]
 - wizard-agent-service#286 [feature] Agent notebooks for Notes: owner-only, read-only route
-- wizard-app-manager#369 [maintenance] Maintenance: mirror Wizard OS 0.3.91 and 0.3.92 onto latest
+- wizard-app-manager#369 [maintenance] Maintenance: mirror WizardOS 0.3.91 and 0.3.92 onto latest
 - wizard-app-manager#370 [maintenance] Mirror 0.3.93 onto latest (byte-identical to wizard-os #349)
 - wizard-app-manager#371 [fix] Recommended fix: the wizard-os plugin follows the release's Agent Service commit
-- wizard-app-manager#372 [maintenance] Maintenance: mirror Wizard OS 0.3.94 onto latest (release train)
+- wizard-app-manager#372 [maintenance] Maintenance: mirror WizardOS 0.3.94 onto latest (release train)
 - wizard-app-manager#373 [fix] Recommended fix: an update survives Ubuntu's automatic restarts and keeps its release
-- wizard-app-manager#374 [maintenance] Maintenance: mirror Wizard OS stable 0.3.94 (release train, feature)
+- wizard-app-manager#374 [maintenance] Maintenance: mirror WizardOS stable 0.3.94 (release train, feature)
 - wizard-app-manager#375 [feature] links: keep an app's Wizard address when Serve can't be read; serialize link refreshes
-- wizard-app-manager#379 [maintenance] Maintenance: mirror Wizard OS 0.3.95–0.3.97 onto latest (release train)
+- wizard-app-manager#379 [maintenance] Maintenance: mirror WizardOS 0.3.95–0.3.97 onto latest (release train)
 - wizard-app-manager#380 [maintenance] Mirror 0.3.98 onto latest (release train) (#380)
-- wizard-app-manager#381 [maintenance] Maintenance: mirror Wizard OS 0.3.99 onto latest (release train)
+- wizard-app-manager#381 [maintenance] Maintenance: mirror WizardOS 0.3.99 onto latest (release train)
 - wizard-app-manager#383 [feature] App update notice: use display names, not internal ids
-- wizard-app-manager#384 [maintenance] Maintenance: mirror Wizard OS 0.3.100 onto latest (release train)
+- wizard-app-manager#384 [maintenance] Maintenance: mirror WizardOS 0.3.100 onto latest (release train)
 - wizard-app-manager#385 [feature] App renames: an app's id follows its name (renamed_from), migrated with rollback; naming lint
 - wizard-app-manager#388 [fix] Recommended fix: app checks distinguish acceptance harnesses from hosted code
 - wizard-app-manager#389 [fix] Fix: phone sync reads the public release mirror (wizard-os is private)
-- wizard-app-manager#391 [maintenance] Maintenance: mirror Wizard OS 0.3.101 onto latest (release train)
+- wizard-app-manager#391 [maintenance] Maintenance: mirror WizardOS 0.3.101 onto latest (release train)
 - wizard-app-manager#392 [feature] Retire migrated app ids and update the Connected accounts default
 - wizard-app-manager#393 [fix] Recommended fix: reach every provider without breaking install checks
 - wizard-app-manager#398 [feature] Store installs recover after a failed release; apps open in every shell alias

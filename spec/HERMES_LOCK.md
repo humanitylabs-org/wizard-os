@@ -22,7 +22,7 @@ pinned by manifest digest; its two Linux configs name the locked upstream commit
 
 ## Paused means no unattended Hermes changes
 
-Hermes automatic updates are paused independently of Wizard OS/app updates.
+Hermes automatic updates are paused independently of WizardOS/app updates.
 Ordinary release reruns skip installed Hermes; a user-requested app update or
 host update refuses until a reviewed promotion exists and the operator explicitly
 sets `WIZARD_HERMES_PROMOTION` to its id. A missing, malformed, mismatched or

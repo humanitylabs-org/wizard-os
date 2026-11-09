@@ -165,7 +165,7 @@ class LinkTest(unittest.TestCase):
         before = sha(p)
         rc, out = self.wizard("link")
         self.assertNotEqual(rc, 0)
-        self.assertIn("isn't Wizard OS", out["error"]["message"])
+        self.assertIn("isn't WizardOS", out["error"]["message"])
         self.assertEqual(sha(p), before)
 
     def test_link_leaves_the_owner_tool_search_settings_alone(self):

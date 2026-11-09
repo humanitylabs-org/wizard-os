@@ -1,6 +1,6 @@
 # Private access
 
-Miguel's current default: **Tailscale**, preinstalled by the Wizard OS installer.
+Miguel's current default: **Tailscale**, preinstalled by the WizardOS installer.
 Cloudflare Tunnel + Access remains an alternative, not the default for this installer.
 
 ## A system parking spot, with a host provider
