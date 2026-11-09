@@ -11,6 +11,8 @@ Rules used below:
 - **Per-machine**: never captured and never replaced. The destination keeps its own.
 - **Outside the backup**: lives outside the Wizard home, app data, agent homes and Files, so no backup sees it. The
   destination's installer or setup step makes its own.
+- **Not captured**: lives where a backup looks, but the engine or stock `hermes backup` leaves it out on purpose.
+- **Not box state**: kept by each device (browser storage), not by the box.
 
 A Wizard home entry travels unless the backup engine names it as per-machine, regenerated or engine state, or it is a
 `*.lock`, `*.pid`, `*.tmp` or `*.bak*` file.
@@ -54,15 +56,61 @@ The restore rule is not decided yet. Options:
 Until this is decided, the installed upgrade test (#135) and the blank-host restore proof should record what they
 see for this flag rather than assert one rule.
 
-## Not yet listed
+## Agent and owner state
 
-These state places exist in release 0.3.103/0.3.104 `latest` and still need rows here (wizard-os#425):
+Places in release 0.3.103/0.3.104 `latest` that are not about maintenance (wizard-os#425). Each row says what a backup and a restore do **today**,
+checked against the code named in its section. A row marked **Gap** is today's behaviour, written down so it can be
+decided. Nothing on this page changes it.
 
-- Personality-replacement undo data: `$HERMES_HOME/cache/bring-data/` (`imports.json`, `SOUL.before-*.md`), Agent
-  Service #336.
-- The Wizard scheduler database `schedules.sqlite3` and the Incognito runtime, Agent Service #290. BACKUP.md already
-  describes the scheduler and run-queue files and their limits.
-- The owner's Look file, Pages `wizard-look/look.json`, wizard-ux #829.
-- Saved notification levels, wizard-ux #899.
-- App data folders left open to every user on the box (`a+rwx`) for the recipes that do not set `private_data`,
-  wizard-app-manager #457.
+### Personality-replacement undo data
+
+Implementation: wizard-agent-service `hermes-plugin/wizard-os/bring_data.py` (`_state_dir()`), contract
+`docs/bring-my-data.md`, Agent Service #336. Each agent's home is captured by stock `hermes backup`, which leaves out
+everything under `cache/` except its media and citations folders (`_KEPT_CACHE_SUBDIRS` in Hermes
+`hermes_cli/backup.py`).
+
+| State | Where | Backup and restore today |
+|---|---|---|
+| Import record per agent: import id, kind, files written, skills, memory entries added | `$HERMES_HOME/cache/bring-data/imports.json` | Not captured (stock `hermes backup` leaves `cache/bring-data/` out). **Gap:** after a restore the Importer lists no earlier imports, so their Undo is gone on the new host. The files, skills and memory they wrote do travel with the agent home. |
+| The personality and About me before an import replaced them | `$HERMES_HOME/cache/bring-data/` (`SOUL.before-<import>.md`, `About me.before-<import>.md`) | Not captured, same reason. **Gap:** on the new host the replaced `SOUL.md` cannot be put back through Undo. The current `SOUL.md` and `About me.md` travel. |
+
+### Wizard scheduler and Incognito
+
+Implementation: wizard-agent-service `server/index.mjs` (`schedulerStatePath`) and `server/incognito.mjs` with
+`ops/agent-runtime/incognito_runtime.py`, Agent Service #290. Backup behaviour: wizard-app-manager `docs/BACKUP.md`,
+"Wizard scheduler / run queue" row, which wins over this table.
+
+| State | Where | Backup and restore today |
+|---|---|---|
+| Wizard schedules and pending runs | `$HERMES_HOME/state/wizard-mobile/` (`schedules.sqlite3`, `run-queue.sqlite3`) | Travels inside the agent's stock `hermes backup`, copied as plain files (no SQLite snapshot). Not paused on arrival: `wam backup activate --old-is-off` does not fence them. Stop the source Service before export. A custom `WIZARD_SCHEDULER_STATE_PATH` outside the agent home does not travel. |
+| Incognito conversation home | A RAM-only container, `/opt/data` on `tmpfs` | Not captured, by design: it is never written to disk and ends with the conversation. A restore never brings back an Incognito session. |
+| Incognito runtime helper | `~/.wizard-os/agent-runtime/` | Per-machine (`agent-runtime` in `PER_MACHINE`). The destination keeps its own. |
+
+### Owner Look file
+
+Implementation: wizard-ux `web/core/look-sync.js` (wizard-ux #829), stored through the Agent Service Pages file API
+([PAGES.md](PAGES.md)).
+
+| State | Where | Backup and restore today |
+|---|---|---|
+| Skin, feature switches (`tweaks`, `defaults`) and shell views for every device | `media/Pages/wizard-look/look.json` (the owner's Files) | Travels in the Files tree, unless the export used `--no-files`. Without it each device keeps its own last copy, and the first device that has switches on seeds the new box. |
+| Its save history | `<Agent Service state>/pages-history.git` | Travels in the Agent Service's app data (`app-data/data/`). |
+| Each device's own copy | Browser storage on the device (`wos.skin`, `wos.skin-tweaks.v1`, `wos.look-sync.v1`) | Not box state. The device keeps it; the box copy wins at the next sync. |
+
+### Saved notification levels
+
+Implementation: wizard-ux `web/core/notif-bell.js` ("Routing: notification levels", wizard-ux #899).
+
+| State | Where | Backup and restore today |
+|---|---|---|
+| Level per source (Chats, Badge, Morning report, Off) and per System kind (`system:<kind>`) | The Notifications app's own data, saved through `/notifications/api/routes` | Travels in the Notifications app's data archive. The app is refused when the backup holds a newer Notifications release than the destination offers, and then the levels stay as the destination has them. |
+| This device's fallback copy | Browser storage (`wos.notify.route.v1`) | Not box state. On a box with nothing saved, the first device to sync uploads its copy once, then the box wins. |
+
+### App data folder modes
+
+Implementation: wizard-app-manager `packages/backend/src/modules/apps/app-files-manager.ts`
+(`setAppDataDirPermissions()`), policy in `docs/private-app-data-permissions.md`, wizard-app-manager #457.
+
+| State | Where | Backup and restore today |
+|---|---|---|
+| Owner, group and mode of every file in an app's data | `<runtipi>/app-data/<store>/<app>/` | Travels: the app data archive keeps owners and modes. **Gap:** on the destination, install and start run `chmod -Rf a+rwx` over the app's data again unless its recipe sets `private_data: true`. So a folder that was private on the source is open to every user on the new host. In the 6 Nov survey none of the 34 recipe folders set it (Messenger's opt-in is its own PR). |

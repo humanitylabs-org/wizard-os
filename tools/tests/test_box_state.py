@@ -12,6 +12,9 @@ READ_ONLY_INPUTS = {'/etc/os-release'}
 HELPER_ARGV = ['check', 'check --refresh', 'apply', 'native-off', 'native-on', 'restart-check', 'remove']
 LANE_ARGV = ['restart-service *', 'apply-held', 'reboot']
 
+# The rules BOX_STATE.md defines at the top; every row's last cell starts with one.
+RULES = ('Travels', 'Per-machine', 'Outside the backup', 'Not captured', 'Not box state')
+
 
 def named_paths(text: str) -> set[str]:
     """Backticked absolute or home paths, e.g. `/etc/sudoers.d/x` or `~/.wizard-os/x`."""
@@ -40,6 +43,24 @@ class BoxStateTest(unittest.TestCase):
     def test_helper_removed_restore_rule_is_marked(self):
         self.assertIn('helper_removed', self.inventory)
         self.assertRegex(self.inventory, r'(?m)^### (Open|Decided): `helper_removed` on restore$')
+
+    def test_every_row_names_a_rule(self):
+        rows = [line for line in self.inventory.splitlines()
+                if line.startswith('| ') and not line.startswith('| State ')]
+        self.assertGreater(len(rows), 15)
+        for row in rows:
+            cells = [c.strip() for c in row.strip('|').split('|')]
+            with self.subTest(row=cells[0]):
+                self.assertEqual(len(cells), 3, 'a row has State | Where | Backup and restore today')
+                self.assertTrue(cells[2].startswith(RULES), f'{cells[0]}: say which rule applies first')
+
+    def test_issue_425_places_have_rows(self):
+        self.assertNotIn('## Not yet listed', self.inventory)
+        for place in ['cache/bring-data/imports.json', 'SOUL.before-', 'schedules.sqlite3', 'run-queue.sqlite3',
+                      'tmpfs', 'agent-runtime/', 'Pages/wizard-look/look.json', 'pages-history.git',
+                      '/notifications/api/routes', 'wos.notify.route.v1', 'private_data: true', 'a+rwx']:
+            with self.subTest(place=place):
+                self.assertIn(place, self.inventory)
 
     def test_maintenance_lists_the_sudoers_argument_lists(self):
         privilege = self.maintenance.split('## Privilege', 1)[1].split('\n## ', 1)[0]
