@@ -1,0 +1,30 @@
+name: Feature
+description: Something new. Core features wait for James or Miguel to accept them before the builder starts.
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: Say which repo this belongs to. App repos (Messenger, Calendar and so on) are built at once; core repos wait for a yes.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem it solves
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want to happen
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What you will see when it is finished. The reviewing agent judges against this.
+    validations:
+      required: true
+  - type: input
+    id: goal
+    attributes:
+      label: Goal it serves, if any

@@ -24,6 +24,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What you will see when it is fixed. The reviewing agent judges against this.
+    validations:
+      required: true
+  - type: textarea
     id: shot
     attributes:
       label: Screenshot
@@ -32,6 +39,5 @@ body:
     id: version
     attributes:
       label: Version and device
-      description: For example "0.3.114 on a Mac mini" or "Android app 1.2 on a Pixel 8".
     validations:
       required: true
