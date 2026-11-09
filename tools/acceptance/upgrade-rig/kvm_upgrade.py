@@ -250,10 +250,23 @@ def vm_start(unit: str, argv: list[str], log: Path) -> None:
         raise SystemExit(f"qemu exited {p.returncode}: {log.read_text(errors='replace')[-400:]}")
 
 
+UNIX_PATH_MAX = 107   # sun_path is 108 bytes including the NUL; qemu refuses a longer QMP socket path
+
+
+def qmp_path(disk: Path, unit: str) -> Path:
+    """The QMP socket beside the disk, or a short /tmp path when a deep workdir would make it too long for a UNIX
+    socket (qemu exits: 'Path must be less than 108 bytes')."""
+    beside = disk.with_suffix(".qmp")
+    if len(os.fsencode(str(beside))) <= UNIX_PATH_MAX:
+        return beside
+    tag = hashlib.sha256(str(disk.resolve()).encode()).hexdigest()[:10]
+    return Path("/tmp") / f"wz-{unit[:40]}-{tag}.qmp"
+
+
 def boot(disk: Path, unit: str, seed_iso: Path | None = None) -> Path:
     if not port_free(SSH_PORT):
         raise SystemExit(f"127.0.0.1:{SSH_PORT} is taken: another rig guest is running ({unit})")
-    qmp = disk.with_suffix(".qmp")
+    qmp = qmp_path(disk, unit)
     qmp.unlink(missing_ok=True)
     cmd = [shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", GUEST_SMP,
            "-m", GUEST_MEM_MB, "-drive", f"file={disk},if=virtio",
@@ -499,6 +512,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         if not keep:
             if qmp:
                 vm_stop(GUEST_UNIT)
+                qmp.unlink(missing_ok=True)
             sh(["docker", "rm", "-f", HS_NAME], check=False)
             disk.unlink(missing_ok=True)
         say(f"upgrade test {frm} -> {to}: {'PASSED' if report['passed'] else 'FAILED'} ({rundir})")
