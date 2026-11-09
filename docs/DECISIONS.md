@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 10 Nov 2026 — Miguel: bugs ship without waiting for people ([AGENTS.md](../AGENTS.md))
+
+| # | Decision | Status |
+|---|---|---|
+| 114 | **Bugs are merged switched on and reviewed afterwards.** Amends #113 for bugs (features unchanged). Building → merged and shipping (in For testers right away, no switch) → AI review by the opener's agent after the merge → the opener's check last, as an after-the-fact sanity check. Doesn't work at any point (also after close) reopens it to Building. Done = in a For everyone release and the opener said Works, or 7 days in the opener's check with no Doesn't work (the builder host then closes it as fixed, label `approved`). Hotfix = the same plus the front of the queue. Promotion to For everyone never waits on a bug's human check. | Locked (Miguel) |
+
 ## 7 Nov 2026 — James: disk encryption with the security chip ([spec/DISK_ENCRYPTION.md](../spec/DISK_ENCRYPTION.md))
 
 | # | Decision | Status |
