@@ -1,6 +1,6 @@
 # Prepares a runner for tools/acceptance/upgrade-rig/kvm_upgrade.py (the installed upgrade test).
-# On a GitHub-hosted Linux runner: the KVM udev rule GitHub documents, qemu + cloud-localds, a user systemd manager
-# (the rig starts its guest with `systemd-run --user`), more free disk, and a guest sized for the runner (2 vCPU, 7 GB).
+# On a GitHub-hosted Linux runner: the KVM udev rule GitHub documents, qemu + cloud-localds, a user systemd manager,
+# more free disk, and a guest sized for the runner (2 vCPU, 7 GB). The rig starts qemu as its own child process.
 # On a self-hosted runner (vars.RELEASE_UPGRADE_RUNNER) it only checks: that machine is set up once by its owner.
 name: Upgrade rig setup
 description: Make /dev/kvm, qemu and a user systemd manager available for the upgrade rig
@@ -33,8 +33,7 @@ runs:
       run: |
         set -euo pipefail
         [ -r /dev/kvm ] && [ -w /dev/kvm ] || { echo "::error::no /dev/kvm on this runner: set vars.RELEASE_UPGRADE_RUNNER to a self-hosted KVM runner label"; exit 1; }
-        for t in qemu-system-x86_64 qemu-img cloud-localds docker ssh systemd-run; do
+        for t in qemu-system-x86_64 qemu-img cloud-localds docker ssh; do
           command -v "$t" >/dev/null || { echo "::error::missing $t"; exit 1; }
         done
-        systemd-run --user --quiet --collect --wait true
         nproc; free -m | head -2; df -h / | tail -1

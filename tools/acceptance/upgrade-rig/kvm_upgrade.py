@@ -28,11 +28,14 @@ Nothing here touches a real box.
 from __future__ import annotations
 
 import argparse
+import grp
 import hashlib
 import json
 import os
+import pwd
 import shlex
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -183,25 +186,88 @@ def seed(path: Path, instance: str) -> None:
     sh(["cloud-localds", str(path), str(ud), str(md)])
 
 
+def kvm_wrap() -> list[str]:
+    """[] when this process can open /dev/kvm; else `sg kvm -c` (the user is in the kvm group, but a long-lived
+    process such as a job worker or the systemd --user manager started before they joined it has stale groups)."""
+    try:
+        os.close(os.open("/dev/kvm", os.O_RDWR))
+        return []
+    except OSError:
+        pass
+    try:
+        g = grp.getgrnam("kvm")
+        member = pwd.getpwuid(os.getuid()).pw_name in g.gr_mem or pwd.getpwuid(os.getuid()).pw_gid == g.gr_gid
+    except KeyError:
+        member = False
+    return ["sg", "kvm", "-c"] if member and shutil.which("sg") and os.path.exists("/dev/kvm") else []
+
+
+def _pidfile(unit: str) -> Path:
+    return ASSETS / f"{unit}.pid"
+
+
+def vm_active(unit: str) -> bool:
+    try:
+        pid = int(_pidfile(unit).read_text().strip())
+        os.kill(pid, 0)
+    except (OSError, ValueError):
+        return False
+    try:   # a zombie child of this process counts as gone
+        return os.waitpid(pid, os.WNOHANG) == (0, 0)
+    except ChildProcessError:
+        return True
+
+
+def vm_stop(unit: str, timeout: float = 60) -> None:
+    """Stop a guest started by vm_start (this run or an earlier --keep run): SIGTERM, then SIGKILL."""
+    if vm_active(unit):
+        pid = int(_pidfile(unit).read_text().strip())
+        for sig, wait in ((signal.SIGTERM, timeout), (signal.SIGKILL, 10)):
+            try:
+                os.killpg(pid, sig)
+            except OSError:
+                break
+            deadline = time.time() + wait
+            while time.time() < deadline and vm_active(unit):
+                time.sleep(1)
+            if not vm_active(unit):
+                break
+    _pidfile(unit).unlink(missing_ok=True)
+
+
+def vm_start(unit: str, argv: list[str], log: Path) -> None:
+    """Start qemu as this process's own child, in its own session so --keep guests outlive it; tracked by a pidfile.
+    Not `systemd-run --user`: the user manager may predate the user joining the kvm group, and then qemu cannot open
+    /dev/kvm (forum, 9 Nov 2026)."""
+    wrap = kvm_wrap()
+    cmd = wrap + ["exec " + shlex.join(argv)] if wrap else argv
+    with open(log, "ab") as out:
+        p = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+    _pidfile(unit).write_text(f"{p.pid}\n")
+    time.sleep(3)
+    if p.poll() is not None:
+        _pidfile(unit).unlink(missing_ok=True)
+        raise SystemExit(f"qemu exited {p.returncode}: {log.read_text(errors='replace')[-400:]}")
+
+
 def boot(disk: Path, unit: str, seed_iso: Path | None = None) -> Path:
     if not port_free(SSH_PORT):
         raise SystemExit(f"127.0.0.1:{SSH_PORT} is taken: another rig guest is running ({unit})")
     qmp = disk.with_suffix(".qmp")
     qmp.unlink(missing_ok=True)
-    cmd = ["systemd-run", "--user", "--quiet", "--collect", "--unit", unit,
-           shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", GUEST_SMP,
+    cmd = [shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", GUEST_SMP,
            "-m", GUEST_MEM_MB, "-drive", f"file={disk},if=virtio",
            "-netdev", f"user,id=n0,hostfwd=tcp:127.0.0.1:{SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:{SHELL_PORT}-:8796",
            "-device", "virtio-net-pci,netdev=n0", "-display", "none", "-serial", f"file:{disk.with_suffix('.console')}",
            "-qmp", f"unix:{qmp},server,nowait"]
     if seed_iso:
         cmd[cmd.index("-netdev"):cmd.index("-netdev")] = ["-drive", f"file={seed_iso},if=virtio,format=raw"]
-    sh(cmd)
+    vm_start(unit, cmd, disk.with_suffix(".qemu.log"))
     return qmp
 
 
 def power_off(qmp: Path, unit: str, timeout: float = 120) -> None:
-    """ACPI power button through QMP (a clean guest shutdown), then stop the unit."""
+    """ACPI power button through QMP (a clean guest shutdown), then stop the guest."""
     try:
         s = socket.socket(socket.AF_UNIX)
         s.settimeout(10)
@@ -216,10 +282,11 @@ def power_off(qmp: Path, unit: str, timeout: float = 120) -> None:
         pass
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if sh(["systemctl", "--user", "is-active", "--quiet", unit], check=False).returncode:
+        if not vm_active(unit):
+            vm_stop(unit)
             return
         time.sleep(3)
-    sh(["systemctl", "--user", "stop", unit], check=False)
+    vm_stop(unit)
 
 
 def golden(max_age_days: float = 7, force: bool = False) -> Path:
@@ -238,7 +305,7 @@ def golden(max_age_days: float = 7, force: bool = False) -> Path:
     iso = ASSETS / "golden-seed.iso"
     seed(iso, f"wtrain-golden-{int(time.time())}")
     unit = GUEST_UNIT + "-golden"
-    sh(["systemctl", "--user", "stop", unit], check=False)
+    vm_stop(unit)
     qmp = boot(tmp, unit, iso)
     try:
         wait_ssh()
@@ -365,7 +432,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
     for tool in ("qemu-system-x86_64", "qemu-img", "cloud-localds", "docker", "ssh"):
         if not shutil.which(tool):
             raise SystemExit(f"missing {tool}")
-    if not os.access("/dev/kvm", os.R_OK | os.W_OK):
+    if not os.access("/dev/kvm", os.R_OK | os.W_OK) and not kvm_wrap():
         raise SystemExit("no /dev/kvm access")
     ASSETS.mkdir(parents=True, exist_ok=True)
     g = golden(max_golden_age)
@@ -378,7 +445,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
     report: dict = {"from": frm, "to": to, "started_at": stamp, "release_base": release_base or "public mirror",
                     "golden": json.loads((ASSETS / "golden.json").read_text()),
                     "os_sh_sha256": hashlib.sha256(os_sh).hexdigest(), "rundir": str(rundir), "problems": []}
-    sh(["systemctl", "--user", "stop", GUEST_UNIT], check=False)
+    vm_stop(GUEST_UNIT)
     qmp = None
     try:
         authkey = headscale_up(rundir)
@@ -431,7 +498,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
             out.write_text(json.dumps(report, indent=2) + "\n")
         if not keep:
             if qmp:
-                sh(["systemctl", "--user", "stop", GUEST_UNIT], check=False)
+                vm_stop(GUEST_UNIT)
             sh(["docker", "rm", "-f", HS_NAME], check=False)
             disk.unlink(missing_ok=True)
         say(f"upgrade test {frm} -> {to}: {'PASSED' if report['passed'] else 'FAILED'} ({rundir})")
