@@ -362,8 +362,13 @@ class ForTestersForEveryone(unittest.TestCase):
         rep, _ = self._plan("soaked", hours=71.5)
         self.assertTrue(rep["outcome"].startswith("WAITING: 0.3.106 has been For testers for 72h"[:30]))
         self.assertIn("after 72h", rep["outcome"])
-        rep, _ = self._plan("soaked", hours=None)
-        self.assertIn("an unknown time", rep["outcome"])
+        # an unmeasurable soak stops loudly (wizard-os#416), never "an unknown time"
+        with mock.patch.object(rt, "soaked_for", return_value=None), \
+                mock.patch.object(rt, "release_blockers", side_effect=AssertionError("stops before")):
+            with self.assertRaises(rt.Stop) as e:
+                rt.soak_gate("0.3.102", "0.3.106", Path("/nonexistent"))
+        self.assertIn("can't tell how long 0.3.106 has been For testers", str(e.exception))
+        self.assertNotIn("'an unknown time' if hours is None", (HERE.parent / "release_train.py").read_text())
 
     def test_promote_soaked_is_held_by_an_open_release_blocker(self):
         rep, _ = self._plan("soaked", blockers=["https://github.com/humanitylabs-org/wizard-ux/issues/1 Chats blank"])
@@ -407,24 +412,122 @@ class ForTestersForEveryone(unittest.TestCase):
 
     def test_soaked_for_reads_latest_history(self):
         with tempfile.TemporaryDirectory() as d:
-            rel = Path(d)
-            subprocess.run(["git", "init", "-q"], cwd=rel, check=True)
-            (rel / "latest").write_text("0.3.106\n")
-            env = {"GIT_AUTHOR_DATE": "2026-11-01T00:00:00Z", "GIT_COMMITTER_DATE": "2026-11-01T00:00:00Z",
-                   "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-                   "PATH": "/usr/bin:/bin"}
-            subprocess.run(["git", "add", "latest"], cwd=rel, check=True)
-            subprocess.run(["git", "commit", "-qm", "cut"], cwd=rel, check=True, env=env)
+            src = history(Path(d) / "src", [("0.3.106", "2026-11-01T00:00:00Z")])
             from datetime import datetime
             now = datetime.fromisoformat("2026-11-04T01:00:00+00:00").timestamp()
-            self.assertAlmostEqual(rt.soaked_for("0.3.106", rel, now), 73.0, places=3)
-            self.assertIsNone(rt.soaked_for("0.3.999", rel, now))
+            self.assertAlmostEqual(rt.soaked_for("0.3.106", src, now), 73.0, places=3)
+            self.assertIsNone(rt.soaked_for("0.3.999", src, now))
 
     def test_cli_has_cut_and_promote_soaked(self):
         out = subprocess.run([sys.executable, str(HERE.parent / "release_train.py"), "--help"], capture_output=True,
                              text=True).stdout
         self.assertIn("cut", out)
         self.assertIn("promote-soaked", out)
+
+
+GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+           "PATH": "/usr/bin:/bin"}
+
+
+def history(d: Path, cuts) -> Path:
+    """A wizard-os-like repo whose releases/latest named each (version, ISO time) in turn, with origin/main set."""
+    d.mkdir(parents=True)
+    run = lambda *a, env=None: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True,  # noqa: E731
+                                              env={**GIT_ENV, **(env or {})})
+    run("init", "-q", "-b", "main")
+    (d / "releases").mkdir()
+    for v, when in cuts:
+        (d / "releases" / f"{v}.json").write_text(json.dumps({"version": v}) + "\n")
+        (d / "releases" / "latest").write_text(v + "\n")
+        run("add", ".")
+        run("commit", "-qm", f"cut {v}", env={"GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when})
+    run("update-ref", "refs/remotes/origin/main", "HEAD")
+    return d
+
+
+class SoakByCutAge(unittest.TestCase):
+    """wizard-os#416: the scheduled promote measured "an unknown time" (its clone has no checkout), and with cuts
+    landing every few hours the current latest never reaches 72h. Measure from git objects; and, behind
+    WIZARD_TRAIN_SOAK_BY_CUT, promote the newest release cut 72h or more ago."""
+    CUTS = [("0.3.102", "2026-11-01T00:00:00Z"), ("0.3.103", "2026-11-02T00:00:00Z"),
+            ("0.3.104", "2026-11-03T00:00:00Z"), ("0.3.105", "2026-11-05T00:00:00Z"),
+            ("0.3.106", "2026-11-06T23:00:00Z")]
+    NOW = "2026-11-07T00:00:00+00:00"
+
+    def no_checkout_clone(self, d: Path) -> Path:
+        src = history(d / "src", self.CUTS)
+        dst = d / "repos" / "wizard-os"
+        subprocess.run(["git", "clone", "-q", "--no-checkout", str(src), str(dst)], check=True, capture_output=True)
+        self.assertFalse((dst / "releases").exists())     # what clone() gives the train: no releases/ on disk
+        return dst
+
+    def now(self):
+        from datetime import datetime
+        return datetime.fromisoformat(self.NOW).timestamp()
+
+    def test_off_by_default(self):
+        env = {k: v for k, v in __import__("os").environ.items() if k != "WIZARD_TRAIN_SOAK_BY_CUT"}
+        out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.SOAK_BY_CUT)"],
+                             cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
+        self.assertEqual(out, "False")
+
+    def test_the_gate_measures_a_no_checkout_clone(self):
+        with tempfile.TemporaryDirectory() as d:
+            wos = self.no_checkout_clone(Path(d))
+            self.assertAlmostEqual(rt.soaked_for("0.3.106", wos, self.now()), 1.0, places=3)
+            with mock.patch.object(rt.time, "time", return_value=self.now()), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", False), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]):
+                due, why, hours, hf, v = rt.soak_gate("0.3.102", "0.3.106", wos)
+            self.assertFalse(due)
+            self.assertTrue(why.startswith("WAITING: 0.3.106 has been For testers for 1h"), why)
+            self.assertEqual(v, "0.3.106")
+
+    def test_unreadable_history_stops_loudly(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(rt.Stop):
+                rt.soak_gate("0.3.102", "0.3.106", Path(d))     # not a git repo
+
+    def test_switch_on_promotes_the_newest_release_cut_72h_ago(self):
+        with tempfile.TemporaryDirectory() as d:
+            wos = self.no_checkout_clone(Path(d))
+            self.assertEqual(rt.due_by_cut("0.3.102", "0.3.106", wos, self.now()), ("0.3.104", 96.0))
+            self.assertIsNone(rt.due_by_cut("0.3.104", "0.3.106", wos, self.now()))
+            with mock.patch.object(rt.time, "time", return_value=self.now()), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]):
+                due, why, hours, hf, v = rt.soak_gate("0.3.102", "0.3.106", wos)
+                self.assertEqual((due, v, hf), (True, "0.3.104", []))
+                self.assertAlmostEqual(hours, 96.0)
+                # nothing old enough above stable: it waits on latest as before
+                due, why, _, _, v = rt.soak_gate("0.3.104", "0.3.106", wos)
+                self.assertFalse(due)
+                self.assertEqual(v, "0.3.106")
+            with mock.patch.object(rt.time, "time", return_value=self.now()), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                    mock.patch.object(rt, "release_blockers", return_value=["u blocker"]):
+                due, why, _, _, _ = rt.soak_gate("0.3.102", "0.3.106", wos)
+                self.assertTrue(why.startswith("HELD: 1 open release-blocker"))
+
+    def test_check_reads_the_clone_not_a_missing_folder(self):
+        with tempfile.TemporaryDirectory() as d:
+            wos = self.no_checkout_clone(Path(d))
+            from io import StringIO
+            with mock.patch.object(rt, "STATE", Path(d)), mock.patch.object(rt, "clone", return_value=wos), \
+                    mock.patch.object(rt.time, "time", return_value=self.now()), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]), \
+                    mock.patch("sys.stdout", new=StringIO()) as out:
+                with mock.patch.object(rt, "show", side_effect=lambda r, ref, f: "0.3.106\n" if f.endswith("latest")
+                                       else "0.3.102\n"):
+                    self.assertEqual(rt.main(["--work", d, "promote-soaked", "--check"]), 0)
+            self.assertIn("due=true", out.getvalue())
+            self.assertIn("0.3.104 has soaked", out.getvalue())
+
+    def test_run_takes_the_due_release_not_latest(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        self.assertIn('p["candidate"], p["cut"], p["moves"] = version, False, {}', src)
+        self.assertIn('C = L if V == latest else json.loads((wt / "releases" / f"{V}.json").read_text())', src)
 
 
 class HotfixLane(unittest.TestCase):
@@ -471,7 +574,7 @@ class HotfixLane(unittest.TestCase):
                 mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: ref == "b" * 40 and in_latest), \
                 mock.patch.object(rt, "soaked_for", return_value=hours), \
                 mock.patch.object(rt, "release_blockers", return_value=list(blockers)):
-            return rt.soak_gate("0.3.102", "0.3.106", Path("/nonexistent/releases"))
+            return rt.soak_gate("0.3.102", "0.3.106", Path("/nonexistent"))[:4]
 
     def test_a_hotfix_reaches_for_everyone_after_24h(self):
         due, why, _, hf = self.gate(20.0)
