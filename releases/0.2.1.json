@@ -1,8 +1,8 @@
 {
   "version": "0.2.1",
-  "name": "WizardOS 0.2.1",
+  "name": "Wizard OS 0.2.1",
   "date": "2026-10-12",
-  "about": "One WizardOS version: the commit of every component repo, the images those commits produced, and the default app in each parking spot. The installer (wizard-app-manager get.sh) installs these pins and reads back what runs. Check with: python3 tools/check_release.py releases/0.2.1.json",
+  "about": "One Wizard OS version: the commit of every component repo, the images those commits produced, and the default app in each parking spot. The installer (wizard-app-manager get.sh) installs these pins and reads back what runs. Check with: python3 tools/check_release.py releases/0.2.1.json",
   "install": {
     "command": "curl -fsSL aiwizards.com/os.sh | bash",
     "modes": {

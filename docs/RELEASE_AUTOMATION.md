@@ -42,7 +42,14 @@ owner step below is done.
    `release-blocker` (`gh search issues --owner humanitylabs-org --label release-blocker`, fails closed). Only when
    due: KVM + qemu on the runner, the installed upgrade test from the current stable on a disposable guest,
    `promote_stable.py promote` **without** `--fast-track`, promotion PR, checked mirror. Otherwise `WAITING` /
-   `HELD` / `nothing to promote` with the reason.
+   `HELD` / `nothing to promote` with the reason. The soak is read from git objects of the train's
+   `--no-checkout` clone; when no commit of `releases/latest` names latest the run stops loudly instead of
+   waiting "an unknown time" (wizard-os#416). Switch, off by default: `WIZARD_TRAIN_SOAK_BY_CUT=1` promotes the
+   newest release above stable that was first named on latest 72h or more ago, so steady cuts no longer hold
+   Stable back forever ("72h" then means "cut 72h ago"); the upgrade test and blocker check still apply to it.
+   Published release records (`releases/<v>.json`, `releases/promotions/<v>.json`) never change after they ship:
+   `releases/SHA256SUMS` lists them, the train appends each new one, and `tools/tests/test_published_releases.py`
+   fails when a listed file changes.
 4. **Mirror check (replaces the per-cut human click)** — before merging any wizard-app-manager mirror PR,
    `verify_mirror` proves every file the PR changes is under `releases/`, is added or updated (never deleted), and
    has the same sha256 as the file at the same path on wizard-os main; `releases/README.md` (the App Manager's own

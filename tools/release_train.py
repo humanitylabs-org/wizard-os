@@ -545,6 +545,20 @@ def serve(directory: Path):
         srv.shutdown()
 
 
+# Published release records never change (boxes and release notes cite their sha256; wizard-os#416).
+# releases/SHA256SUMS lists every one; tools/tests/test_published_releases.py fails when a listed file changes.
+SUMS = "SHA256SUMS"
+
+
+def record_published(releases: Path, name: str) -> None:
+    """Append <name> (relative to releases/) to releases/SHA256SUMS once."""
+    f = releases / SUMS
+    lines = f.read_text().splitlines() if f.is_file() else []
+    if not any(x.endswith(f"  {name}") for x in lines):
+        with open(f, "a") as fh:
+            fh.write(f"{sha(releases / name)}  {name}\n")
+
+
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -675,35 +689,72 @@ def _hf_names(hf: list[dict]) -> str:
     return ", ".join(f"{h['repo'].split('/')[1]}#{h['number']}" for h in hf)
 
 
-def soaked_for(version: str, releases: Path, now: float | None = None) -> float | None:
-    """Hours <version> has been releases/latest (from git history, the same source promote_stable uses)."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("promote_stable", Path(__file__).resolve().parent / "promote_stable.py")
-    ps = importlib.util.module_from_spec(spec); spec.loader.exec_module(ps)   # type: ignore[union-attr]
-    since = ps.latest_since(version, releases)
-    if not since:
-        return None
-    t = datetime.fromisoformat(since.replace("Z", "+00:00")).timestamp()
-    return ((now if now is not None else time.time()) - t) / 3600
+# Soak by cut age (wizard-os#416), OFF by default: WIZARD_TRAIN_SOAK_BY_CUT=1 turns it on. While cuts keep landing,
+# the current latest is always minutes old, so "latest soaked 72h" never fires. With the switch on, For everyone takes
+# the newest release above stable that was FIRST named on releases/latest SOAK_HOURS or more ago ("72h" then means
+# "cut 72h ago"). promote_stable.py promote accepts any version from that history; the upgrade test still runs on it.
+SOAK_BY_CUT = os.environ.get("WIZARD_TRAIN_SOAK_BY_CUT", "0") == "1"
 
 
-def soak_gate(stable: str, latest: str, releases: Path) -> tuple[bool, str, float | None, list[dict]]:
-    """Is latest due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the soak).
+def latest_history(wos: Path, ref: str = "origin/main") -> dict[str, float]:
+    """version -> unix time releases/latest first named it on <ref>. Reads git objects only, so it works in the
+    train's --no-checkout clone (where there is no releases/ folder on disk). Unreadable history raises Stop."""
+    out = sh(["git", "-C", str(wos), "log", "--reverse", "--format=%H %ct", ref, "--", "releases/latest"])
+    first: dict[str, float] = {}
+    for line in out.splitlines():
+        commit, ct = line.split(" ", 1)
+        v = sh(["git", "-C", str(wos), "show", f"{commit}:releases/latest"], check=False).strip()
+        if v and v not in first:
+            first[v] = float(ct)
+    return first
+
+
+def soaked_for(version: str, wos: Path, now: float | None = None) -> float | None:
+    """Hours since releases/latest first named <version> on wizard-os main (git history, as promote_stable reads it).
+    None: no commit of releases/latest names it."""
+    t = latest_history(wos).get(version)
+    return None if t is None else ((now if now is not None else time.time()) - t) / 3600
+
+
+def due_by_cut(stable: str, latest: str, wos: Path, now: float | None = None) -> tuple[str, float] | None:
+    """(newest version above stable cut onto latest >= SOAK_HOURS ago, its hours), or None. Only real releases count."""
+    now = now if now is not None else time.time()
+    best = None
+    for v, t in latest_history(wos).items():
+        hours = (now - t) / 3600
+        if _key(stable) < _key(v) <= _key(latest) and hours >= SOAK_HOURS and (best is None or _key(v) > _key(best[0])):
+            if subprocess.run(["git", "-C", str(wos), "cat-file", "-e", f"origin/main:releases/{v}.json"],
+                              capture_output=True).returncode == 0:
+                best = (v, hours)
+    return best
+
+
+def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | None, list[dict], str]:
+    """Is a release due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the
+    soak, the version to promote). <wos> is the wizard-os clone (git objects; no checkout needed).
     Cheap: wizard-os only (plus GitHub API reads when the hotfix lane is on)."""
     if _key(latest) <= _key(stable):
-        return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None, []
-    need, hf = hotfix_soak(releases.parent, stable, latest)
-    hours = soaked_for(latest, releases)
-    if need > 0 and (hours is None or hours < need):
-        return False, (f"WAITING: {latest} has been For testers for "
-                       f"{'an unknown time' if hours is None else f'{hours:.0f}h'}; it moves to For everyone "
-                       f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}. "
-                       f"Stable stays {stable}."), hours, hf
+        return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None, [], latest
+    need, hf = hotfix_soak(wos, stable, latest)
+    hours = soaked_for(latest, wos)
+    version = latest
+    if need > 0 and hours is None:
+        # Never "an unknown time": a gate that cannot measure the soak must say so and stop (wizard-os#416).
+        raise Stop(f"can't tell how long {latest} has been For testers: no commit of releases/latest on "
+                   f"origin/main names it (in {wos}). Stable stays {stable}.")
+    if need > 0 and hours < need:
+        older = due_by_cut(stable, latest, wos) if SOAK_BY_CUT else None
+        if older is None:
+            return False, (f"WAITING: {latest} has been For testers for {hours:.0f}h; it moves to For everyone "
+                           f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}. "
+                           f"Stable stays {stable}."), hours, hf, latest
+        # soak by cut age: the older release takes the normal soaked gate (no hotfix waiver applies to it)
+        version, hours, hf = older[0], older[1], []
     blockers = release_blockers()
     if blockers:
         return False, (f"HELD: {len(blockers)} open {BLOCKER_LABEL} issue(s): " + "; ".join(blockers)
-                       + f". Stable stays {stable}."), hours, hf
-    return True, "", hours, hf
+                       + f". Stable stays {stable}."), hours, hf, version
+    return True, "", hours, hf, version
 
 
 def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False,
@@ -730,15 +781,16 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     stable, latest = p["stable"], p["latest"]
     if mode == "soaked":
         # For everyone takes latest as it is: never a new cut here.
-        due, why, hours, hotfixes = soak_gate(stable, latest, clone(WOS, work) / "releases")
+        due, why, hours, hotfixes, version = soak_gate(stable, latest, clone(WOS, work))
         if not due:
             rep["outcome"] = why
             return rep
-        p["candidate"], p["cut"], p["moves"] = latest, False, {}
+        p["candidate"], p["cut"], p["moves"] = version, False, {}
         if hotfixes:
             rep["hotfixes"] = hotfixes
-        step(f"{latest} soaked {'an unknown time' if hours is None else f'{hours:.0f}h'} on For testers; no open "
-             f"{BLOCKER_LABEL}{f'; hotfix lane: {_hf_names(hotfixes)}' if hotfixes else ''}")
+        step(f"{version} soaked {'0h (immediate hotfix)' if hours is None else f'{hours:.0f}h'} on For testers; no open "
+             f"{BLOCKER_LABEL}{f'; hotfix lane: {_hf_names(hotfixes)}' if hotfixes else ''}"
+             f"{f' (soak by cut age, wizard-os#416: latest {latest} is newer)' if version != latest else ''}")
     step(f"stable {stable}, latest {latest}; waiting fixes: {len(p['waiting_fixes'])}; to move: {sorted(p['moves'])}")
     for m in p["manual"] + p["unpublished"]:
         step(f"not in this train: {m}")
@@ -780,11 +832,12 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
                 continue
             sh([sys.executable, "-m", "unittest", "discover", "-s", "tools/tests", "-p", pattern], cwd=wt, timeout=900)
         sh(["git", "-C", str(wt), "checkout", "-q", "-B", branch_cut])
-        sh(["git", *IDENTITY, "-C", str(wt), "add", f"releases/{V}.json", "releases/latest"])
+        record_published(wt / "releases", f"{V}.json")
+        sh(["git", *IDENTITY, "-C", str(wt), "add", f"releases/{V}.json", "releases/latest", f"releases/{SUMS}"])
         sh(["git", *IDENTITY, "-C", str(wt), "commit", "-qm", f"Cut {V} onto latest (release train): {C['name']}"])
         step(f"cut {V}: check_release ok, channels ok ({'local only' if dry else 'pushing'})")
     else:
-        C = L
+        C = L if V == latest else json.loads((wt / "releases" / f"{V}.json").read_text())   # soak by cut age
     cls, items, prs = ride_alongs(work, S, C)
     rep["classification"], rep["ride_alongs"] = cls, items
     rep["prs"] = [{**x, "tier": tier(x)} for x in prs]
@@ -905,6 +958,7 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
         "--classification", cls, "--reason", reason, "--notes", notes], cwd=wt)
     sh([sys.executable, "tools/promote_stable.py", "check"], cwd=wt)
     rec = json.loads((wt / "releases" / "promotions" / f"{V}.json").read_text())
+    record_published(wt / "releases", f"promotions/{V}.json")
     if mode != "soaked" and rec.get("fast_track", {}).get("classification") != cls:
         raise Stop("the promotion record's classification does not match the computed one")
     sh(["git", *IDENTITY, "-C", str(wt), "add", "releases", evidence_rel])
@@ -998,7 +1052,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             wos = clone(WOS, a.work)
             rel = lambda name: show(wos, "origin/main", f"releases/{name}")   # noqa: E731
-            due, why, _hours, _hf = soak_gate(rel("stable").strip(), rel("latest").strip(), wos / "releases")
+            due, why, _hours, _hf, version = soak_gate(rel("stable").strip(), rel("latest").strip(), wos)
+            if due:
+                why = f"due: {version} has soaked with no release-blocker; run promote-soaked"
         except Stop as e:
             due, why = False, f"STOPPED: {e}"
         print(f"due={'true' if due else 'false'}")
