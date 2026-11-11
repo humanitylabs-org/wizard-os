@@ -67,6 +67,63 @@ class StyleCheck(unittest.TestCase):
         for bad in (['web/skins'], ['/abs/'], ['**/skins/'], ['./web/']):
             with self.assertRaises(ValueError): style.scan(self.root, {'skin_layers': bad})
 
+    def test_generated_vendor_bundle_warns_only_while_ci_drift_checks_it(self):
+        def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
+        git('init'); git('config','user.name','Fixture'); git('config','user.email','fixture@example.invalid')
+        vendor = self.root / 'web/vendor'; vendor.mkdir(parents=True)
+        bundle = vendor / 'live-preview.js'
+        bundle.write_text('var a=1;\nvar t={".cm-button":{color:"#fff"}};\n')
+        wf = self.root / '.github/workflows'; wf.mkdir(parents=True)
+        (wf / 'quality.yml').write_text('jobs:\n  t:\n    steps:\n      - run: npm run build:editor\n      - run: git diff --exit-code -- web/vendor\n')
+        self.write('a{color:var(--wz-text)}\n')
+        git('add','.'); git('commit','-m','Base with drift check')
+        policy = {'generated_vendor': ['web/vendor/']}
+        # A rebuild renames identifiers file-wide, so the library theme line changes.
+        bundle.write_text('var b=1;\nvar u={".cm-button":{color:"#fff",background:"rgba(0,0,0,.1)"}};\n')
+        rows = style.scan(self.root, policy, base='HEAD')
+        self.assertTrue(rows and not any(r['error'] for r in rows))
+        self.assertTrue(all(r.get('generated') for r in rows))
+        # Without the policy scope, or without a drift check in CI, the same lines fail.
+        self.assertTrue(any(r['error'] for r in style.scan(self.root, {}, base='HEAD')))
+        (wf / 'quality.yml').write_text('jobs:\n  t:\n    steps:\n      - run: npm run build:editor\n')
+        self.assertTrue(any(r['error'] for r in style.scan(self.root, policy, base='HEAD')))
+        # App CSS and app JS outside the vendor folder are still checked as before.
+        (wf / 'quality.yml').write_text('      - run: git diff --exit-code -- web/vendor\n')
+        self.write('a{color:#fff}\n')
+        (self.root / 'web/app.js').write_text('el.style.color="#fff"\n')
+        rows = style.scan(self.root, policy, base='HEAD')
+        self.assertEqual(sorted(r['path'] for r in rows if r['error']), ['app.css', 'web/app.js'])
+        # A drift check under a different folder does not cover web/vendor.
+        self.write('a{color:var(--wz-text)}\n'); (self.root / 'web/app.js').unlink()
+        (wf / 'quality.yml').write_text('      - run: git diff --exit-code -- web/vendor-other\n')
+        self.assertTrue(any(r['error'] for r in style.scan(self.root, policy, base='HEAD')))
+        # Kit copies inside the vendor folder still drift-fail.
+        (wf / 'quality.yml').write_text('      - run: git diff --exit-code -- web/vendor\n')
+        (vendor / 'wizard-ui.css').write_text('drift')
+        self.assertTrue(any(r['rule'] == 'kit-drift' and r['error'] for r in style.scan(self.root, policy, base='HEAD')))
+        for bad in (['web/vendor'], ['/abs/'], ['**/vendor/'], ['./web/']):
+            with self.assertRaises(ValueError): style.scan(self.root, {'generated_vendor': bad})
+
+    def test_generated_vendor_skip_cannot_be_granted_by_the_pr_itself(self):
+        def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
+        git('init'); git('config','user.name','Fixture'); git('config','user.email','fixture@example.invalid')
+        self.write('a{color:var(--wz-text)}\n')
+        git('add','.'); git('commit','-m','Base without drift check')
+        vendor = self.root / 'web/vendor'; vendor.mkdir(parents=True)
+        (vendor / 'x.js').write_text('var t={color:"#fff"};\n')
+        wf = self.root / '.github/workflows'; wf.mkdir(parents=True)
+        (wf / 'ci.yml').write_text('      - run: git diff --exit-code -- web/vendor\n')
+        rows = style.scan(self.root, {'generated_vendor': ['web/vendor/']}, base='HEAD')
+        self.assertTrue(any(r['path'] == 'web/vendor/x.js' and r['error'] for r in rows))
+        # Without a base (local inventory) the working-tree workflows decide.
+        rows = style.scan(self.root, {'generated_vendor': ['web/vendor/']}, strict=True)
+        self.assertFalse(any(r['path'] == 'web/vendor/x.js' and r['error'] for r in rows))
+
+    def test_drift_checked_paths(self):
+        self.assertEqual(style.drift_checked_paths(['run: git diff --exit-code -- web/vendor/ ./dist/a.js "x/y"\n']), {'web/vendor', 'dist/a.js', 'x/y'})
+        self.assertEqual(style.drift_checked_paths(['run: git diff --stat web/vendor\n', 'git diff --exit-code $DIR\n']), set())
+        self.assertEqual(style.drift_checked_paths(['git diff --quiet web/vendor && echo ok # web/other\n']), {'web/vendor'})
+
     def test_change_line_ratchet_and_untracked(self):
         def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
         git('init'); git('config','user.name','Fixture'); git('config','user.email','fixture@example.invalid')
