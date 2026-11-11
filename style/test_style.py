@@ -120,9 +120,31 @@ class StyleCheck(unittest.TestCase):
         self.assertFalse(any(r['path'] == 'web/vendor/x.js' and r['error'] for r in rows))
 
     def test_drift_checked_paths(self):
-        self.assertEqual(style.drift_checked_paths(['run: git diff --exit-code -- web/vendor/ ./dist/a.js "x/y"\n']), {'web/vendor', 'dist/a.js', 'x/y'})
-        self.assertEqual(style.drift_checked_paths(['run: git diff --stat web/vendor\n', 'git diff --exit-code $DIR\n']), set())
-        self.assertEqual(style.drift_checked_paths(['git diff --quiet web/vendor && echo ok # web/other\n']), {'web/vendor'})
+        f = style.drift_checked_paths
+        self.assertEqual(f(['run: git diff --exit-code -- web/vendor/ ./dist/a.js "x/y"\n']), {'web/vendor', 'dist/a.js', 'x/y'})
+        self.assertEqual(f(['run: git diff --stat web/vendor\n', 'git diff --exit-code $DIR\n']), set())
+        self.assertEqual(f(['      - run: npm ci && git diff --quiet web/vendor && echo ok # web/other\n']), {'web/vendor'})
+        # Comments, quoted output and step names are not drift checks.
+        self.assertEqual(f(['# git diff --exit-code -- web/vendor\n',
+                            '      - run: echo "git diff --exit-code -- web/vendor"\n',
+                            '      - run: echo "x && git diff --exit-code -- web/vendor"\n',
+                            '      - name: git diff --exit-code web/vendor\n']), set())
+        # Shell line continuations are joined.
+        self.assertEqual(f(['        run: |\n          git diff --exit-code -- \\\n            web/vendor\n']), {'web/vendor'})
+
+    def test_generated_vendor_coverage_compared_per_side(self):
+        def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
+        git('init'); git('config','user.name','Fixture'); git('config','user.email','fixture@example.invalid')
+        vendor = self.root / 'web/vendor'; vendor.mkdir(parents=True)
+        (vendor / 'live-preview.js').write_text('var a=1;\n')
+        wf = self.root / '.github/workflows'; wf.mkdir(parents=True)
+        (wf / 'q.yml').write_text('      - run: git diff --exit-code -- web/vendor\n')
+        git('add','.'); git('commit','-m','Base')
+        # The PR tightens the check to the exact file and rebuilds the bundle.
+        (wf / 'q.yml').write_text('      - run: git diff --exit-code -- ./web/vendor/live-preview.js\n')
+        (vendor / 'live-preview.js').write_text('var t={color:"#fff"};\n')
+        rows = style.scan(self.root, {'generated_vendor': ['web/vendor/']}, base='HEAD')
+        self.assertTrue(rows and not any(r['error'] for r in rows))
 
     def test_change_line_ratchet_and_untracked(self):
         def git(*a): return subprocess.check_output(['git','-C',str(self.root),*a], stderr=subprocess.DEVNULL)
