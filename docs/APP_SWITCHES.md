@@ -48,5 +48,7 @@ the switch's real state (core or app).
 4. **Link** each switch to the issue(s) it delivers (`issues`), so the card finds it.
 5. Re-read switches when the page becomes visible: the owner may flip them from the Tracker.
 
+Shared code (empty list, copy as is): Python stdlib `wizard-app-manager templates/hello-wizard/app/server.py` (the `wizard.app-switches/1` block + `wizard_switches_install(Handler)`); FastAPI `wizard-recorder app/wizard_switches.py` (`install_switches(app, data_dir)`); Node `wizard-music server/switches.mjs` (`handleSwitches(req, res)`). Every org app shipped one on 11 Nov 2026.
+
 Reference implementations: wizard-messenger `switches.py` + `web.py` `_switches`; wizard-calendar `app/server.py`
 (`SWITCHES`, `post_switch`); wizard-app-manager `wam/app_switches.py`.
