@@ -33,6 +33,24 @@ class Tiers(unittest.TestCase):
             self.assertEqual(rt.tier(p), "feature", p)
 
 
+class PrBody(unittest.TestCase):
+    def test_a_long_ride_along_list_fits_githubs_limit(self):
+        body = "Cut 0.3.180\n\n" + "\n".join(f"- wizard-ux#{n} [fix] Recommended fix: {'x' * 150}" for n in range(500))
+        self.assertGreater(len(body), 65536)
+        out = rt.fit_body(body)
+        self.assertLessEqual(len(out), 65536)
+        self.assertTrue(out.startswith("Cut 0.3.180\n\n- wizard-ux#0 "))
+        self.assertRegex(out.splitlines()[-1], r"and \d+ more lines")
+
+    def test_a_short_body_is_unchanged(self):
+        self.assertEqual(rt.fit_body("short\nbody"), "short\nbody")
+
+    def test_open_and_merge_sends_the_fitted_body(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        body = src[src.index("def open_and_merge("):src.index("def mirror_problems(")]
+        self.assertIn('"--body", fit_body(body)', body)
+
+
 class Candidate(unittest.TestCase):
     def setUp(self):
         latest = (ROOT / "releases" / "latest").read_text().strip()

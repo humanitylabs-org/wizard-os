@@ -415,13 +415,30 @@ def ride_alongs(work: Path, S: dict, C: dict) -> tuple[str, list[str], list[dict
 # ---------------------------------------------------------------- PR mechanics
 
 
+PR_BODY_MAX = 60000   # GitHub rejects a PR body over 65536 characters (wizard-ux issue 1289: every cut STOPPED)
+
+
+def fit_body(body: str, limit: int = PR_BODY_MAX) -> str:
+    """Keep a PR body under GitHub's size limit: cut whole lines from the end and say how many were left out. A long
+    ride-along list (hundreds of PRs since Stable) must never stop a cut; the full list stays in the release report."""
+    if len(body) <= limit:
+        return body
+    lines, kept, size = body.split("\n"), [], 0
+    for line in lines:
+        if size + len(line) + 1 > limit - 200:
+            break
+        kept.append(line)
+        size += len(line) + 1
+    return "\n".join(kept) + f"\n- ... and {len(lines) - len(kept)} more lines (full list in the release train report)"
+
+
 def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, label: str, need_checks: bool,
                    timeout: float = 3600, verify=None) -> str:
     """Push, open, wait for every check on this exact head (need_checks), then merge that head. `verify(n, head)`
     (the App Manager mirror: verify_mirror) is the automated non-author check of DECISIONS #96 as amended: it must
     pass, and post its status, before the merge."""
     sh(["git", "-C", str(wt), "push", "-q", "-f", "origin", f"HEAD:refs/heads/{branch}"])
-    url = sh(["gh", "pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", title, "--body", body]).strip()
+    url = sh(["gh", "pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", title, "--body", fit_body(body)]).strip()
     n = url.rstrip("/").rsplit("/", 1)[1]
     sh(["gh", "api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={label}"], check=False)
     head = sh(["git", "-C", str(wt), "rev-parse", "HEAD"]).strip()
