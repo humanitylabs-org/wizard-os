@@ -31,17 +31,15 @@ jobs:
     outputs:
       due: ${{ steps.gate.outputs.due }}
     env:
-      GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
+      BUILDER_APP_KEY: ${{ secrets.BUILDER_APP_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Work dirs
         run: |
           echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
           echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
-      - name: Token present
-        run: |
-          [ -n "$GH_TOKEN" ] || { echo "::error::RELEASE_TRAIN_TOKEN is not set on humanitylabs-org/wizard-os (docs/RELEASE_AUTOMATION.md, Owner setup)"; exit 1; }
-          gh auth setup-git
+      - name: Log in as the WizardOS Builder app
+        run: tools/builder_app_login.sh
       - name: Is a promotion due? (72h on latest, no open release-blocker)
         id: gate
         run: |
@@ -55,17 +53,18 @@ jobs:
     runs-on: ${{ vars.RELEASE_UPGRADE_RUNNER || 'ubuntu-latest' }}   # x86_64 Linux with /dev/kvm
     timeout-minutes: 180
     env:
-      GH_TOKEN: ${{ secrets.RELEASE_TRAIN_TOKEN }}
+      BUILDER_APP_KEY: ${{ secrets.BUILDER_APP_PRIVATE_KEY }}
       WIZARD_TRAIN_BUDGET_S: "9000"
-      WIZARD_TRAIN_GIT_NAME: wizardosbuilder
-      WIZARD_TRAIN_GIT_EMAIL: 353326775+wizardosbuilder@users.noreply.github.com
+      WIZARD_TRAIN_GIT_NAME: wizardos-builder[bot]
+      WIZARD_TRAIN_GIT_EMAIL: 355658529+wizardos-builder[bot]@users.noreply.github.com
     steps:
       - uses: actions/checkout@v4
       - name: Work dirs
         run: |
           echo "WIZARD_TRAIN_HOME=$RUNNER_TEMP/release-train" >> "$GITHUB_ENV"
           echo "WIZARD_RIG_DIR=$RUNNER_TEMP/rig" >> "$GITHUB_ENV"
-      - run: gh auth setup-git
+      - name: Log in as the WizardOS Builder app
+        run: tools/builder_app_login.sh
       - uses: ./.github/actions/upgrade-rig-setup
       - name: Promote latest (upgrade test, promotion PR, checked mirror)
         run: |

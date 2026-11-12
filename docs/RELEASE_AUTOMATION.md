@@ -103,6 +103,8 @@ owner step below is done.
 
 ## Owner setup (one token)
 
+**12 Nov 2026:** GitHub suspended the `wizardosbuilder` user, so the train's writer is now the GitHub App **WizardOS Builder** (`wizardos-builder[bot]`, app 5723441). Its private key is the repo secret `BUILDER_APP_PRIVATE_KEY` on wizard-os, wizard-ux, wizard-agent-service and wizard-app-manager; `tools/builder_app_login.sh` mints and refreshes the 1-hour token, and the notify workflows use `actions/create-github-app-token`. `RELEASE_TRAIN_TOKEN` is retired. The older text below describes the user-token setup.
+
 The train has one writer, `wizardosbuilder`, and one secret, `RELEASE_TRAIN_TOKEN`.
 
 1. **Access for the account** (org admin, once): `wizardosbuilder` needs **Write** on wizard-os and
