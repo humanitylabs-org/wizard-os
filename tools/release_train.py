@@ -174,9 +174,18 @@ def merged_prs(repo: str, repo_dir: Path, old: str, new: str) -> list[dict]:
         return []
     known = {p["number"]: p for p in gh_json(["pr", "list", "-R", repo, "--state", "merged", "-L", "400",
                                               "--json", "number,title,labels"])}
+    subjects = dict(line.split("\t", 1) for line in log.splitlines() if "\t" in line)   # sha -> subject
     out = []
     for n, sha in nums.items():
-        p = known.get(n) or gh_json(["pr", "view", str(n), "-R", repo, "--json", "number,title,labels"])
+        try:
+            p = known.get(n) or gh_json(["pr", "view", str(n), "-R", repo, "--json", "number,title,labels"])
+        except Stop as e:
+            # 12 Nov 2026: GitHub hides every PR of the suspended wizardosbuilder user ("Could not resolve to a
+            # PullRequest"). The merge is still in git: take its title from the commit subject, with no labels.
+            if "Could not resolve to a PullRequest" not in str(e):
+                raise
+            subj = subjects.get(sha, "")
+            p = {"title": re.sub(r"\s*\(#\d+\)\s*$", "", subj), "labels": []}
         out.append({"repo": repo, "number": n, "commit": sha, "title": p.get("title", ""),
                     "labels": sorted(lb["name"] for lb in p.get("labels", []))})
     return sorted(out, key=lambda p: p["number"])
