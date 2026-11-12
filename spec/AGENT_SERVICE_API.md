@@ -112,6 +112,7 @@ POST            /wizard-os-home/api/route                         compat       u
 GET,POST,DELETE /wizard/mcp                                       box          -   -
 GET             /wizard/v1/agent-context                          box          -   harness,format
 GET             /wizard/health                                    box          -   -
+GET,POST,DELETE /wizard/v1/restart                                box          -   -
 GET             /wizard/                                          page         ux  session,view
 GET             /wizard-os-home/                                  page         ux  -
 GET             /wizard/v1/wizard-apps                            proposed     -   -
@@ -478,7 +479,8 @@ Served only when the service also serves the UX (`WIZARD_UX_DIR`), under its pre
 
 - `/wizard/mcp`: the `wizard` MCP gateway (streamable HTTP; spec/AGENT_BRIDGE.md). `POST` JSON-RPC (`initialize` returns `Mcp-Session-Id`; `tools/list`, `tools/call`, `ping`), `GET` the notification stream (`tools/list_changed` when `apps.json` changes), `DELETE` ends the session. `404` when the bridge is off.
 - `GET /wizard/v1/agent-context?harness=hermes|generic&format=json`: the WizardOS kernel for a harness, as text, or as JSON (`text`, `chars`, `harness`, `mcp_server`, `job_map`, `job_skills`, `apps`).
-- `GET /wizard/health`: `{"status":"ok","upstream_reachable":true,"queue":{…}}`. No auth.
+- `GET /wizard/health`: `{"status":"ok","upstream_reachable":true,"queue":{…}}`. No auth. While a graceful restart holds sends (below) it also carries `restart` (`phase`, `holding`, `reason`, `requested_at`, `wait_until`, `active`, `held`; counts only, no thread ids).
+- `/wizard/v1/restart` (off unless `WIZARD_GRACEFUL_RESTART=1`, else `404`; owner or the App Manager on loopback, `403` for apps and agents): the graceful restart gate. `POST {"reason","wait_s"}` holds new sends (accepted and saved, launched by the next process) while running turns finish; `GET` answers `phase` `waiting`, `ready` (nothing runs: restart now) or `overdue` (past `wait_until`: ask the owner), with `turns`, `held` and `active_unknown`; `DELETE` lifts the hold. Each `POST`/`GET` renews a 2-minute lease, so an abandoned hold lapses. Details: wizard-agent-service `docs/graceful-restart.md`.
 
 ## Pages
 
