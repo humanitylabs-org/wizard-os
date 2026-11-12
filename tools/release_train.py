@@ -517,6 +517,29 @@ def mirror_problems(changes: list[tuple[str, str]], mirror_file, canonical_file,
     return problems, proofs
 
 
+def _vkey(v: str) -> tuple:
+    return tuple(int(x) if x.isdigit() else 0 for x in v.split("."))
+
+
+def mirror_gap(canonical: Path, mirror: Path, upto: str) -> list[str]:
+    """Canonical releases the App Manager mirror skipped (wizard-app-manager#656): every wizard-os releases/<v>.json
+    newer than the mirror's `latest` and older than `upto` that the mirror lacks, oldest first. A mirror PR that
+    stalled (a flaky check stops the train) leaves the next cut jumping past it; copying these with the new release
+    keeps every rollback target installable instead of a 404."""
+    try:
+        floor = _vkey((mirror / "latest").read_text().strip())
+    except (OSError, ValueError):
+        return []
+    names = []
+    for f in canonical.glob("*.json"):
+        v = f.name[:-5]
+        if not v[:1].isdigit() or (mirror / f.name).exists():
+            continue
+        if floor < _vkey(v) < _vkey(upto):
+            names.append(v)
+    return sorted(names, key=_vkey)
+
+
 def verify_mirror(wam_dir: Path, wos_dir: Path, base: str, n: str, head: str) -> list[str]:
     """Prove mirror PR #n (head) byte-identical to wizard-os main and post MIRROR_STATUS on its head."""
     sh(["git", "-C", str(wos_dir), "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main"])
@@ -876,7 +899,18 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
          f"{len(items)} other changes")
     rel_json = wt / "releases" / f"{V}.json"
     if p["cut"]:
-        # Mirror the cut into the App Manager (the copy installers read), byte-identical.
+        # Mirror the cut into the App Manager (the copy installers read), byte-identical. Releases an earlier,
+        # stalled mirror PR never landed come along (oldest first), so the rollback target always exists.
+        gap = mirror_gap(wt / "releases", mwt / "releases", V)
+        for g in gap:
+            shutil.copyfile(wt / "releases" / f"{g}.json", mwt / "releases" / f"{g}.json")
+            with open(mwt / "releases" / "README.md", "a") as f:
+                f.write(f"\n## {g} provenance\n\nCanonical: wizard-os releases/{g}.json (release train, gap fill). "
+                        f"SHA256: `{sha(wt / 'releases' / f'{g}.json')}`.\n"
+                        f"{json.loads((wt / 'releases' / f'{g}.json').read_text()).get('about', '')}\n"
+                        "Channel: on latest only.\n")
+        if gap:
+            step(f"mirror gap fill: {', '.join(gap)} (never landed in {WAM})")
         shutil.copyfile(rel_json, mwt / "releases" / f"{V}.json")
         shutil.copyfile(wt / "releases" / "latest", mwt / "releases" / "latest")
         with open(mwt / "releases" / "README.md", "a") as f:
@@ -897,7 +931,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
             rep["cut_pr"] = open_and_merge(WOS, wt, branch_cut, f"Maintenance: cut {V} onto latest (release train)",
                                            body, "tier: maintenance", need_checks=False)
             mbody = (f"Maintenance: mirror **{V}** onto latest, byte-identical to canonical ({rep['cut_pr']}). "
-                     f"`releases/{V}.json` sha256 `{sha(rel_json)}`. Stable unchanged ({stable}). Merged on the automated "
+                     + (f"Also mirrors {', '.join(gap)}, which earlier mirror PRs never landed. " if gap else "")
+                     + f"`releases/{V}.json` sha256 `{sha(rel_json)}`. Stable unchanged ({stable}). Merged on the automated "
                      f"`{MIRROR_STATUS}` check (DECISIONS #96 as amended).\n\nRollback: "
                      f"`releases/latest` back to {latest}.")
             mbase = sh(["git", "-C", str(wam), "rev-parse", "origin/main"]).strip()
