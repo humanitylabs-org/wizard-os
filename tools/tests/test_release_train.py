@@ -147,6 +147,30 @@ class Gate(unittest.TestCase):
         self.assertIn("return rep", src[i_gate:i_rig])
         self.assertIn('rep["outcome"] = (f"BLOCKED:', src[i_gate:i_rig])
 
+    def test_mirror_gap_lists_canonical_releases_the_mirror_skipped(self):
+        """wizard-app-manager#656: stalled mirror PRs left Latest jumping 0.3.182 -> 0.3.198 with no rollback target."""
+        with tempfile.TemporaryDirectory() as d:
+            wos, wam = Path(d, "wos"), Path(d, "wam")
+            wos.mkdir(); wam.mkdir()
+            for v in ("0.3.9", "0.3.10", "0.3.11", "0.3.12", "0.3.13", "0.3.14"):
+                (wos / f"{v}.json").write_text("{}")
+            (wos / "hermes-lock.json").write_text("{}")
+            (wam / "0.3.9.json").write_text("{}"); (wam / "0.3.10.json").write_text("{}")
+            (wam / "0.3.12.json").write_text("{}")
+            (wam / "latest").write_text("0.3.10\n")
+            # 0.3.12 is already there; 0.3.14 is the release being cut now; 0.3.9 is older than the mirror's latest.
+            self.assertEqual(rt.mirror_gap(wos, wam, "0.3.14"), ["0.3.11", "0.3.13"])
+            (wam / "latest").write_text("0.3.13\n")
+            self.assertEqual(rt.mirror_gap(wos, wam, "0.3.14"), [])
+            (wam / "latest").unlink()
+            self.assertEqual(rt.mirror_gap(wos, wam, "0.3.14"), [])
+
+    def test_the_cut_mirror_fills_the_gap_before_moving_latest(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        i_gap = src.index('gap = mirror_gap(wt / "releases", mwt / "releases", V)')
+        i_latest = src.index('shutil.copyfile(wt / "releases" / "latest", mwt / "releases" / "latest")')
+        self.assertLess(i_gap, i_latest)
+
     def test_served_compares_the_exact_bytes(self):
         body = b'{"version": "0.0.1"}\n'
         resp = mock.MagicMock()
