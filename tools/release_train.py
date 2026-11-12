@@ -264,8 +264,12 @@ def published_wam(repo_dir: Path, latest: dict, limit: int = 40) -> dict | None:
                  and is_ancestor(repo_dir, r["headSha"], "origin/main")), None)
     if not head or head == l_c or is_ancestor(repo_dir, head, l_c) or only_releases_changed(repo_dir, l_c, head):
         return None
-    images = gh_json(["run", "list", "-R", WAM, "--workflow", WAM_IMAGE_WORKFLOW, "--branch", "main", "--event", "push",
-                      "-L", str(limit), "--json", "databaseId,headSha,conclusion,url"])
+    # 12 Nov 2026: a main push by the suspended wizardosbuilder user left no visible image run, so a rebuild can be
+    # started by hand (workflow_dispatch on main): count those too. Both publish from main and are attested.
+    images = [r for ev in ("push", "workflow_dispatch")
+              for r in gh_json(["run", "list", "-R", WAM, "--workflow", WAM_IMAGE_WORKFLOW, "--branch", "main",
+                                "--event", ev, "-L", str(limit), "--json", "databaseId,headSha,conclusion,url,createdAt"])]
+    images.sort(key=lambda r: r.get("createdAt") or "", reverse=True)
     for r in images:
         if r.get("conclusion") != "success" or not is_ancestor(repo_dir, r["headSha"], head):
             continue
