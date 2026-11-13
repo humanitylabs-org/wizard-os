@@ -23,7 +23,7 @@ Contract: [MAINTENANCE.md](MAINTENANCE.md). Implementation: wizard-app-manager `
 
 | State | Where | Backup and restore today |
 |---|---|---|
-| Owner choices: `os_security`, `quiet_restarts`, `held_platform`, `quiet_reboot`, `helper_removed` | `~/.wizard-os/maintenance.json` | Travels. See [the open question](#open-helper_removed-on-restore) for `helper_removed`. |
+| Owner choices: `os_security`, `quiet_restarts`, `held_platform`, `quiet_reboot`, `helper_removed` | `~/.wizard-os/maintenance.json` | Travels. For `helper_removed` see [the restore rule](#decided-helper_removed-on-restore). |
 | Run history, last run, Health row | `~/.wizard-os/maintenance/` (`history.jsonl`, `last.json`, `health.json`) | Travels. The next nightly run on the destination overwrites `last.json` and `health.json`. |
 | Run lease | `~/.wizard-os/maintenance.lock` | Not captured (lock file). |
 | Nightly timer | `~/.config/systemd/user/wizard-os-maintain.{service,timer}` | Outside the backup. The destination's installer runs `wam maintain --ensure-timer`. |
@@ -32,29 +32,30 @@ Contract: [MAINTENANCE.md](MAINTENANCE.md). Implementation: wizard-app-manager `
 | Restart lane sudoers rule (attended opt-in) | `/etc/sudoers.d/wizard-os-maintenance-restart-lane` (root, 0440) | Outside the backup. Only `wam maintain setup --restart-lane` writes it, so it is never on the destination after a restore. |
 | Distribution updater pause (apt, `patch` mode only) | `/etc/apt/apt.conf.d/52wizard-os-maintenance` | Outside the backup. Written by the helper's `native-off` when the owner picks `patch`. A restored `os_security: patch` does not write it: the distribution's own updater keeps running on the destination until the owner sets the mode again. |
 
-### Open: `helper_removed` on restore
+### Decided: `helper_removed` on restore
 
 `wam maintain remove` deletes the helper and both sudoers rules and records `helper_removed: true`. Later installer
 runs (`wam maintain setup --installer`; a WizardOS update re-runs the installer) then skip the helper, so the owner's
 removal sticks.
 
 Because `maintenance.json` travels, a restore copies the source box's `helper_removed: true` onto a host whose own
-installer has already put the helper in place. The helper stays installed on the new host, but every later installer
-run skips refreshing it. After the next update that changes the helper, the installed copy is `stale`, every root
-step is refused ("The OS patch helper is not installed"), and OS patching stops on the new host. Nothing tells the
-owner that a flag copied from the old box is the cause.
+installer has already put the helper in place. Left alone, the helper stays installed but every later installer run
+skips refreshing it, so after the next update that changes the helper every root step is refused and OS patching
+stops on the new host.
 
-The restore rule is not decided yet. Options:
+Rule (wizard-os#425, the builder's pick of the three options listed there, because it is the only one that does no
+root work and keeps the owner's choice): **the flag travels and is kept, and the mismatch is shown.** Nothing removes
+or reinstalls the helper during or after a restore. Whenever `helper_removed` is set but a helper exists on the box,
+Home > Resources > Health shows a **Maintenance helper: needs a choice** row naming `wam maintain setup` (keep it
+here; clears the flag) and `wam maintain remove` (remove it here too). Either command clears the row.
+A restore recomputes `maintenance/health.json` on the destination right away, so the row shows without waiting for
+the next nightly run.
+Implementation: wizard-app-manager `wam/maintain.py` `_helper_removed_item` and `refresh_health` (called from
+`wam/backup/restore.py`), test
+`tests/test_maintain_restore.py` (which also checks that the sudoers rules `setup()` writes list exactly the commands
+in [MAINTENANCE.md](MAINTENANCE.md)).
 
-1. Treat `helper_removed` as per-machine: a restore keeps the destination's value. The destination keeps the helper
-   its installer put in place, and the owner removes it again there if they still want it gone.
-2. Keep the source's value, and have restore (or the first nightly run after it) remove the destination's helper so
-   the box matches what the owner chose. Root work during a restore.
-3. Keep the source's value and show a Health line on the destination: "Root maintenance helper was removed on your
-   old box. Run `wam maintain setup` to turn it on here."
-
-Until this is decided, the installed upgrade test (#135) and the blank-host restore proof should record what they
-see for this flag rather than assert one rule.
+To change it later (for example to treat the flag as per machine), change this section first.
 
 ## Agent and owner state
 

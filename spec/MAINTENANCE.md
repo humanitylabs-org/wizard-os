@@ -83,7 +83,7 @@ the distribution's own updater (`native-off`), or remove the helper. Nothing els
 `wam maintain remove` deletes the helper and both rules, sets `os_security` back to `check`, turns off `quiet_restarts`, `held_platform` and
 `quiet_reboot`, and records
 `helper_removed: true` in `maintenance.json`. Installer runs then skip setup until the owner runs `wam maintain setup`
-again. What a restore does with that flag is still open: see [BOX_STATE.md](BOX_STATE.md#nightly-maintenance).
+again. After a restore the flag is kept, and Health asks the owner to choose when a helper is installed on the new box: see [BOX_STATE.md](BOX_STATE.md#decided-helper_removed-on-restore).
 
 ## Safety rules
 

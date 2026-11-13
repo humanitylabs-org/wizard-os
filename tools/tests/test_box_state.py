@@ -42,7 +42,7 @@ class BoxStateTest(unittest.TestCase):
 
     def test_helper_removed_restore_rule_is_marked(self):
         self.assertIn('helper_removed', self.inventory)
-        self.assertRegex(self.inventory, r'(?m)^### (Open|Decided): `helper_removed` on restore$')
+        self.assertRegex(self.inventory, r'(?m)^### Decided: `helper_removed` on restore$')
 
     def test_every_row_names_a_rule(self):
         rows = [line for line in self.inventory.splitlines()
