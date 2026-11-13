@@ -48,7 +48,10 @@ root work and keeps the owner's choice): **the flag travels and is kept, and the
 or reinstalls the helper during or after a restore. Whenever `helper_removed` is set but a helper exists on the box,
 Home > Resources > Health shows a **Maintenance helper: needs a choice** row naming `wam maintain setup` (keep it
 here; clears the flag) and `wam maintain remove` (remove it here too). Either command clears the row.
-Implementation: wizard-app-manager `wam/maintain.py` `_helper_removed_item`, test
+A restore recomputes `maintenance/health.json` on the destination right away, so the row shows without waiting for
+the next nightly run.
+Implementation: wizard-app-manager `wam/maintain.py` `_helper_removed_item` and `refresh_health` (called from
+`wam/backup/restore.py`), test
 `tests/test_maintain_restore.py` (which also checks that the sudoers rules `setup()` writes list exactly the commands
 in [MAINTENANCE.md](MAINTENANCE.md)).
 
