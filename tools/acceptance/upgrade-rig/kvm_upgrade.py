@@ -4,6 +4,7 @@ to a candidate release with the same command, and check what promote_stable.py's
 
     python3 tools/acceptance/upgrade-rig/kvm_upgrade.py golden            # build/refresh the Hermes base image
     python3 tools/acceptance/upgrade-rig/kvm_upgrade.py run --from 0.3.72 --to 0.3.73 [--release-base URL] [--keep]
+    python3 tools/acceptance/upgrade-rig/kvm_upgrade.py run --from 0.3.72 --to 0.3.73 --helper-removed
 
 The rig is the one documented in docs/acceptance/promote-0.3.65.md and promote-0.3.72.md, automated:
 
@@ -20,7 +21,10 @@ The rig is the one documented in docs/acceptance/promote-0.3.65.md and promote-0
 
 Passing means: the upgrade ended `done`; release.json names the candidate, status `pinned`, every check ok; Hermes
 config.yaml/.env/SOUL.md are byte-identical; the Hermes API answers; the shell answers; `wizard doctor` and
-`wam doctor` report no FAIL. The report (JSON + Markdown) is the evidence a promotion links to.
+`wam doctor` report no FAIL; `wam maintain status` reports the nightly maintenance helper `ready` (or `root` on a
+root-run box), never `stale`, `unsafe` or missing. With --helper-removed the owner removes the helper (`wam maintain
+remove`) before the upgrade, and the upgrade must keep that choice: `removed_by_owner`, with no helper reinstalled.
+The report (JSON + Markdown) is the evidence a promotion links to.
 
 Needs: qemu-system-x86_64 with /dev/kvm, qemu-img, cloud-localds, docker (rootless is fine), ssh, ~12 GB disk.
 Nothing here touches a real box.
@@ -404,6 +408,7 @@ def snapshot() -> dict:
         snap["release"] = json.loads(guest("cat /root/.wizard-os/release.json", check=False))
     except ValueError:
         snap["release"] = {}
+    snap["maintenance_helper"] = maintenance_helper()
     snap["containers"] = guest("docker ps --format '{{.Names}}' | sort | while read n; do "
                                "echo \"$n $(docker inspect -f '{{.Image}} {{.State.StartedAt}}' $n)\"; done",
                                check=False).splitlines()
@@ -411,6 +416,42 @@ def snapshot() -> dict:
         lines = guest(f"{tool} doctor 2>&1", check=False, timeout=300).splitlines()
         snap[f"{tool}_doctor_fail"] = [ln.strip() for ln in lines if ln.strip().startswith("FAIL")]
     return snap
+
+
+HELPER_PATHS = ("/usr/local/libexec/wizard-os/os-patch", "/etc/sudoers.d/wizard-os-maintenance")
+
+
+def helper_report(status: dict | None, installed: bool) -> str:
+    """One word for the nightly maintenance helper, from `wam maintain status --json` plus whether a helper file is on
+    disk: ready / root / removed_by_owner / needs_choice (removed earlier but one is installed) / stale / unsafe /
+    missing / unknown (no readable status)."""
+    if not isinstance(status, dict) or not isinstance(status.get("helper"), str):
+        return "unknown"
+    removed = bool((status.get("settings") or {}).get("helper_removed"))
+    if removed:
+        return "needs_choice" if installed else "removed_by_owner"
+    return status["helper"]
+
+
+def helper_problems(after: str, owner_removed: bool) -> list[str]:
+    """What the upgrade test fails on: a fresh-or-kept helper is `ready` (`root` on a root-run box, which calls the
+    patcher directly); an owner who removed it keeps `removed_by_owner`. Anything else (`stale` above all) means
+    nightly OS patching silently stopped after the upgrade."""
+    want = ("removed_by_owner",) if owner_removed else ("ready", "root")
+    if after in want:
+        return []
+    return [f"maintenance helper: {after} after the upgrade (want {' or '.join(want)})"]
+
+
+def maintenance_helper() -> dict:
+    raw = guest("wam maintain status --json 2>/dev/null", check=False, timeout=120)
+    installed = guest("for f in " + " ".join(HELPER_PATHS) + "; do [ -e $f ] && echo yes; done", check=False).strip() != ""
+    try:
+        status = json.loads(raw)
+    except ValueError:
+        status = None
+    return {"state": helper_report(status, installed), "installed": installed,
+            "helper": (status or {}).get("helper") if isinstance(status, dict) else None}
 
 
 def install(release: str, label: str, release_base: str | None) -> tuple[dict, float]:
@@ -441,7 +482,8 @@ def install(release: str, label: str, release_base: str | None) -> tuple[dict, f
     return st, secs
 
 
-def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age: float, out: Path | None) -> dict:
+def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age: float, out: Path | None,
+        helper_removed: bool = False) -> dict:
     for tool in ("qemu-system-x86_64", "qemu-img", "cloud-localds", "docker", "ssh"):
         if not shutil.which(tool):
             raise SystemExit(f"missing {tool}")
@@ -457,7 +499,8 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
     os_sh = subprocess.run(["curl", "-fsSL", OS_SH], capture_output=True, timeout=60).stdout   # the bytes owners get
     report: dict = {"from": frm, "to": to, "started_at": stamp, "release_base": release_base or "public mirror",
                     "golden": json.loads((ASSETS / "golden.json").read_text()),
-                    "os_sh_sha256": hashlib.sha256(os_sh).hexdigest(), "rundir": str(rundir), "problems": []}
+                    "os_sh_sha256": hashlib.sha256(os_sh).hexdigest(), "rundir": str(rundir), "problems": [],
+                    "helper_removed": helper_removed}
     vm_stop(GUEST_UNIT)
     qmp = None
     try:
@@ -471,8 +514,14 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         if st.get("state") != "done":
             report["problems"].append(f"installing {frm} ended {st.get('state')}: {st.get('failure_reason') or st.get('message')}")
             return report
+        if helper_removed:
+            say("owner removes the maintenance helper before the upgrade (wam maintain remove)")
+            report["helper_remove"] = guest("wam maintain remove --json 2>&1", check=False, timeout=120)[-2000:]
         before = snapshot()
         report["before"] = before
+        if helper_removed and (before.get("maintenance_helper") or {}).get("state") != "removed_by_owner":
+            report["problems"].append(f"before: removing the maintenance helper left it "
+                                      f"{(before.get('maintenance_helper') or {}).get('state')}")
         rel = before.get("release") or {}
         if rel.get("release") != frm or rel.get("status") != "pinned":
             report["problems"].append(f"before: release.json is {rel.get('release')} {rel.get('status')}, not {frm} pinned")
@@ -494,6 +543,8 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
                 report["problems"].append(f"{k}: {after.get(k)} (want {want})")
         if not str(after.get("shell", "")).startswith(("2", "3")):   # the shell answers / with a redirect into the UI
             report["problems"].append(f"shell: HTTP {after.get('shell')}")
+        report["problems"] += helper_problems((after.get("maintenance_helper") or {}).get("state", "unknown"),
+                                              helper_removed)
         for tool in ("wizard", "wam"):
             if after.get(f"{tool}_doctor_fail"):
                 report["problems"].append(f"{tool} doctor FAIL: {after[f'{tool}_doctor_fail']}")
@@ -540,6 +591,8 @@ def markdown(r: dict) -> str:
              f"({', '.join(f'{k} `{v[:8]}…`' for k, v in (a.get('files') or {}).items())}).",
              f"- After: Hermes API /health {a.get('api')}, gateway {a.get('gateway')}, shell {a.get('shell')}, "
              f"`wizard doctor` FAIL {len(a.get('wizard_doctor_fail') or [])}, `wam doctor` FAIL {len(a.get('wam_doctor_fail') or [])}.",
+             f"- Maintenance helper{' (owner removed it before the upgrade)' if r.get('helper_removed') else ''}: "
+             f"{(b.get('maintenance_helper') or {}).get('state')} before, {(a.get('maintenance_helper') or {}).get('state')} after.",
              ""]
     if r.get("problems"):
         lines += ["**Problems:**", *[f"- {p}" for p in r["problems"]], ""]
@@ -558,11 +611,13 @@ def main() -> int:
     r.add_argument("--keep", action="store_true", help="leave the guest running (debugging)")
     r.add_argument("--max-golden-age", type=float, default=7.0, help="days before the Hermes base is rebuilt")
     r.add_argument("--out", type=Path, help="also write the JSON report here")
+    r.add_argument("--helper-removed", action="store_true",
+                   help="owner removes the maintenance helper before the upgrade; the upgrade must keep that choice")
     a = ap.parse_args()
     if a.cmd == "golden":
         golden(force=a.force)
         return 0
-    rep = run(a.frm, a.to, a.release_base, a.keep, a.max_golden_age, a.out)
+    rep = run(a.frm, a.to, a.release_base, a.keep, a.max_golden_age, a.out, a.helper_removed)
     print(json.dumps({k: rep.get(k) for k in ("passed", "problems", "rundir")}, indent=2))
     return 0 if rep.get("passed") else 1
 
