@@ -191,5 +191,18 @@ class StyleCheck(unittest.TestCase):
         rule = re.search(r'\.wz-sheet-x \{([^}]*)\}', css)[1]
         self.assertRegex(rule, r'background:[^;]*var\(--wz-panel\)')
 
+    def test_try_features_section(self):
+        # wizard-os#627: the shared "Try new features" section (render, hide, flip, vote, re-read).
+        import shutil
+        node = shutil.which('node')
+        if not node: self.skipTest('node not installed')
+        here = Path(__file__).parent
+        out = subprocess.run([node, str(here / 'test_try_features.cjs')], capture_output=True, text=True, timeout=60)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        policy = __import__('json').loads((here / 'style-policy.json').read_text())
+        digest = hashlib.sha256((here / 'try-features.js').read_bytes()).hexdigest()
+        for name in ('try-features.js', 'wizard-try-features.js'):
+            self.assertEqual(policy['assets'][name], {'source': 'style/try-features.js', 'sha256': digest})
+
 
 if __name__ == '__main__': unittest.main()
