@@ -14,6 +14,7 @@
 - `shell-tokens.css`: generated from the existing shell skin variables by `python3 style/generate_shell.py`; never introduces global resets or legacy alias cycles.
 - `controls.css`: generated no-global-reset row/card/button/action subset for shell-embedded components. Run `python3 style/generate_controls.py` after changing those primitives in `ui.css`; `--check` catches drift. This is a generated distribution of the one kit, not a second authored implementation.
 - `sheet.js`: the one pop-up's behaviour (×, Esc, outside tap, Back, swipe down) for `.wz-sheet`.
+- `try-features.js`: the standard "Try new features" section at the bottom of every app's Settings (feature switches under test, On/Off, optional thumbs up/down), read from the app's `wizard.app-switches/1` listing; see `docs/APP_SWITCHES.md`.
 - `demo.html`: executable component gallery, with a nested sheet handled by `__wizardCloseOverlay()`. Serve this directory with any static HTTP server to inspect it.
 
 ## Use

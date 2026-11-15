@@ -51,6 +51,37 @@ the switch's real state (core or app).
 4. **Link** each switch to the issue(s) it delivers (`issues`), so the card finds it.
 5. Re-read switches when the page becomes visible: the owner may flip them from the Tracker.
 
+## Try new features: the one place in an app's Settings
+Miguel, 14 Nov 2026 (wizard-os#627): a feature under test is shown **only** in one standard section at the very bottom
+of the app's Settings, with the same look and wording in every app, and **never** as ordinary Settings rows.
+
+- **Title** `Try new features`, then one short note: "Features still being tested. Approved ones become part of the
+  app; the rest go away. Thumbs up the ones you like."
+- **One row per switch** from the app's own listing: name, one-line description, On/Off and, when the app keeps votes,
+  thumbs up / thumbs down. The section hides when the app has no switches.
+- **Shared component**, so apps don't each build it: `style/try-features.js` (kit name `wizard-try-features.js`,
+  hash-locked in `style/style-policy.json`). Put an empty `<section id="try-features"></section>` last in Settings and
+  call `WzTryFeatures.mount(el, { path: 'api/switches' })` (the path declared in `wizard.md`). It needs `tokens.css` +
+  `ui.css`, posts flips and votes with `X-Wizard-Switch: 1`, and re-reads when the page becomes visible.
+- **Lifecycle unchanged:** approved removes the switch (the feature is just part of the app); dropped removes it with
+  its code. Either way it leaves the listing, so it leaves the section.
+
+### Optional feedback fields (additive to `wizard.app-switches/1`)
+An app that records feedback adds two fields to each switch in its `GET` listing; clients that don't know them ignore
+them, and an app without them simply shows no thumbs:
+
+- `tried`: `true` once the owner has turned the switch on at least once on this box (never reset by turning it off).
+- `vote`: `"up"`, `"down"` or `null` (no vote). Present (even `null`) means the app keeps votes.
+
+`POST` with `{"id": "…", "vote": "up"|"down"|null}` sets the vote, with the same owner-only checks as a flip; any
+other vote value is 400. Tapping the active thumb again sends `null`. Votes and `tried` are box state like `on`
+(`DATA/switches.json`).
+
+**Counts leave the box anonymously, opt-in by tapping:** only `{switch id, issues, tried, vote}` plus a per-box random
+id for de-duplication, never content or identity, through the existing Feedback route. The App Manager collects them
+from the catalog above and the Tracker shows `Tried by N · 👍 N · 👎 N` on the item. Those two parts are tracked in
+their own repos (linked from wizard-os#627).
+
 Shared code (empty list, copy as is): Python stdlib `wizard-app-manager templates/hello-wizard/app/server.py` (the `wizard.app-switches/1` block + `wizard_switches_install(Handler)`); FastAPI `wizard-recorder app/wizard_switches.py` (`install_switches(app, data_dir)`); Node `wizard-music server/switches.mjs` (`handleSwitches(req, res)`). Every org app shipped one on 11 Nov 2026.
 
 Reference implementations: wizard-messenger `switches.py` + `web.py` `_switches`; wizard-calendar `app/server.py`
