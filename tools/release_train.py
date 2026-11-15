@@ -6,7 +6,7 @@
     python3 tools/release_train.py run --dry-run            # everything local; stops before any push or merge
     python3 tools/release_train.py run --dry-run --force    # same, even when no fix is waiting (proves the path)
     python3 tools/release_train.py cut [--dry-run]          # For testers: cut + mirror main's newest published images
-    python3 tools/release_train.py promote-soaked [--dry-run]   # For everyone: latest after 72h, no release-blocker
+    python3 tools/release_train.py promote-soaked [--dry-run]   # For everyone: newest release cut 72h+ ago, no release-blocker
 
 For testers / For everyone (Miguel + James, Nov 2026; proposed DECISIONS amendment of #75 in docs/RELEASE_AUTOMATION.md):
 `cut` is what .github/workflows/release-cut.yml runs after any component merge to main publishes: every newer
@@ -14,9 +14,10 @@ published Wizard UX / Agent Service main commit, and the newest green App Manage
 published image), is cut onto latest (not only Recommended fixes), mirrored, and it stops there (no rig, no
 promotion). At most one cut per MIN_CUT_INTERVAL (30 min): a cut asked for sooner is DEFERRED and the workflow's
 30-minute sweep picks it up. `promote-soaked` is what .github/workflows/release-promote.yml runs on a
-schedule: when releases/latest has been latest for >= SOAK_HOURS (promote_stable.latest_since) and no issue labelled
-`release-blocker` is open anywhere in the org, it runs the same installed upgrade test from the current Stable and
-promotes WITHOUT --fast-track (the normal soaked gate), then mirrors. Anything missing: it waits and says why.
+schedule: it takes the NEWEST release above Stable that was cut onto releases/latest >= SOAK_HOURS ago
+(promote_stable.latest_since, from the git history of releases/latest; latest itself keeps moving every ~30 min), and
+when no issue labelled `release-blocker` is open anywhere in the org, it runs the same installed upgrade test from the
+current Stable on it and promotes WITHOUT --fast-track (the normal soaked gate), then mirrors. Anything missing: it waits and says why.
 `promote-soaked --check` only answers whether that is due (no clones of the components, no rig).
 
 Mirror PRs into wizard-app-manager merge on an automated check, not a person (DECISIONS #96 as amended, Nov 2026):
@@ -742,11 +743,13 @@ def _hf_names(hf: list[dict]) -> str:
     return ", ".join(f"{h['repo'].split('/')[1]}#{h['number']}" for h in hf)
 
 
-# Soak by cut age (wizard-os#416), OFF by default: WIZARD_TRAIN_SOAK_BY_CUT=1 turns it on. While cuts keep landing,
-# the current latest is always minutes old, so "latest soaked 72h" never fires. With the switch on, For everyone takes
-# the newest release above stable that was FIRST named on releases/latest SOAK_HOURS or more ago ("72h" then means
-# "cut 72h ago"). promote_stable.py promote accepts any version from that history; the upgrade test still runs on it.
-SOAK_BY_CUT = os.environ.get("WIZARD_TRAIN_SOAK_BY_CUT", "0") == "1"
+# Soak by cut age (wizard-os#416), ON by default (Miguel, 15 Nov 2026: Stable had not moved since 9 Nov). While cuts
+# keep landing about every 30 minutes, the current latest is always minutes old, so "latest soaked 72h" never fires.
+# So For everyone takes the NEWEST release above stable that was first named on releases/latest SOAK_HOURS or more
+# ago, the same latest_since promote_stable.py records and checks ("72h" means "cut onto For testers 72h ago"). The
+# no-release-blocker gate, the installed upgrade test and promote_stable's own soak gate still apply to it.
+# WIZARD_TRAIN_SOAK_BY_CUT=0 restores the old rule (only the current latest, once it is 72h old).
+SOAK_BY_CUT = os.environ.get("WIZARD_TRAIN_SOAK_BY_CUT", "1") != "0"
 
 
 def latest_history(wos: Path, ref: str = "origin/main") -> dict[str, float]:
@@ -782,6 +785,14 @@ def due_by_cut(stable: str, latest: str, wos: Path, now: float | None = None) ->
     return best
 
 
+def oldest_above(stable: str, latest: str, wos: Path, now: float | None = None) -> tuple[str, float] | None:
+    """(the oldest release above stable that releases/latest named, its hours since that cut), or None. Only for
+    the WAITING message: it says when the next promotion is due."""
+    now = now if now is not None else time.time()
+    cand = [(v, (now - t) / 3600) for v, t in latest_history(wos).items() if _key(stable) < _key(v) <= _key(latest)]
+    return max(cand, key=lambda x: x[1]) if cand else None
+
+
 def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | None, list[dict], str]:
     """Is a release due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the
     soak, the version to promote). <wos> is the wizard-os clone (git objects; no checkout needed).
@@ -798,9 +809,12 @@ def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | N
     if need > 0 and hours < need:
         older = due_by_cut(stable, latest, wos) if SOAK_BY_CUT else None
         if older is None:
+            oldest = oldest_above(stable, latest, wos) if SOAK_BY_CUT else None
             return False, (f"WAITING: {latest} has been For testers for {hours:.0f}h; it moves to For everyone "
-                           f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}. "
-                           f"Stable stays {stable}."), hours, hf, latest
+                           f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}"
+                           + (f"; the oldest release above Stable, {oldest[0]}, was cut {oldest[1]:.0f}h ago and is "
+                              f"promoted at {SOAK_HOURS}h" if oldest and oldest[0] != latest else "")
+                           + f". Stable stays {stable}."), hours, hf, latest
         # soak by cut age: the older release takes the normal soaked gate (no hotfix waiver applies to it)
         version, hours, hf = older[0], older[1], []
     blockers = release_blockers()
@@ -1086,7 +1100,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
     for name, what in (("cut", "For testers: cut + mirror main's newest published images onto latest, then stop"),
-                       ("promote-soaked", "For everyone: promote latest after 72h with no open release-blocker")):
+                       ("promote-soaked", "For everyone: promote the newest release cut onto latest 72h+ ago, no open release-blocker")):
         x = sub.add_parser(name, help=what)
         x.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
         x.add_argument("--keep-guest", action="store_true")
