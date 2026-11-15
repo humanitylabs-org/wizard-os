@@ -38,15 +38,18 @@ owner step below is done.
    only while that is set (a skipped job uses no runner minutes) and cuts everything newer in one release, then
    clears it.
 3. **Promote** — `.github/workflows/release-promote.yml` (every 6h). `release_train.py promote-soaked --check`
-   (wizard-os only, seconds) decides: latest newer than stable → `promote_stable.latest_since` ≥ 72h → no open
-   `release-blocker` (`gh search issues --owner humanitylabs-org --label release-blocker`, fails closed). Only when
-   due: KVM + qemu on the runner, the installed upgrade test from the current stable on a disposable guest,
-   `promote_stable.py promote` **without** `--fast-track`, promotion PR, checked mirror. Otherwise `WAITING` /
-   `HELD` / `nothing to promote` with the reason. The soak is read from git objects of the train's
-   `--no-checkout` clone; when no commit of `releases/latest` names latest the run stops loudly instead of
-   waiting "an unknown time" (wizard-os#416). Switch, off by default: `WIZARD_TRAIN_SOAK_BY_CUT=1` promotes the
-   newest release above stable that was first named on latest 72h or more ago, so steady cuts no longer hold
-   Stable back forever ("72h" then means "cut 72h ago"); the upgrade test and blocker check still apply to it.
+   (wizard-os only, seconds) decides: the **newest release above stable that was first named on `releases/latest`
+   72h or more ago** (`promote_stable.latest_since`, from the git history of `releases/latest`; latest itself moves
+   about every 30 minutes, so it is never 72h old) → no open `release-blocker` (`gh search issues --owner
+   humanitylabs-org --label release-blocker`, fails closed). Only when due: KVM + qemu on the runner, the installed
+   upgrade test from the current stable to that release on a disposable guest, `promote_stable.py promote`
+   **without** `--fast-track` (its own 72h gate reads the same history), promotion PR, checked mirror. Otherwise
+   `WAITING` (naming the oldest release above stable and its age) / `HELD` / `nothing to promote` with the reason.
+   The soak is read from git objects of the train's `--no-checkout` clone; when no commit of `releases/latest`
+   names latest the run stops loudly instead of waiting "an unknown time" (wizard-os#416). "72h" means "cut onto
+   For testers 72h ago" (on by default since 15 Nov 2026; Stable had stalled at 0.3.143 from 9 Nov while every
+   cut reset the clock). `WIZARD_TRAIN_SOAK_BY_CUT=0` restores the old rule (only the current latest, once 72h old).
+
    Published release records (`releases/<v>.json`, `releases/promotions/<v>.json`) never change after they ship:
    `releases/SHA256SUMS` lists them, the train appends each new one, and `tools/tests/test_published_releases.py`
    fails when a listed file changes.

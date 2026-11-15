@@ -367,6 +367,7 @@ class AppManagerAndBursts(unittest.TestCase):
                 mock.patch.object(rt, "clone", return_value=Path(d)), \
                 mock.patch.object(rt, "show", side_effect=lambda repo, ref, f: "0.3.106\n" if f.endswith("latest") else "0.3.102\n"), \
                 mock.patch.object(rt, "soaked_for", return_value=10.0), \
+                mock.patch.object(rt, "SOAK_BY_CUT", False), \
                 mock.patch.object(rt, "plan", side_effect=AssertionError("no component clones")):
             from io import StringIO
             with mock.patch("sys.stdout", new=StringIO()) as out:
@@ -386,6 +387,7 @@ class ForTestersForEveryone(unittest.TestCase):
                 mock.patch.object(rt, "plan", return_value=p) as plan, \
                 mock.patch.object(rt, "clone", return_value=Path(d)), \
                 mock.patch.object(rt, "soaked_for", return_value=hours), \
+                mock.patch.object(rt, "SOAK_BY_CUT", False), \
                 mock.patch.object(rt, "release_blockers", return_value=list(blockers)), \
                 mock.patch.object(rt, "worktree", side_effect=rt.Stop("reached the rig path")):
             try:
@@ -489,8 +491,8 @@ def history(d: Path, cuts) -> Path:
 
 class SoakByCutAge(unittest.TestCase):
     """wizard-os#416: the scheduled promote measured "an unknown time" (its clone has no checkout), and with cuts
-    landing every few hours the current latest never reaches 72h. Measure from git objects; and, behind
-    WIZARD_TRAIN_SOAK_BY_CUT, promote the newest release cut 72h or more ago."""
+    landing every few hours the current latest never reaches 72h. Measure from git objects, and promote the newest
+    release cut 72h or more ago (on by default; WIZARD_TRAIN_SOAK_BY_CUT=0 restores the old rule)."""
     CUTS = [("0.3.102", "2026-11-01T00:00:00Z"), ("0.3.103", "2026-11-02T00:00:00Z"),
             ("0.3.104", "2026-11-03T00:00:00Z"), ("0.3.105", "2026-11-05T00:00:00Z"),
             ("0.3.106", "2026-11-06T23:00:00Z")]
@@ -507,11 +509,65 @@ class SoakByCutAge(unittest.TestCase):
         from datetime import datetime
         return datetime.fromisoformat(self.NOW).timestamp()
 
-    def test_off_by_default(self):
+    def test_on_by_default_and_0_turns_it_off(self):
         env = {k: v for k, v in __import__("os").environ.items() if k != "WIZARD_TRAIN_SOAK_BY_CUT"}
-        out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.SOAK_BY_CUT)"],
-                             cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
-        self.assertEqual(out, "False")
+        probe = lambda e: subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.SOAK_BY_CUT)"],  # noqa: E731
+                                         cwd=HERE.parent, env=e, capture_output=True, text=True).stdout.strip()
+        self.assertEqual(probe(env), "True")
+        self.assertEqual(probe({**env, "WIZARD_TRAIN_SOAK_BY_CUT": "0"}), "False")
+
+    def test_latest_moving_every_30_min_still_promotes_a_72h_old_release(self):
+        """The stall of 9-15 Nov 2026: a cut every 30 minutes, so latest is never 72h old. By default the gate must
+        still promote the newest release cut 72h+ ago, keep the blocker gate, and promote_stable must accept it."""
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 11, 10, tzinfo=timezone.utc)
+        cuts = [(f"0.3.{143 + i}", (start + timedelta(minutes=30 * i)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+                for i in range(161)]                       # 0.3.143 .. 0.3.303 over 80h
+        now = (start + timedelta(hours=80)).timestamp()    # latest 0.3.303 was cut 0h ago
+        with tempfile.TemporaryDirectory() as d:
+            src = history(Path(d) / "src", cuts)
+            wos = Path(d) / "repos" / "wizard-os"
+            subprocess.run(["git", "clone", "-q", "--no-checkout", str(src), str(wos)], check=True, capture_output=True)
+            env = {k: v for k, v in __import__("os").environ.items() if k != "WIZARD_TRAIN_SOAK_BY_CUT"}
+            default = subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.SOAK_BY_CUT)"],
+                                     cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
+            with mock.patch.object(rt.time, "time", return_value=now), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", default == "True"), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]):
+                due, why, hours, hf, v = rt.soak_gate("0.3.143", "0.3.303", wos)
+            # cut i lands at 30*i min; 72h before "now" (80h) is 8h in, cut 16: 0.3.159 is the newest cut 72h+ ago
+            self.assertEqual((due, v, hf), (True, "0.3.159", []), why)
+            self.assertAlmostEqual(hours, 72.0)
+            with mock.patch.object(rt.time, "time", return_value=now), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", default == "True"), \
+                    mock.patch.object(rt, "release_blockers", return_value=["u blocker"]):
+                due, why, _, _, _ = rt.soak_gate("0.3.143", "0.3.303", wos)
+            self.assertFalse(due)
+            self.assertTrue(why.startswith("HELD: 1 open release-blocker"), why)
+            # promote_stable (normal gate, no fast-track) accepts it: latest_since from the same history
+            import promote_stable as ps
+            since = ps.latest_since("0.3.159", src / "releases")
+            self.assertEqual(since, "2026-11-10T08:00:00Z")
+            rec = {"version": "0.3.159", "latest_since": since,
+                   "promoted_at": datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   "upgrade_test": {"from": "0.3.143", "to": "0.3.159", "passed": True, "evidence": "x"}}
+            self.assertEqual(ps.promotion_problems(rec, "0.3.159"), [])
+            # the old rule (switch off) is the stall itself
+            with mock.patch.object(rt.time, "time", return_value=now), mock.patch.object(rt, "SOAK_BY_CUT", False), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]):
+                due, why, _, _, _ = rt.soak_gate("0.3.143", "0.3.303", wos)
+            self.assertFalse(due)
+            self.assertTrue(why.startswith("WAITING: 0.3.303 has been For testers for 0h"), why)
+
+    def test_waiting_says_when_the_oldest_release_above_stable_is_due(self):
+        with tempfile.TemporaryDirectory() as d:
+            wos = self.no_checkout_clone(Path(d))
+            with mock.patch.object(rt.time, "time", return_value=self.now()), \
+                    mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                    mock.patch.object(rt, "release_blockers", return_value=[]):
+                due, why, _, _, v = rt.soak_gate("0.3.104", "0.3.106", wos)
+            self.assertFalse(due)
+            self.assertIn("the oldest release above Stable, 0.3.105, was cut 48h ago and is promoted at 72h", why)
 
     def test_the_gate_measures_a_no_checkout_clone(self):
         with tempfile.TemporaryDirectory() as d:
@@ -615,6 +671,7 @@ class HotfixLane(unittest.TestCase):
                 mock.patch.object(rt, "hotfix_prs", side_effect=rt.Stop("down") if lookup_fails else None, return_value=hf), \
                 mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: ref == "b" * 40 and in_latest), \
                 mock.patch.object(rt, "soaked_for", return_value=hours), \
+                mock.patch.object(rt, "SOAK_BY_CUT", False), \
                 mock.patch.object(rt, "release_blockers", return_value=list(blockers)):
             return rt.soak_gate("0.3.102", "0.3.106", Path("/nonexistent"))[:4]
 
