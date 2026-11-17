@@ -34,9 +34,10 @@ owner step below is done.
    the automated mirror check (below), wait until the public mirror serves it. Stops there: no rig, no promotion.
 2. **Bursts** — at most one For testers cut per 30 minutes. One concurrency group (`release-train`) runs one train
    at a time and keeps only the newest queued request. A cut asked for within 30 minutes of the last change to
-   `releases/latest` ends `DEFERRED` and sets the wizard-os variable `RELEASE_CUT_PENDING=1`; the `*/30` sweep runs
-   only while that is set (a skipped job uses no runner minutes) and cuts everything newer in one release, then
-   clears it.
+   `releases/latest` waits in its own run (`cut --wait-deferred`) until the 30 minutes are up, then cuts everything
+   newer in one release; a waiting hotfix (checked every 2 minutes) ends the wait at once. Requests that arrive while
+   it waits queue behind it (the newest one is kept). This replaced a `*/30` sweep gated on a `RELEASE_CUT_PENDING`
+   repo variable, which the builder app can't write, so deferred cuts waited for the daily sweep (wizard-os#669).
 3. **Promote** — `.github/workflows/release-promote.yml` (every 6h). `release_train.py promote-soaked --check`
    (wizard-os only, seconds) decides: the **newest release above stable that was first named on `releases/latest`
    72h or more ago** (`promote_stable.latest_since`, from the git history of `releases/latest`; latest itself moves

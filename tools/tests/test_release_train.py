@@ -348,6 +348,37 @@ class AppManagerAndBursts(unittest.TestCase):
             with self.assertRaises(rt.Stop):
                 rt.run(Path(d), False, False, [], False, "cut")
 
+    def test_a_deferred_cut_waits_out_the_window_then_cuts(self):
+        # wizard-os#669: a deferred cut must run once the 30-minute window ends, without a repo variable.
+        naps = []
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "last_cut_age", return_value=600.0), \
+                mock.patch.object(rt, "pending_hotfixes", return_value=[]), \
+                mock.patch.object(rt.time, "sleep", side_effect=naps.append), \
+                mock.patch.object(rt, "plan", side_effect=rt.Stop("planned")):
+            with self.assertRaises(rt.Stop):
+                rt.run(Path(d), False, False, [], False, "cut", wait_deferred=True)
+        self.assertAlmostEqual(sum(naps), rt.MIN_CUT_INTERVAL - 600.0 + rt.CUT_WAIT_MARGIN)
+        self.assertTrue(all(n <= rt.CUT_WAIT_POLL for n in naps))
+        # a hotfix that turns up while waiting ends the wait at once
+        naps.clear()
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "last_cut_age", return_value=600.0), \
+                mock.patch.object(rt, "pending_hotfixes", side_effect=[[], [], [{"repo": "o/r", "number": 7}]]), \
+                mock.patch.object(rt.time, "sleep", side_effect=naps.append), \
+                mock.patch.object(rt, "plan", side_effect=rt.Stop("planned")):
+            with self.assertRaises(rt.Stop):
+                rt.run(Path(d), False, False, [], False, "cut", wait_deferred=True)
+        self.assertEqual(len(naps), 2)
+
+    def test_release_cut_workflow_waits_instead_of_a_variable_sweep(self):
+        wf = (HERE.parent.parent / ".github" / "workflows" / "release-cut.yml").read_text()
+        self.assertIn("--wait-deferred", wf)
+        self.assertNotIn("vars.RELEASE_CUT_PENDING", wf)
+        self.assertNotIn("gh variable set", wf)
+
     def test_last_cut_age_reads_releases_latest_history(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
