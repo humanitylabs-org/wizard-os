@@ -12,8 +12,8 @@ For testers / For everyone (Miguel + James, Nov 2026; proposed DECISIONS amendme
 `cut` is what .github/workflows/release-cut.yml runs after any component merge to main publishes: every newer
 published Wizard UX / Agent Service main commit, and the newest green App Manager main commit (with its newest
 published image), is cut onto latest (not only Recommended fixes), mirrored, and it stops there (no rig, no
-promotion). At most one cut per MIN_CUT_INTERVAL (30 min): a cut asked for sooner is DEFERRED and the workflow's
-30-minute sweep picks it up. `promote-soaked` is what .github/workflows/release-promote.yml runs on a
+promotion). At most one cut per MIN_CUT_INTERVAL (30 min): the workflow runs `cut --wait-deferred`, so a cut asked
+for sooner waits in its run until the window ends and then cuts (wizard-os#669); without the flag it ends DEFERRED. `promote-soaked` is what .github/workflows/release-promote.yml runs on a
 schedule: it takes the NEWEST release above Stable that was cut onto releases/latest >= SOAK_HOURS ago
 (promote_stable.latest_since, from the git history of releases/latest; latest itself keeps moving every ~30 min), and
 when no issue labelled `release-blocker` is open anywhere in the org, it runs the same installed upgrade test from the
@@ -85,6 +85,8 @@ PUBLISH_WORKFLOW = "Publish public image"
 WAM_IMAGE_WORKFLOW, WAM_TEST_WORKFLOW = "image", "test"     # wizard-app-manager .github/workflows/image.yml, test.yml
 MIRROR_STATUS = "release-mirror/byte-identical"
 MIN_CUT_INTERVAL = int(os.environ.get("WIZARD_TRAIN_MIN_CUT_INTERVAL", "1800"))   # at most one For testers cut per 30 min
+CUT_WAIT_MARGIN = 30     # seconds past the window before a waiting cut goes ahead
+CUT_WAIT_POLL = 120      # a waiting cut looks for a hotfix this often
 STATE = Path(os.environ.get("WIZARD_TRAIN_HOME", Path.home() / ".wizard-os" / "release-train"))
 RIG = Path(__file__).resolve().parent / "acceptance" / "upgrade-rig" / "kvm_upgrade.py"
 PUBLIC_MIRROR = f"https://raw.githubusercontent.com/{WAM}/main/releases"
@@ -824,8 +826,26 @@ def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | N
     return True, "", hours, hf, version
 
 
+def wait_out_cut_window(work: Path, age: float, step) -> list:
+    """Sleep until MIN_CUT_INTERVAL has passed since the last cut, then return (wizard-os#669: a deferred cut used to
+    wait for a sweep gated on a repo variable the builder app can't write, so it waited for the daily cut). Checks for
+    a waiting hotfix every CUT_WAIT_POLL seconds and returns it at once, so the hotfix lane still skips the wait."""
+    left = MIN_CUT_INTERVAL - age + CUT_WAIT_MARGIN
+    step(f"the last For testers cut was {age / 60:.0f} min ago (at most one per {MIN_CUT_INTERVAL // 60} min); "
+         f"waiting {max(left, 0) / 60:.0f} min, then cutting whatever is newer")
+    while left > 0:
+        nap = min(CUT_WAIT_POLL, left)
+        time.sleep(nap)
+        left -= nap
+        if left > 0:
+            hf = pending_hotfixes(clone(WOS, work))
+            if hf:
+                return hf
+    return []
+
+
 def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_track: bool = False,
-        mode: str = "train") -> dict:
+        mode: str = "train", wait_deferred: bool = False) -> dict:
     """mode "train": today's fix train. "cut": For testers (cut + mirror any newer published main, then stop).
     "soaked": For everyone (promote latest after SOAK_HOURS with no release-blocker; normal gate, no fast-track)."""
     rep: dict = {"started": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "dry_run": dry, "force": force,
@@ -837,6 +857,11 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
         if hf:
             rep["hotfixes"] = hf
             step(f"hotfix lane: {_hf_names(hf)} waiting; cutting now (skips the {MIN_CUT_INTERVAL // 60}-min limit)")
+        elif age is not None and age < MIN_CUT_INTERVAL and wait_deferred:
+            hf = wait_out_cut_window(work, age, step)
+            if hf:
+                rep["hotfixes"] = hf
+                step(f"hotfix lane: {_hf_names(hf)} waiting; cutting now")
         elif age is not None and age < MIN_CUT_INTERVAL:
             rep["mode"], rep["deferred"] = mode, True
             rep["outcome"] = (f"DEFERRED: the last For testers cut was {age / 60:.0f} min ago (at most one per "
@@ -1104,6 +1129,9 @@ def main(argv: list[str] | None = None) -> int:
         x = sub.add_parser(name, help=what)
         x.add_argument("--dry-run", action="store_true", help="local only; stop before any push, PR or merge")
         x.add_argument("--keep-guest", action="store_true")
+        if name == "cut":
+            x.add_argument("--wait-deferred", action="store_true",
+                           help="inside the 30-min window, wait for it to end and then cut (instead of DEFERRED)")
         if name == "promote-soaked":
             x.add_argument("--check", action="store_true",
                            help="only say whether a promotion is due (prints due=true|false; no component clones, no rig)")
@@ -1146,7 +1174,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         mode = {"cut": "cut", "promote-soaked": "soaked"}.get(a.cmd, "train")
         rep = run(a.work, a.dry_run, getattr(a, "force", False), ["--keep"] if a.keep_guest else [],
-                  a.feature_fast_track if a.cmd == "run" else False, mode)
+                  a.feature_fast_track if a.cmd == "run" else False, mode, getattr(a, "wait_deferred", False))
         code = 0 if not str(rep.get("outcome", "")).startswith("STOPPED") else 1
     except Stop as e:
         rep, code = {"outcome": f"STOPPED: {e}", "dry_run": a.dry_run}, 1
