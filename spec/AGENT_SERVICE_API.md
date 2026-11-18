@@ -113,6 +113,7 @@ GET,POST,DELETE /wizard/mcp                                       box          -
 GET             /wizard/v1/agent-context                          box          -   harness,format
 GET             /wizard/health                                    box          -   -
 GET,POST,DELETE /wizard/v1/restart                                box          -   -
+GET             /wizard/v1/private-first                          box          -   -
 GET             /wizard/                                          page         ux  session,view
 GET             /wizard-os-home/                                  page         ux  -
 GET             /wizard/v1/wizard-apps                            proposed     -   -
@@ -482,6 +483,7 @@ Served only when the service also serves the UX (`WIZARD_UX_DIR`), under its pre
 - `GET /wizard/health`: `{"status":"ok","upstream_reachable":true,"queue":{…}}`. No auth. While a graceful restart holds sends (below) it also carries `restart` (`phase`, `holding`, `reason`, `requested_at`, `wait_until`, `active`, `held`; counts only, no thread ids).
 - **Per-device write limit** (issue wizard-agent-service#513): owner and app state writes under `/wizard/` (`PUT`/`PATCH` with a JSON or empty body; upload chunks and byte bodies excluded) are limited per device and route (device = a hash of the forwarded-for chain, socket address and user agent): at most 4 in flight and 60 a minute; over that the answer is `429 {"error":"client_storm","check":"client_storm"}` with `Retry-After`, never queued. Identical concurrent `PUT`s (same body) to thread-seen, thread-dispositions, ui-preferences and workspaces share one result. While it trips, `/wizard/health` also carries `client_storm` (`tripping`: `device`, `route`, `rate`, `in_flight`, `body_bytes`, `refused`, `since`; plus `limits`). Agents and machine routes are not limited here.
 - `/wizard/v1/restart` (off unless `WIZARD_GRACEFUL_RESTART=1`, else `404`; owner or the App Manager on loopback, `403` for apps and agents): the graceful restart gate. `POST {"reason","wait_s"}` holds new sends (accepted and saved, launched by the next process) while running turns finish; `GET` answers `phase` `waiting`, `ready` (nothing runs: restart now) or `overdue` (past `wait_until`: ask the owner), with `turns`, `held` and `active_unknown`; `DELETE` lifts the hold. Each `POST`/`GET` renews a 2-minute lease, so an abandoned hold lapses. Details: wizard-agent-service `docs/graceful-restart.md`.
+- `GET /wizard/v1/private-first` (owner; spec/AGENTS.md section 10, wizard-agent-service#545): `{"schema":"wizard.private-first/1","on","standard_agent":"hermes","private_agent","standard_on"}`, whether private first setup (switch `wizard/private-first-setup`, or `WIZARD_PRIVATE_FIRST=1`/`0`) is on, which agent it set up as the box's private default, and whether the standard agent is on yet. The provider images change it only through the wizard-os dashboard plugin (`/api/plugins/wizard-os/private-first`, wizard-app-store `images/PRIVATE_FIRST.md`), which relays to the loopback-token route `POST /wizard/internal/private-first/{state,private-agent,standard-agent}`.
 
 ## Pages
 
