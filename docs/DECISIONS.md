@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 18 Nov 2026 — James: new installs start private ([spec/AGENTS.md](../spec/AGENTS.md) section 10, [wizard-os#676](https://github.com/humanitylabs-org/wizard-os/issues/676))
+
+| # | Decision | Status |
+|---|---|---|
+| 115 | **A fresh WizardOS is private by default.** First-run setup creates a **private agent on Tinfoil** (private inference) and makes it the owner's default agent. It is the default home for apps and connectors (Mail, Messenger, Photos, Notes, Recorder and the like): a new app starts ticked for the private agent, and the standard agent gets an app only when the owner ticks it. Connecting Claude or ChatGPT, at any time and from anywhere (Welcome, the provider app, Settings), never attaches to the private agent: it switches on a separate, optional **standard** agent (created if missing) and attaches the provider there. The main-agent provider-attach protection (wizard-agent-service#428) is on whenever this applies, with no env setting. Every private-agent seal stays (#59: confidential provider only, no fallback, never a source). Existing installs are not migrated silently; that is a separate decision. **Reverses #58's defaults** (standard agents ticked, private unticked) **and the 23 Oct 2026 app-access rule** (new apps join only the main agent; only `privacy: private` apps join private agents) for boxes where it is on. Ships behind the switch `wizard/private-first-setup` (Agent Service env `WIZARD_PRIVATE_FIRST=1` forces it on for a fresh install, which has no Look file yet), off until James's final yes; the old defaults hold while it is off. | **Approved by James, 18 Nov 2026** ([wizard-os#676](https://github.com/humanitylabs-org/wizard-os/issues/676)), after his fresh Forum install put ChatGPT and Claude on the main agent. |
+
 ## 10 Nov 2026 — Miguel: bugs ship without waiting for people ([AGENTS.md](../AGENTS.md))
 
 | # | Decision | Status |
@@ -281,7 +287,7 @@ slots and offline-only scheduler/AI-login limitations:
 
 | # | Decision | Status |
 |---|---|---|
-| 58 | **The owner picks which agents can use an app when installing it.** The install screen lists every agent with a tick box: standard agents start ticked, private agents start unticked. Editable later from the app or from the agent. No agent gains an app silently. Replaces the draft default in PR #6 (every agent gets every app at install). Apps that produce work for an agent also show where their work goes (app → agent binding, separate setting). | **Approved by James (14 Oct)** |
+| 58 | **The owner picks which agents can use an app when installing it.** The install screen lists every agent with a tick box: standard agents start ticked, private agents start unticked. Editable later from the app or from the agent. No agent gains an app silently. Replaces the draft default in PR #6 (every agent gets every app at install). Apps that produce work for an agent also show where their work goes (app → agent binding, separate setting). | **Approved by James (14 Oct)**; defaults revised 23 Oct (spec/AGENTS.md section 5); **reversed by #115** (private by default) where its switch is on |
 | 59 | **No agent can ever read a private agent.** No grant, setting or agent request gives another agent (standard or private) access to a private agent's chats, memory, skills or files, and Agent History never serves it to another reader. Sharing goes one way: the private agent itself publishes a copy of something to another agent or to Files, and only after the owner approves that exact item in the private agent's chat. Each publish is logged. Amends #46 ("a label, never a hard wall") for private agents. | **Approved by James (14 Oct)** |
 
 Deferred by James (14 Oct), brought back when due: whether apps that can run an agent need a separate warning at install (due before apps from other publishers are installable), and whether network isolation between apps is required before the stable release (due before any box installs another person's app).
