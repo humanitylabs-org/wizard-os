@@ -213,7 +213,7 @@ With the switch on:
 - **The seal is unchanged.** Section 6 holds: the standard agent cannot read the private agent's chats, files or connector data.
 - **Existing installs are not migrated.** A box set up before the switch keeps its agents and app lists; moving it is a separate decision.
 
-The pieces are built in the repos that own them, each `Refs wizard-os#676`: the Agent Service (first-run private agent, standard agent on provider connect, attach protection, the switch reader), Wizard UX (Welcome's Connect your AI and the catalog entry), the provider images in wizard-app-store (`adopt_as_agent_default`, Tinfoil connect) and the App Manager (passing `WIZARD_PRIVATE_FIRST` from the installer).
+The pieces are built in the repos that own them, each `Refs wizard-os#676`: the Agent Service ([wizard-agent-service#545](https://github.com/humanitylabs-org/wizard-agent-service/issues/545): first-run private agent, standard agent on provider connect, attach protection, the switch reader), Wizard UX ([wizard-ux#1549](https://github.com/humanitylabs-org/wizard-ux/issues/1549): Welcome's Connect your AI and the catalog entry), the provider images ([wizard-app-store#77](https://github.com/humanitylabs-org/wizard-app-store/issues/77): `adopt_as_agent_default`, Tinfoil connect) and the App Manager ([wizard-app-manager#759](https://github.com/humanitylabs-org/wizard-app-manager/issues/759): passing `WIZARD_PRIVATE_FIRST` from the installer).
 
 ## Deferred (James, 14 Oct; brought back when due)
 
