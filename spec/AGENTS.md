@@ -71,7 +71,7 @@ agents/<id>/
 | `private` | none | `own` | none | confidential provider only (`tinfoil`, `local`), `fallback: false` |
 | `standard` | harness defaults | `shared-write` | owner's choice | any provider; fallback allowed |
 
-Apps column at install (#58, revised 23 Oct 2026): a new app starts on the main agent only; an app tagged `privacy: private` starts on private agents only. Every other box starts unticked.
+Apps column at install (#58, revised 23 Oct 2026): a new app starts on the main agent only; an app tagged `privacy: private` starts on private agents only. Every other box starts unticked. With private first on (section 10, #115) a new app starts on the default private agent instead, and the standard agent starts unticked.
 
 A preset sets the starting values; the owner adjusts any field afterwards. `preset` keeps the name it was created with.
 
@@ -123,6 +123,8 @@ A recording app (the Meeting Recorder, or any app that turns recordings into rec
 Installing an app shows one tick box per agent: **"Which agents can use *App*?"** A new app starts ticked for the main agent only; every other agent starts unticked and the owner ticks it (James, 23 Oct 2026: "the user should have to enable things manually").
 
 **Optional private tag.** An app's `wizard.md` may say `privacy: private` (James, 23 Oct 2026: "Rather than each app needing to declare itself, let's just make an optional one that tags it as private"). Untagged apps are standard. A private app starts ticked for private agents only, never the main agent, and every new private agent gets it. Apps installed before the tag that provide `meeting-transcripts`, `meeting-recording` or `transcript-redaction` (Mizel, Airlock) count as private. `GET /wizard/v1/apps/<id>/agents` reports `privacy` and, for a private app, `needs_private_agent`. When no private agent exists, the install sheet says the app is meant to be privacy first and offers **Set up private agent** (the Agents app's New agent flow with Private chosen) or **Choose an agent** (this tick list); ticking a non-private agent is the owner's choice and the sheet says what it reveals. The owner's choice is written to each agent's `permissions.wizard_apps` / `agent_apps`, and the gateway serves an agent only the apps on its list. Either side can change it later: the app's settings sheet lists agents, the agent's page lists apps. An app never joins an agent without the owner's tick, so installing more apps never widens a private agent.
+
+**Private first (#115, behind `wizard/private-first-setup`).** With the switch on, the defaults above flip: every new app, tagged or not, starts ticked for the box's default private agent (section 10) and unticked for the standard agent. Ticking the standard agent stays the owner's choice, and the sheet says what it reveals.
 
 Apps that produce work for an agent also show **"Sends its work to: [agent]"** (the app → agent binding). That decides where the app's output lands; it gives the app no right to run the agent or read its history.
 
@@ -198,6 +200,20 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 - Read receipts are owner-only server-side state, qualified by agent and session, shared by phone and desktop. They contain activity timestamps and counts, never transcript text or transcript-derived hashes (private fingerprints use a constant sentinel); private marks remain invisible to other agents. Old device-local receipts migrate without overriding newer server marks.
 - Owner-only private-thread deletion names the agent explicitly and deletes through its Hermes API. The same route is unavailable to agent/operator callers; absent threads return 404. Hidden test chats may be cleaned up by exact id without reading their content.
 - Sealing (#59), unified Chats/picker routing (#64), the Agents app and separate Private workspace remain unchanged. A deployment may ship compatible UX first; unavailable backend capabilities must not be advertised as working.
+
+## 10. Private first: new installs start private (#115, approved by James 18 Nov 2026)
+
+Switch: `wizard/private-first-setup` (shell tweak, kept in the owner's Look file like `wizard/chat-channels`); Agent Service env `WIZARD_PRIVATE_FIRST=1` forces it on and `0` forces it off, because a fresh box has no Look file when setup runs. Off by default: with it off, sections 1 to 9 apply unchanged. Tracked in [wizard-os#676](https://github.com/humanitylabs-org/wizard-os/issues/676).
+
+With the switch on:
+
+- **First run creates the private agent.** Signing in to Tinfoil is the first and recommended step of Welcome's **Connect your AI**. It creates one agent with the `private` preset on the confidential provider (`fallback: false`) and marks it `is_default: true`, so new chats, voice and app work go to it. It gets every installed app, and the connector apps (Mail, Messenger, Photos, Notes, Recorder and the like) are bound to it (section 7).
+- **Claude and ChatGPT are an optional second agent.** Welcome shows them after Tinfoil as an extra, in plain words: "Adds a second agent that uses Claude. Your private agent and its apps stay private." Connecting either one, at any time and from anywhere (Welcome, the provider app, Settings), switches on the **standard** agent (the main Hermes, `hermes`; it is created if a box has none) and attaches the provider there. The standard agent starts with no apps; the owner ticks each one (section 5).
+- **Nothing reaches the private agent by accident.** A provider sign-in never changes the private agent's model, provider list or app list. The provider apps' `adopt_as_agent_default` targets the standard agent, never a private one. A model change on the private agent to a non-confidential provider is refused (`409 {error: "confidential_provider_required", check: "agent.confidential_provider"}`). The main-agent provider-attach protection (wizard-agent-service#428, `GET /wizard/v1/main-providers`) is active without `WIZARD_MAIN_PROVIDER_ATTACH`.
+- **The seal is unchanged.** Section 6 holds: the standard agent cannot read the private agent's chats, files or connector data.
+- **Existing installs are not migrated.** A box set up before the switch keeps its agents and app lists; moving it is a separate decision.
+
+The pieces are built in the repos that own them, each `Refs wizard-os#676`: the Agent Service ([wizard-agent-service#545](https://github.com/humanitylabs-org/wizard-agent-service/issues/545): first-run private agent, standard agent on provider connect, attach protection, the switch reader), Wizard UX ([wizard-ux#1549](https://github.com/humanitylabs-org/wizard-ux/issues/1549): Welcome's Connect your AI and the catalog entry), the provider images ([wizard-app-store#77](https://github.com/humanitylabs-org/wizard-app-store/issues/77): `adopt_as_agent_default`, Tinfoil connect) and the App Manager ([wizard-app-manager#759](https://github.com/humanitylabs-org/wizard-app-manager/issues/759): passing `WIZARD_PRIVATE_FIRST` from the installer).
 
 ## Deferred (James, 14 Oct; brought back when due)
 
