@@ -1,6 +1,16 @@
 # Weekly Hermes candidate gate — staged integration
 
 This is HERMES_STABLE step 3's read-only evidence helper, not an updater.
+
+**Track (James, 15 Nov 2026, DECISIONS #116):** the WizardOS Hermes fork
+([`defleur-agents/hermes-agent`](https://github.com/defleur-agents/hermes-agent))
+is the Wizard Hermes track, and Hermes never updates automatically. Local Wizard
+edits ride on the fork and are re-verified on each candidate. The gate is the
+first step of the path: weekly gate, our test (fresh-VM acceptance plus an
+isolated `state.db` rehearsal of the session API, with the fork's local edits
+applied), James says go, Telos first, then Miguel and the other testers, a few
+days of soak, then the official WizardOS update on James's yes. The live job is
+`07dec4c126fb`.
 `tools/hermes_candidate_report.py` reads the local **stable snapshot**, selects the
 newest final upstream release with seven full days of public soak, resolves its
 source commit, checks its final Docker Hub image/digest and both Linux revisions,
@@ -33,7 +43,9 @@ job changes are authorized:
 > match that source tag. Missing provenance is a blocker, not permission to infer
 > the commit from the image name. Read the complete risk-search results, then
 > review unversioned upstream storage/session/compaction/database/gateway reports
-> and recent fix churn. Link a passed fresh-Thales acceptance record only if it
+> and recent fix churn. List the fork's local Wizard edits (commits on
+> defleur-agents/hermes-agent main after the pinned upstream tag) and say whether
+> each still applies cleanly to the candidate or has been taken upstream. Link a passed fresh-Thales acceptance record only if it
 > covers the exact proposed source/image digest. Confirm the two-to-three-day
 > Archimedes soak without installing or restarting anything. Produce only ONE
 > concise assessment in this job's existing Hermes release-check thread, beginning

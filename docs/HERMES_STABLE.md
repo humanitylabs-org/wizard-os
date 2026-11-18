@@ -1,6 +1,6 @@
 # Wizard stable: which Hermes version every Wizard box runs
 
-**Status:** direction approved by James on 21 Oct 2026 (DECISIONS #74). The details below are a proposal by Archimedes.
+**Status:** direction approved by James on 21 Oct 2026 (DECISIONS #74); on 15 Nov 2026 James decided that WizardOS maintains its own Hermes fork and Hermes never updates automatically (DECISIONS #116, which replaces #74's "never a fork"). The details below are a proposal by Archimedes.
 **Owner:** Archimedes. The `hermes-agent` app repo owner reviews the image change in step 5.
 
 **Shared lock implementation:** [contract](../spec/HERMES_LOCK.md) and
@@ -13,7 +13,16 @@ never approval.
 
 ## The idea in one paragraph
 
-Hermes ships a new release roughly every few days, and some of them break things. In October, 0.22.x had open reports of lost and duplicated conversations, and one update restored a three-week-old copy of someone's chat history. We are not going to maintain our own trimmed copy of Hermes. Instead, Wizard picks **one upstream release that it has tested**, and every Wizard box runs that release. A new upstream release reaches Wizard boxes only after it has been public for a week, has passed our own test run on Thales, and has run on Archimedes for a few days. Rolling back is one step. Wizard ships no changes to Hermes code by default.
+Hermes ships a new release roughly every few days, and some of them break things. In October, 0.22.x had open reports of lost and duplicated conversations, and one update restored a three-week-old copy of someone's chat history. So Hermes never updates itself on a Wizard box. **The WizardOS Hermes fork ([`defleur-agents/hermes-agent`](https://github.com/defleur-agents/hermes-agent)) is the Wizard Hermes track** (James, 15 Nov 2026, DECISIONS #116). Its `main` is one tested upstream release plus Wizard's own local edits, and every Wizard box runs that. The local Wizard edits ride on the fork as ordinary commits, kept small, and are re-applied and re-verified on every new candidate. Rolling back is one step.
+
+## The path of a new Hermes version
+
+1. **Weekly gate.** The Sunday job (`07dec4c126fb`, [HERMES_WEEKLY_GATE](HERMES_WEEKLY_GATE.md)) names the newest upstream final release that qualifies and what blocks it.
+2. **Our test.** The candidate plus the fork's local edits passes a fresh-VM acceptance run (the checks below) and an isolated rehearsal of the session API against a copy of a real `state.db`. The local edits' own tests pass on the candidate.
+3. **James says go.** Nothing moves past our test without his yes.
+4. **Telos first, then Miguel and the other testers.**
+5. **A few days of soak** on those boxes.
+6. **Official WizardOS update**, on James's yes: the fork's `main` moves to the candidate plus the edits, and a new install snapshot pins it.
 
 ## Done when
 
@@ -56,9 +65,9 @@ No VM, Docker pull, acceptance run, app-image PR, release-snapshot PR, promotion
   - the database is intact before and after a restart;
   - a scheduled job fires;
   - an update followed by a rollback both work, and history is still there afterwards.
-- **The order a release reaches boxes:** first the Thales test run, then Archimedes for two to three days, then a new install snapshot, then everyone else.
-- **Patches:** none by default. When one is unavoidable, it is a small patch with an open upstream pull request and a note saying when to remove it. It is deleted as soon as upstream fixes the problem. A Hermes feature we don't want on Wizard boxes is switched off in settings, so the code stays upstream's.
-- **When we would fork after all:** only if upstream takes a direction we can't live with. For example, if Hermes's own installer insists on managing how Hermes runs on our boxes, or if the licence changes. None of these has happened.
+- **The order a release reaches boxes:** the path above: weekly gate, our test, James's go, Telos, then Miguel and the other testers, a few days of soak, then the official WizardOS update.
+- **Local Wizard edits:** they live on the fork as commits on top of the upstream release, each with its own tests, never as uncommitted changes on a box. Each candidate is checked with those edits applied, and their tests run again. An edit upstream has taken over is dropped from the fork. Where one is useful upstream too, offer it there as a pull request. A Hermes feature we don't want on Wizard boxes is still switched off in settings rather than cut out of the code.
+- **Box working trees match the fork.** A box's `~/.hermes/hermes-agent` is a checkout of the fork's `main` with an empty `git status`. Restarting a gateway is the box owner's agent's job, on a quiet gateway.
 
 ## Steps
 
