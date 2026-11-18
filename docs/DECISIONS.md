@@ -2,6 +2,12 @@
 
 Newest first. **Locked** = the named owners agreed. **Approved by James, confirm** = James approved; Jan and/or Miguel still to confirm.
 
+## 15 Nov 2026 — James: WizardOS keeps its own Hermes fork ([docs/HERMES_STABLE.md](HERMES_STABLE.md), [wizard-os#690](https://github.com/humanitylabs-org/wizard-os/issues/690))
+
+| # | Decision | Status |
+|---|---|---|
+| 116 | **WizardOS maintains its own Hermes fork, and Hermes never updates automatically.** **Replaces #74's "never a fork"** (the pin, test record and rollback rules of #74 stay). The fork (`defleur-agents/hermes-agent`) is the Wizard Hermes track: its `main` is one tested upstream release plus Wizard's local edits as commits, re-verified on each candidate. Path: weekly gate (`07dec4c126fb`) → our test (fresh-VM acceptance plus an isolated `state.db` rehearsal of the session API) → James says go → Telos first, then Miguel and the other testers → a few days of soak → official WizardOS update on James's yes. | James, 15 Nov 2026 (filed by Archimedes) |
+
 ## 18 Nov 2026 — James: new installs start private ([spec/AGENTS.md](../spec/AGENTS.md) section 10, [wizard-os#676](https://github.com/humanitylabs-org/wizard-os/issues/676))
 
 | # | Decision | Status |
@@ -223,7 +229,7 @@ slots and offline-only scheduler/AI-login limitations:
 
 | # | Decision | Status |
 |---|---|---|
-| 74 | **Wizard ships a tested upstream Hermes, never a fork.** Each install snapshot pins one upstream Hermes release (tag, commit, image digest, test record, rollback release). A release becomes Wizard stable after seven days public, a passing Thales test run and two to three days on Archimedes. Patches are temporary, each with an upstream PR; features we don't want are turned off in settings. Fork only if upstream's direction becomes unworkable. | Approved by James (direction), 21 Oct; details proposed |
+| 74 | **Wizard ships a tested upstream Hermes, never a fork.** Each install snapshot pins one upstream Hermes release (tag, commit, image digest, test record, rollback release). A release becomes Wizard stable after seven days public, a passing Thales test run and two to three days on Archimedes. Patches are temporary, each with an upstream PR; features we don't want are turned off in settings. Fork only if upstream's direction becomes unworkable. | Approved by James (direction), 21 Oct; details proposed. **"Never a fork" replaced by #116** (15 Nov) |
 
 ## 21 Oct 2026 — James: Skins, palettes and swappable views ([spec/SKINS_AND_VIEWS.md](../spec/SKINS_AND_VIEWS.md))
 
