@@ -89,6 +89,32 @@ CUT_WAIT_MARGIN = 30     # seconds past the window before a waiting cut goes ahe
 CUT_WAIT_POLL = 120      # a waiting cut looks for a hotfix this often
 STATE = Path(os.environ.get("WIZARD_TRAIN_HOME", Path.home() / ".wizard-os" / "release-train"))
 RIG = Path(__file__).resolve().parent / "acceptance" / "upgrade-rig" / "kvm_upgrade.py"
+# The arm64 upgrade test (what Wizard for Mac's WizardOS VM runs) needs an ARM64 machine, so release-promote.yml runs
+# it in its own job on vars.RELEASE_UPGRADE_RUNNER_ARM64 and hands the rig's JSON report (plus a .md beside it) to
+# the promote job through this variable. Set: the report must be a passed arm64 run of exactly stable -> candidate,
+# or nothing is promoted. Unset (no ARM64 runner): promotion goes on and the evidence says arm64 was not checked.
+ARM64_REPORT_ENV = "WIZARD_TRAIN_ARM64_REPORT"
+
+
+def arm64_evidence(stable: str, version: str) -> tuple[str | None, str]:
+    """(why promotion must stop, or None; the arm64 evidence markdown, empty when there is no arm64 report)."""
+    path = os.environ.get(ARM64_REPORT_ENV, "").strip()
+    if not path:
+        return None, ""
+    try:
+        r = json.loads(Path(path).read_text())
+    except (OSError, ValueError) as e:
+        return f"the arm64 upgrade report {path} is missing or unreadable ({e})", ""
+    if r.get("arch") != "arm64":
+        return f"the arm64 upgrade report is for {r.get('arch') or 'an unknown architecture'}, not arm64", ""
+    if (r.get("from"), r.get("to")) != (stable, version):
+        return f"the arm64 upgrade test ran {r.get('from')} -> {r.get('to')}, not {stable} -> {version}", ""
+    if not r.get("passed"):
+        return f"the arm64 upgrade test {stable} -> {version} failed: {r.get('problems')}", ""
+    md = Path(path).with_suffix(".md")
+    text = md.read_text() if md.is_file() else (f"## Installed upgrade {stable} → {version} (arm64)\n\n**Result: PASSED** "
+                                                 f"(upgrade {(r.get('upgrade') or {}).get('seconds')} s).\n")
+    return None, text
 PUBLIC_MIRROR = f"https://raw.githubusercontent.com/{WAM}/main/releases"
 # Who the train's commits are by. The workflows set the token owner's identity (wizardosbuilder); a host run keeps Oscar's.
 IDENTITY = ["-c", f"user.name={os.environ.get('WIZARD_TRAIN_GIT_NAME', 'Oscar')}",
@@ -1017,6 +1043,11 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     if r.returncode or not rig.get("passed"):
         rep["outcome"] = f"STOPPED: the upgrade test {stable} -> {V} failed: {rig.get('problems')}. Stable stays {stable}."
         return rep
+    arm64_stop, arm64_md = arm64_evidence(stable, V)
+    rep["upgrade_test_arm64"] = "passed" if arm64_md else "not run (no ARM64 runner)" if not arm64_stop else arm64_stop
+    if arm64_stop:
+        rep["outcome"] = f"STOPPED: {arm64_stop}. Stable stays {stable}."
+        return rep
     # Evidence + promotion.
     evidence_rel = f"docs/acceptance/promote-{V}.md"
     rig_md = Path(rig["rundir"], "report.md").read_text()
@@ -1026,7 +1057,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
               "0 failed checks, doctors 0 FAIL, Hermes config/.env/SOUL unchanged.")
     notes = ("Ride-alongs onto Stable: " + "; ".join(f"{x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title'][:80]}"
                                                      for x in prs) + ("; " + "; ".join(items) if items else "")
-             + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install.")
+             + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install"
+             + ("" if arm64_md else ", arm64 (Wizard for Mac's WizardOS VM; no ARM64 runner configured)") + ".")
     why = ([f"{V} carries hotfix {_hf_names(rep['hotfixes'])}: hotfix lane (wizard-os#434), shortened soak with no "
             f"open {BLOCKER_LABEL} issue, recorded as a fast-track."] if mode == "soaked" and rep.get("hotfixes") else
            [f"{V} soaked {SOAK_HOURS}h+ on For testers (latest) with no open {BLOCKER_LABEL} issue (For everyone "
@@ -1038,7 +1070,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
            + (" (every change is a Recommended fix or maintenance)." if cls == "fix" else
               " (launch-phase fast-track, DECISIONS #93): it carries changes that are not provably fixes.")
            + "\n\n" + "\n".join(f"- {x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title']}" for x in prs)
-           + "".join(f"\n- {i}" for i in items) + "\n\n## Evidence\n\n" + rig_md)
+           + "".join(f"\n- {i}" for i in items) + "\n\n## Evidence\n\n" + rig_md
+           + (f"\n{arm64_md}" if arm64_md else ""))
     (wt / evidence_rel).write_text(doc)
     if p["cut"] and not dry:
         sh(["git", "-C", str(wt), "fetch", "-q", "origin"])
@@ -1165,6 +1198,9 @@ def main(argv: list[str] | None = None) -> int:
         except Stop as e:
             due, why = False, f"STOPPED: {e}"
         print(f"due={'true' if due else 'false'}")
+        if due:   # what release-promote.yml's arm64 upgrade-test job tests, before the promote job runs
+            print(f"stable={rel('stable').strip()}")
+            print(f"version={version}")
         print(why or "due: latest has soaked with no release-blocker; run promote-soaked")
         return 0
     if a.cmd == "plan":

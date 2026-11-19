@@ -96,6 +96,18 @@ owner step below is done.
   repository variables** (Settings › Secrets and variables › Actions › Variables): on GitHub Free, organization
   variables and secrets are not visible to private repositories such as wizard-os.
 - The existing self-hosted macOS `release-acceptance.yml` is unchanged.
+- **arm64 (Wizard for Mac's WizardOS VM).** The upgrade test above boots an x86_64 guest, but every Mac runs WizardOS
+  as an arm64 VM, so an arm64-only break (an image without an arm64 build, a package that fails on ARM) would pass it.
+  `release-promote.yml` therefore has a second job, `upgrade-test-arm64`: the same test (`kvm_upgrade.py --arch arm64`)
+  on an arm64 guest, from the current stable to the release being promoted. It runs only when the repository
+  variable `RELEASE_UPGRADE_RUNNER_ARM64` names a self-hosted runner label, because GitHub's hosted ARM64 runners have
+  no `/dev/kvm` (and an emulated guest is far too slow). That runner is an Apple-silicon Mac (Homebrew `qemu`, Docker
+  Desktop running; the guest uses Hypervisor.framework, `-accel hvf`) or an ARM64 Linux host with `/dev/kvm`
+  (`qemu-system-arm`, `qemu-efi-aarch64`, `cloud-image-utils`, docker). The job gets no secrets. When it ran, the
+  promote job promotes only if it passed for exactly that stable → version (`WIZARD_TRAIN_ARM64_REPORT`), and its
+  report joins the promotion evidence. When the variable is unset the job is skipped and the evidence lists arm64 under
+  "Not checked". Size the guest to the machine (`WIZARD_RIG_SMP`, `WIZARD_RIG_MEM_MB` in the runner's environment);
+  an 8 GB Mac needs Wizard for Mac quit during the run.
 
 ### Moving to the Mac later
 
@@ -103,7 +115,8 @@ owner step below is done.
    self-hosted runner) with the label `release-mac`.
 2. Set the wizard-os repository variable `RELEASE_RUNNER` to `release-mac`; the next cut runs there, nothing else changes.
 3. Keep `RELEASE_UPGRADE_RUNNER` unset (GitHub-hosted): the upgrade test boots an x86_64 Linux guest under KVM, which
-   macOS cannot do; point it only at a Linux/KVM runner label.
+   macOS cannot do; point it only at a Linux/KVM runner label. An Apple-silicon Mac can run the **arm64** upgrade test
+   instead: give it a label and set `RELEASE_UPGRADE_RUNNER_ARM64` to it (above).
 
 ## Owner setup (one token)
 
