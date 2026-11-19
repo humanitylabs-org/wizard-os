@@ -5,6 +5,15 @@ to a candidate release with the same command, and check what promote_stable.py's
     python3 tools/acceptance/upgrade-rig/kvm_upgrade.py golden            # build/refresh the Hermes base image
     python3 tools/acceptance/upgrade-rig/kvm_upgrade.py run --from 0.3.72 --to 0.3.73 [--release-base URL] [--keep]
     python3 tools/acceptance/upgrade-rig/kvm_upgrade.py run --from 0.3.72 --to 0.3.73 --helper-removed
+    python3 tools/acceptance/upgrade-rig/kvm_upgrade.py --arch arm64 run --from 0.3.72 --to 0.3.73
+
+Two guest architectures (--arch, or WIZARD_RIG_ARCH; default: the host's own):
+- amd64: what Linux boxes on x86 run (the release train's GitHub-hosted runner, KVM);
+- arm64: what Wizard for Mac's WizardOS VM runs (Apple silicon), and ARM servers. On an Apple-silicon Mac the guest
+  runs under Hypervisor.framework (qemu `-accel hvf`); on an ARM64 Linux host under KVM. GitHub's hosted ARM64
+  runners expose no /dev/kvm, so the arm64 run needs an ARM64 machine of our own.
+A guest always matches the host's architecture: a cross-architecture guest would be emulated (TCG), far too slow for
+a 30-minute install, so the rig refuses it.
 
 The rig is the one documented in docs/acceptance/promote-0.3.65.md and promote-0.3.72.md, automated:
 
@@ -26,8 +35,9 @@ root-run box), never `stale`, `unsafe` or missing. With --helper-removed the own
 remove`) before the upgrade, and the upgrade must keep that choice: `removed_by_owner`, with no helper reinstalled.
 The report (JSON + Markdown) is the evidence a promotion links to.
 
-Needs: qemu-system-x86_64 with /dev/kvm, qemu-img, cloud-localds, docker (rootless is fine), ssh, ~12 GB disk.
-Nothing here touches a real box.
+Needs: qemu-system-x86_64 (amd64) or qemu-system-aarch64 + its UEFI firmware (arm64), with /dev/kvm on Linux or
+Hypervisor.framework on macOS; qemu-img; a seed-ISO tool (cloud-localds, or hdiutil on macOS, or xorriso/genisoimage);
+docker (rootless is fine; Docker Desktop on a Mac), ssh, ~12 GB disk. Nothing here touches a real box.
 """
 from __future__ import annotations
 
@@ -36,6 +46,7 @@ import grp
 import hashlib
 import json
 import os
+import platform
 import pwd
 import shlex
 import shutil
@@ -48,7 +59,21 @@ import urllib.request
 from pathlib import Path
 
 ASSETS = Path(os.environ.get("WIZARD_RIG_DIR", Path.home() / ".cache" / "wizard-release-train" / "rig"))
-BASE_URL = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+BASE_URLS = {a: f"https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-{a}.img" for a in ("amd64", "arm64")}
+BASE_URL = BASE_URLS["amd64"]
+QEMU = {"amd64": "qemu-system-x86_64", "arm64": "qemu-system-aarch64"}
+# UEFI firmware for an arm64 guest (`-bios`): Homebrew's qemu, Debian/Ubuntu's qemu-efi-aarch64, Fedora's edk2.
+AARCH64_FIRMWARE = ("/opt/homebrew/share/qemu/edk2-aarch64-code.fd", "/usr/local/share/qemu/edk2-aarch64-code.fd",
+                    "/usr/share/qemu/edk2-aarch64-code.fd", "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+                    "/usr/share/AAVMF/AAVMF_CODE.fd", "/usr/share/edk2/aarch64/QEMU_EFI.fd")
+
+
+def host_arch() -> str:
+    m = platform.machine().lower()
+    return "arm64" if m in ("arm64", "aarch64") else "amd64" if m in ("x86_64", "amd64") else m
+
+
+ARCH = os.environ.get("WIZARD_RIG_ARCH") or host_arch()
 OS_SH = "https://aiwizards.com/os.sh"
 HERMES_INSTALL = "https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh"
 SSH_PORT = int(os.environ.get("WIZARD_RIG_SSH_PORT", "2273"))
@@ -169,13 +194,23 @@ def port_free(port: int) -> bool:
         s.close()
 
 
+def asset(name: str, arch: str | None = None) -> Path:
+    """An arch-specific asset: amd64 keeps the original names (runners keep their cached golden image), arm64 gets
+    an `-arm64` suffix so both can live in one rig dir."""
+    a = arch or ARCH
+    if a == "amd64":
+        return ASSETS / name
+    stem, dot, ext = name.partition(".")
+    return ASSETS / f"{stem}-{a}{dot}{ext}"
+
+
 def base_image() -> Path:
-    img = ASSETS / "noble-base.img"
+    img = asset("noble-base.img")
     if not img.exists():
         ASSETS.mkdir(parents=True, exist_ok=True)
-        say(f"downloading {BASE_URL}")
+        say(f"downloading {BASE_URLS[ARCH]}")
         tmp = img.with_suffix(".part")
-        with urllib.request.urlopen(BASE_URL, timeout=600) as r, open(tmp, "wb") as f:
+        with urllib.request.urlopen(BASE_URLS[ARCH], timeout=600) as r, open(tmp, "wb") as f:
             shutil.copyfileobj(r, f)
         tmp.replace(img)
     return img
@@ -187,12 +222,84 @@ def seed(path: Path, instance: str) -> None:
                   f"    ssh_authorized_keys:\n      - {(ASSETS / 'guest_key.pub').read_text().strip()}\n"
                   "package_update: false\n")
     md.write_text(f"instance-id: {instance}\nlocal-hostname: wtrain\n")
-    sh(["cloud-localds", str(path), str(ud), str(md)])
+    sh(seed_cmd(path, ud, md))
+
+
+def seed_tool() -> str | None:
+    """What builds the NoCloud seed ISO here: cloud-localds (Linux runners), hdiutil (macOS), xorriso/genisoimage."""
+    for t in ("cloud-localds", "hdiutil", "xorriso", "genisoimage", "mkisofs"):
+        if shutil.which(t):
+            return t
+    return None
+
+
+def seed_cmd(path: Path, ud: Path, md: Path) -> list[str]:
+    """A NoCloud seed: an ISO labelled `cidata` holding `user-data` and `meta-data`."""
+    t = seed_tool()
+    if t == "cloud-localds" or t is None:
+        return ["cloud-localds", str(path), str(ud), str(md)]
+    src = path.with_suffix(".seed")
+    shutil.rmtree(src, ignore_errors=True)
+    src.mkdir(parents=True)
+    shutil.copyfile(ud, src / "user-data")
+    shutil.copyfile(md, src / "meta-data")
+    path.unlink(missing_ok=True)
+    if t == "hdiutil":
+        return ["hdiutil", "makehybrid", "-quiet", "-iso", "-joliet", "-default-volume-name", "cidata", "-o", str(path), str(src)]
+    if t == "xorriso":
+        return ["xorriso", "-as", "mkisofs", "-quiet", "-output", str(path), "-volid", "cidata", "-joliet", "-rock", str(src)]
+    return [t, "-quiet", "-output", str(path), "-volid", "cidata", "-joliet", "-rock", str(src)]
+
+
+def accel(arch: str | None = None) -> str:
+    """The hardware accelerator for a guest of `arch` on this host: `kvm` (Linux) or `hvf` (macOS). Raises when there
+    is none: a different-architecture guest, or no /dev/kvm / Hypervisor.framework."""
+    a = arch or ARCH
+    if a not in QEMU:
+        raise SystemExit(f"unknown guest architecture {a!r} (amd64 or arm64)")
+    if a != host_arch():
+        raise SystemExit(f"a {a} guest needs a {a} host (this one is {host_arch()}): emulation is too slow for the "
+                         "upgrade test. Run the arm64 test on an Apple-silicon Mac or an ARM64 Linux host with /dev/kvm.")
+    if sys.platform == "darwin":
+        hv = subprocess.run(["sysctl", "-n", "kern.hv_support"], capture_output=True, text=True).stdout.strip()
+        if hv != "1":
+            raise SystemExit("this Mac has no Hypervisor.framework support (sysctl kern.hv_support)")
+        return "hvf"
+    if not os.access("/dev/kvm", os.R_OK | os.W_OK) and not kvm_wrap():
+        raise SystemExit("no /dev/kvm access")
+    return "kvm"
+
+
+def firmware() -> str:
+    """UEFI code for an arm64 guest (WIZARD_RIG_FIRMWARE overrides the search)."""
+    for f in ([os.environ["WIZARD_RIG_FIRMWARE"]] if os.environ.get("WIZARD_RIG_FIRMWARE") else []) + list(AARCH64_FIRMWARE):
+        if os.path.exists(f):
+            return f
+    raise SystemExit("no UEFI firmware for an arm64 guest (Homebrew qemu ships edk2-aarch64-code.fd; on Debian/Ubuntu "
+                     "install qemu-efi-aarch64); or set WIZARD_RIG_FIRMWARE")
+
+
+def qemu_argv(disk: Path, qmp: Path, seed_iso: Path | None, arch: str, acc: str) -> list[str]:
+    """The qemu command line. amd64 under KVM is unchanged from before arm64 support."""
+    net = ["-netdev", f"user,id=n0,hostfwd=tcp:127.0.0.1:{SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:{SHELL_PORT}-:8796",
+           "-device", "virtio-net-pci,netdev=n0", "-display", "none", "-serial", f"file:{disk.with_suffix('.console')}",
+           "-qmp", f"unix:{qmp},server,nowait"]
+    binary = shutil.which(QEMU[arch]) or QEMU[arch]
+    if arch == "amd64":
+        head = [binary, "-enable-kvm", "-cpu", "host"] if acc == "kvm" else [binary, "-accel", acc, "-cpu", "host"]
+    else:
+        head = [binary, "-machine", "virt", "-accel", acc, "-cpu", "host", "-bios", firmware()]
+    cmd = head + ["-smp", GUEST_SMP, "-m", GUEST_MEM_MB, "-drive", f"file={disk},if=virtio"] + net
+    if seed_iso:
+        cmd[cmd.index("-netdev"):cmd.index("-netdev")] = ["-drive", f"file={seed_iso},if=virtio,format=raw"]
+    return cmd
 
 
 def kvm_wrap() -> list[str]:
     """[] when this process can open /dev/kvm; else `sg kvm -c` (the user is in the kvm group, but a long-lived
     process such as a job worker or the systemd --user manager started before they joined it has stale groups)."""
+    if sys.platform == "darwin":
+        return []
     try:
         os.close(os.open("/dev/kvm", os.O_RDWR))
         return []
@@ -243,7 +350,7 @@ def vm_start(unit: str, argv: list[str], log: Path) -> None:
     """Start qemu as this process's own child, in its own session so --keep guests outlive it; tracked by a pidfile.
     Not `systemd-run --user`: the user manager may predate the user joining the kvm group, and then qemu cannot open
     /dev/kvm (forum, 9 Nov 2026)."""
-    wrap = kvm_wrap()
+    wrap = kvm_wrap() if ("-enable-kvm" in argv or "kvm" in argv) else []
     cmd = wrap + ["exec " + shlex.join(argv)] if wrap else argv
     with open(log, "ab") as out:
         p = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
@@ -254,7 +361,8 @@ def vm_start(unit: str, argv: list[str], log: Path) -> None:
         raise SystemExit(f"qemu exited {p.returncode}: {log.read_text(errors='replace')[-400:]}")
 
 
-UNIX_PATH_MAX = 107   # sun_path is 108 bytes including the NUL; qemu refuses a longer QMP socket path
+# sun_path is 108 bytes on Linux and 104 on macOS, including the NUL; qemu refuses a longer QMP socket path.
+UNIX_PATH_MAX = 103 if sys.platform == "darwin" else 107
 
 
 def qmp_path(disk: Path, unit: str) -> Path:
@@ -272,14 +380,7 @@ def boot(disk: Path, unit: str, seed_iso: Path | None = None) -> Path:
         raise SystemExit(f"127.0.0.1:{SSH_PORT} is taken: another rig guest is running ({unit})")
     qmp = qmp_path(disk, unit)
     qmp.unlink(missing_ok=True)
-    cmd = [shutil.which("qemu-system-x86_64") or "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-smp", GUEST_SMP,
-           "-m", GUEST_MEM_MB, "-drive", f"file={disk},if=virtio",
-           "-netdev", f"user,id=n0,hostfwd=tcp:127.0.0.1:{SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:{SHELL_PORT}-:8796",
-           "-device", "virtio-net-pci,netdev=n0", "-display", "none", "-serial", f"file:{disk.with_suffix('.console')}",
-           "-qmp", f"unix:{qmp},server,nowait"]
-    if seed_iso:
-        cmd[cmd.index("-netdev"):cmd.index("-netdev")] = ["-drive", f"file={seed_iso},if=virtio,format=raw"]
-    vm_start(unit, cmd, disk.with_suffix(".qemu.log"))
+    vm_start(unit, qemu_argv(disk, qmp, seed_iso, ARCH, accel()), disk.with_suffix(".qemu.log"))
     return qmp
 
 
@@ -308,7 +409,7 @@ def power_off(qmp: Path, unit: str, timeout: float = 120) -> None:
 
 def golden(max_age_days: float = 7, force: bool = False) -> Path:
     """The Hermes base image: noble + root stock Hermes (official installer, --skip-setup) + gateway + Tailscale."""
-    g, meta = ASSETS / "golden.qcow2", ASSETS / "golden.json"
+    g, meta = asset("golden.qcow2"), asset("golden.json")
     if g.exists() and meta.exists() and not force:
         m = json.loads(meta.read_text())
         if time.time() - m.get("built", 0) < max_age_days * 86400:
@@ -316,10 +417,10 @@ def golden(max_age_days: float = 7, force: bool = False) -> Path:
     base = base_image()
     key()
     say("building the golden Hermes guest (official Hermes installer; ~10-15 min)")
-    tmp = ASSETS / "golden-build.qcow2"
+    tmp = asset("golden-build.qcow2")
     tmp.unlink(missing_ok=True)
     sh(["qemu-img", "create", "-q", "-f", "qcow2", "-b", str(base), "-F", "qcow2", str(tmp), "40G"])
-    iso = ASSETS / "golden-seed.iso"
+    iso = asset("golden-seed.iso")
     seed(iso, f"wtrain-golden-{int(time.time())}")
     unit = GUEST_UNIT + "-golden"
     vm_stop(unit)
@@ -346,7 +447,7 @@ def golden(max_age_days: float = 7, force: bool = False) -> Path:
     finally:
         power_off(qmp, unit)
     tmp.replace(g)
-    meta.write_text(json.dumps({"built": time.time(), "hermes": version, "base": BASE_URL,
+    meta.write_text(json.dumps({"built": time.time(), "hermes": version, "base": BASE_URLS[ARCH], "arch": ARCH,
                                 "built_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, indent=2) + "\n")
     say(f"golden ready: {version}")
     return g
@@ -484,21 +585,25 @@ def install(release: str, label: str, release_base: str | None) -> tuple[dict, f
 
 def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age: float, out: Path | None,
         helper_removed: bool = False) -> dict:
-    for tool in ("qemu-system-x86_64", "qemu-img", "cloud-localds", "docker", "ssh"):
+    for tool in (QEMU.get(ARCH, "qemu-system-x86_64"), "qemu-img", "docker", "ssh"):
         if not shutil.which(tool):
             raise SystemExit(f"missing {tool}")
-    if not os.access("/dev/kvm", os.R_OK | os.W_OK) and not kvm_wrap():
-        raise SystemExit("no /dev/kvm access")
+    if not seed_tool():
+        raise SystemExit("missing a seed-ISO tool (cloud-localds, hdiutil, xorriso or genisoimage)")
+    acc = accel()
+    if ARCH == "arm64":
+        firmware()
     ASSETS.mkdir(parents=True, exist_ok=True)
     g = golden(max_golden_age)
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    rundir = ASSETS / "runs" / f"{stamp}-{frm}-to-{to}"
+    rundir = ASSETS / "runs" / f"{stamp}-{frm}-to-{to}{'' if ARCH == 'amd64' else '-' + ARCH}"
     rundir.mkdir(parents=True)
     disk = rundir / "guest.qcow2"
     sh(["qemu-img", "create", "-q", "-f", "qcow2", "-b", str(g), "-F", "qcow2", str(disk)])
     os_sh = subprocess.run(["curl", "-fsSL", OS_SH], capture_output=True, timeout=60).stdout   # the bytes owners get
     report: dict = {"from": frm, "to": to, "started_at": stamp, "release_base": release_base or "public mirror",
-                    "golden": json.loads((ASSETS / "golden.json").read_text()),
+                    "golden": json.loads(asset("golden.json").read_text()), "arch": ARCH, "accel": acc,
+                    "host": host_label(),
                     "os_sh_sha256": hashlib.sha256(os_sh).hexdigest(), "rundir": str(rundir), "problems": [],
                     "helper_removed": helper_removed}
     vm_stop(GUEST_UNIT)
@@ -569,12 +674,23 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         say(f"upgrade test {frm} -> {to}: {'PASSED' if report['passed'] else 'FAILED'} ({rundir})")
 
 
+def host_label() -> str:
+    """How the report names the machine: WIZARD_RIG_HOST_LABEL, else its kind (never a host or tailnet name)."""
+    if os.environ.get("WIZARD_RIG_HOST_LABEL"):
+        return os.environ["WIZARD_RIG_HOST_LABEL"]
+    if sys.platform == "darwin":
+        return "a Mac (Apple silicon)" if host_arch() == "arm64" else "a Mac (Intel)"
+    return f"a Linux {platform.machine()} host"
+
+
 def markdown(r: dict) -> str:
     b, a = r.get("before") or {}, r.get("after") or {}
     rel = a.get("release") or {}
-    lines = [f"## Installed upgrade {r['from']} → {r['to']} on a disposable KVM guest", "",
+    arch, acc = r.get("arch", "amd64"), str(r.get("accel", "kvm")).upper()
+    lines = [f"## Installed upgrade {r['from']} → {r['to']} on a disposable {acc} guest ({arch})", "",
              f"**Result: {'PASSED' if r.get('passed') else 'FAILED'}** ({r.get('started_at')} → {r.get('finished_at')} UTC)", "",
-             "**Rig.** Disposable KVM guest on oscar-main (Ubuntu 24.04 cloud image overlay, 4 vCPU, 8 GB, user-mode NAT, "
+             f"**Rig.** Disposable {acc} guest on {r.get('host', 'the rig host')} (Ubuntu 24.04 {arch} cloud image overlay, "
+             f"{GUEST_SMP} vCPU, {int(GUEST_MEM_MB) // 1024} GB, user-mode NAT, "
              f"loopback-only SSH). Root stock Hermes ({(r.get('golden') or {}).get('hermes')}) from the official installer "
              "(`--skip-setup`) + `hermes gateway install`; Tailscale joined to a local headscale with a pre-auth key "
              "(stands in for the owner's approval); a test-only `tailscale` wrapper simulates HTTPS turned on. "
@@ -602,7 +718,9 @@ def markdown(r: dict) -> str:
 
 
 def main() -> int:
+    global ARCH
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--arch", choices=sorted(QEMU), help="guest architecture (default: WIZARD_RIG_ARCH or this host's)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     g = sub.add_parser("golden"); g.add_argument("--force", action="store_true")
     r = sub.add_parser("run")
@@ -614,6 +732,7 @@ def main() -> int:
     r.add_argument("--helper-removed", action="store_true",
                    help="owner removes the maintenance helper before the upgrade; the upgrade must keep that choice")
     a = ap.parse_args()
+    ARCH = a.arch or ARCH
     if a.cmd == "golden":
         golden(force=a.force)
         return 0
