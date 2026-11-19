@@ -21,6 +21,7 @@ def run(*args):
 class Shape(unittest.TestCase):
     def test_every_release_file_has_a_valid_shape(self):
         files = sorted(p for p in (ROOT / "releases").glob("*.json") if p.name != 'hermes-lock.json')
+        files += sorted((ROOT / "releases" / "candidates").glob("*.json"))
         self.assertTrue(files)
         for f in files:
             with self.subTest(f.name):
@@ -120,6 +121,116 @@ class HermesPin(unittest.TestCase):
     def test_test_record_must_exist(self):
         self.assertFails(self.check(self.pin(test_record="docs/acceptance/hermes-v9.9.9.md")), "does not exist")
         self.assertFails(self.check(self.pin(test_record="trust me")), "hermes.test_record")
+
+
+FORK_COMMIT = "c1d1d6fefdf2f43f83960ea4280455e5f626f3d8"   # defleur-agents/hermes-agent main, 18 Nov 2026
+FORK_PIN = {
+    "tag": "v0.22.7",
+    "commit": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+    "fork": {"repo": "defleur-agents/hermes-agent", "branch": "main", "tag": f"sha-{FORK_COMMIT}",
+             "commit": FORK_COMMIT},
+    "image": {"ref": f"ghcr.io/defleur-agents/hermes-agent:sha-{FORK_COMMIT}", "digest": "sha256:" + "ab" * 32,
+              "commit": FORK_COMMIT, "architectures": ["amd64", "arm64"],
+              "ci_run": "https://github.com/defleur-agents/hermes-agent/actions/runs/1"},
+    "test_record": "https://github.com/humanitylabs-org/wizard-os/issues/692",
+    "rollback": {k: SEPTEMBER_PIN[k] for k in ("tag", "commit", "image")},
+}
+
+
+class HermesForkCandidate(unittest.TestCase):
+    """wizard-os#723: a candidate snapshot may pin the fork image; latest/stable and the frozen lock stay as they are."""
+
+    def check(self, hermes=None, channel="candidate", version="0.3.289-hermes-fork.1", where=None):
+        rel = json.loads((ROOT / "releases" / "0.3.289.json").read_text())
+        rel["version"] = version
+        rel["hermes"] = json.loads(json.dumps(FORK_PIN if hermes is None else hermes))
+        if channel is not None:
+            rel["channel"] = channel
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, dir=where) as f:
+            json.dump(rel, f)
+        try:
+            return run(f.name, "--offline")
+        finally:
+            Path(f.name).unlink()
+
+    def pin(self, **changes):
+        pin = json.loads(json.dumps(FORK_PIN))
+        for key, value in changes.items():
+            part, _, field = key.partition("__")
+            if field:
+                pin[part][field] = value
+            else:
+                pin[part] = value
+        return pin
+
+    def assertFails(self, p, words):
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertIn(words, p.stdout)
+
+    def test_fork_candidate_passes(self):
+        p = self.check()
+        self.assertEqual(p.returncode, 0, p.stdout)
+
+    def test_fork_pin_outside_a_candidate_hits_the_frozen_lock(self):
+        self.assertFails(self.check(channel=None, version="0.3.290"), "Hermes is frozen")
+
+    def test_unknown_channel_is_refused(self):
+        self.assertFails(self.check(channel="beta"), "only \"candidate\" is a channel")
+
+    def test_candidate_needs_a_prerelease_version(self):
+        self.assertFails(self.check(version="0.3.290"), "pre-release suffix")
+
+    def test_candidate_never_sits_beside_the_releases(self):
+        self.assertFails(self.check(where=ROOT / "releases"), "releases/candidates/")
+
+    def test_latest_or_stable_never_names_a_candidate(self):
+        latest = (ROOT / "releases" / "latest").read_text().strip()
+        self.assertFails(self.check(version=latest), "releases/latest names candidate")
+
+    def test_image_must_be_the_forks_own_ghcr_image(self):
+        self.assertFails(self.check(self.pin(image__ref="docker.io/nousresearch/hermes-agent:v0.22.7")),
+                         "ghcr.io/<fork owner>/hermes-agent")
+        self.assertFails(self.check(self.pin(image__ref=f"ghcr.io/someone/hermes-agent:sha-{FORK_COMMIT}")),
+                         "not the fork's owner")
+        self.assertFails(self.check(self.pin(image__ref="ghcr.io/defleur-agents/hermes-agent:latest")),
+                         "differs from hermes.fork.tag")
+
+    def test_image_commit_is_the_fork_commit(self):
+        self.assertFails(self.check(self.pin(image__commit=FORK_PIN["commit"])), "must equal hermes.fork.commit")
+
+    def test_both_architectures_and_a_digest(self):
+        self.assertFails(self.check(self.pin(image__architectures=["amd64"])), "amd64 and arm64")
+        self.assertFails(self.check(self.pin(image__digest="sha256:short")), "digest is not")
+
+    def test_fork_pin_needs_a_real_test_record(self):
+        self.assertFails(self.check(self.pin(test_record="none: not tested yet")), "needs a real test record")
+
+    def test_fork_fields_are_required(self):
+        self.assertFails(self.check(self.pin(fork__commit="main")), "hermes.fork: commit")
+        self.assertFails(self.check(self.pin(fork__repo="hermes")), "hermes.fork: repo")
+
+    def test_rollback_to_the_same_fork_commit_is_refused(self):
+        same = {"tag": FORK_PIN["tag"], "commit": FORK_PIN["commit"], "fork": FORK_PIN["fork"]}
+        self.assertFails(self.check(self.pin(rollback=same)), "different release")
+        older = {**same, "fork": {**FORK_PIN["fork"], "commit": "1" * 40}}
+        self.assertEqual(self.check(self.pin(rollback=older)).returncode, 0)
+
+    def test_candidate_writer_makes_a_passing_snapshot_and_moves_no_pointer(self):
+        before = {n: (ROOT / "releases" / n).read_text() for n in ("latest", "stable")}
+        with tempfile.TemporaryDirectory() as d:
+            p = subprocess.run([sys.executable, str(HERE.parent / "hermes_fork_candidate.py"),
+                                "--base-commit", FORK_PIN["commit"], "--fork-commit", FORK_COMMIT,
+                                "--digest", FORK_PIN["image"]["digest"], "--ci-run", FORK_PIN["image"]["ci_run"],
+                                "--test-record", FORK_PIN["test_record"], "--out-dir", d],
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            out = Path(p.stdout.strip())
+            rel = json.loads(out.read_text())
+            self.assertEqual(rel["channel"], "candidate")
+            self.assertEqual(rel["hermes"]["fork"]["commit"], FORK_COMMIT)
+            self.assertEqual(rel["hermes"]["rollback"]["image"], SEPTEMBER_PIN["image"])
+            self.assertEqual(run(str(out), "--offline").returncode, 0)
+        self.assertEqual(before, {n: (ROOT / "releases" / n).read_text() for n in ("latest", "stable")})
 
 
 if __name__ == "__main__":

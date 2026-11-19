@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch one digest-pinned public image on the host and write a `docker load` archive.
+"""Fetch one digest-pinned image (public, or private GHCR with GHCR_TOKEN) on the host and write a `docker load` archive.
 
 Docker inside a Lima vz guest on Thales fails GHCR blob downloads ("tls: bad record MAC") while the host fetches
 them fine, so the harness downloads on the host and side-loads into the fresh VM. The archive keeps the registry's
@@ -9,6 +9,7 @@ config digest, so the VM runs exactly the pinned image.
     fetch_image.py <registry>/<repo>@sha256:<index or manifest digest> <out.tar> [arch=arm64]
     fetch_image.py <image>:<tag> <out.tar>   (pins the tag to its current digest and prints it)
 """
+import base64
 import hashlib
 import io
 import json
@@ -42,7 +43,12 @@ def split(ref):
 def token(host, repo):
     url = {"ghcr.io": f"https://ghcr.io/token?scope=repository:{repo}:pull",
            "registry-1.docker.io": f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{repo}:pull"}[host]
-    with urllib.request.urlopen(url, timeout=60) as r:
+    req = urllib.request.Request(url)
+    # A still-private GHCR image (the Hermes fork before James releases it): GHCR_TOKEN = a read:packages token.
+    if host == "ghcr.io" and os.environ.get("GHCR_TOKEN"):
+        cred = f"{os.environ.get('GHCR_USER', 'token')}:{os.environ['GHCR_TOKEN']}".encode()
+        req.add_header("Authorization", "Basic " + base64.b64encode(cred).decode())
+    with urllib.request.urlopen(req, timeout=60) as r:
         return json.load(r)["token"]
 
 

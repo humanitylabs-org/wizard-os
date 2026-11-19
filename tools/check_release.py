@@ -33,6 +33,10 @@ VERSION = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 HERMES_TAG = re.compile(r"^v\d+\.\d+\.\d+$")          # a final upstream tag, never an rc build
 HERMES_IMAGE = re.compile(r"^docker\.io/nousresearch/hermes-agent:(v\d+\.\d+\.\d+)$")
 HERMES_UPSTREAM = "NousResearch/hermes-agent"
+# The WizardOS Hermes fork (DECISIONS #116): upstream base tag + Wizard's local edits, built into its own image.
+HERMES_FORK_IMAGE = re.compile(r"^ghcr\.io/([a-z0-9._-]+)/hermes-agent:([A-Za-z0-9._-]{1,128})$")
+HERMES_FORK_TAG = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+CANDIDATE = "candidate"   # `"channel": "candidate"`: a snapshot to test, never what latest/stable installs
 HERMES_PIN_FROM = (0, 3, 23)   # DECISIONS #74: snapshots from 0.3.23 on name their Hermes; older files are history
 SERVICE_ROUTES_FROM = (0, 3, 33)   # snapshots from 0.3.33 on: the pinned Agent Service serves every stable spec route
 SPEC = Path(__file__).resolve().parents[1] / "spec" / "AGENT_SERVICE_API.md"
@@ -40,6 +44,11 @@ SPEC = Path(__file__).resolve().parents[1] / "spec" / "AGENT_SERVICE_API.md"
 
 def _vtuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in re.match(r"^(\d+)\.(\d+)\.(\d+)", v).groups())
+
+
+def _fork_commit(pin: dict) -> str | None:
+    fork = pin.get("fork")
+    return fork.get("commit") if isinstance(fork, dict) else None
 
 
 def hermes_shape(rel: dict) -> list[str]:
@@ -58,7 +67,10 @@ def hermes_shape(rel: dict) -> list[str]:
     if not SHA.fullmatch(str(h.get("commit", ""))):
         errs.append(f"hermes: commit {h.get('commit')!r} is not a 40-char sha")
     im = h.get("image")
-    if im is not None:
+    fork = h.get("fork")
+    if fork is not None:
+        errs += hermes_fork_shape(h)
+    elif im is not None:
         m = HERMES_IMAGE.fullmatch(str((im or {}).get("ref", ""))) if isinstance(im, dict) else None
         if not m:
             errs.append("hermes.image: ref must be docker.io/nousresearch/hermes-agent:<tag> (null = source-only)")
@@ -77,7 +89,11 @@ def hermes_shape(rel: dict) -> list[str]:
     if im is None and isinstance(agent, dict) and agent.get("app") == "hermes-agent":
         errs.append("hermes.image: fresh installs run the hermes-agent container, so the pin needs an image")
     rec = h.get("test_record")
-    if not isinstance(rec, str) or not (rec.startswith("none: ") and len(rec) > 12 or
+    if fork is not None and isinstance(rec, str) and re.fullmatch(r"https://\S+", rec):
+        pass   # a fork pin may link its test run (e.g. the forum run of the fork's tests)
+    elif fork is not None and isinstance(rec, str) and rec.startswith("none: "):
+        errs.append("hermes.test_record: a fork pin needs a real test record (docs/acceptance/... or an https link)")
+    elif not isinstance(rec, str) or not (rec.startswith("none: ") and len(rec) > 12 or
                                        re.fullmatch(r"docs/acceptance/hermes-v[\w.-]+\.md", rec)):
         errs.append("hermes.test_record: docs/acceptance/hermes-<tag>.md, or 'none: <why>' for a carried-over pin")
     elif not rec.startswith("none: ") and not (Path(__file__).resolve().parents[1] / rec).is_file():
@@ -88,13 +104,52 @@ def hermes_shape(rel: dict) -> list[str]:
     elif rb is not None and (not isinstance(rb, dict) or not HERMES_TAG.fullmatch(str(rb.get("tag", ""))) or
                              not SHA.fullmatch(str(rb.get("commit", "")))):
         errs.append("hermes.rollback: needs a final tag and a 40-char commit")
-    elif isinstance(rb, dict) and rb.get("tag") == h.get("tag"):
+    elif isinstance(rb, dict) and rb.get("tag") == h.get("tag") and _fork_commit(rb) == _fork_commit(h):
         errs.append("hermes.rollback: must be a different release from hermes.tag")
-    if VERSION.fullmatch(version) and _vtuple(version) >= (0, 3, 40):
+    if rel.get("channel", CANDIDATE) != CANDIDATE:
+        errs.append(f"channel: {rel.get('channel')!r}; only \"candidate\" is a channel (latest/stable are pointers)")
+    # The shared frozen lock guards what installs get. A candidate is only tested, never installed by
+    # releases/latest or releases/stable (main() checks that), so it may pin a Hermes the lock does not.
+    if VERSION.fullmatch(version) and _vtuple(version) >= (0, 3, 40) and rel.get("channel") != CANDIDATE:
         try:
             hermes_lock.check_release(rel)
         except (ValueError, OSError) as exc:
             errs.append(str(exc))
+    return errs
+
+
+def hermes_fork_shape(h: dict) -> list[str]:
+    """A fork pin: `tag`/`commit` name the upstream base release, `fork` the fork commit the image was built from."""
+    errs: list[str] = []
+    fork, im = h.get("fork"), h.get("image")
+    if not isinstance(fork, dict):
+        return ["hermes.fork: expected an object (repo, branch, tag, commit)"]
+    if not REPO.fullmatch(str(fork.get("repo", ""))):
+        errs.append(f"hermes.fork: repo {fork.get('repo')!r} is not owner/name")
+    if not isinstance(fork.get("branch"), str) or not fork["branch"].strip():
+        errs.append("hermes.fork: branch is required (the fork branch the commit is on, normally main)")
+    if not HERMES_FORK_TAG.fullmatch(str(fork.get("tag", ""))):
+        errs.append(f"hermes.fork: tag {fork.get('tag')!r} is not an image tag")
+    if not SHA.fullmatch(str(fork.get("commit", ""))):
+        errs.append(f"hermes.fork: commit {fork.get('commit')!r} is not a 40-char sha")
+    if not isinstance(im, dict):
+        return errs + ["hermes.image: a fork pin needs the fork's image (ref, digest, commit, architectures)"]
+    m = HERMES_FORK_IMAGE.fullmatch(str(im.get("ref", "")))
+    if not m:
+        errs.append("hermes.image: a fork pin's ref must be ghcr.io/<fork owner>/hermes-agent:<fork tag>")
+    else:
+        if m.group(1) != str(fork.get("repo", "")).split("/")[0].lower():
+            errs.append(f"hermes.image: ref owner {m.group(1)} is not the fork's owner")
+        if m.group(2) != fork.get("tag"):
+            errs.append(f"hermes.image: ref tag {m.group(2)} differs from hermes.fork.tag {fork.get('tag')}")
+    if not DIGEST.fullmatch(str(im.get("digest", ""))):
+        errs.append("hermes.image: digest is not sha256:<64 hex>")
+    if im.get("commit") != fork.get("commit"):
+        errs.append("hermes.image: commit must equal hermes.fork.commit (the image's source-revision label)")
+    if not isinstance(im.get("architectures"), list) or set(im["architectures"]) != {"amd64", "arm64"}:
+        errs.append("hermes.image: architectures must name amd64 and arm64")
+    if "ci_run" in im and not re.fullmatch(r"https://github\.com/\S+/actions/runs/\d+", str(im["ci_run"])):
+        errs.append("hermes.image: ci_run must link the GitHub Actions run that built it")
     return errs
 
 
@@ -459,6 +514,40 @@ def app_dockerfile(repo: str, commit: str) -> str | None:
     return base64.b64decode(r.stdout).decode(errors="replace")
 
 
+def hermes_fork_online(rel: dict, ok: list[str], errs: list[str]) -> tuple[list[str], list[str]]:
+    """Fork pin: the fork commit is on its branch, the GHCR image exists and was built from that commit on both
+    architectures, and the hermes-agent app builds FROM exactly that image."""
+    h = rel["hermes"]
+    fork, im = h["fork"], h["image"]
+    found, why = commit_exists(fork["repo"], fork["commit"])
+    (ok if found else errs).append(f"hermes.fork: {fork['repo']}@{fork['commit'][:12]}" + ("" if found else f" missing ({why})"))
+    if found:
+        on, why = on_branch(fork["repo"], fork["commit"], fork["branch"])
+        (ok if on else errs).append(f"hermes.fork: {fork['commit'][:12]} on {fork['branch']}" + ("" if on else f" ({why})"))
+    found, why = digest_exists(im["ref"], im["digest"])
+    (ok if found else errs).append(f"hermes.image: {im['ref']} {im['digest'][:19]}" + ("" if found else
+                                   f" missing ({why}; a private image fails here until it is made public)"))
+    if found:
+        rev, why = image_revision(im["ref"], im["digest"], im["architectures"])
+        if rev == fork["commit"]:
+            ok.append(f"hermes.image: linux/amd64 + linux/arm64 built from fork commit {rev[:12]}")
+        else:
+            errs.append(f"hermes.image: built from {(rev or '?')[:12]}, fork pins {fork['commit'][:12]}"
+                        + (f" ({why})" if why else ""))
+    agent = (rel.get("default_apps") or {}).get("agent") or {}
+    if agent.get("app") == "hermes-agent" and agent.get("repo") and agent.get("commit"):
+        df = app_dockerfile(agent["repo"], agent["commit"])
+        want = f"{im['ref']}@{im['digest']}"
+        if df is None:
+            errs.append(f"hermes.image: can't read image/Dockerfile in {agent['repo']}@{agent['commit'][:12]}")
+        elif want in df:
+            ok.append(f"hermes.image: {agent['repo']}@{agent['commit'][:12]} builds FROM the fork image")
+        else:
+            errs.append(f"hermes.image: {agent['repo']}@{agent['commit'][:12]} does not build FROM {want[:60]}…, "
+                        "so fresh installs would run another Hermes")
+    return ok, errs
+
+
 def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
     """Tag -> commit upstream, image digest on Docker Hub, and the hermes-agent app really builds FROM that digest."""
     h, ok, errs = rel.get("hermes"), [], []
@@ -474,6 +563,8 @@ def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
             errs.append(f"{label}: {pin['tag']} is {(sha or '?')[:12]} upstream, release says {pin['commit'][:12]}"
                         + (f" ({why})" if why else ""))
     im = h.get("image")
+    if im and isinstance(h.get("fork"), dict):
+        return hermes_fork_online(rel, ok, errs)
     if im:
         found, why = dockerhub_digest_exists(im["digest"])
         (ok if found else errs).append(f"hermes.image: {im['digest'][:19]}" + ("" if found else f" missing ({why})"))
@@ -496,6 +587,26 @@ def hermes_online(rel: dict) -> tuple[list[str], list[str]]:
                 errs.append(f"hermes.image: {agent['repo']}@{agent['commit'][:12]} does not build FROM "
                             f"nousresearch/hermes-agent:{h['tag']}@{im['digest'][:19]}…, so fresh installs run another Hermes")
     return ok, errs
+
+
+def candidate_place(rel: dict, path: Path) -> list[str]:
+    """A candidate lives in releases/candidates/, has a pre-release version, and no channel pointer names it."""
+    if not isinstance(rel, dict) or rel.get("channel") != CANDIDATE:
+        return []
+    errs: list[str] = []
+    releases = Path(__file__).resolve().parents[1] / "releases"
+    if path.resolve().parent == releases:
+        errs.append("channel: a candidate snapshot lives in releases/candidates/, not beside the releases")
+    version = str(rel.get("version", ""))
+    if "-" not in version:
+        errs.append(f"version {version!r}: a candidate needs a pre-release suffix, e.g. 0.3.289-hermes-fork.1")
+    for pointer in ("latest", "stable"):
+        try:
+            if (releases / pointer).read_text().strip() == version:
+                errs.append(f"releases/{pointer} names candidate {version}; candidates are never installed")
+        except OSError:
+            pass
+    return errs
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -522,7 +633,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as e:
         print(f"can't read {a.file}: {e}", file=sys.stderr)
         return 2
-    errs = shape(rel)
+    errs = shape(rel) + candidate_place(rel, Path(a.file))
     ok_lines: list[str] = []
     if not errs and not a.offline:
         for name, c in rel["components"].items():
