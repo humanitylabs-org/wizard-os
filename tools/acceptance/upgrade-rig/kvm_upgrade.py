@@ -429,9 +429,12 @@ def golden(max_age_days: float = 7, force: bool = False) -> Path:
         wait_ssh()
         guest("cloud-init status --wait >/dev/null 2>&1 || true", timeout=600)
         guest("loginctl enable-linger root; systemctl start user@0.service")
-        guest(f"curl -fsSL {HERMES_INSTALL} -o /root/hermes-install.sh && "
-              "(nohup bash /root/hermes-install.sh --skip-setup > /root/hermes-install.log 2>&1; echo $? > /root/hermes-install.rc) "
-              "</dev/null >/dev/null 2>&1 &")
+        # Download first, then start the installer fully detached: with `curl ... && (...) </dev/null ... &` the
+        # redirections only cover the subshell, the backgrounded list keeps ssh's channel open, and ssh then waits for
+        # the whole install (a host slower than ~10 min, e.g. a busy Mac, timed out here).
+        guest(f"curl -fsSL {HERMES_INSTALL} -o /root/hermes-install.sh", timeout=300)
+        guest("(nohup bash /root/hermes-install.sh --skip-setup > /root/hermes-install.log 2>&1; "
+              "echo $? > /root/hermes-install.rc) </dev/null >/dev/null 2>&1 &")
         deadline = time.time() + 2400
         while time.time() < deadline and not guest("cat /root/hermes-install.rc 2>/dev/null", check=False).strip():
             time.sleep(15)
