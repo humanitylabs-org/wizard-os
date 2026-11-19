@@ -15,6 +15,8 @@ CATEGORIES = {"agent", "interface", "app", "system"}
 BAD_CAPS = {"ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "NET_ADMIN", "DAC_READ_SEARCH", "BPF", "PERFMON"}
 HOST_PATH = re.compile(r"^/(etc|root|boot|proc|sys|dev|var/run|run|home|usr|lib|bin|sbin)(/|$)")
 NEEDS = {"mic", "system-audio", "camera", "notifications", "files", "home-network"}
+# Browser permissions an app frame may ask the owner for (spec/WIZARD_MD.md "Browser permissions").
+PERMISSIONS = {"geolocation"}
 # Connectors (owner rule, 27 Oct 2026): an app that signs in to or holds the key for an outside service is a
 # Connector and must say `type: external`, or shells and the App Store shelve it under Apps/Agent apps.
 CONNECTOR_SLOTS = {"ai-connection", "bank-connection", "cloudflare-connection", "web-data", "x-search"}
@@ -258,6 +260,12 @@ def voice_names(manifest: dict) -> list[str]:
     return list(names)
 
 
+def permissions_ok(value: object) -> bool:
+    """`permissions`: a list of distinct browser permissions from PERMISSIONS; absent or [] means none."""
+    return (isinstance(value, list) and all(isinstance(v, str) and v in PERMISSIONS for v in value)
+            and len(set(value)) == len(value))
+
+
 HOME_SCREEN_KEYS = {"offline", "position_keys", "route_state"}
 HOME_SCREEN_ROUTE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,39}")
 
@@ -375,6 +383,9 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     if "whats_new" in d:
         wn = d["whats_new"]
         rule("whats_new is one line of 1-140 chars", whats_new_ok(wn), repr(wn)[:60])
+    if "permissions" in d:
+        pm = d["permissions"]
+        rule("permissions are known (geolocation)", permissions_ok(pm), repr(pm)[:60])
     if "receives_voice_input" in d:
         rv = d["receives_voice_input"]
         rule("receives_voice_input is boolean", type(rv) is bool, repr(rv))
