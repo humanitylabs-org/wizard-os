@@ -32,7 +32,7 @@ Type roles are opt-in: controls take `--wz-font-ui`; an app may use `--wz-font-r
 
 ## Builder and updates
 
-The portable [wizard-app-builder pointer](../system-skills/wizard-app-builder/SKILL.md) names this folder, the system apps, the hello template and the checker. WAM's source bundle includes a **generated, hash-locked snapshot** of these runtime assets so an offline builder works. Its lock records this repository's exact revision and source/destination paths. Refresh with WAM's `tools/sync_wizard_style.py --source <wizard-os> --revision <sha>`, then review both PRs. The kit/client in WAM are distribution artifacts, not a second authored style source; `--check` catches local drift and comparison with this source catches divergence.
+The [`wizard-builder` system skill](https://github.com/humanitylabs-org/wizard-app-manager/tree/main/system-skills/wizard-builder) (wizard-app-manager `system-skills/`, the one home for system skills since wizard-os#760) names this folder, the system apps, the hello template and the checker. WAM's source bundle includes a **generated, hash-locked snapshot** of these runtime assets so an offline builder works. Its lock records this repository's exact revision and source/destination paths. Refresh with WAM's `tools/sync_wizard_style.py --source <wizard-os> --revision <sha>`, then review both PRs. The kit/client in WAM are distribution artifacts, not a second authored style source; `--check` catches local drift and comparison with this source catches divergence.
 
 Every build ends: **"is there a component here other apps could share?"**
 
