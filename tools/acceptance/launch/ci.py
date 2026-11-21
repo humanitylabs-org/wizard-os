@@ -54,6 +54,9 @@ def placement(env):
         check(lock.samefile(env['WIZARD_HEAVY_REMOTE_LOCK']), 'shared_lock_identity_mismatch')
     if env.get('WIZARD_HEAVY_ROOT'):
         check(Path(env['WIZARD_HEAVY_ROOT']).resolve(strict=True) == work, 'heavy_root_mismatch')
+    # release-acceptance.yml dispatches this controller only on macOS ARM64.
+    # Keep its legacy 250 reserve + 40 guest + 1 metadata = 291 GiB; Linux
+    # directory admission belongs to run.py/release_gate.py, not this transport.
     check(shutil.disk_usage(work).free >= 291 * GIB, '291_GiB_free_required')
     for tool in ('limactl', 'git', 'python3'):
         check(shutil.which(tool), 'missing_' + tool)

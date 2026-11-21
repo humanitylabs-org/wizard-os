@@ -24,7 +24,9 @@ def module(name):
     spec = importlib.util.spec_from_file_location('launch_' + name, ROOT / (name + '.py'))
     assert spec is not None and spec.loader is not None
     result = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(result)
+    # Direct file loads need the same sibling-import path as script execution.
+    with patch.object(sys, 'path', [str(ROOT), *sys.path]):
+        spec.loader.exec_module(result)
     return result
 
 
@@ -180,7 +182,8 @@ class HarnessTests(unittest.TestCase):
             argv = ['release_gate.py', '--root', str(work / 'check'), '--release', '0.3.48',
                     '--previous-release', '0.3.39', '--cli', str(cli), '--wam-commit', 'a' * 40, '--check-only']
             with patch.object(gate.sys, 'argv', argv), patch.dict(os.environ, WIZARD_WORK_ROOT=str(work)), \
-                    patch.object(Path, 'is_mount', return_value=True), patch.object(gate.sys, 'stdout', io.StringIO()):
+                    patch.object(Path, 'is_mount', return_value=True), patch.object(gate.sys, 'stdout', io.StringIO()), \
+                    patch.object(gate.platform, 'system', return_value='Darwin'):
                 with patch.object(gate.shutil, 'disk_usage', return_value=SimpleNamespace(free=290 * gate.GIB)):
                     with self.assertRaises(AssertionError):
                         gate.main()

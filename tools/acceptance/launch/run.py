@@ -11,15 +11,21 @@ import subprocess
 import sys
 import time
 
+from capacity import GIB, required_free_gib, reserve_gib
+
 HERE = Path(__file__).resolve().parent
 
 # Outlives tunnel.py's own readiness deadline plus its guest snapshot.
 TUNNEL_TIMEOUT_SECONDS = 600
 
 
+def cleanup_command(argv):
+    """Forced teardown must remain possible even when the work disk is full."""
+    return argv[:3] in (['limactl', 'stop', '-f'], ['limactl', 'delete', '-f'])
+
+
 def command(argv, log, timeout=1800):
-    cleanup = argv[:3] in (['limactl', 'stop', '-f'], ['limactl', 'delete', '-f'])
-    if not cleanup and shutil.disk_usage(Path(os.environ['WIZARD_WORK_ROOT'])).free < 250 * (1 << 30):
+    if not cleanup_command(argv) and shutil.disk_usage(Path(os.environ['WIZARD_WORK_ROOT'])).free < reserve_gib() * GIB:
         raise RuntimeError('disk_reserve')
     with log.open('a') as out:
         p = subprocess.run(argv, stdout=out, stderr=subprocess.STDOUT, timeout=timeout)
@@ -137,12 +143,14 @@ def main():
             if any(secret.is_relative_to(Path(m['location']).resolve()) for m in old.get('mounts', [])):
                 p.error('credential is visible through an existing guest mount')
     # Linux reuses the release gate's guest budget; retain the Mac disk size.
-    required_gib = 250 + disk_gib + 1 + (9 if args.phone_config else 0)
-    if shutil.disk_usage(work).free < required_gib * (1 << 30):
-        p.error(f'250 GiB reserve plus guest/phone/metadata required ({required_gib} GiB)')
+    reserve = reserve_gib()
+    required_gib = required_free_gib(disk_gib, phone=bool(args.phone_config))
+    capacity = {'disk_gib': disk_gib, 'reserve_gib': reserve, 'required_free_gib': required_gib}
+    if shutil.disk_usage(work).free < required_gib * GIB:
+        p.error(f'{reserve} GiB reserve plus guest/phone/metadata required ({required_gib} GiB)')
     if args.check_only:
         print(json.dumps({'preflight': True, 'executed': False, 'release': args.release,
-                          'architecture': native['arch'], 'vm_type': native['vmType']}))
+                          'architecture': native['arch'], 'vm_type': native['vmType'], **capacity}))
         return 0
     os.umask(0o077)
     os.environ['LIMA_HOME'] = str(root / 'lima')
@@ -162,7 +170,7 @@ def main():
             p.error(f'Lima socket path too long for instance {name!r} ({len(str(sock))} chars); use a shorter --root')
     result = {'fixture': 'launch-audits-8-9', 'at': dt.datetime.now(dt.timezone.utc).isoformat(),
               'release': args.release, 'architecture': native['arch'], 'passed': False, 'interventions': 0,
-              'overlays': [], 'cases': [], 'step': 'start'}
+              'overlays': [], 'cases': [], 'step': 'start', **capacity}
     log = run / 'private-run.log'
     def shell(name, argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', name, '--'] + argv, log, timeout)
@@ -231,6 +239,10 @@ def main():
             result['passed'] = True
         else:
             disposable_cases(args, run, clean, create, install, journey, delete, result)
+            # Release the disposable disk before allocating/growing the retained
+            # guest. The shared capacity policy budgets one guest at a time.
+            result['step'] = 'clean-delete'
+            delete(clean)
         if args.onboarding_only:
             raise OnboardingComplete
         instance = root / 'lima' / retained
