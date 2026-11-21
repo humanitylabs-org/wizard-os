@@ -31,8 +31,8 @@ A core app is ready when it:
 - installs and updates cleanly;
 - works as its own phone app;
 - is useful at stage 1 (no account);
-- gives agents access only through the owner's per-agent ticks ([PERMISSIONS.md](../spec/PERMISSIONS.md)), with the
-  app's own default level read-only or draft-only;
+- gives agents access only through the owner's per-agent ticks ([PERMISSIONS.md](../spec/PERMISSIONS.md)), read-only
+  by default;
 - backs up and restores.
 
 ## Where each core app stands
