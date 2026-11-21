@@ -170,6 +170,10 @@ Stock Hermes backup covers its home, not its whole working environment. Begin wi
 
 **Packages:** an **agent package** is one agent's folder (for Hermes, its own backup zip). A **Wizard package** is every agent package plus app data, settings, schedules and Files. App data is not silently bundled/mounted through an agent package. Import, backup/restore and moving a box to another machine use these two boundaries. An **agent template** (idea, [AGENT_TEMPLATES.md](AGENT_TEMPLATES.md)) is the shareable subset of an agent package: soul, skills and recommendations, with no memory, history or sign-ins.
 
+## App notebook reads (proposal, not an approved exception)
+
+[App reads of declared agent notebooks](APP_AGENT_NOTEBOOKS.md) proposes a generic, explicitly owner-granted read-only resource layered over normal per-app identity. It keeps private/hidden/recovery agents excluded and keeps presentation in apps. It does not make an ordinary app connection into agent-state authority or amend sealed private agents (#59); contract review and an authenticated consuming-app handoff are required before implementation merges or activation.
+
 ## Not in this spec
 
 - **Keys and the Key Vault:** a separate proposal (Wizard Topics thread, 11 Oct): an egress proxy that holds the real keys so agents only hold stand-ins.
