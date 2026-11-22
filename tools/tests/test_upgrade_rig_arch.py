@@ -90,6 +90,16 @@ class UpgradeRigArch(unittest.TestCase):
         self.assertIn("a Mac (Apple silicon)", md)
         self.assertNotIn("oscar-main", md)
 
+    def test_a_rerun_of_the_starting_install_is_disclosed_and_the_upgrade_is_never_retried(self):
+        rig = self.rig
+        r = {"from": "0.3.1", "to": "0.3.2", "arch": "arm64", "accel": "hvf", "passed": True, "started_at": "a",
+             "finished_at": "b", "golden": {}, "install_from_first": {"failure_reason": "wam recover failed"},
+             "install_from": {"state": "done", "rerun": True}}
+        self.assertIn("first ended **failed** (wam recover failed)", rig.markdown(r))
+        src = RIG.read_text()
+        i = src.index("if st.get(\"state\") == \"failed\" and retry_from")
+        self.assertLess(i, src.index("st, secs = install(to,"), "only the starting install is re-run")
+
 
 if __name__ == "__main__":
     unittest.main()
