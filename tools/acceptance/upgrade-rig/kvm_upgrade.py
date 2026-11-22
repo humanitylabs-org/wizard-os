@@ -82,6 +82,8 @@ HS_PORT = int(os.environ.get("WIZARD_RIG_HS_PORT", "8090"))
 # Guest size: 4 vCPU / 8 GB on a box; a GitHub-hosted runner (2 vCPU, 7 GB) sets smaller values in the workflow.
 GUEST_SMP = os.environ.get("WIZARD_RIG_SMP", "4")
 GUEST_MEM_MB = os.environ.get("WIZARD_RIG_MEM_MB", "8192")
+# Optional public DNS servers for the guest (space-separated), disclosed in the report; unset = the NAT's own DNS.
+RIG_DNS = os.environ.get("WIZARD_RIG_DNS", "").strip()
 HS_NAME = "wizard-train-headscale"
 HS_IMAGE = "headscale/headscale:latest"
 GUEST_UNIT = "wizard-train-guest"
@@ -615,6 +617,10 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         authkey = headscale_up(rundir)
         qmp = boot(disk, GUEST_UNIT)
         wait_ssh()
+        if RIG_DNS:   # user-mode NAT forwards DNS through the host's resolver, which a sleeping/roaming Mac drops
+            report["dns"] = RIG_DNS
+            guest("mkdir -p /etc/systemd/resolved.conf.d && printf '[Resolve]\\nDNS=%s\\n' "
+                  f"{shlex.quote(RIG_DNS)} > /etc/systemd/resolved.conf.d/rig.conf && systemctl restart systemd-resolved")
         guest(f"tailscale up --login-server=http://10.0.2.2:{HS_PORT} --authkey={authkey} --timeout=90s "
               ">/root/ts-up.log 2>&1; touch /root/.https-on; tailscale ip -4", timeout=200)
         st, secs = install(frm, f"install {frm}", None)
