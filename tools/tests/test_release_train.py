@@ -520,6 +520,16 @@ class ForTestersForEveryone(unittest.TestCase):
         # it still needs a passed upgrade test first
         self.assertLess(src.index('rig.get("passed")'), i)
 
+    def test_promote_soaked_passes_only_what_promote_stable_accepts_without_fast_track(self):
+        """wizard-os#856: the first soaked promotion to pass the upgrade test stopped on `--classification/--reason/
+        --notes only go with --fast-track` (exit 2), so Stable stayed put even with a green upgrade test."""
+        src = (HERE.parent / "release_train.py").read_text()
+        i = src.index('if mode == "soaked":     # the normal gate')
+        block = src[i:src.index("else:", i)]
+        for flag in ("--notes", "--classification", "--reason"):
+            self.assertNotIn(f'"{flag}"', block)
+        self.assertIn("only go with --fast-track", (HERE.parent / "promote_stable.py").read_text())
+
     def test_cut_plans_with_any_merge_and_stops_after_the_mirror(self):
         rep, plan = self._plan("cut")
         plan.assert_called_once()

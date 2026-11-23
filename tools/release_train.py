@@ -1098,8 +1098,9 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
             f"(issues {', '.join(sorted({h['issue'] for h in rep['hotfixes']}))}); no open {BLOCKER_LABEL}. " + reason,
             "--notes", notes], cwd=wt)
     elif mode == "soaked":     # the normal gate: promote_stable itself refuses a release that has not soaked
-        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence,
-            "--notes", notes], cwd=wt)
+        # No notes here: promote_stable takes notes only on a fast-track and exits 2 otherwise (wizard-os#856, the
+        # first soaked promotion to pass the upgrade test stopped on it). The ride-alongs are in the evidence doc.
+        sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence], cwd=wt)
     else:
         sh([sys.executable, "tools/promote_stable.py", "promote", V, "--from", stable, "--evidence", evidence, "--fast-track",
         "--classification", cls, "--reason", reason, "--notes", notes], cwd=wt)
