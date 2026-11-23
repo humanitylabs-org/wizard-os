@@ -70,7 +70,9 @@ owner step below is done.
      `hotfix lane: <repo>#<n> waiting; cutting now`).
    - **Promote:** a latest that carries a hotfix PR not yet in stable moves after **24h** instead of 72h; after
      **0h** when the hotfix issue is also labelled `breaking` or the PR closes a `release-blocker` issue. Any open
-     `release-blocker` still holds it, and the installed upgrade test still runs first. The promotion record uses
+     `release-blocker` still holds it, and the installed upgrade test still runs first. With soak by cut age (on
+     by default, #416) latest is cut about every 30 min and is never 24h old itself, so the lane promotes the
+     newest release cut onto latest 24h+ ago that already carries the hotfix (the `--check` line names it). The promotion record uses
      `promote_stable.py promote --fast-track` with a `Hotfix lane (wizard-os#434): ...` reason, so
      `promote_stable.py check` (and its mirrored copy) is unchanged.
    - Any GitHub read error keeps the normal timing (fails toward waiting).

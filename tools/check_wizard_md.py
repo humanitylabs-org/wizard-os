@@ -15,11 +15,18 @@ CATEGORIES = {"agent", "interface", "app", "system"}
 BAD_CAPS = {"ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "NET_ADMIN", "DAC_READ_SEARCH", "BPF", "PERFMON"}
 HOST_PATH = re.compile(r"^/(etc|root|boot|proc|sys|dev|var/run|run|home|usr|lib|bin|sbin)(/|$)")
 NEEDS = {"mic", "system-audio", "camera", "notifications", "files", "home-network"}
+# Browser permissions an app frame may ask the owner for (spec/WIZARD_MD.md "Browser permissions").
+PERMISSIONS = {"geolocation"}
 # Connectors (owner rule, 27 Oct 2026): an app that signs in to or holds the key for an outside service is a
 # Connector and must say `type: external`, or shells and the App Store shelve it under Apps/Agent apps.
 CONNECTOR_SLOTS = {"ai-connection", "bank-connection", "cloudflare-connection", "web-data", "x-search"}
 CONNECTOR_SLOT = re.compile(r"[a-z0-9-]+-(connection|connector)")
 CONNECTOR_SUMMARY = re.compile(r"^\s*(connect|sign in to)\b", re.I)
+# Linux refuses any single exec argument or environment string over MAX_ARG_STRLEN (128 KiB = 131,072 bytes), so a
+# container whose `command` carries a bigger inline program never starts (humanitylabs-org/photos#9). Fail well
+# before the limit and warn earlier still.
+ARG_ERROR_BYTES = 120_000
+ARG_WARN_BYTES = 100_000
 
 
 def connector_signals(d: dict) -> list[str]:
@@ -64,6 +71,51 @@ def front_matter(text: str) -> dict:
     return data
 
 
+def _exec_strings(name: str, s: dict):
+    """(label, bytes) for every single string the kernel sees as one exec argument or environment entry."""
+    import shlex
+    for key in ("command", "entrypoint"):
+        v = s.get(key)
+        if isinstance(v, str):
+            try:
+                parts = shlex.split(v)
+            except ValueError:
+                parts = [v]
+        elif isinstance(v, list):
+            parts = [str(x) for x in v if x is not None]
+        else:
+            continue
+        for part in parts:
+            yield f"{name} {key} argument", len(part.encode())
+    env = s.get("environment")
+    if isinstance(env, dict):
+        items = list(env.items())
+    elif isinstance(env, list):
+        items = [str(e).partition("=")[::2] for e in env if e is not None]
+    else:
+        items = []
+    for k, v in items:
+        yield f"{name} environment {k}", len(f"{k}={'' if v is None else v}".encode())
+
+
+def _arg_message(label: str, n: int) -> str:
+    return (f"{label} is {round(n / 1000)} KB; Linux refuses one argument over 128 KiB. "
+            "Pack it (zlib+base64 in mcp/inline.py) or ship a file.")
+
+
+def compose_arg_warnings(text: str) -> list[str]:
+    """Single exec strings between ARG_WARN_BYTES and ARG_ERROR_BYTES: still start, but close to the kernel limit."""
+    try:
+        doc = yaml.safe_load(text) or {}
+    except Exception:  # noqa: BLE001
+        return []
+    out = []
+    for name, s in ((doc.get("services") or {}) if isinstance(doc, dict) else {}).items():
+        if isinstance(s, dict):
+            out += [_arg_message(label, n) for label, n in _exec_strings(name, s) if ARG_WARN_BYTES < n <= ARG_ERROR_BYTES]
+    return out
+
+
 def compose_risks(text: str) -> list[str]:
     """Host-level access a public, unreviewed app must never ask for (rule 12)."""
     try:
@@ -93,6 +145,7 @@ def compose_risks(text: str) -> list[str]:
                 risks.append(f"{name}: mounts the container runtime socket")
             elif src == "/" or HOST_PATH.match(src):
                 risks.append(f"{name}: mounts host path {src}")
+        risks += [_arg_message(label, n) for label, n in _exec_strings(name, s) if n > ARG_ERROR_BYTES]
     return risks
 
 
@@ -258,6 +311,12 @@ def voice_names(manifest: dict) -> list[str]:
     return list(names)
 
 
+def permissions_ok(value: object) -> bool:
+    """`permissions`: a list of distinct browser permissions from PERMISSIONS; absent or [] means none."""
+    return (isinstance(value, list) and all(isinstance(v, str) and v in PERMISSIONS for v in value)
+            and len(set(value)) == len(value))
+
+
 HOME_SCREEN_KEYS = {"offline", "position_keys", "route_state"}
 HOME_SCREEN_ROUTE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,39}")
 
@@ -375,6 +434,9 @@ def check(repo: Path, github: str | None = None) -> list[tuple[str, bool, str]]:
     if "whats_new" in d:
         wn = d["whats_new"]
         rule("whats_new is one line of 1-140 chars", whats_new_ok(wn), repr(wn)[:60])
+    if "permissions" in d:
+        pm = d["permissions"]
+        rule("permissions are known (geolocation)", permissions_ok(pm), repr(pm)[:60])
     if "receives_voice_input" in d:
         rv = d["receives_voice_input"]
         rule("receives_voice_input is boolean", type(rv) is bool, repr(rv))

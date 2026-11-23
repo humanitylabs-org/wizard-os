@@ -76,6 +76,7 @@ The App Manager writes one JSON file, `<runtipi data dir>/state/wizard-grants.js
 - `seeded`: apps whose proposals were already made, so a restart doesn't re-add revoked grants.
 - **Mirrored into `apps.json`** as top-level `grants` (same objects, no keys) so the Agent Service and the shell can show them ([APPS_JSON.md](APPS_JSON.md)).
 - Agent → app ticks stay in each `agent.json` (`permissions.wizard_apps`, AGENTS.md). The Apps screen may show them beside app grants, labelled as agents; they are not written here.
+- Connected accounts > **Agent access** (app switch `connected-accounts:grants-panel`, off by default) is a second owner screen for the same `agent.json` ticks, beside App Manager > Connections. It sets them through the Agent Service's `PUT /wizard/v1/apps/<app>/agents` and stores nothing itself ([wizard-connectors `docs/CONNECTIONS_PANEL.md`](https://github.com/humanitylabs-org/wizard-connectors/blob/main/docs/CONNECTIONS_PANEL.md)).
 
 ## Enforcement layer 1: Docker networks
 

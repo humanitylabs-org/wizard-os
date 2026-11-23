@@ -800,13 +800,15 @@ def soaked_for(version: str, wos: Path, now: float | None = None) -> float | Non
     return None if t is None else ((now if now is not None else time.time()) - t) / 3600
 
 
-def due_by_cut(stable: str, latest: str, wos: Path, now: float | None = None) -> tuple[str, float] | None:
-    """(newest version above stable cut onto latest >= SOAK_HOURS ago, its hours), or None. Only real releases count."""
+def due_by_cut(stable: str, latest: str, wos: Path, now: float | None = None,
+               need: float = SOAK_HOURS) -> tuple[str, float] | None:
+    """(newest version above stable cut onto latest >= <need> hours ago (default SOAK_HOURS), its hours), or None.
+    Only real releases count."""
     now = now if now is not None else time.time()
     best = None
     for v, t in latest_history(wos).items():
         hours = (now - t) / 3600
-        if _key(stable) < _key(v) <= _key(latest) and hours >= SOAK_HOURS and (best is None or _key(v) > _key(best[0])):
+        if _key(stable) < _key(v) <= _key(latest) and hours >= need and (best is None or _key(v) > _key(best[0])):
             if subprocess.run(["git", "-C", str(wos), "cat-file", "-e", f"origin/main:releases/{v}.json"],
                               capture_output=True).returncode == 0:
                 best = (v, hours)
@@ -835,21 +837,38 @@ def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | N
         raise Stop(f"can't tell how long {latest} has been For testers: no commit of releases/latest on "
                    f"origin/main names it (in {wos}). Stable stays {stable}.")
     if need > 0 and hours < need:
-        older = due_by_cut(stable, latest, wos) if SOAK_BY_CUT else None
-        if older is None:
-            oldest = oldest_above(stable, latest, wos) if SOAK_BY_CUT else None
-            return False, (f"WAITING: {latest} has been For testers for {hours:.0f}h; it moves to For everyone "
-                           f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}"
-                           + (f"; the oldest release above Stable, {oldest[0]}, was cut {oldest[1]:.0f}h ago and is "
-                              f"promoted at {SOAK_HOURS}h" if oldest and oldest[0] != latest else "")
-                           + f". Stable stays {stable}."), hours, hf, latest
-        # soak by cut age: the older release takes the normal soaked gate (no hotfix waiver applies to it)
-        version, hours, hf = older[0], older[1], []
+        hot = hotfix_due_by_cut(stable, latest, wos, need) if hf and SOAK_BY_CUT else None
+        if hot is not None:
+            # hotfix lane under soak by cut age (wizard-os#434): latest moves every ~30 min, so it is never 24h old;
+            # the newest release cut 24h+ ago that already carries the hotfix takes the shortened soak instead.
+            version, hours, hf = hot
+        else:
+            older = due_by_cut(stable, latest, wos) if SOAK_BY_CUT else None
+            if older is None:
+                oldest = oldest_above(stable, latest, wos) if SOAK_BY_CUT else None
+                return False, (f"WAITING: {latest} has been For testers for {hours:.0f}h; it moves to For everyone "
+                               f"after {need:.0f}h{f' (hotfix lane: {_hf_names(hf)})' if hf else ''}"
+                               + (f"; the oldest release above Stable, {oldest[0]}, was cut {oldest[1]:.0f}h ago and "
+                                  f"is promoted at {SOAK_HOURS}h" if oldest and oldest[0] != latest else "")
+                               + f". Stable stays {stable}."), hours, hf, latest
+            # soak by cut age: the older release takes the normal soaked gate (no hotfix waiver applies to it)
+            version, hours, hf = older[0], older[1], []
     blockers = release_blockers()
     if blockers:
         return False, (f"HELD: {len(blockers)} open {BLOCKER_LABEL} issue(s): " + "; ".join(blockers)
                        + f". Stable stays {stable}."), hours, hf, version
     return True, "", hours, hf, version
+
+
+def hotfix_due_by_cut(stable: str, latest: str, wos: Path, need: float) -> tuple[str, float, list[dict]] | None:
+    """Hotfix lane with soak by cut age: (the newest release above stable cut onto latest >= <need> hours ago that
+    carries a hotfix PR not in stable, its hours, those hotfixes), or None. A release older than that cannot carry a
+    hotfix the newer one lacks (pins only move forward), so only that one release is looked up."""
+    cand = due_by_cut(stable, latest, wos, need=need)
+    if cand is None or cand[0] == latest:
+        return None
+    n2, hf2 = hotfix_soak(wos, stable, cand[0])
+    return (cand[0], cand[1], hf2) if hf2 and cand[1] >= n2 else None
 
 
 def wait_out_cut_window(work: Path, age: float, step) -> list:
