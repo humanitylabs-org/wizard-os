@@ -60,6 +60,8 @@ view:                       # required for view; optional for others
   port: 8080
 
 receives_voice_input: true  # optional boolean: app owns voice requests and feedback
+permissions: [geolocation]  # optional: browser permissions the app may ask the
+                            # owner for (only geolocation today; absent = none)
 
 provides: [video-editing, short-form-video]   # capability slots (optional, recommended)
 recommends:                 # optional for non-AI apps; declared AI model is binding
@@ -148,6 +150,14 @@ app names belong in the shell's alias table.
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
 
+## Browser permissions
+
+Optional `permissions: [geolocation]` lists the browser permissions an app's view may **ask the owner for**. It is a list of distinct values; the only allowed value today is `geolocation` (the device's location, for example Maps' follow-me and "near me"). Any other value fails the check. Absent or `[]` means none, which is what every app gets today: the shell denies the permission to its frame with no prompt.
+
+Declaring it never grants anything by itself. The shell lets a declaring app's frame ask only while its own switch allows it (wizard-ux `wizard/app-location`, off by default), and only from the box's own app list, never a cached or app-supplied copy. Even then the grant goes through the owner's own prompt on that device (the browser's, Android's or the Mac's location prompt), never silently, and the owner can withdraw it in that device's settings. Apps that did not declare it keep `geolocation 'none'`.
+
+The App Manager validates the list and copies it to `apps.json`; the Agent Service passes it on in `/wizard/v1/apps`. Older shells ignore it.
+
 
 ## Home-screen pins
 
@@ -207,12 +217,13 @@ Apps without `runtime.package` still install as before. New apps declare it; the
 8b. `voice_names`, if present, is a list of at most 8 nonblank strings of at most 40 Unicode characters, without control characters.
 8c. `home_screen`, if present, is a mapping with only `offline` (boolean), `position_keys` (list as above) and `route_state` (name as above); a non-empty declaration requires a declared `view` with path and port.
 8d. `whats_new`, if present, is one line of 1–140 characters without line breaks or control characters. It says what changed in this version, in words the owner understands. Settings > About & updates shows it next to an app's pending update and right after the update installed (wizard-ux#1191). The App Manager reads it from the App Store's copy of the app, so it always describes the version that copy installs. Apps without it show "no notes".
+8e. `permissions`, if present, is a list of distinct values from `geolocation` (the only one today); anything else fails.
 8a. `receives_voice_input`, if present, is a boolean; true requires a declared view with path and port.
 8. `provides` entries, if present, are slot ids (`^[a-z0-9][a-z0-9-]{1,40}$`).
 9. Optional online check (`--github owner/repo`): the repo has the `wizard-app` or `wizard-ai` topic.
 10. `publisher`, if present, is a valid `npub1…`.
 11. `category`, if present, is one of `agent`, `interface`, `app`, `system`.
-12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine.
+12. The Runtipi compose file asks for no host-level access: no `privileged`, no `network_mode`/`pid`/`ipc`/`uts`/`userns_mode: host`, no host devices, no container-runtime socket, no host system paths (`/`, `/etc`, `/root`, `/home`, `/proc`, `/sys`, `/dev`, `/run`, `/var/run`, `/usr`, `/boot` …), no `unconfined` security options, and none of `SYS_ADMIN`, `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `NET_ADMIN`, `DAC_READ_SEARCH`, `BPF`, `PERFMON`, `ALL` in `cap_add`. Runtipi's own `${APP_DATA_DIR}` and `${ROOT_FOLDER_HOST}/media` mounts are fine. No single `command` / `entrypoint` argument or `environment` entry is over 120,000 bytes: Linux refuses one exec string over 128 KiB (MAX_ARG_STRLEN), so the container would never start; pack inline programs (zlib+base64) or ship a file. `wam check` warns above 100,000 bytes.
 13. Publisher credit (index and App Manager): an app is credited to an npub only when `publisher` names it **and** that npub signed a NIP-34 announcement whose `clone` is this repo and whose `euc` is the repo's first commit (or lists the signer in `maintainers`). Every Nostr event's id and signature are verified. With either side missing, the app is listed as unclaimed under its GitHub owner ([WIZARD_ID.md](WIZARD_ID.md#app-publishing-decisions-33)).
 14. Packaging (when `runtime.package` is present): it is `source`, `build` or `image`; every compose image is digest-pinned; `source` has no `build:` and mounts `${APP_SOURCE_DIR}` read-only; `build` has a `build:` whose context stays inside the repo and a Dockerfile with digest-pinned `FROM`s, hash-locked `pip install`s and no compile or bundle steps; `image` has no `build:`.
 15. Storage: no top-level volume sets `name:`; every `shares[].path` is relative and stays inside the app-data folder; every `mounts[]` names an app id, a share id and an absolute container path.

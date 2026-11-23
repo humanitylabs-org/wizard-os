@@ -112,6 +112,45 @@ the checker resolves the tag's commit upstream, finds the digest on Docker Hub, 
 reads the `hermes-agent` app's `image/Dockerfile` at its pinned commit to prove it builds
 `FROM nousresearch/hermes-agent:<tag>@<digest>`.
 
+## Hermes fork candidates (wizard-os#723)
+
+The WizardOS Hermes fork ([`defleur-agents/hermes-agent`](https://github.com/defleur-agents/hermes-agent),
+DECISIONS #116) is upstream plus Wizard's local edits, built into its own image. A snapshot that runs it is a
+**candidate** first: it sits in `releases/candidates/<base>-hermes-fork.<n>.json`, carries
+`"channel": "candidate"` and a pre-release version, and neither `releases/latest` nor `releases/stable` may name
+it. Nothing installs a candidate; it is what Telos, then Miguel and the testers, try before James's yes. The
+shared frozen lock (`releases/hermes-lock.json`) is not checked for candidates and still refuses a fork pin in
+any normal release, so moving installs to the fork stays one reviewed lock change.
+
+```json
+"channel": "candidate",
+"hermes": {
+  "tag": "v0.22.7",
+  "commit": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+  "fork": {"repo": "defleur-agents/hermes-agent", "branch": "main",
+           "tag": "sha-<fork commit>", "commit": "<fork commit>"},
+  "image": {"ref": "ghcr.io/defleur-agents/hermes-agent:sha-<fork commit>", "digest": "sha256:<multi-arch>",
+            "commit": "<fork commit>", "architectures": ["amd64", "arm64"],
+            "ci_run": "https://github.com/defleur-agents/hermes-agent/actions/runs/<id>"},
+  "test_record": "<forum test run link, or docs/acceptance/hermes-<tag>.md>",
+  "rollback": {"tag": "v2026.9.24", "commit": "f97608f…", "image": {"ref": "docker.io/nousresearch/hermes-agent:v2026.9.24", "digest": "sha256:fca358f…"}}
+}
+```
+
+`tag`/`commit` are the **upstream base** release; `fork` is the fork commit the image was built from, and
+`image.commit` must equal it. `test_record` must be a real record (a fork pin can't be `none: …`). `rollback` is
+the pin to go back to (normally the base snapshot's). Online, the checker also proves the fork commit is on its
+branch, the GHCR digest exists, both architectures' `org.opencontainers.image.revision` equal the fork commit, and
+the pinned `hermes-agent` recipe builds `FROM <image ref>@<digest>`. A still-private image fails the digest check
+until it is made public, as everything a fresh install downloads must be.
+
+- Build the image: copy [`tools/hermes-fork/image.yml`](../tools/hermes-fork/image.yml) into the fork's
+  `.github/workflows/`; each run's summary prints the digest and the next command.
+- Write the candidate: `python3 tools/hermes_fork_candidate.py --fork-commit <sha> --digest <digest> --ci-run <run> --test-record <link>`
+  (base = what `releases/latest` names; `--agent-repo/--agent-commit` pin a recipe that builds FROM the fork image).
+- Fresh-VM run: `tools/acceptance/hermes/locked.py ghcr.io/defleur-agents/hermes-agent@<digest> nousresearch/hermes-agent@<pinned digest>`
+  (set `GHCR_TOKEN` to a `read:packages` token while the image is private).
+
 ## Provenance check
 
 For a newly tested Hermes pin, `hermes.commit` is the **source tag's commit** and

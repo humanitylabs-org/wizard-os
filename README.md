@@ -26,6 +26,7 @@ The shared map of WizardOS: how the pieces fit, the contracts between them, and 
 5. [`docs/SYSTEM_APPS.md`](docs/SYSTEM_APPS.md): system apps, slots, and the files and transcription overlaps.
 6. [`docs/PRIVATE_BETA.md`](docs/PRIVATE_BETA.md): sharing an app with a friend before it's public.
 7. [`docs/MAC.md`](docs/MAC.md): the later Mac installer.
+8. [`docs/core-apps.md`](docs/core-apps.md): the 14 core apps for WizardOS 1.0, the three stages and the core-ready bar.
 
 ## Contracts (`spec/`)
 

@@ -730,6 +730,48 @@ class HotfixLane(unittest.TestCase):
         self.assertFalse(due)
         self.assertIn("after 72h.", why)
 
+    def test_with_latest_moving_every_30_min_a_hotfix_still_reaches_for_everyone_after_24h(self):
+        """Soak by cut age is on by default (#416) and latest is cut every ~30 min, so latest itself is never 24h old.
+        The newest release cut 24h+ ago that carries the hotfix must take the shortened soak (wizard-os#434)."""
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 11, 10, tzinfo=timezone.utc)
+        cuts = [(f"0.3.{143 + i}", (start + timedelta(minutes=30 * i)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+                for i in range(61)]                        # 0.3.143 .. 0.3.203 over 30h
+        now = (start + timedelta(hours=30)).timestamp()    # 24h before now is cut 12: 0.3.155
+        pin = lambda v: f"{int(v.split('.')[2]):040d}"     # noqa: E731  (a fake wizard-ux commit per release)
+        hf = [{"repo": self.UX, "number": 7, "commit": "h" * 40, "issue": "u", "immediate": False}]
+
+        def gate(first_with_fix, blockers=()):
+            carries = lambda ref: ref != "main" and int(ref) >= int(pin(first_with_fix))  # noqa: E731
+            with tempfile.TemporaryDirectory() as d:
+                src = history(Path(d) / "src", cuts)
+                wos = Path(d) / "repos" / "wizard-os"
+                subprocess.run(["git", "clone", "-q", "--no-checkout", str(src), str(wos)], check=True,
+                               capture_output=True)
+                with mock.patch.object(rt.time, "time", return_value=now), \
+                        mock.patch.object(rt, "HOTFIX_LANE", True), mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                        mock.patch.object(rt, "show", side_effect=lambda r, ref, f: json.dumps(
+                            self.rel(pin(f.split("/")[1][:-5])))), \
+                        mock.patch.object(rt, "hotfix_prs", return_value=hf), \
+                        mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: carries(ref)), \
+                        mock.patch.object(rt, "release_blockers", return_value=list(blockers)):
+                    return rt.soak_gate("0.3.143", "0.3.203", wos)
+
+        # the hotfix landed in 0.3.150 (cut 27h ago): 0.3.155 (cut 24h ago) carries it and is promoted now
+        due, why, hours, got, v = gate("0.3.150")
+        self.assertEqual((due, v), (True, "0.3.155"), why)
+        self.assertAlmostEqual(hours, 24.0)
+        self.assertEqual([h["number"] for h in got], [7])
+        # an open release-blocker still holds it
+        due, why, _, _, _ = gate("0.3.150", blockers=["x other"])
+        self.assertFalse(due)
+        self.assertTrue(why.startswith("HELD: 1 open release-blocker"), why)
+        # the hotfix landed only in 0.3.190 (cut 6.5h ago): nothing carrying it has soaked 24h, so it waits
+        due, why, _, _, v = gate("0.3.190")
+        self.assertFalse(due)
+        self.assertIn("after 24h (hotfix lane: wizard-ux#7)", why)
+        self.assertEqual(v, "0.3.203")
+
     def test_a_pending_hotfix_skips_the_30_minute_limit(self):
         with tempfile.TemporaryDirectory() as d, \
                 mock.patch.object(rt, "clone", return_value=Path(d)), \

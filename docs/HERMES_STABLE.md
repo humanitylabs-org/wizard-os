@@ -22,7 +22,7 @@ Hermes ships a new release roughly every few days, and some of them break things
 3. **James says go.** Nothing moves past our test without his yes.
 4. **Telos first, then Miguel and the other testers.**
 5. **A few days of soak** on those boxes.
-6. **Official WizardOS update**, on James's yes: the fork's `main` moves to the candidate plus the edits, and a new install snapshot pins it.
+6. **Official WizardOS update**, on James's yes: the fork's `main` moves to the candidate plus the edits, and a new install snapshot pins it. Before that yes, the fork image runs only from a **candidate snapshot** (`releases/candidates/`, never named by latest or stable; format and tools in [`releases/README.md`](../releases/README.md#hermes-fork-candidates-wizard-os723)).
 
 ## Done when
 

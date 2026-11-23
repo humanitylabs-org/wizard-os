@@ -1,0 +1,205 @@
+[
+ {
+  "request": 0,
+  "messages": 2,
+  "chars": 23386,
+  "last_input": "HS-ECHO head0",
+  "reply": "ECHO head0"
+ },
+ {
+  "request": 1,
+  "messages": 2,
+  "chars": 1060,
+  "last_input": "HS-ECHO head0",
+  "reply": "ECHO head0"
+ },
+ {
+  "request": 2,
+  "messages": 4,
+  "chars": 23513,
+  "last_input": "HS-ECHO head1",
+  "reply": "ECHO head1"
+ },
+ {
+  "request": 3,
+  "messages": 6,
+  "chars": 23603,
+  "last_input": "HS-FACT alpha",
+  "reply": "NOTED alpha"
+ },
+ {
+  "request": 4,
+  "messages": 8,
+  "chars": 23694,
+  "last_input": "HS-FACT bravo",
+  "reply": "NOTED bravo"
+ },
+ {
+  "request": 5,
+  "messages": 10,
+  "chars": 23787,
+  "last_input": "HS-FACT charlie",
+  "reply": "NOTED charlie"
+ },
+ {
+  "request": 6,
+  "messages": 12,
+  "chars": 23879,
+  "last_input": "HS-ECHO pad0",
+  "reply": "ECHO pad0"
+ },
+ {
+  "request": 7,
+  "messages": 14,
+  "chars": 23967,
+  "last_input": "HS-ECHO pad1",
+  "reply": "ECHO pad1"
+ },
+ {
+  "request": 8,
+  "messages": 16,
+  "chars": 24055,
+  "last_input": "HS-ECHO pad2",
+  "reply": "ECHO pad2"
+ },
+ {
+  "request": 9,
+  "messages": 18,
+  "chars": 24143,
+  "last_input": "HS-ECHO pad3",
+  "reply": "ECHO pad3"
+ },
+ {
+  "request": 10,
+  "messages": 20,
+  "chars": 24231,
+  "last_input": "HS-ECHO pad4",
+  "reply": "ECHO pad4"
+ },
+ {
+  "request": 11,
+  "messages": 22,
+  "chars": 25961,
+  "last_input": "Review the conversation above and consider saving to memory ",
+  "reply": "OK"
+ },
+ {
+  "request": 12,
+  "messages": 22,
+  "chars": 24319,
+  "last_input": "HS-ECHO pad5",
+  "reply": "ECHO pad5"
+ },
+ {
+  "request": 13,
+  "messages": 24,
+  "chars": 33947,
+  "last_input": "Review the conversation above and update the skill library. ",
+  "reply": "OK"
+ },
+ {
+  "request": 14,
+  "messages": 24,
+  "chars": 24407,
+  "last_input": "HS-ECHO pad6",
+  "reply": "ECHO pad6"
+ },
+ {
+  "request": 15,
+  "messages": 26,
+  "chars": 24495,
+  "last_input": "HS-ECHO pad7",
+  "reply": "ECHO pad7"
+ },
+ {
+  "request": 16,
+  "messages": 28,
+  "chars": 24583,
+  "last_input": "HS-ECHO pad8",
+  "reply": "ECHO pad8"
+ },
+ {
+  "request": 17,
+  "messages": 30,
+  "chars": 24671,
+  "last_input": "HS-ECHO pad9",
+  "reply": "ECHO pad9"
+ },
+ {
+  "request": 18,
+  "messages": 32,
+  "chars": 24760,
+  "last_input": "HS-ECHO pad10",
+  "reply": "ECHO pad10"
+ },
+ {
+  "request": 19,
+  "messages": 34,
+  "chars": 24850,
+  "last_input": "HS-ECHO pad11",
+  "reply": "ECHO pad11"
+ },
+ {
+  "request": 20,
+  "messages": 36,
+  "chars": 24937,
+  "last_input": "HS-FILL f1",
+  "reply": "FILLED f1\nNote 0: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9\nNote 1:"
+ },
+ {
+  "request": 21,
+  "messages": 38,
+  "chars": 227740,
+  "last_input": "HS-ECHO after-fill",
+  "reply": "ECHO after-fill"
+ },
+ {
+  "request": 22,
+  "messages": 4,
+  "chars": 13614,
+  "last_input": "TURNS TO SUMMARIZE:\n[The turns to summarize are the messages",
+  "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation about remembered facts "
+ },
+ {
+  "request": 23,
+  "messages": 40,
+  "chars": 227831,
+  "last_input": "HS-RECALL",
+  "reply": "RECALL alpha bravo charlie | summary=false | verbatim_fact_turns=true"
+ },
+ {
+  "request": 24,
+  "messages": 42,
+  "chars": 229621,
+  "last_input": "Review the conversation above and consider saving to memory ",
+  "reply": "OK"
+ },
+ {
+  "request": 25,
+  "messages": 4,
+  "chars": 9543,
+  "last_input": "PREVIOUS SUMMARY:\n## Historical Task Snapshot\nUser asked (de",
+  "reply": "## Goal\nAcceptance conversation about remembered facts (synthetic).\n\n## Key Decisions\n- Th"
+ },
+ {
+  "request": 26,
+  "messages": 10,
+  "chars": 27600,
+  "last_input": "HS-ECHO more1",
+  "reply": "ECHO more1"
+ },
+ {
+  "request": 27,
+  "messages": 8,
+  "chars": 26945,
+  "last_input": "HS-ECHO more2",
+  "reply": "ECHO more2"
+ },
+ {
+  "request": 28,
+  "messages": 10,
+  "chars": 27031,
+  "last_input": "HS-RECALL",
+  "reply": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false"
+ }
+]
