@@ -325,6 +325,59 @@ class AppManagerAndBursts(unittest.TestCase):
             (d / "wam.py").write_text("y\n"); git("commit", "-qam", "code")
             self.assertFalse(rt.only_releases_changed(d, a, git("rev-parse", "HEAD")))
 
+    def test_wam_image_found_whatever_short_sha_length_the_runner_used(self):
+        # wizard-os#844: the runner tagged 7 chars, the train's clone abbreviates to 8 -> image never found.
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin"}
+            git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,  # noqa: E731
+                                            env=env).stdout.strip()
+            git("init", "-q", "-b", "main")
+            git("config", "core.abbrev", "8")
+            (d / ".github" / "workflows").mkdir(parents=True)
+            (d / ".github" / "workflows" / "image.yml").write_text(
+                '      - id: v\n        run: echo "tag=v4.12.0-wizard.$(git rev-list --count HEAD)-$(git rev-parse --short HEAD)" '
+                '>> "$GITHUB_OUTPUT"\n')
+            git("add", "."); git("commit", "-qm", "one")
+            (d / "wam.py").write_text("x\n"); git("add", "."); git("commit", "-qm", "two")
+            img = git("rev-parse", "HEAD")
+            (d / "wam.py").write_text("y\n"); git("commit", "-qam", "code")
+            head = git("rev-parse", "HEAD")
+            self.assertEqual(len(rt.wam_image_tag(d, img).rsplit("-", 1)[1]), 8)
+            tags = rt.wam_image_tags(d, img)
+            self.assertEqual(tags[0], rt.wam_image_tag(d, img))
+            self.assertEqual({len(t.rsplit("-", 1)[1]) for t in tags}, set(range(7, 13)))
+            published = f"ghcr.io/{rt.WAM}:v4.12.0-wizard.2-{img[:7]}"
+            man = {"digest": "sha256:abc", "manifests": [{"platform": {"architecture": "amd64"}},
+                                                         {"platform": {"architecture": "arm64"}}]}
+            real_sh = rt.sh
+
+            def fake_sh(cmd, *a, **kw):
+                if cmd[:3] == ["docker", "buildx", "imagetools"]:
+                    return json.dumps(man) if cmd[4] == published else "ERROR: not found"
+                return real_sh(cmd, *a, **kw)
+
+            def fake_gh(args):
+                if args[0] == "run" and args[1] == "list" and rt.WAM_TEST_WORKFLOW in args:
+                    return [{"headSha": head, "conclusion": "success", "status": "completed"}]
+                if args[0] == "run" and args[1] == "list":
+                    return [{"databaseId": 1, "headSha": img, "conclusion": "success", "url": "u",
+                             "createdAt": "2026-11-21T00:00:00Z"}] if "push" in args else []
+                return {"jobs": [{"name": "publish", "conclusion": "success"}, {"name": "attest", "conclusion": "success"}]}
+
+            first = git("rev-list", "--max-parents=0", "HEAD")
+            L = {"components": {"wizard-app-manager": {"commit": first}},
+                 "images": {"wizard-app-manager": {"image_inputs": ["Dockerfile"]}}}
+            with mock.patch.object(rt, "sh", fake_sh), mock.patch.object(rt, "gh_json", fake_gh), \
+                    mock.patch.object(rt, "is_ancestor", lambda _d, a, b: b != first):
+                got = rt.published_wam(d, L)
+            self.assertIsNotNone(got)
+            self.assertEqual(got["ref"], published)
+            self.assertEqual(got["commit"], head)
+            self.assertEqual(got["source_commit"], img)
+            self.assertEqual(got["digest"], "sha256:abc")
+
     def test_plan_cuts_the_app_manager_automatically(self):
         src = (HERE.parent / "release_train.py").read_text()
         i = src.index("def plan(")

@@ -249,6 +249,36 @@ def wam_image_tag(repo_dir: Path, sha: str) -> str | None:
     return f"{m.group(1)}{count}-{short}"
 
 
+def wam_image_tags(repo_dir: Path, sha: str) -> list[str]:
+    """Every tag image.yml may have given `sha`: `git rev-parse --short` picks its length from the size of the clone it
+    runs in, so the runner's tag (e.g. 7 chars) and this clone's (e.g. 8) can differ (wizard-os#844). This clone's own
+    abbreviation first, then 7 to 12 characters."""
+    tag = wam_image_tag(repo_dir, sha)
+    if not tag:
+        return []
+    prefix = tag.rsplit("-", 1)[0]
+    full = sh(["git", "-C", str(repo_dir), "rev-parse", sha]).strip()
+    out = [tag]
+    for n in range(7, 13):
+        t = f"{prefix}-{full[:n]}"
+        if t not in out:
+            out.append(t)
+    return out
+
+
+def multiarch_manifest(ref: str) -> dict | None:
+    """The registry's manifest list for `ref` when it carries amd64 and arm64, else None (missing or single-arch)."""
+    raw = sh(["docker", "buildx", "imagetools", "inspect", ref, "--format", "{{json .Manifest}}"], check=False)
+    try:
+        man = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(man, dict) or not {"amd64", "arm64"} <= {
+            str((m.get("platform") or {}).get("architecture")) for m in man.get("manifests", [])}:
+        return None
+    return man
+
+
 def only_releases_changed(repo_dir: Path, base: str, head: str) -> bool:
     """True when base..head touches nothing outside releases/ (the App Manager's mirror merges)."""
     names = sh(["git", "-C", str(repo_dir), "diff", "--name-only", base, head]).split()
@@ -279,17 +309,11 @@ def published_wam(repo_dir: Path, latest: dict, limit: int = 40) -> dict | None:
         jobs = gh_json(["run", "view", str(r["databaseId"]), "-R", WAM, "--json", "jobs"]).get("jobs", [])
         if not {"publish", "attest"} <= {str(j.get("name")) for j in jobs if j.get("conclusion") == "success"}:
             continue
-        tag = wam_image_tag(repo_dir, r["headSha"])
-        if not tag:
+        found = next(((f"ghcr.io/{WAM}:{t}", man) for t in wam_image_tags(repo_dir, r["headSha"])
+                      if (man := multiarch_manifest(f"ghcr.io/{WAM}:{t}"))), None)
+        if not found:
             continue
-        ref = f"ghcr.io/{WAM}:{tag}"
-        raw = sh(["docker", "buildx", "imagetools", "inspect", ref, "--format", "{{json .Manifest}}"], check=False)
-        try:
-            man = json.loads(raw)
-        except ValueError:
-            continue
-        if not {"amd64", "arm64"} <= {str((m.get("platform") or {}).get("architecture")) for m in man.get("manifests", [])}:
-            continue
+        ref, man = found
         return {"commit": head, "ref": ref, "digest": man["digest"], "ci_run": r["url"], "architectures": ["amd64", "arm64"],
                 "source_commit": r["headSha"],
                 "image_inputs": list(latest["images"]["wizard-app-manager"].get("image_inputs") or [])}
