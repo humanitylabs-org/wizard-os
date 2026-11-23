@@ -63,6 +63,20 @@ GUEST_UNIT = "wizard-train-guest"
 ROOT_ENV = "export PATH=/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin XDG_RUNTIME_DIR=/run/user/0; "
 # An agent-run install (what owners do: they paste one sentence to their agent): detached, restart deferred.
 AGENT_ENV = "_HERMES_GATEWAY=1 HERMES_SESSION_PLATFORM=telegram "
+# Installing an OLD Stable (wizard-os#856): its App Manager runs Runtipi's setup without --version, so the setup asks
+# api.github.com for the latest Runtipi WITHOUT a token (60 calls an hour per IP, wizard-app-manager#808). On a shared
+# GitHub-hosted runner that limit is often used up: the install then stops after only "Installing runtipi..." and the
+# promotion fails on the rig, not on the release. Newer installers pin the version and never call the API. When this
+# variable holds a read-only token (the workflow's own GITHUB_TOKEN), the guest's root curl sends it to api.github.com
+# only (a .netrc entry for that one host) while the OLD release installs; the rig removes it again before the upgrade.
+GITHUB_API_TOKEN_ENV = "WIZARD_RIG_GITHUB_API_TOKEN"
+GITHUB_API_AUTH_ON = (
+    "umask 077; for f in .netrc .curlrc; do [ -e /root/$f ] && [ ! -e /root/$f.rig-orig ] && cp -p /root/$f "
+    "/root/$f.rig-orig; done; IFS= read -r t; printf 'machine api.github.com login x-access-token password %s\\n' "
+    "\"$t\" >> /root/.netrc; echo netrc-optional >> /root/.curlrc; chmod 600 /root/.netrc /root/.curlrc")
+GITHUB_API_AUTH_OFF = (
+    "rm -f /root/.netrc /root/.curlrc; for f in .netrc .curlrc; do [ -e /root/$f.rig-orig ] && "
+    "mv /root/$f.rig-orig /root/$f; done; true")
 
 TS_WRAPPER = r"""#!/bin/bash
 # TEST-ONLY wrapper (disposable upgrade-rig guest): headscale cannot issue HTTPS certs; simulate "owner turned HTTPS on".
@@ -537,6 +551,22 @@ def install(release: str, label: str, release_base: str | None) -> tuple[dict, f
     return st, secs
 
 
+def github_api_auth(on: bool) -> bool:
+    """Give (on) or take back (off) the guest's root curl a token for api.github.com only. False when none is set."""
+    token = os.environ.get(GITHUB_API_TOKEN_ENV, "").strip()
+    if not token:
+        return False
+    if on:
+        p = sh(ssh_cmd(ROOT_ENV + GITHUB_API_AUTH_ON), check=False, timeout=60, input=token + "\n")   # never argv
+        if p.returncode:
+            say(f"could not hand the guest a GitHub API token (exit {p.returncode}); installing without one")
+            return False
+        say("old-release install: the guest's curl uses a read-only token for api.github.com only (wizard-os#856)")
+    else:
+        guest(GITHUB_API_AUTH_OFF, check=False, timeout=60)
+    return True
+
+
 def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age: float, out: Path | None,
         helper_removed: bool = False) -> dict:
     for tool in ("qemu-system-x86_64", "qemu-img", "cloud-localds", "docker", "ssh"):
@@ -564,7 +594,12 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         wait_ssh()
         guest(f"tailscale up --login-server=http://10.0.2.2:{HS_PORT} --authkey={authkey} --timeout=90s "
               ">/root/ts-up.log 2>&1; touch /root/.https-on; tailscale ip -4", timeout=200)
-        st, secs = install(frm, f"install {frm}", None)
+        authed = github_api_auth(True)
+        try:
+            st, secs = install(frm, f"install {frm}", None)
+        finally:
+            if authed:
+                github_api_auth(False)
         report["install_from"] = {"state": st.get("state"), "seconds": round(secs)}
         if st.get("state") != "done":
             report["problems"].append(f"installing {frm} ended {st.get('state')}: {st.get('failure_reason') or st.get('message')}")

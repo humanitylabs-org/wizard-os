@@ -55,6 +55,10 @@ jobs:
     env:
       BUILDER_APP_KEY: ${{ secrets.BUILDER_APP_PRIVATE_KEY }}
       WIZARD_TRAIN_BUDGET_S: "9000"
+      # Read-only (contents: read) token the rig lends the guest for api.github.com only while it installs the OLD
+      # Stable, whose Runtipi setup asks that API without one and fails when the runner's shared IP is rate-limited
+      # (wizard-os#856, wizard-app-manager#808).
+      WIZARD_RIG_GITHUB_API_TOKEN: ${{ github.token }}
       WIZARD_TRAIN_GIT_NAME: wizardos-builder[bot]
       WIZARD_TRAIN_GIT_EMAIL: 355658529+wizardos-builder[bot]@users.noreply.github.com
     steps:
