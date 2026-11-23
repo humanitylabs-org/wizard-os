@@ -100,6 +100,19 @@ class UpgradeRigArch(unittest.TestCase):
         i = src.index("if st.get(\"state\") == \"failed\" and retry_from")
         self.assertLess(i, src.index("st, secs = install(to,"), "only the starting install is re-run")
 
+    def test_a_changed_hermes_file_is_shown_as_a_diff_but_env_never(self):
+        rig = self.rig
+        calls = []
+        with mock.patch.object(rig, "guest", lambda cmd, check=True, timeout=600: calls.append(cmd) or "-a: 1\n+a: 2\n"):
+            d = rig.hermes_diff({"config.yaml": "x", ".env": "e", "SOUL.md": "s"},
+                                {"config.yaml": "y", ".env": "f", "SOUL.md": "s"})
+        self.assertEqual(d[".env"], "(changed; content not shown)")
+        self.assertIn("+a: 2", d["config.yaml"])
+        self.assertNotIn("SOUL.md", d)
+        self.assertTrue(all(".env" not in c for c in calls))
+        md = rig.markdown({"from": "1", "to": "2", "passed": False, "hermes_diff": d, "started_at": "a", "finished_at": "b"})
+        self.assertIn("Hermes config.yaml: what the upgrade changed", md)
+
 
 if __name__ == "__main__":
     unittest.main()

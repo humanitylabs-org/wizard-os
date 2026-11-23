@@ -527,6 +527,22 @@ def snapshot() -> dict:
 HELPER_PATHS = ("/usr/local/libexec/wizard-os/os-patch", "/etc/sudoers.d/wizard-os-maintenance")
 
 
+DIFFABLE = ("config.yaml", "SOUL.md")   # .env changes are reported by hash only (secrets)
+
+
+def hermes_diff(before: dict, after: dict) -> dict:
+    """A unified diff per changed Hermes file the rig may show (config.yaml, SOUL.md); `.env`: changed, no content."""
+    out = {}
+    for f in sorted(set(before) | set(after)):
+        if before.get(f) == after.get(f):
+            continue
+        if f not in DIFFABLE:
+            out[f] = "(changed; content not shown)"
+            continue
+        out[f] = guest(f"diff -u /root/.rig-before/{f} /root/.hermes/{f}", check=False)[-8000:] or "(no diff readable)"
+    return out
+
+
 def helper_report(status: dict | None, installed: bool) -> str:
     """One word for the nightly maintenance helper, from `wam maintain status --json` plus whether a helper file is on
     disk: ready / root / removed_by_owner / needs_choice (removed earlier but one is installed) / stale / unsafe /
@@ -641,6 +657,9 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
             report["helper_remove"] = guest("wam maintain remove --json 2>&1", check=False, timeout=120)[-2000:]
         before = snapshot()
         report["before"] = before
+        # Keep copies of the owner's Hermes files (never .env: it holds secrets) so a change can be shown as a diff.
+        guest("mkdir -p /root/.rig-before && cd /root/.hermes && for f in " + " ".join(DIFFABLE) +
+              "; do [ -f $f ] && cp -p $f /root/.rig-before/; done; true", check=False)
         if helper_removed and (before.get("maintenance_helper") or {}).get("state") != "removed_by_owner":
             report["problems"].append(f"before: removing the maintenance helper left it "
                                       f"{(before.get('maintenance_helper') or {}).get('state')}")
@@ -660,6 +679,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
             report["problems"].append(f"after: release.json {rel.get('release')} {rel.get('status')}, failed checks {bad}")
         if before["files"] != after["files"]:
             report["problems"].append(f"Hermes files changed: {before['files']} -> {after['files']}")
+            report["hermes_diff"] = hermes_diff(before["files"], after["files"])
         for k, want in (("api", "200"), ("gateway", "active")):
             if after.get(k) != want:
                 report["problems"].append(f"{k}: {after.get(k)} (want {want})")
@@ -732,6 +752,9 @@ def markdown(r: dict) -> str:
              ""]
     if r.get("problems"):
         lines += ["**Problems:**", *[f"- {p}" for p in r["problems"]], ""]
+    for f, d in (r.get("hermes_diff") or {}).items():
+        lines += [f"<details><summary>Hermes {f}: what the upgrade changed</summary>", "", "```diff", d.rstrip(), "```",
+                  "</details>", ""]
     lines += ["<details><summary>Containers after the upgrade</summary>", "", "```", *a.get("containers", []), "```",
               "</details>", ""]
     return "\n".join(lines)
