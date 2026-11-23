@@ -82,6 +82,8 @@ HS_PORT = int(os.environ.get("WIZARD_RIG_HS_PORT", "8090"))
 # Guest size: 4 vCPU / 8 GB on a box; a GitHub-hosted runner (2 vCPU, 7 GB) sets smaller values in the workflow.
 GUEST_SMP = os.environ.get("WIZARD_RIG_SMP", "4")
 GUEST_MEM_MB = os.environ.get("WIZARD_RIG_MEM_MB", "8192")
+# Optional public DNS servers for the guest (space-separated), disclosed in the report; unset = the NAT's own DNS.
+RIG_DNS = os.environ.get("WIZARD_RIG_DNS", "").strip()
 HS_NAME = "wizard-train-headscale"
 HS_IMAGE = "headscale/headscale:latest"
 GUEST_UNIT = "wizard-train-guest"
@@ -525,6 +527,22 @@ def snapshot() -> dict:
 HELPER_PATHS = ("/usr/local/libexec/wizard-os/os-patch", "/etc/sudoers.d/wizard-os-maintenance")
 
 
+DIFFABLE = ("config.yaml", "SOUL.md")   # .env changes are reported by hash only (secrets)
+
+
+def hermes_diff(before: dict, after: dict) -> dict:
+    """A unified diff per changed Hermes file the rig may show (config.yaml, SOUL.md); `.env`: changed, no content."""
+    out = {}
+    for f in sorted(set(before) | set(after)):
+        if before.get(f) == after.get(f):
+            continue
+        if f not in DIFFABLE:
+            out[f] = "(changed; content not shown)"
+            continue
+        out[f] = guest(f"diff -u /root/.rig-before/{f} /root/.hermes/{f}", check=False)[-8000:] or "(no diff readable)"
+    return out
+
+
 def helper_report(status: dict | None, installed: bool) -> str:
     """One word for the nightly maintenance helper, from `wam maintain status --json` plus whether a helper file is on
     disk: ready / root / removed_by_owner / needs_choice (removed earlier but one is installed) / stale / unsafe /
@@ -587,7 +605,7 @@ def install(release: str, label: str, release_base: str | None) -> tuple[dict, f
 
 
 def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age: float, out: Path | None,
-        helper_removed: bool = False) -> dict:
+        helper_removed: bool = False, retry_from: bool = False) -> dict:
     for tool in (QEMU.get(ARCH, "qemu-system-x86_64"), "qemu-img", "docker", "ssh"):
         if not shutil.which(tool):
             raise SystemExit(f"missing {tool}")
@@ -608,17 +626,29 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
                     "golden": json.loads(asset("golden.json").read_text()), "arch": ARCH, "accel": acc,
                     "host": host_label(),
                     "os_sh_sha256": hashlib.sha256(os_sh).hexdigest(), "rundir": str(rundir), "problems": [],
-                    "helper_removed": helper_removed}
+                    "helper_removed": helper_removed, "retry_from": retry_from}
     vm_stop(GUEST_UNIT)
     qmp = None
     try:
         authkey = headscale_up(rundir)
         qmp = boot(disk, GUEST_UNIT)
         wait_ssh()
+        if RIG_DNS:   # user-mode NAT forwards DNS through the host's resolver, which a sleeping/roaming Mac drops
+            report["dns"] = RIG_DNS
+            guest("mkdir -p /etc/systemd/resolved.conf.d && printf '[Resolve]\\nDNS=%s\\n' "
+                  f"{shlex.quote(RIG_DNS)} > /etc/systemd/resolved.conf.d/rig.conf && systemctl restart systemd-resolved")
         guest(f"tailscale up --login-server=http://10.0.2.2:{HS_PORT} --authkey={authkey} --timeout=90s "
               ">/root/ts-up.log 2>&1; touch /root/.https-on; tailscale ip -4", timeout=200)
         st, secs = install(frm, f"install {frm}", None)
         report["install_from"] = {"state": st.get("state"), "seconds": round(secs)}
+        if st.get("state") == "failed" and retry_from:
+            # The starting release is already shipped: a failure installing IT is not what this test judges (the
+            # upgrade is). Do what the installer tells an owner to do, once: re-run the same command. Disclosed.
+            report["install_from_first"] = {"state": "failed", "seconds": round(secs),
+                                            "failure_reason": st.get("failure_reason")}
+            say(f"install {frm} failed ({st.get('failure_reason')}); re-running the same command once, as the installer says")
+            st, secs = install(frm, f"install {frm} (re-run)", None)
+            report["install_from"] = {"state": st.get("state"), "seconds": round(secs), "rerun": True}
         if st.get("state") != "done":
             report["problems"].append(f"installing {frm} ended {st.get('state')}: {st.get('failure_reason') or st.get('message')}")
             return report
@@ -627,6 +657,9 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
             report["helper_remove"] = guest("wam maintain remove --json 2>&1", check=False, timeout=120)[-2000:]
         before = snapshot()
         report["before"] = before
+        # Keep copies of the owner's Hermes files (never .env: it holds secrets) so a change can be shown as a diff.
+        guest("mkdir -p /root/.rig-before && cd /root/.hermes && for f in " + " ".join(DIFFABLE) +
+              "; do [ -f $f ] && cp -p $f /root/.rig-before/; done; true", check=False)
         if helper_removed and (before.get("maintenance_helper") or {}).get("state") != "removed_by_owner":
             report["problems"].append(f"before: removing the maintenance helper left it "
                                       f"{(before.get('maintenance_helper') or {}).get('state')}")
@@ -646,6 +679,7 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
             report["problems"].append(f"after: release.json {rel.get('release')} {rel.get('status')}, failed checks {bad}")
         if before["files"] != after["files"]:
             report["problems"].append(f"Hermes files changed: {before['files']} -> {after['files']}")
+            report["hermes_diff"] = hermes_diff(before["files"], after["files"])
         for k, want in (("api", "200"), ("gateway", "active")):
             if after.get(k) != want:
                 report["problems"].append(f"{k}: {after.get(k)} (want {want})")
@@ -699,6 +733,9 @@ def markdown(r: dict) -> str:
              "(stands in for the owner's approval); a test-only `tailscale` wrapper simulates HTTPS turned on. "
              "Headscale has no Serve, so installs end box-only. Nothing ran on a real box. "
              f"Upgrade release base: {r.get('release_base')}. os.sh sha256 `{r.get('os_sh_sha256', '')[:16]}…`.", "",
+             *([f"- Install {r['from']} first ended **failed** ({(r.get('install_from_first') or {}).get('failure_reason')}); "
+                f"re-ran the same command once (`--retry-from`), as the installer tells an owner to."]
+               if r.get("install_from_first") else []),
              f"- Install {r['from']} (public command, agent-run, `WIZARD_STRICT=1`): "
              f"{(r.get('install_from') or {}).get('state')} in {(r.get('install_from') or {}).get('seconds')} s; "
              f"release.json {(b.get('release') or {}).get('release')} {(b.get('release') or {}).get('status')}.",
@@ -715,6 +752,9 @@ def markdown(r: dict) -> str:
              ""]
     if r.get("problems"):
         lines += ["**Problems:**", *[f"- {p}" for p in r["problems"]], ""]
+    for f, d in (r.get("hermes_diff") or {}).items():
+        lines += [f"<details><summary>Hermes {f}: what the upgrade changed</summary>", "", "```diff", d.rstrip(), "```",
+                  "</details>", ""]
     lines += ["<details><summary>Containers after the upgrade</summary>", "", "```", *a.get("containers", []), "```",
               "</details>", ""]
     return "\n".join(lines)
@@ -732,6 +772,9 @@ def main() -> int:
     r.add_argument("--keep", action="store_true", help="leave the guest running (debugging)")
     r.add_argument("--max-golden-age", type=float, default=7.0, help="days before the Hermes base is rebuilt")
     r.add_argument("--out", type=Path, help="also write the JSON report here")
+    r.add_argument("--retry-from", action="store_true",
+                   help="if installing the starting release fails, re-run the same command once (disclosed in the report); "
+                        "the upgrade itself is never retried")
     r.add_argument("--helper-removed", action="store_true",
                    help="owner removes the maintenance helper before the upgrade; the upgrade must keep that choice")
     a = ap.parse_args()
@@ -739,7 +782,7 @@ def main() -> int:
     if a.cmd == "golden":
         golden(force=a.force)
         return 0
-    rep = run(a.frm, a.to, a.release_base, a.keep, a.max_golden_age, a.out, a.helper_removed)
+    rep = run(a.frm, a.to, a.release_base, a.keep, a.max_golden_age, a.out, a.helper_removed, a.retry_from)
     print(json.dumps({k: rep.get(k) for k in ("passed", "problems", "rundir")}, indent=2))
     return 0 if rep.get("passed") else 1
 
