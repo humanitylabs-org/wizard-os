@@ -543,6 +543,45 @@ def hermes_diff(before: dict, after: dict) -> dict:
     return out
 
 
+# What WizardOS itself keeps in the owner's Hermes config.yaml (wizard-app-manager wam/agent_link.py EDIT): its MCP
+# server entry (url, Authorization header, `lazy` since wizard-app-manager#591), its skills folder in
+# skills.external_dirs, and its plugin in plugins.enabled. A release may change these; everything else is the owner's.
+OWNER_CONFIG_CHECK = r"""
+import json, sys, yaml
+def own(c):
+    c = dict(c or {})
+    s = {k: v for k, v in (c.get('mcp_servers') or {}).items()
+         if not (isinstance(v, dict) and '/wizard/mcp' in str(v.get('url', '')))}
+    c['mcp_servers'] = s
+    sk = dict(c.get('skills') or {})
+    sk['external_dirs'] = [d for d in (sk.get('external_dirs') or []) if '.wizard-os/' not in str(d)]
+    c['skills'] = sk
+    pl = dict(c.get('plugins') or {})
+    pl['enabled'] = [p for p in (pl.get('enabled') or []) if p != 'wizard-os']
+    c['plugins'] = pl
+    return c
+a, b = (yaml.safe_load(open(p)) for p in sys.argv[1:3])
+print(json.dumps({'owner_equal': own(a) == own(b)}))
+"""
+
+
+def config_owner_equal() -> bool:
+    """True when config.yaml differs only in WizardOS's own entries. Fails closed (False) when it can't tell."""
+    out = guest("python3 - /root/.rig-before/config.yaml /root/.hermes/config.yaml <<'PY'\n" + OWNER_CONFIG_CHECK
+                + "\nPY", check=False)
+    try:
+        return json.loads(out.strip().splitlines()[-1]).get("owner_equal") is True
+    except (ValueError, IndexError, AttributeError):
+        return False
+
+
+def owner_changed(before: dict, after: dict) -> list[str]:
+    """The owner's Hermes files the upgrade changed. config.yaml counts only when something besides WizardOS's own
+    entries changed; .env and SOUL.md always count."""
+    changed = [f for f in sorted(set(before) | set(after)) if before.get(f) != after.get(f)]
+    return [f for f in changed if not (f == "config.yaml" and config_owner_equal())]
+
+
 def helper_report(status: dict | None, installed: bool) -> str:
     """One word for the nightly maintenance helper, from `wam maintain status --json` plus whether a helper file is on
     disk: ready / root / removed_by_owner / needs_choice (removed earlier but one is installed) / stale / unsafe /
@@ -678,8 +717,12 @@ def run(frm: str, to: str, release_base: str | None, keep: bool, max_golden_age:
         if rel.get("release") != to or rel.get("status") != "pinned" or bad:
             report["problems"].append(f"after: release.json {rel.get('release')} {rel.get('status')}, failed checks {bad}")
         if before["files"] != after["files"]:
-            report["problems"].append(f"Hermes files changed: {before['files']} -> {after['files']}")
             report["hermes_diff"] = hermes_diff(before["files"], after["files"])
+            owner = owner_changed(before["files"], after["files"])
+            report["hermes_owner_changed"] = owner
+            if owner:
+                report["problems"].append(f"the owner's Hermes files changed: {', '.join(owner)} "
+                                          f"({before['files']} -> {after['files']})")
         for k, want in (("api", "200"), ("gateway", "active")):
             if after.get(k) != want:
                 report["problems"].append(f"{k}: {after.get(k)} (want {want})")
@@ -720,6 +763,15 @@ def host_label() -> str:
     return f"a Linux {platform.machine()} host"
 
 
+def hermes_files_word(r: dict) -> str:
+    b, a = (r.get("before") or {}).get("files"), (r.get("after") or {}).get("files")
+    if b == a:
+        return "identical"
+    if not r.get("hermes_owner_changed"):
+        return "the owner's settings identical; only WizardOS's own entries in config.yaml changed (diff below)"
+    return f"CHANGED: {', '.join(r['hermes_owner_changed'])}"
+
+
 def markdown(r: dict) -> str:
     b, a = r.get("before") or {}, r.get("after") or {}
     rel = a.get("release") or {}
@@ -743,7 +795,7 @@ def markdown(r: dict) -> str:
              + (" (quick shell swap)" if (r.get('upgrade') or {}).get('quick') else "") + "; "
              f"release.json {rel.get('release')} {rel.get('status')}, {len(rel.get('checks', []))} checks, "
              f"{sum(1 for c in rel.get('checks', []) if not c.get('ok'))} failed.",
-             f"- Hermes config.yaml/.env/SOUL.md: {'identical' if b.get('files') == a.get('files') else 'CHANGED'} "
+             f"- Hermes config.yaml/.env/SOUL.md: {hermes_files_word(r)} "
              f"({', '.join(f'{k} `{v[:8]}…`' for k, v in (a.get('files') or {}).items())}).",
              f"- After: Hermes API /health {a.get('api')}, gateway {a.get('gateway')}, shell {a.get('shell')}, "
              f"`wizard doctor` FAIL {len(a.get('wizard_doctor_fail') or [])}, `wam doctor` FAIL {len(a.get('wam_doctor_fail') or [])}.",
