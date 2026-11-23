@@ -1073,7 +1073,7 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     reason = (f"Release train: merged Recommended fixes ({'; '.join(fix_notes) or 'none: forced proof run'}). Installed "
               f"upgrade {stable} -> {V} passed on a disposable KVM guest (public os.sh"
               f"{', candidate served locally' if dry else ''}): {(rig.get('upgrade') or {}).get('seconds')} s, pinned, "
-              "0 failed checks, doctors 0 FAIL, Hermes config/.env/SOUL unchanged.")
+              "0 failed checks, doctors 0 FAIL, the owner's Hermes config/.env/SOUL unchanged.")
     notes = ("Ride-alongs onto Stable: " + "; ".join(f"{x['repo'].split('/')[1]}#{x['number']} [{tier(x)}] {x['title'][:80]}"
                                                      for x in prs) + ("; " + "; ".join(items) if items else "")
              + ". Not checked: real Tailscale/HTTPS/Serve, real chats and sign-ins, phones, a fresh install"
