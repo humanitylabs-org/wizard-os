@@ -8,6 +8,11 @@
 # Runners: the gate on RELEASE_RUNNER (default GitHub-hosted); the promote job, the only one needing KVM, on
 # RELEASE_UPGRADE_RUNNER (default GitHub-hosted ubuntu-latest, which has /dev/kvm; .github/actions/upgrade-rig-setup
 # applies GitHub's documented udev rule). Set it to a self-hosted x86_64 Linux/KVM runner label to move only that job.
+# arm64 (what Wizard for Mac's WizardOS VM runs): when the repository variable RELEASE_UPGRADE_RUNNER_ARM64 names a
+# self-hosted ARM64 runner (an Apple-silicon Mac with qemu + Docker, or ARM64 Linux with /dev/kvm; GitHub's hosted
+# ARM64 runners have no /dev/kvm), the upgrade-test-arm64 job runs the same upgrade test as an arm64 guest first, with
+# no secrets, and the promote job promotes only if it passed for exactly that stable -> version. Unset: the job is
+# skipped and the promotion evidence says arm64 was not checked.
 name: Release promote (For everyone)
 on:
   schedule:
@@ -30,6 +35,8 @@ jobs:
     timeout-minutes: 10
     outputs:
       due: ${{ steps.gate.outputs.due }}
+      stable: ${{ steps.gate.outputs.stable }}
+      version: ${{ steps.gate.outputs.version }}
     env:
       BUILDER_APP_KEY: ${{ secrets.BUILDER_APP_PRIVATE_KEY }}
     steps:
@@ -46,10 +53,41 @@ jobs:
           set -o pipefail
           python3 tools/release_train.py promote-soaked --check | tee "$RUNNER_TEMP/gate.out"
           if grep -q '^due=true' "$RUNNER_TEMP/gate.out"; then echo "due=true" >> "$GITHUB_OUTPUT"; else echo "due=false" >> "$GITHUB_OUTPUT"; fi
-  promote:
-    # The only job that needs KVM: the installed upgrade test, then promotion + checked mirror.
+          grep -E '^(stable|version)=[0-9][0-9A-Za-z.+-]*$' "$RUNNER_TEMP/gate.out" >> "$GITHUB_OUTPUT" || true
+  upgrade-test-arm64:
+    # The same installed upgrade test as an arm64 guest, on our own ARM64 machine. No secrets: it only reads the public
+    # installer and mirror, and hands its report to the promote job as an artifact.
     needs: gate
-    if: needs.gate.outputs.due == 'true'
+    if: needs.gate.outputs.due == 'true' && vars.RELEASE_UPGRADE_RUNNER_ARM64 != ''
+    runs-on: ${{ vars.RELEASE_UPGRADE_RUNNER_ARM64 }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upgrade test ${{ needs.gate.outputs.stable }} -> ${{ needs.gate.outputs.version }} (arm64)
+        env:
+          FROM: ${{ needs.gate.outputs.stable }}
+          TO: ${{ needs.gate.outputs.version }}
+        run: |
+          set -o pipefail
+          [ -n "$FROM" ] && [ -n "$TO" ] || { echo "::error::the gate named no stable/version"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/arm64"
+          rc=0
+          python3 tools/acceptance/upgrade-rig/kvm_upgrade.py --arch arm64 run --from "$FROM" --to "$TO" \
+            --out "$RUNNER_TEMP/arm64/rig-arm64.json" || rc=$?
+          rundir=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rundir",""))' "$RUNNER_TEMP/arm64/rig-arm64.json" 2>/dev/null || true)
+          [ -n "$rundir" ] && [ -f "$rundir/report.md" ] && cp "$rundir/report.md" "$RUNNER_TEMP/arm64/rig-arm64.md"
+          exit $rc
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rig-arm64
+          path: ${{ runner.temp }}/arm64/
+          if-no-files-found: ignore
+  promote:
+    # The only job that needs KVM: the installed upgrade test, then promotion + checked mirror. When the arm64 test
+    # ran, it must have passed (a failed or cancelled arm64 run stops here); skipped (no ARM64 runner) goes on.
+    needs: [gate, upgrade-test-arm64]
+    if: always() && needs.gate.outputs.due == 'true' && (needs.upgrade-test-arm64.result == 'success' || needs.upgrade-test-arm64.result == 'skipped')
     runs-on: ${{ vars.RELEASE_UPGRADE_RUNNER || 'ubuntu-latest' }}   # x86_64 Linux with /dev/kvm
     timeout-minutes: 180
     env:
@@ -66,8 +104,14 @@ jobs:
       - name: Log in as the WizardOS Builder app
         run: tools/builder_app_login.sh
       - uses: ./.github/actions/upgrade-rig-setup
+      - if: needs.upgrade-test-arm64.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: rig-arm64
+          path: ${{ runner.temp }}/arm64
       - name: Promote latest (upgrade test, promotion PR, checked mirror)
         run: |
+          if [ "${{ needs.upgrade-test-arm64.result }}" = "success" ]; then export WIZARD_TRAIN_ARM64_REPORT="$RUNNER_TEMP/arm64/rig-arm64.json"; fi
           args=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then args="--dry-run"; fi
           timeout 9600 python3 tools/release_train.py promote-soaked $args

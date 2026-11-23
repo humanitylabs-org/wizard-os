@@ -797,5 +797,75 @@ class HotfixLane(unittest.TestCase):
         self.assertLess(src.index('rig.get("passed")'), i)
 
 
+class Arm64UpgradeTest(unittest.TestCase):
+    """Wizard for Mac runs WizardOS as an arm64 VM: an arm64 upgrade test, when an ARM64 runner ran one, gates the
+    promotion; without one, promotion goes on and the evidence says arm64 was not checked."""
+
+    def report(self, d, **kw):
+        r = {"from": "0.3.240", "to": "0.3.288", "arch": "arm64", "passed": True, "problems": [],
+             "upgrade": {"seconds": 900}, **kw}
+        path = Path(d) / "rig-arm64.json"
+        path.write_text(json.dumps(r))
+        return path
+
+    def evidence(self, path):
+        env = {rt.ARM64_REPORT_ENV: str(path)} if path else {}
+        with mock.patch.dict("os.environ", env, clear=False):
+            if not path:
+                import os
+                os.environ.pop(rt.ARM64_REPORT_ENV, None)
+            return rt.arm64_evidence("0.3.240", "0.3.288")
+
+    def test_no_arm64_runner_means_no_stop_and_no_evidence(self):
+        self.assertEqual(self.evidence(None), (None, ""))
+
+    def test_a_passed_run_of_exactly_this_upgrade_joins_the_evidence(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = self.report(d)
+            p.with_suffix(".md").write_text("## Installed upgrade 0.3.240 → 0.3.288 on a disposable HVF guest (arm64)\n")
+            stop, md = self.evidence(p)
+        self.assertIsNone(stop)
+        self.assertIn("(arm64)", md)
+
+    def test_failed_other_versions_other_arch_or_missing_report_stop_the_promotion(self):
+        with tempfile.TemporaryDirectory() as d:
+            for kw, word in (({"passed": False, "problems": ["upgrade ended failed"]}, "failed"),
+                             ({"from": "0.3.200"}, "not 0.3.240 -> 0.3.288"),
+                             ({"arch": "amd64"}, "not arm64")):
+                stop, md = self.evidence(self.report(d, **kw))
+                self.assertIn(word, stop or "")
+                self.assertEqual(md, "")
+            stop, _ = self.evidence(Path(d) / "nothing.json")
+            self.assertIn("missing or unreadable", stop)
+
+    def test_an_arm64_failure_stops_before_any_promotion(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        i_arm, i_promote = src.index("arm64_evidence(stable, V)"), src.index('"promote", V, "--from", stable')
+        self.assertLess(src.index('rig.get("passed")'), i_arm)
+        self.assertLess(i_arm, i_promote)
+        self.assertIn("return rep", src[i_arm:src.index("# Evidence + promotion.")])
+
+    def test_check_names_what_the_arm64_job_tests(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(rt, "STATE", Path(d)), \
+                mock.patch.object(rt, "clone", return_value=Path(d)), \
+                mock.patch.object(rt, "show", side_effect=lambda repo, ref, f: "0.3.288\n" if f.endswith("latest") else "0.3.240\n"), \
+                mock.patch.object(rt, "soak_gate", return_value=(True, "", 80.0, [], "0.3.288")):
+            from io import StringIO
+            with mock.patch("sys.stdout", new=StringIO()) as out:
+                self.assertEqual(rt.main(["--work", d, "promote-soaked", "--check"]), 0)
+        self.assertIn("due=true\nstable=0.3.240\nversion=0.3.288\n", out.getvalue())
+
+    def test_workflow_runs_arm64_without_secrets_and_promote_waits_for_it(self):
+        wf = (ROOT / ".github" / "workflows" / "release-promote.yml").read_text()
+        arm = wf[wf.index("  upgrade-test-arm64:"):wf.index("  promote:")]
+        self.assertIn("vars.RELEASE_UPGRADE_RUNNER_ARM64 != ''", arm)
+        self.assertIn("--arch arm64 run", arm)
+        self.assertNotIn("secrets.", arm)
+        promote = wf[wf.index("  promote:"):]
+        self.assertIn("needs: [gate, upgrade-test-arm64]", promote)
+        self.assertIn("needs.upgrade-test-arm64.result == 'skipped'", promote)
+        self.assertIn("WIZARD_TRAIN_ARM64_REPORT", promote)
+
+
 if __name__ == "__main__":
     unittest.main()
