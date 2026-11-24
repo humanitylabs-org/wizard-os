@@ -15,8 +15,10 @@ ROOT = Path(__file__).resolve().parents[2]
 VARIANT = re.compile(
     r"(?:(?<![\w/.~-])|(?<=\\[ntr]))wizard(?:[ \t\u00a0\u2009\u202f]+|[ \t\u00a0]*[-\u2010\u2011\u2013\u2014][ \t\u00a0]*)os(?![\w/-])",
     re.IGNORECASE)
-# Kept byte-for-byte: captured evidence and published release records (their sha256 is cited in release notes).
-SKIP = re.compile(r"(^|/)evidence/|^releases/")
+# Kept byte-for-byte: captured evidence and published release records (their sha256 is cited in release notes), and
+# the release train's promotion evidence (docs/acceptance/promote-<version>.md, tools/release_train.py), which quotes
+# merged PR titles as they were written.
+SKIP = re.compile(r"(^|/)evidence/|^releases/|^docs/acceptance/promote-[\w.-]+\.md$")
 
 
 def misspells(line: str) -> bool:
