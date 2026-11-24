@@ -68,6 +68,7 @@ Apps that don't adopt the client still open in themed window chrome; the shell n
 
 - The skin choice is owner configuration in `theme.json`, reapplied on every connect; apps never store it.
 - App Back closes its own overlay or nested view first and reports handled / at-root; the shell then leaves fullscreen or changes desk; a single Back never exits Wizard.
+- App Home (wizard-ux#1332): the shell may ask an app for its first view, as if just opened (the narrow desktop's tap on the app already in front). The app's `WizardApp.nav.onHome(fn)` handler runs first; `fn()` returns `true` when the app is at its first view, else every Back step the app registered runs at once (overlays, handlers, a history adapter in one traversal to its first entry). Home never reloads the app and never loses its other state (drafts, scroll, playback). Same-origin it is a call on the client; under the browser boundary it is the `home` op (`handled` / `atRoot`; an older client answers `refused` and the shell takes one Back instead).
 - Pin the appearance version. Older hosts or no host: the app runs on its standalone defaults.
 
 ## Shared assets
