@@ -1,0 +1,852 @@
+# Promote 0.3.332 (release train)
+
+## Why
+
+- 0.3.332 soaked 72h+ on For testers (latest) with no open release-blocker issue (For everyone promotion, normal gate, no fast-track).
+
+## What changes (0.3.240 → 0.3.332)
+
+**Classification: feature** (launch-phase fast-track, DECISIONS #93): it carries changes that are not provably fixes.
+
+- wizard-ux#782 [fix] Recommended fix: Sigil for Podcasts
+- wizard-ux#783 [fix] Recommended fix: chat pins in the row menu, optional row buttons
+- wizard-ux#785 [fix] Recommended fix: slow server no longer shows a false start failure; model retry responds at once
+- wizard-ux#786 [feature] Alert quick actions with one Archive completion verb
+- wizard-ux#787 [feature] fix: named app IDs with compatible launcher voice and Food handoff aliases
+- wizard-ux#788 [fix] Recommended fix: recheck voice setup before rejecting a recording
+- wizard-ux#789 [fix] Recommended fix: keep Miguel's chats pin-free after #783
+- wizard-ux#790 [feature] Opinionated: Archive on top of the By status list on phone and desktop
+- wizard-ux#797 [fix] Recommended fix: internal routing services stay hidden
+- wizard-ux#800 [fix] Recommended fix: skins are colours only; Miguel's old layout is retired (no tweak)
+- wizard-ux#801 [maintenance] Maintenance: guard separate skin and colour choices
+- wizard-ux#803 [fix] Restore separate Skin and Color controls per James’s decision
+- wizard-ux#808 [feature] Opinionated: Pins can be turned off (Filter › View › Pins)
+- wizard-ux#813 [fix] Recommended fix: every app wears a house sigil, never a letter
+- wizard-ux#815 [fix] Recommended fix: desk order sync — the phone no longer reshuffles desks on every device
+- wizard-ux#816 [fix] Recommended fix: secret scan treats wux.* storage key names like wos.* ones
+- wizard-ux#820 [feature] Opinionated: Settings › Look is one flat Tweaks list, no per-author 'All of' buttons
+- wizard-ux#829 [feature] Opinionated: skin and tweak choices are one set per owner, the same on every device
+- wizard-ux#835 [fix] Recommended fix: composer is one colour when the model label sits under the text
+- wizard-ux#837 [feature] Opinionated: retire four Miguel tweaks; add No ✕ on desks (miguel/no-desk-close)
+- wizard-ux#844 [fix] Recommended fix: required secret scan checks only each change's own commits (rule 2); daily full-history audit; verified gitleaks download
+- wizard-ux#851 [feature] Tweak (off by default): Archive on top in By day too
+- wizard-ux#852 [fix] Recommended fix: a browser back swipe under a finger a skin gesture owns is not also a Back step
+- wizard-ux#853 [feature] Tweak (off by default): one Group by day switch instead of the Layout picker
+- wizard-ux#868 [feature] Desktop: tile windows on desks out of sight so their apps load at a real size
+- wizard-ux#870 [fix] Launch the approved Home and Hermes identities
+- wizard-ux#884 [fix] Fix Notes icon precedence without changing other app logos
+- wizard-ux#885 [fix] Recommended fix: unblock secret scans with verified historical fingerprints
+- wizard-ux#888 [feature] Opinionated (off by default): three shell views to try — AI apps, Apps, Orb (Miguel's box version; replaces #771 #793 #832 #843 #854)
+- wizard-ux#890 [fix] Recommended fix: a take's voice controls follow the skin (readable on light skins)
+- wizard-ux#892 [feature] Strong suggestion: apps declare home-screen pin capabilities; the shell names no app
+- wizard-ux#893 [fix] Recommended fix: user-facing service apps belong in Store Apps (kind from what the owner sees)
+- wizard-ux#894 [feature] Strong suggestion: short answer first — long agent replies lead with their plain-words ask, full reply under Details (Miguel's tweak, off by default)
+- wizard-ux#895 [feature] Opinionated UX (Miguel's area: notifications): Chats is the notification inbox — every app lands in Chats, one row per app
+- wizard-ux#896 [feature] Opinionated — feel free to drop: optional orb pins with saved-ON recovery
+- wizard-ux#897 [feature] Strong suggestion: Settings › About shows the main commit this box is built on and how far behind/ahead of main it is (#887 rule 5)
+- wizard-ux#899 [feature] Opinionated UX (Miguel's area: notifications): Notification levels are built in — Chats, Badge, Morning report, Off, saved on the box
+- wizard-ux#900 [maintenance] Maintenance: preserve fixture contracts across optional Back and connection capabilities
+- wizard-ux#903 [fix] Recommended fix: fingerprint prompts wait for the app in front
+- wizard-ux#904 [fix] Recommended fix: cached People work with every share receiver
+- wizard-ux#905 [feature] Opinionated — feel free to drop: new desktop sends stay on Chats
+- wizard-ux#907 [fix] Recommended fix: imported shares keep their selected agent and comment
+- wizard-ux#908 [feature] fix: preserve live icon masks, pin geometry and Store identity on main
+- wizard-ux#909 [fix] Recommended fix: readable generic app headings
+- wizard-ux#910 [fix] Recommended fix: restored background desk geometry
+- wizard-ux#912 [fix] Recommended fix: launch each app once and preserve independent web surfaces
+- wizard-ux#914 [fix] Recommended fix: preserve live answer loading and notification drafts
+- wizard-ux#915 [feature] Host app-owned Ready extensions; remove domain-specific card from core
+- wizard-ux#916 [maintenance] Maintenance: preserve live shell and opacity regression evidence
+- wizard-ux#917 [fix] Recommended fix: restore shared microphone startup and recovery
+- wizard-ux#918 [fix] Recommended fix: preserve About identities and unavailable updates
+- wizard-ux#919 [fix] Recommended fix: retain temporary chat UX behind capability and opt-in
+- wizard-ux#920 [fix] Recommended fix: retain hosted thread drafts and reply recording owner
+- wizard-ux#921 [fix] Recommended fix: restore same-frame action acknowledgements
+- wizard-ux#922 [fix] Recommended fix: prevent QA helpers from reading owner data
+- wizard-ux#923 [fix] Recommended fix: converge shared search and live runtime proofs
+- wizard-ux#924 [fix] Recommended fix: stop disposed Chats work and guard browser proof initialization
+- wizard-ux#925 [maintenance] Maintenance: port four browser proofs to shared-main synthetic fixtures
+- wizard-ux#926 [fix] Recommended fix: report only executed offline QA checks
+- wizard-ux#927 [feature] Fix v8 offline pill and routed search/Wisdom browser proofs
+- wizard-ux#928 [feature] Keep outage feedback visible across browser hints
+- wizard-ux#929 [fix] Recommended fix: complete closed synthetic browser fixtures
+- wizard-ux#931 [feature] Opinionated UX (Miguel's area: notifications): notifications about an app are listed under that app and follow its route (app:<id> tag)
+- wizard-ux#932 [maintenance] Maintenance: give Second Hand its own price-tag sigil
+- wizard-ux#933 [feature] Strong suggestion: optional Bring your AI step in the Welcome (opens the Importer app)
+- wizard-ux#934 [maintenance] Maintenance: QA fence reports every uncatalogued request at once; inventory of request paths for the three browser proofs
+- wizard-ux#935 [fix] Recommended fix: complete synthetic startup and keep desktop mic proof reachable
+- wizard-ux#936 [fix] Recommended fix: keep the last Look row clear of navigation and sheet edges
+- wizard-ux#937 [fix] Recommended fix: desktop voice notes record mono from the computer's own mic
+- wizard-ux#939 [fix] Recommended fix: restore approved Sonnet for connected Claude accounts
+- wizard-ux#940 [feature] Opinionated UX — feel free to drop: Now playing, minimal (small bars on the playing app's icon, desktop + phone; miguel/now-playing tweak + api.media)
+- wizard-ux#941 [feature] fix: open Troubleshooter immediately with local connection help
+- wizard-ux#943 [feature] Opinionated: Wizard OS backgrounds for Landscapes (official hat)
+- wizard-ux#944 [fix] Recommended fix: Discard on a kept voice recording works in Wizard for Mac
+- wizard-ux#945 [fix] Recommended fix: About compares owner releases with main on public App Manager
+- wizard-ux#947 [feature] Opinionated: calm offline card tweak (miguel/calm-offline, off by default)
+- wizard-ux#948 [fix] Recommended fix: preserve provider sign-in links in Troubleshooter
+- wizard-ux#949 [feature] Sync tested main UX with preserved owner opt-ins
+- wizard-ux#950 [feature] Strong suggestion: finish Miguel’s shipped background gallery after #943
+- wizard-ux#951 [feature] Strong suggestion: recover Miguel’s shipped notification stacks and counted rail marks
+- wizard-ux#952 [fix] Recommended fix: preserve Miguel’s shipped News newspaper sigil
+- wizard-ux#953 [feature] Fix: changing to AI apps keeps Settings open
+- wizard-ux#954 [fix] Recommended fix: AI apps view keeps its AI fuel gauge without the network Home
+- wizard-ux#955 [fix] Recommended fix: keep phone Settings open across view changes and clean test fixtures
+- wizard-ux#957 [fix] Recommended fix: phone AI apps drawer never covers Settings
+- wizard-ux#958 [fix] Recommended fix: complete Miguel coverage through 44e53363 before v5
+- wizard-ux#959 [fix] Recommended fix: Notifications items fold under their app in skin-host noteRows
+- wizard-ux#964 [fix] Recommended fix: keep shell views separate on desktop and phone
+- wizard-ux#965 [maintenance] Maintenance: exercise offered older-chat actions without touching routed windows
+- wizard-ux#966 [fix] Recommended fix: readable Settings in narrow desktop view hosts
+- wizard-ux#967 [fix] Recommended fix: keep desktop Settings open through Orb and AI apps changes
+- wizard-ux#968 [fix] Recommended fix: keep built-in appearance switches in sync across devices
+- wizard-ux#969 [fix] Recommended fix: keep skin and tweak choices selected during sync
+- wizard-ux#970 [feature] Stage standard desktop AI apps shell; keep phone Classic Desks
+- wizard-ux#972 [fix] Recommended fix: Chats badges count unread threads
+- wizard-ux#973 [fix] Recommended fix: preserve restored view selections across concurrent saves
+- wizard-ux#985 [feature] Fix AI apps One list ignoring Newest sort
+- wizard-ux#987 [feature] Remove developer credits from Wizard's interface
+- wizard-ux#988 [feature] Strong suggestion: Wizard desktop backgrounds and default orb radial
+- wizard-ux#990 [feature] Restore skin names and descriptions; keep only the layout credit removal
+- wizard-ux#991 [feature] Escape goes back by recency and focus on desktop
+- wizard-ux#992 [feature] Fix accepted voice messages staying below their replies
+- wizard-ux#994 [fix] Recommended fix: backgrounds keep the Wizard desktop palette
+- wizard-ux#997 [maintenance] One shared Chats list model for every layout
+- wizard-ux#998 [fix] Recommended fix: Reload with page-independent recorder custody
+- wizard-ux#1000 [fix] Recommended fix: slide desktop app panes as one unit
+- wizard-ux#1001 [feature] Desktop draws its chosen layout first on refresh
+- wizard-ux#1002 [fix] Recommended fix: preserve native desktop Option-arrow navigation
+- wizard-ux#1003 [fix] Recommended fix: unblock voice Send and Discard when storage fails
+- wizard-ux#1004 [feature] Open outside links in the installed Browser Reader
+- wizard-ux#1005 [feature] Strong suggestion: Thread tracker tweak (ask strip, row dots, quote Reply), off by default
+- wizard-ux#1008 [feature] One core pane layout model; AI apps reads its geometry from it
+- wizard-ux#1009 [fix] Recommended fix: desktop Ready pills count unread like the phone
+- wizard-ux#1010 [fix] Recommended fix: keep in-flight threads in Working
+- wizard-ux#1012 [feature] Fix Thread tracker when synced Look arrives after opening a thread
+- wizard-ux#1013 [fix] Recommended fix: Keep external inline files outside the Wizard tab
+- wizard-ux#1015 [feature] Fix Android Reload hangs and safely rescue stale audio
+- wizard-ux#1017 [feature] Put Chats tracker dots immediately left of timestamps
+- wizard-ux#1020 [maintenance] Maintenance: test interface update notice with a harmless comment
+- wizard-ux#1021 [feature] Count tracker replies, not separate asks on the same reply
+- wizard-ux#1024 [fix] Recommended fix: Reload works when this page holds no audio
+- wizard-ux#1026 [fix] Recommended fix: desktop media opens within the screen
+- wizard-ux#1029 [maintenance] Maintenance: second harmless interface update for Reload retry
+- wizard-ux#1031 [maintenance] Maintenance: third harmless interface update test
+- wizard-ux#1035 [feature] Keep app drafts through Reload (main)
+- wizard-ux#1039 [fix] Recommended fix: preserve native media arrow-key seeking
+- wizard-ux#1040 [fix] Recommended fix: reject late draft saves before Reload
+- wizard-ux#1043 [fix] Recommended fix: restore Sonnet to compact model dropdown
+- wizard-ux#1045 [fix] Recommended fix: show app toolbar after delayed initialization
+- wizard-ux#1049 [fix] Recommended fix: Thread tracker visible-seen, panel seam and reply landing
+- wizard-ux#1054 [fix] Recommended fix: Project-level thread rename hint
+- wizard-ux#1056 [fix] Recommended fix: hide thread tracker when nothing needs you
+- wizard-ux#1057 [maintenance] Maintenance: explicit desktop lifecycle host boundary (slice 1)
+- wizard-ux#1058 [maintenance] Maintenance: desktop host app surfaces (slice 2)
+- wizard-ux#1059 [feature] Strong suggestion: add window modes to the core pane model
+- wizard-ux#1060 [feature] Keep desktop chats open through Working and other state changes
+- wizard-ux#1062 [fix] Recommended fix: retain running items in the thread tracker (main)
+- wizard-ux#1063 [fix] Recommended fix: make the first chat rename survive stale refreshes
+- wizard-ux#1064 [fix] Recommended fix: harden desktop slice 2 focus and layout diagnostics
+- wizard-ux#1065 [fix] Recommended fix: Android Translate missing Thai text behind English controls
+- wizard-ux#1066 [maintenance] Maintenance: guard desktop Archive against an empty chat pane
+- wizard-ux#1067 [feature] Add server-backed custom desktop backgrounds
+- wizard-ux#1068 [fix] Recommended fix: keep phone chats open after actions by default
+- wizard-ux#1070 [maintenance] Maintenance: desktop host slice 3 retained Chats mounts and shared overlays
+- wizard-ux#1071 [feature] Shorten the custom background note so the app-parity label inventory parses it
+- wizard-ux#1072 [maintenance] CI: avoid optional apt font stalls before responsive browser QA
+- wizard-ux#1074 [feature] Tracker: pin server versions at send and distinguish ordinary reply tails
+- wizard-ux#1077 [feature] Keep helper and live-run threads in Working, with owner asks visible
+- wizard-ux#1079 [fix] Recommended fix: Recorder survives broken phone storage and live reloads
+- wizard-ux#1082 [fix] Recommended fix: restore in-place Android picture translation
+- wizard-ux#1086 [fix] Recommended fix: recover phone Recorder storage after transient failures
+- wizard-ux#1087 [fix] Recommended fix: keep the same Recorder meeting through phone app updates
+- wizard-ux#1088 [feature] Clear finished reload alerts and match update-banner styling
+- wizard-ux#1089 [fix] Media viewer: always contain phone screenshots on open
+- wizard-ux#1093 [feature] Fix native-update banner: truthful ready text and first-tap install
+- wizard-ux#1094 [feature] Fix native updater stale-holder fence without interrupting genuine takes
+- wizard-ux#1096 [feature] Fix Chats lifecycle truth: stopped helpers Ready, stopped tracker dots
+- wizard-ux#1099 [feature] Finish truthful tracker lifecycle fixtures and style checks
+- wizard-ux#1102 [feature] Sync web orb with the shipped native orb (GPU context restore + smoothstep fix)
+- wizard-ux#1103 [feature] Desktop: the app beside a docked chat stays clickable after a reply
+- wizard-ux#1106 [feature] Thread tracker: one-tap Resume for stopped items (main port of live a97701f4)
+- wizard-ux#1109 [feature] Desktop applies interface updates by itself when hidden or quiet (main port of live 94e28b52)
+- wizard-ux#1112 [feature] AI apps desktop: Resolve this on a notification stays in the chat column (main port of live f4eaf0a6)
+- wizard-ux#1113 [feature] Chats: no per-message attachment count limit; the refused message goes through on reload
+- wizard-ux#1114 [fix] Recommended fix: keep nearby orb Translate captions and start picture reads independently
+- wizard-ux#1116 [fix] Recommended fix: Wizard's own links skip Reader; Reader failures open the original in one tap
+- wizard-ux#1117 [maintenance] Maintenance: opt-in Desktop-style Chats list tweak for phone (off by default)
+- wizard-ux#1121 [feature] Working threads sort A to Z by default, Newest/Oldest on Ready's pill bar (live port; supersedes #1073)
+- wizard-ux#1122 [feature] Claude extra usage: show purchased credits remaining (live port; supersedes #1098)
+- wizard-ux#1123 [feature] Phone: starter apps never pop open on other devices (live port)
+- wizard-ux#1124 [feature] Voice reply from the docked AI apps orb goes to the visible thread (live port; supersedes #1075)
+- wizard-ux#1125 [feature] Desktop window modes: Centred / Side by side / Full screen / Back to tiled, ⌥⇧U/J/F/T (live port; supersedes #1069)
+- wizard-ux#1128 [feature] Desktop shell: AI apps renderer boundary + each shell loads only its own layout code
+- wizard-ux#1129 [feature] Chats: Archive back at the bottom of the list on desktop and phone
+- wizard-ux#1130 [maintenance] docs: COMPONENTS.md back under its brief budget
+- wizard-ux#1132 [feature] Chats: 'Not up to date' notice is one slim row with a Troubleshoot link
+- wizard-ux#1133 [feature] Chats: a reply can carry a live tweak switch ([WIZARD_TWEAK_V1])
+- wizard-ux#1134 [feature] Chats: desktop Archive opens the next chat; phone Archive returns to the list
+- wizard-ux#1135 [feature] Voice: declared first-word app routes; tapped "music" opens Music song ID
+- wizard-ux#1136 [fix] Recommended fix: Attachments: no hidden eight-file cap on orb, voice and voice-reply sends
+- wizard-ux#1137 [maintenance] Maintenance: test(qa-chat-rename): relative fixture timestamps (fixed date aged out)
+- wizard-ux#1140 [fix] Recommended fix: in-app Downloads banner + Downloads sheet (skin-matched)
+- wizard-ux#1143 [fix] Recommended fix: harden Downloads native entry; retain same-origin isolation hold
+- wizard-ux#1144 [feature] Strong suggestion: always-automatic updates, For testers / For everyone, feature switches in Settings (testers) and the Tracker
+- wizard-ux#1145 [fix] Recommended fix: a follow-up typed while a reply is still working is queued, not 'Not sent' (wait + same-thread follow-up)
+- wizard-ux#1146 [fix] Recommended fix: Stop withdraws a waiting refused steer (port of live 83a44cd2a)
+- wizard-ux#1148 [feature] Thread tracker: chronological open list (oldest first, running last)
+- wizard-ux#1149 [maintenance] Maintenance: notify the release train after a green Publish public image on main
+- wizard-ux#1150 [feature] Store: installed apps with alias ids/mirrored repos no longer show Get; install progress bar
+- wizard-ux#1151 [feature] Archive (and other one-tap list actions) paint on the tap's own frame
+- wizard-ux#1152 [feature] Thread tracker: owner reply answers older asks on every device; drop helper pill and tracked Needs-you line on Working rows
+- wizard-ux#1153 [feature] Thread tracker: shown owner reply answers older asks when list lastUserAt lags
+- wizard-ux#1154 [feature] Chats list: a running helper keeps an interrupted or failed thread in Working
+- wizard-ux#1155 [fix] Recommended fix: wait for a new thread history instead of declaring it gone
+- wizard-ux#1156 [fix] Recommended fix: stack companion panels in narrow windows
+- wizard-ux#1157 [fix] Recommended fix: work that finished during downtime can be continued with one tap (off by default)
+- wizard-ux#1158 [feature] Merge pull request #1158 from humanitylabs-org/builder/14-fix-main-tests
+- wizard-ux#1159 [feature] Settings: one plain disk encryption line from wam disk status
+- wizard-ux#1161 [feature] Dictation into Notes uses the native editing pipeline (fix for text pasted twice on Android)
+- wizard-ux#1162 [fix] Recommended fix: Settings › Updates offers Automatic / Ask me again
+- wizard-ux#1163 [feature] Fix: voice typing into Notes no longer copies to the clipboard and no longer lags (native)
+- wizard-ux#1164 [fix] Recommended fix: dismissing tracker items never archives the thread; only Archive does
+- wizard-ux#1165 [feature] Snooze lands where Archive lands
+- wizard-ux#1167 [fix] Recommended fix: restore Home and keep Hermes out of app icons
+- wizard-ux#1168 [feature] Spell WizardOS in About & updates behind wizard/wizardos-name (Refs humanitylabs-org/wizard-os#436)
+- wizard-ux#1169 [fix] Recommended fix: repeated picture text keeps every line when a position is missing
+- wizard-ux#1170 [fix] Recommended fix: switching Wizards no longer shows the previous Wizard's pending app install
+- wizard-ux#1171 [fix] Recommended fix: the app update banner, Welcome, tour and Android subtitles spell WizardOS (behind a tweak)
+- wizard-ux#1172 [feature] Chat: owner messages get their own colour; streaming replies never yank the thread down
+- wizard-ux#1173 [feature] Open Troubleshooter loads at once and falls back to its direct line
+- wizard-ux#1174 [maintenance] Maintenance: bug issue form for wizard-ux
+- wizard-ux#1175 [fix] Recommended fix: a failed reply says why (subscription ended, usage limit, network), behind a tweak
+- wizard-ux#1176 [fix] Recommended fix: the Mac desktop bar starts after the measured window buttons
+- wizard-ux#1178 [feature] Thread tracker: main builder agent only (no tracker in Philosopher or other agents' chats)
+- wizard-ux#1180 [fix] Recommended fix: the phone stops re-sending guidance every 3 s to a reply that never started
+- wizard-ux#1181 [feature] Strong suggestion: AI Look up in the Chats selection menu, a fast model explains the words in their message
+- wizard-ux#1182 [feature] WizardOS is one word, always: shell, Android, docs and tests
+- wizard-ux#1183 [fix] Recommended fix: every Chats/Ready number counts unread threads only
+- wizard-ux#1184 [feature] Fix composer/orb layout in a full-screen Working thread on the Android app
+- wizard-ux#1185 [fix] Recommended fix: a chat waiting on a background job reads 'Waiting on a background job', not Stuck
+- wizard-ux#1186 [feature] Add shared native-first Wizard switcher to web shells (ships #812)
+- wizard-ux#1187 [feature] Wizard switcher follow-up: AI-apps workspace list offers the switch
+- wizard-ux#1188 [feature] Strong suggestion: Store Sources sheet, GitHub sign-in and Beta source
+- wizard-ux#1192 [feature] Strong suggestion: skins are look only, only feature switches decide what runs (switch, off by default)
+- wizard-ux#1193 [feature] Strong suggestion: Settings > About & updates lists every installed app, installed vs latest (switch, off by default)
+- wizard-ux#1194 [feature] Strong suggestion: skins are look only, skin scripts pause while the switch is on (switch, off by default)
+- wizard-ux#1195 [feature] Strong suggestion: Settings > Updates shows failed, rolled back and held apps with the reason (switch, off by default)
+- wizard-ux#1196 [feature] Switching Wizards stays inside the Android app (fixes switcher opening the browser)
+- wizard-ux#1197 [feature] Strong suggestion: Settings can turn on telling the team about failed updates (switch, off by default)
+- wizard-ux#1198 [feature] Outside links open in your own browser again (Browser Reader off by default)
+- wizard-ux#1199 [feature] Strong suggestion: skins are look only, the worn skin's choices become the shared switches once, drop list off (switch, off by default)
+- wizard-ux#1200 [feature] Strong suggestion: Settings > Updates gets Update now, Retry, Hold and Automatic / Ask me for apps (switch, off by default)
+- wizard-ux#1202 [feature] Strong suggestion: Settings > Updates shows one line of What's new per app version (switch, off by default)
+- wizard-ux#1203 [feature] Wizard switcher visible and usable on the desktop AI apps view (James: missing on desktop PWA)
+- wizard-ux#1204 [feature] Trial: outside links open in a Brave panel over WizardOS on Android (off by default, links.panel)
+- wizard-ux#1205 [feature] Strong suggestion: the Chats model menu lists only the main models of your connected AI connectors (switch, off by default)
+- wizard-ux#1206 [fix] Recommended fix: an unsent message stays in the thread, marked Not sent, with one Retry and no duplicate
+- wizard-ux#1207 [feature] Strong suggestion: Settings > Updates links a failed app update to its bug report (switch, off by default)
+- wizard-ux#1208 [fix] Recommended fix: Wizard switcher lists the saved Wizards from the AI apps header name (boxes without a devices registry)
+- wizard-ux#1210 [fix] Recommended fix: AI apps workspace menu - Manage workspaces opens Settings > Connections; Option-O opens the shared switcher
+- wizard-ux#1211 [fix] Recommended fix: Settings can turn on the agent connection repair (switch wizard/link-token-repair, off by default)
+- wizard-ux#1212 [feature] Strong suggestion: outside links open in the browser panel by default on the WizardOS Android app (opt out: links.panel false)
+- wizard-ux#1213 [feature] Strong suggestion: browser panel uses the phone's default browser (Brave only as a fallback); 0.10.37
+- wizard-ux#1214 [feature] Strong suggestion: Settings can turn on publishing app links after command-line installs (switch, off by default)
+- wizard-ux#1215 [feature] Server switch is refused only for unfinished work, and says which (0.10.38)
+- wizard-ux#1216 [maintenance] docs: add ServerSwitchGuard row to COMPONENTS.md
+- wizard-ux#1217 [feature] Panel emulator proof: dismiss Brave's one-time 'Minimize tab' tip before the one Back (test-only)
+- wizard-ux#1221 [maintenance] Maintenance: main green again (COMPONENTS.md size, ServerSwitchGuard allowlist)
+- wizard-ux#1222 [fix] Recommended fix: a voice note goes to the model selected at Send, not at record start
+- wizard-ux#1225 [maintenance] Maintenance: read-only report of leftover live/integration side branches
+- wizard-ux#1226 [maintenance] Maintenance: read-only check of the live checkout and orphaned worktree folders
+- wizard-ux#1227 [fix] Recommended fix: preserve ignored orphan files removed from main
+- wizard-ux#1228 [fix] Recommended fix: landed branch content does not approve deletion
+- wizard-ux#1230 [fix] Recommended fix: stale recordings no longer block switching Wizard; an unsent one opens with Send / Delete (0.10.39)
+- wizard-ux#1232 [fix] Recommended fix: phone app updates download on mobile data too, except when roaming (0.10.40)
+- wizard-ux#1234 [fix] Recommended fix: AI apps desktop chat fills the main area instead of a narrow strip on the left
+- wizard-ux#1238 [fix] Recommended fix: a reply refused in a Telegram or Slack chat says so at once, with no Retry that can never work
+- wizard-ux#1240 [fix] Recommended fix: AI apps desktop sidebar picks an agent (All · each agent) to list its chats and start a new one
+- wizard-ux#1241 [feature] Strong suggestion: the desktop-style phone Chats list is the default; an owner's off stays off
+- wizard-ux#1245 [feature] Strong suggestion: Settings › Look drops seven retired switches and their leftovers
+- wizard-ux#1246 [fix] Recommended fix: phone Archive and Snooze in an alert return to the Chats list
+- wizard-ux#1247 [fix] Recommended fix: open app windows show fresh data on focus, view, a light poll and after agent changes
+- wizard-ux#1248 [fix] Recommended fix: Settings › Connections has one scroll area, Add a Wizard in view on the phone
+- wizard-ux#1252 [fix] Recommended fix: phone home-screen app icons fill the launcher circle
+- wizard-ux#1253 [fix] Recommended fix: snoozed chats no longer light the Ready count when Ready is empty
+- wizard-ux#1255 [feature] Strong suggestion: Channels view in Chats, Slack-style, behind a switch (phase 1)
+- wizard-ux#1257 [feature] Strong suggestion: Channels posts show your first message and pictures, channels sort A–Z with pins, a long-press sheet and Archive (behind a switch)
+- wizard-ux#1260 [feature] Strong suggestion: a message box at the bottom of a channel posts straight into it, Slack-style (behind a switch)
+- wizard-ux#1262 [feature] Strong suggestion: unread channels go bold with a count, and unread posts say "new replies" in the feed (behind a switch)
+- wizard-ux#1264 [fix] Recommended fix: a long channel opens at the first unread post under a New line, or at the bottom, and stays there
+- wizard-ux#1265 [fix] Recommended fix: a channel keeps the place you scrolled to under the filter bar, and finds the right post when two share an id
+- wizard-ux#1267 [fix] Recommended fix: Channels count the replies you see, seeing a post reads it, green unread dot
+- wizard-ux#1268 [fix] Recommended fix: a channel post shows the owner's words from its first frame, never the generated title; stale feed reads keep a newer read
+- wizard-ux#1270 [fix] Recommended fix: a channel post's green dot clears only when it is opened; indicators in one right-hand slot with words; long threads count every reply
+- wizard-ux#1271 [feature] Strong suggestion: Channels in the AI apps desktop sidebar (switch wizard/chat-channels)
+- wizard-ux#1273 [feature] Strong suggestion: Chats channels read the Agent Service channel store (switch wizard/chat-channels)
+- wizard-ux#1274 [fix] Recommended fix: phone capture recovery settles takes whose audio is gone, and names its error instead of UnknownError
+- wizard-ux#1277 [fix] Recommended fix: style ratchet skips generated vendor bundles that CI drift-checks
+- wizard-ux#1280 [feature] Strong suggestion: AI apps sidebar Channels tabs show with no Chats window open (switch wizard/chat-channels)
+- wizard-ux#1283 [fix] Recommended fix: Option-Shift-arrows select words in app text fields on desktop
+- wizard-ux#1284 [feature] Strong suggestion: Alerts posts show the agent and a Reply button in channel feeds (switched off)
+- wizard-ux#1285 [fix] Recommended fix: Option-hyphen and Option-Shift-hyphen type en and em dashes in text fields on desktop (Mac)
+- wizard-ux#1286 [feature] Channels: a channel's feed opens in the AI apps main chat column; the sidebar keeps its channel list (Refs humanitylabs-org/wizard-ux#1256)
+- wizard-ux#1288 [fix] Recommended fix: agent posts in Alerts show bold text and tappable links, not raw asterisks
+- wizard-ux#1290 [fix] Recommended fix: in Wizard for Mac the AI apps sidebar sits below the window buttons
+- wizard-ux#1295 [fix] Recommended fix: Edit on a Not sent channel post puts the words back in the channel's box
+- wizard-ux#1296 [fix] Recommended fix: Dismiss on a Not sent channel post takes its Sending… post out of the feed at once
+- wizard-ux#1297 [fix] Recommended fix: in Wizard for Mac the chat's top buttons respond again (arrangement, Chats list, close)
+- wizard-ux#1298 [fix] Recommended fix: with a channel open, voice keys and New chat post in that channel, not General
+- wizard-ux#1299 [fix] Recommended fix: an agent's channel post shows its words once, also after the feed repaints
+- wizard-ux#1300 [fix] Recommended fix: channel posts stay in posting order; a reply never moves its post
+- wizard-ux#1301 [fix] Recommended fix: a Wizard added on one device shows in every device's switcher (saved Wizards live on the box)
+- wizard-ux#1304 [feature] Channels: desktop Back from a thread to its channel feed (Refs #1302)
+- wizard-ux#1305 [feature] Strong suggestion: Channels: Move to channel… in the Activity row menu
+- wizard-ux#1306 [feature] Channels: the owner's new post scrolls into view in its feed (Refs #1291)
+- wizard-ux#1307 [maintenance] Maintenance: browser proof for the desktop channel Back
+- wizard-ux#1313 [fix] Recommended fix: AI apps desktop keeps the left sidebar open down to 680 px wide
+- wizard-ux#1315 [feature] Recorder: call the app Recorder in the shade label, launcher example and docs
+- wizard-ux#1318 [feature] Channels: + New channel row and + / ⌥N on the Channels list (Refs #1308)
+- wizard-ux#1320 [fix] Recommended fix: Channels: a read watermark per channel; reopening lands where James stopped reading (Refs #1316)
+- wizard-ux#1322 [fix] Recommended fix: Channels: the sidebar tab decides + / ⌥N / voice; a sent desktop New chat stays open (Refs #1310, #1311)
+- wizard-ux#1323 [maintenance] Maintenance: release train runs as the WizardOS Builder GitHub App
+- wizard-ux#1326 [feature] Strong suggestion: narrow desktop shows one app at a time, Chats on top of the Apps column (switch, off)
+- wizard-ux#1327 [maintenance] Maintenance: drop the unused wizard/cli-install-links switch
+- wizard-ux#1333 [feature] Strong suggestion: Channels read on every device: reading a channel on the desktop clears it on the phone
+- wizard-ux#1334 [fix] Recommended fix: Esc from a channel on an app desk keeps the view the owner chose
+- wizard-ux#1337 [feature] Strong suggestion: Channels Mark done clears a thread's Needs you and New reply everywhere (switch, off)
+- wizard-ux#1341 [fix] Recommended fix: Channels agent tab names the agent, never a channel
+- wizard-ux#1345 [feature] Strong suggestion: Channels shows Needs you above the message in the thread, with Mark done (switch, off)
+- wizard-ux#1346 [fix] Recommended fix: a channel opened while an app is centred comes to the front
+- wizard-ux#1347 [fix] Recommended fix: the shell sends the shell-only token on its owner calls (off unless the box turns the browser boundary on)
+- wizard-ux#1348 [fix] Recommended fix: app frames are sandboxed and talk to the shell by postMessage (off unless the box turned the browser boundary on)
+- wizard-ux#1349 [fix] Recommended fix: dictation reaches a sandboxed app's focused field (off unless the box turned the browser boundary on)
+- wizard-ux#1350 [feature] Strong suggestion: with Channels on, Activity becomes a short what-needs-me list and agents move into Channels (switch, off)
+- wizard-ux#1351 [fix] Recommended fix: desktop keys and click-to-focus work in a sandboxed app (off unless the box turned the browser boundary on)
+- wizard-ux#1353 [feature] Strong suggestion: Settings › Look drops the Apps and Orb views and the unreachable two-orb layout
+- wizard-ux#1355 [fix] Recommended fix: pinned apps, link-sheet pages and voice frames are sandboxed too (off unless the box turned the browser boundary on)
+- wizard-ux#1356 [fix] Recommended fix: with Channels on, Ready's sort is one compact menu on its header line and the + no longer covers Archived
+- wizard-ux#1357 [fix] Recommended fix: Android downloads show only Wizard's banner and keep their real file name
+- wizard-ux#1361 [fix] Recommended fix: Store, Agents and Setup keep working inside the browser boundary
+- wizard-ux#1363 [fix] Recommended fix: a reload keeps the open channel feed in the AI apps chat column
+- wizard-ux#1364 [fix] Recommended fix: Needs you in the thread clears on Mark done and lands on screen
+- wizard-ux#1365 [fix] Recommended fix: Welcome sign-in and Importer run sandboxed, Settings › Connections keeps working inside the browser boundary
+- wizard-ux#1366 [feature] Strong suggestion: Channels in Chats is one toggle
+- wizard-ux#1367 [fix] Recommended fix: the Troubleshooter window runs sandboxed inside the browser boundary
+- wizard-ux#1369 [fix] Recommended fix: with Channels on, a Your call thread stays in Ready with its amber dot after you open it
+- wizard-ux#1370 [fix] Recommended fix: Store, Agents and Setup opened as their own tab send owner calls with the shell token (boundary switch on)
+- wizard-ux#1371 [fix] Recommended fix: a thread opens on its Needs you line and stays there
+- wizard-ux#1372 [fix] Recommended fix: a sandboxed app sets its own badge and window title bar (off unless the box turned the browser boundary on)
+- wizard-ux#1373 [feature] Strong suggestion: one-tap jump-to-Needs-you pill at the top of a thread (Channels)
+- wizard-ux#1374 [fix] Recommended fix: a sandboxed app can share out and transcribe again (off unless the box turned the browser boundary on)
+- wizard-ux#1375 [fix] Recommended fix: a sandboxed app can share to Wizard and hold shell updates again (off unless the box turned the browser boundary on)
+- wizard-ux#1376 [fix] Recommended fix: a reload keeps the app open beside a chat opened from the sidebar
+- wizard-ux#1377 [fix] Recommended fix: a sandboxed app hears shell updates and fresh-data asks again (off unless the box turned the browser boundary on)
+- wizard-ux#1378 [fix] Recommended fix: an older channel post opened on desktop shows its title beside Back
+- wizard-ux#1379 [fix] Recommended fix: a sandboxed app receives shares again (off unless the box turned the browser boundary on)
+- wizard-ux#1381 [fix] Recommended fix: a sandboxed app can lower Wizard Music and use its fingerprint vault again (off unless the box turned the browser boundary on)
+- wizard-ux#1382 [fix] Recommended fix: Channels polish: Alerts shows right after turning Channels on, and the jump pills never cover their target or ↓ Latest
+- wizard-ux#1383 [fix] Recommended fix: a sandboxed app can use Wizard ID again (off unless the box turned the browser boundary on)
+- wizard-ux#1384 [maintenance] Maintenance: Activity's Your call rule tested on a real sessions-list payload
+- wizard-ux#1385 [fix] Recommended fix: a sandboxed app can record again (off unless the box turned the browser boundary on)
+- wizard-ux#1386 [fix] Recommended fix: phone + on the Channels list opens the New channel form (Refs #1328)
+- wizard-ux#1387 [fix] Recommended fix: a sandboxed app's own ⌥ keys work in the AI apps view (off unless the box turned the browser boundary on)
+- wizard-ux#1388 [fix] Recommended fix: ↓ Latest and the ↓ pill never sit on Mark done · Snooze · Archive on desktop
+- wizard-ux#1389 [fix] Recommended fix: the AI apps view's own ⌥ keys work with the keyboard in a sandboxed app (off unless the box turned the browser boundary on)
+- wizard-ux#1390 [fix] Recommended fix: Esc on a full-screen channel post goes back to the feed and keeps full screen
+- wizard-ux#1391 [fix] Recommended fix: a sandboxed app gets the live skin layer (skin sheets and My skin) with its theme (off unless the box turned the browser boundary on)
+- wizard-ux#1392 [fix] Recommended fix: boot-layout QA passes again (fixture chat no longer ages out of the sidebar)
+- wizard-ux#1393 [fix] Recommended fix: an agent's reply sent with a tool call stays visible when a short note ends the turn
+- wizard-ux#1394 [fix] Recommended fix: dictation reaches a sandboxed app's rich-text fields (off unless the box turned the browser boundary on)
+- wizard-ux#1395 [fix] Recommended fix: a voice take in #General goes to the main agent on the model picked there
+- wizard-ux#1396 [fix] Recommended fix: the model picked in a channel's message box shows at once and its posts use it
+- wizard-ux#1397 [fix] Recommended fix: hold to record works in a sandboxed app on a touch screen (off unless the box turned the browser boundary on)
+- wizard-ux#1398 [fix] Recommended fix: closing a plain chat keeps the selected desk view; Esc from full screen goes back to the view before it
+- wizard-ux#1401 [fix] Recommended fix: a sandboxed app keeps its own saved settings (off unless the box turned the browser boundary on)
+- wizard-ux#1402 [fix] Recommended fix: a sandboxed app can call its own backend again (off unless the box turned the browser boundary on)
+- wizard-ux#1403 [fix] Recommended fix: a sandboxed app's XMLHttpRequest calls reach its own backend (off unless the box turned the browser boundary on)
+- wizard-ux#1404 [fix] Recommended fix: a sandboxed app's live feeds and streamed answers from its own backend arrive as they come (off unless the box turned the browser boundary on)
+- wizard-ux#1405 [fix] Recommended fix: a sandboxed app's WebSocket to its own backend works (off unless the box turned the browser boundary on)
+- wizard-ux#1406 [fix] Recommended fix: a sandboxed app's IndexedDB and cookies work (off unless the box turned the browser boundary on)
+- wizard-ux#1407 [fix] Recommended fix: removing an app also deletes the data the shell kept for its sandboxed windows (off unless the box turned the browser boundary on)
+- wizard-ux#1408 [maintenance] Maintenance: pin wizard/graceful-restart as an App Manager box switch (off by default)
+- wizard-ux#1409 [feature] Strong suggestion: Agent Service restarts read as a calm saved state, with the owner's wait / restart now (off by default)
+- wizard-ux#1410 [fix] Recommended fix: the AI sign-in inside the Welcome reaches its own backend (off unless the box turned the browser boundary on)
+- wizard-ux#1411 [fix] Recommended fix: an app removed by the agent, the box command or another device also loses the data the shell kept for it here (off unless the box turned the browser boundary on)
+- wizard-ux#1412 [fix] Recommended fix: links and pop-ups in a sandboxed app open the way they do in any app (off unless the box turned the browser boundary on)
+- wizard-ux#1413 [fix] Recommended fix: a sandboxed app's photo viewer, Back, thread and Reply calls reach the shell (off unless the box turned the browser boundary on)
+- wizard-ux#1414 [fix] Recommended fix: Chats always shows a Back where the list is not beside the chat (narrow window, folded sidebar, full screen)
+- wizard-ux#1415 [feature] Strong suggestion: calm restart note starts on every load, names working chats, roomy buttons (off by default)
+- wizard-ux#1416 [feature] Desktop: one app at a time under 1100 px, with a bottom app bar (Chats first, the orb in the middle)
+- wizard-ux#1417 [fix] Recommended fix: a sandboxed app's backend call made while its window finishes loading is sent again instead of failing (off unless the box turned the browser boundary on)
+- wizard-ux#1418 [fix] Recommended fix: an own app screen works in a sandboxed window with the browser boundary on
+- wizard-ux#1419 [feature] Strong suggestion: calm restarts show a message sent during the hold as saved, not Working, in the thread and Chats list (off by default)
+- wizard-ux#1421 [maintenance] Maintenance: explicit-unread test thread dated relative to now (it aged into automatic Archive)
+- wizard-ux#1422 [fix] Recommended fix: a download link in a sandboxed app saves the file instead of replacing the app window (browser boundary, off)
+- wizard-ux#1423 [feature] Strong suggestion: calm restarts keep a held new chat under Saved for the whole wait, and the phone Chats list note gets its own tappable panel (off by default)
+- wizard-ux#1424 [fix] Recommended fix: a tap on a sandboxed app's focus-keeping button (Outline's Go Live) records again
+- wizard-ux#1425 [fix] Recommended fix: an app's offline data comes along when the box turns the browser boundary on (off unless the box turned it on)
+- wizard-ux#1427 [fix] Recommended fix: an app's saved settings come along when the box turns the browser boundary on (off unless the box turned it on)
+- wizard-ux#1429 [fix] Recommended fix: the phone stops re-sending the whole read state on every list refresh
+- wizard-ux#1431 [maintenance] Maintenance: browser-boundary doc points the native-bridge gap at its open bugs
+- wizard-ux#1433 [fix] Recommended fix: under the browser boundary the Android app keeps its native bridges out of app windows
+- wizard-ux#1435 [fix] Recommended fix: removed apps lose their settings notes, and settings changed while the browser boundary was off come along on the next turn-on
+- wizard-ux#1436 [fix] Recommended fix: restart note polish (opaque panel, idle box on a held chat, own words as title, note kept across navigation)
+- wizard-ux#1441 [feature] Strong suggestion: a channel's post list gets the jump pill instead of the Open / Needs you / All filter
+- wizard-ux#1442 [maintenance] Maintenance: archive-flash browser QA dates its thread from now
+- wizard-ux#1446 [fix] Recommended fix: a thread's draft is never lost to a channel's box
+- wizard-ux#1447 [feature] Strong suggestion: a saved-draft mark on Activity rows and Channels lines (off by default)
+- wizard-ux#1449 [fix] Recommended fix: a Recorder meeting start can no longer hang on Starting…
+- wizard-ux#1451 [fix] Recommended fix: Settings stays still when a refresh changes nothing
+- wizard-ux#1454 [fix] Recommended fix: narrow desktop, a channel picked in the list opens; Back from the list goes to the app before
+- wizard-ux#1456 [fix] Recommended fix: chat links to an app page keep their #fragment on desktop (Tracker item links open the item)
+- wizard-ux#1457 [feature] Strong suggestion: list the hourly app updates switch (wizard/app-updates-hourly, off by default)
+- wizard-ux#1458 [feature] Strong suggestion: Android clears a chat app's notification once you read that chat in Messenger (off by default)
+- wizard-ux#1459 [feature] Strong suggestion: the AI apps desktop sidebar follows Settings › Chats › Default Chats (off by default)
+- wizard-ux#1461 [fix] Recommended fix: AI apps desktop opens sidebar chats in the main chat column with another Default Chats look picked
+- wizard-ux#1462 [feature] Strong suggestion: the AI apps app panel can sit on the left (switch wizard/app-panel-left)
+- wizard-ux#1465 [fix] Recommended fix: a stopped app says so instead of a blank page
+- wizard-ux#1466 [fix] Recommended fix: Back closes Wizard's share sheet first in a pinned app
+- wizard-ux#1468 [fix] Recommended fix: the phone app stops waking every 5 s in the background for Snoozes and old replies
+- wizard-ux#1470 [fix] Recommended fix: the floating Wizard Everywhere orb looks like the app's orb (skin colour, icon instead of the old dot and shine)
+- wizard-ux#1473 [fix] Recommended fix: a home-screen pin keeps opening its app after the app is renamed
+- wizard-ux#1474 [fix] Recommended fix: the Can't reach Wizard pill offers Troubleshoot again
+- wizard-ux#1476 [fix] Recommended fix: a stopped app's page has a Start button that starts it
+- wizard-ux#1480 [fix] Recommended fix: Paste lands on the caret the first time in any app on Android
+- wizard-ux#1482 [fix] Recommended fix: an app update still running shows as running after a reload
+- wizard-ux#1483 [fix] Recommended fix: when Wizard can't be reached, the Troubleshooter pops up on its own
+- wizard-ux#1484 [fix] Recommended fix: one Open Troubleshooter tap opens the repair page on its own line when Wizard's usual route is down
+- wizard-ux#1485 [feature] Strong suggestion: Camera and Attach beside Screen on the side-button orb (switch wizard/assist-attach)
+- wizard-ux#1486 [fix] Recommended fix: the Android paste fix keeps working with the browser boundary, and the shell allows only this address's own Troubleshooter line
+- wizard-ux#1490 [fix] Recommended fix: + on the Channels list starts a new chat; only the + New channel row makes a channel
+- wizard-ux#1492 [fix] Recommended fix: Dismiss on a failed-send card clears it at once and never comes back
+- wizard-ux#1494 [fix] Recommended fix: the App Store is a normal tile in the apps list
+- wizard-ux#1496 [fix] Recommended fix: a send that failed on a signed-out subscription says why and offers Reconnect
+- wizard-ux#1498 [feature] Strong suggestion: WizardOS updates on a Mac ask first, name what Wizard is working on, and show one Updating panel on every device
+- wizard-ux#1499 [fix] Recommended fix: the message bar sits above the app bar at medium desktop widths
+- wizard-ux#1501 [fix] Recommended fix: an expired sign-in also gets Reconnect, with no Retry or old 'send it again' text anywhere
+- wizard-ux#1502 [feature] Strong suggestion: CI can sign and publish the phone release from main (off until the signing secrets are set)
+- wizard-ux#1507 [feature] Strong suggestion: Chats reads Channels | Activity, swipe between them, swipe right goes back from a feed
+- wizard-ux#1510 [fix] Recommended fix: photos open at once in the viewer, with a loading mark and Retry
+- wizard-ux#1511 [feature] Strong suggestion: the Daily channel opens as one continuous chat, earlier days folded above today
+- wizard-ux#1512 [fix] Recommended fix: apps with their own screen stay in Apps, never under For agents
+- wizard-ux#1513 [feature] Strong suggestion: phone bar scrubs through desks like the little handle, handle hidden (switch wizard/bar-scrub)
+- wizard-ux#1514 [feature] Strong suggestion: Activity status dots sit left of the title
+- wizard-ux#1515 [fix] Recommended fix: orb badge and Home Ready count match Activity's Ready list
+- wizard-ux#1518 [fix] Recommended fix: desktop Home's need-you count and card follow Activity with Channels on
+- wizard-ux#1519 [feature] Strong suggestion: Chats channels show an emoji instead of #, with an easy emoji picker
+- wizard-ux#1521 [fix] Recommended fix: photos open again in apps opened from their own home-screen icon
+- wizard-ux#1522 [fix] Recommended fix: a bar scrub with Settings open parks Settings like a flick
+- wizard-ux#1524 [feature] Strong suggestion: links to a Wizard app open in that app's own Android window (switch wizard/app-windows)
+- wizard-ux#1525 [fix] Recommended fix: emoji-only channel names show once, can be cleared, and long names are never cut
+- wizard-ux#1527 [fix] Recommended fix: a slow phone store no longer fails a voice take
+- wizard-ux#1530 [fix] Recommended fix: wearing an own skin keeps the owner's feature switches
+- wizard-ux#1532 [fix] Recommended fix: a channel's drop-down never reads as empty when the channel has chats
+- wizard-ux#1535 [fix] Recommended fix: a web page's Camera button opens the camera in the Android app
+- wizard-ux#1537 [feature] Strong suggestion: bar scrub takes the orb's sideways swipe and starts at once
+- wizard-ux#1543 [fix] Recommended fix: no new recording starts while the Mac app restarts for an update (finishes #1479)
+- wizard-ux#1544 [fix] Recommended fix: desktop tiles follow the Mac window when it is resized natively
+- wizard-ux#1545 [fix] Recommended fix: message time tooltips name the owner's time zone instead of always saying Bangkok
+- wizard-ux#1550 [feature] Strong suggestion: back from a thread or channel slides like the Channels/Activity swipe
+- wizard-ux#1554 [fix] Recommended fix: voice notes no longer say 'kept in memory' 1 s into every take on a slow phone
+- wizard-ux#1555 [fix] Recommended fix: phone release builds, signs and publishes in three separate GitHub jobs (wizard-ux#1551)
+- wizard-ux#1557 [maintenance] Maintenance: list the box-side switch wizard/private-first-setup (private first setup)
+- wizard-ux#1559 [feature] Strong suggestion: bar scrub goes by distance on a fast swipe and shows each desk while you scrub
+- wizard-ux#1562 [fix] Recommended fix: connected Tinfoil models show in the stock model picker
+- wizard-ux#1566 [fix] Recommended fix: back from a thread in the Android app slides only sideways (no drop from the top)
+- wizard-ux#1571 [feature] Strong suggestion: with Skins are look only on, a new skin saves no feature choices
+- wizard-ux#1572 [fix] Recommended fix: Settings says Queued when an app update is asked for during another
+- wizard-ux#1573 [fix] Recommended fix: desktop never flashes Classic Desks on a slow load
+- wizard-ux#1574 [fix] Recommended fix: in the narrow desktop window the orb fits the app bar
+- wizard-ux#1575 [feature] Strong suggestion: private first Welcome leads with Tinfoil, Claude/ChatGPT as an optional second agent (switch off)
+- wizard-ux#1577 [fix] Recommended fix: scrolling up while a reply streams keeps your place; at the bottom the reply follows
+- wizard-ux#1579 [fix] Recommended fix: Stop says Stopping… on the tap and the chat shows stopped within seconds
+- wizard-ux#1582 [feature] Strong suggestion: pinned apps open from the last-known app list, without Loading app (switch off)
+- wizard-ux#1585 [feature] Strong suggestion: chat switch card shows app feature switches too
+- wizard-ux#1587 [feature] Strong suggestion: swiping desks on for everyone; the bar scrub is the only bar path and its switch is gone
+- wizard-ux#1590 [fix] Recommended fix: Back to a thread after following a thread link keeps your reading place
+- wizard-ux#1592 [feature] Strong suggestion: tests that quote James's corrections can't be dropped without his yes (guard check, served CSP check)
+- wizard-ux#1595 [fix] Recommended fix: stamp relative CSS @imports so kit/controls.css is cached for the release
+- wizard-ux#1596 [feature] Strong suggestion: Messenger home-screen icon shows a red unread-count bubble (gated by Messenger's unread-count switch)
+- wizard-ux#1597 [fix] Recommended fix: a desktop opening /wizard-os-home/ goes straight to desktop.html, so phone files are not fetched again every open
+- wizard-ux#1598 [fix] Recommended fix: a voice note never shows 'On-device saving failed' while it can still be sent from memory
+- wizard-ux#1602 [feature] Strong suggestion: Open and Send to inbox move a thread between Chats and the background in one tap (switch wizard/agent-inbox, off)
+- wizard-ux#1603 [fix] Recommended fix: a short quick desk flick is always one desk
+- wizard-ux#1608 [feature] Strong suggestion: pinned apps load a slim page, so the app starts sooner (switch wizard/pin-slim-doc, off)
+- wizard-ux#1609 [maintenance] Maintenance: COMPONENTS.md back under its 14800-byte limit (main is red)
+- wizard-ux#1610 [feature] Strong suggestion: the signal sweep card in the Daily thread gets its buttons (switch wizard/agent-inbox, off)
+- wizard-ux#1611 [feature] Strong suggestion: a new task said to the orb starts in the background with a Got it toast (switch wizard/agent-inbox, off)
+- wizard-ux#1612 [feature] Strong suggestion: Not urgent on alerts and Should have alerted on sweep items teach the alert rules (switch wizard/agent-inbox, off)
+- wizard-ux#1613 [maintenance] Maintenance: tests that pin James's music ducking, Sonnet, skin name and direct line corrections carry his words
+- wizard-ux#1615 [feature] Strong suggestion: saved-draft marks are on for everyone
+- wizard-ux#1616 [feature] Strong suggestion: pinned apps show Connecting only while the Wizard hasn't answered (switch wizard/pin-reach-answer, off)
+- wizard-ux#1617 [feature] Strong suggestion: apps' notifications show on the phone as their own Android notifications (switch wizard/phone-app-notifications, off)
+- wizard-ux#1622 [fix] Recommended fix: sharing a chat file never pastes its private link into Messenger
+- wizard-ux#1626 [fix] Recommended fix: sharing a file finds Messenger in a fresh window; Other apps on desktop always says what happened
+- wizard-ux#1631 [fix] Recommended fix: sharing from the media viewer to Messenger shows its Send to… list on top, no false Shared toast
+- wizard-ux#1635 [fix] Recommended fix: Photo or video opens the Android picture picker straight away
+- wizard-ux#1637 [fix] Recommended fix: Fable is back in the compact model menu's first rows
+- wizard-ux#1638 [fix] Recommended fix: Android chat + offers Camera, Photo or video and File
+- wizard-ux#1641 [fix] Recommended fix: Android File opens the file picker directly, Photo or video first
+- wizard-ux#1643 [fix] Recommended fix: Add a Wizard sheet stays open on the phone
+- wizard-ux#1645 [fix] Recommended fix: a reply to a thread whose scheduled run is waiting its turn is sent as the next turn, not Not sent
+- wizard-ux#1647 [fix] Recommended fix: photo Save on Wizard for Mac saves to Downloads and says so
+- wizard-ux#1649 [fix] Recommended fix: Save and Share in the photo viewer always work and say what happened
+- wizard-ux#1654 [fix] Recommended fix: Back after replying in a linked thread keeps the parent's reading place
+- wizard-ux#1657 [fix] Recommended fix: Messenger icon count asks Messenger's real route, so the red bubble shows (phone 0.10.56)
+- wizard-ux#1659 [fix] Recommended fix: alert thread text long-presses to select and copy
+- wizard-ux#1662 [feature] Strong suggestion: Podcasts gets the phone's own media player, like Music (switch wizard/lock-screen-player, off)
+- wizard-ux#1666 [maintenance] Maintenance: move the root QA scripts into qa/scripts and tidy the top folder
+- wizard-ux#1667 [maintenance] Maintenance: Oscar becomes a second code owner for automation and release tools
+- wizard-ux#1673 [maintenance] Maintenance: Chats agent inbox parts move out of chats.js into core/chats-running.js (first split slice, no behaviour change)
+- wizard-ux#1675 [maintenance] Maintenance: Chats durable outbox and thread reading move out of chats.js into core/chats-outbox.js (second split slice, no behaviour change)
+- wizard-ux#1676 [maintenance] Maintenance: Chats channel posts code moves out of chats.js into core/chats-posts.js (third split slice, no behaviour change)
+- wizard-ux#1677 [maintenance] Maintenance: Chats drafts, notification threads and thread tracker move out of chats.js (fourth split slice, no behaviour change)
+- wizard-ux#1678 [maintenance] Maintenance: Chats Mark done / Needs you and attachments / voice notes move out of chats.js (fifth split slice, no behaviour change)
+- wizard-ux#1679 [maintenance] Maintenance: app window services move out of app-services.js into two parts (sixth split slice, no behaviour change)
+- wizard-ux#1680 [maintenance] Maintenance: the Settings view, deep links and focus trap move out of settings.js into core/settings-view.js (seventh split slice, no behaviour change)
+- wizard-ux#1681 [maintenance] Maintenance: live.js data code moves into four parts (eighth split slice, no behaviour change)
+- wizard-ux#1682 [maintenance] Maintenance: Chats sending, channel box, Daily view and setup move out of chats.js (ninth split slice, no behaviour change)
+- wizard-ux#1683 [maintenance] Maintenance: Chats approvals, row actions, notification rows, status marks and channel list move out of chats.js (tenth split slice, no behaviour change)
+- wizard-ux#1684 [maintenance] Maintenance: ten more Chats areas move out of chats.js (eleventh split slice, no behaviour change)
+- wizard-agent-service#293 [feature] Agent notes v2: owner session sees every agent's notebook; agent reads stay sealed
+- wizard-agent-service#296 [fix] Recommended fix: keep voice available when a health probe times out
+- wizard-agent-service#300 [fix] Recommended fix: keep Chats polling from blocking voice and sends
+- wizard-agent-service#319 [maintenance] Maintenance: agent-parity entry for the AI apps chat drawer (wizard-ux #888)
+- wizard-agent-service#320 [fix] Recommended fix: cover immutable model locks before adopting live changes
+- wizard-agent-service#325 [fix] Recommended fix: bound sign-in recovery reads before hydrating saved turns
+- wizard-agent-service#326 [fix] Recommended fix: bound retained triggering-user history reads
+- wizard-agent-service#328 [feature] Strong suggestion: pass app home_screen capabilities through /wizard/v1/apps
+- wizard-agent-service#329 [fix] Recommended fix: required secret scan checks only each change's own commits (wizard-ux#887 rule 2)
+- wizard-agent-service#330 [fix] Recommended fix: Wizard facts keep Hermes' own brevity default; follow-through nudge drops its recap rule
+- wizard-agent-service#331 [fix] Recommended fix: Short answer first shows no short answer — keep each reply's ask on Wizard history rows
+- wizard-agent-service#332 [feature] Strong suggestion (feel free to drop): Bring my ChatGPT / Claude / Hermes data (wizard_bring_data)
+- wizard-agent-service#333 [feature] Strong suggestion: admit reply-only external Pi agents without Hermes lifecycle writes
+- wizard-agent-service#334 [maintenance] Maintenance: register app Ready extension route-custody coverage
+- wizard-agent-service#335 [maintenance] Maintenance: register hosted draft custody UX route coverage
+- wizard-agent-service#336 [feature] Strong suggestion: Importer engine API (Claude Code source, approved card, preview mode, undo)
+- wizard-agent-service#338 [fix] Recommended fix: Importer engine — profiles under this home as sources, Files-not-writable caught before import; Move this agent into Wizard OS (dest + fact store)
+- wizard-agent-service#339 [fix] Recommended fix: keep requested work open after a plan
+- wizard-agent-service#343 [feature] feat: admit any app-provided agent runtime from installed registry and scoped grants
+- wizard-agent-service#344 [feature] fix: allow the narrow public probe in fallback shell CSP
+- wizard-agent-service#345 [fix] Recommended fix: cover compact app-first rules on every routed gateway
+- wizard-agent-service#347 [feature] qa(agent-parity): AI apps drawer lists failed and earlier-day chats (data-only, for wizard-ux #961)
+- wizard-agent-service#348 [fix] Recommended fix: save short-answer preferences when reopening Chats
+- wizard-agent-service#351 [feature] Fix voice turns hidden with coalesced helper completions
+- wizard-agent-service#353 [feature] Strong suggestion: Thread tracker back end (ask ledger, counts, quote-reply expansion), off unless the owner turns it on
+- wizard-agent-service#354 [feature] Keep queued owner messages Working ahead of stale asks
+- wizard-agent-service#355 [fix] Recommended fix: controller lifecycle outranks injected notices
+- wizard-agent-service#356 [feature] Count thread tracker items by current reply anchor
+- wizard-agent-service#359 [maintenance] Maintenance: check media viewer behavior across chat routes
+- wizard-agent-service#361 [maintenance] Maintenance: open the desktop media test thread through its shell
+- wizard-agent-service#363 [fix] Recommended fix: bound repair loops and admit helper jobs under live parents
+- wizard-agent-service#364 [maintenance] Maintenance: record Thread tracker visible-seen UX parity contract
+- wizard-agent-service#365 [fix] Recommended fix: Thread tracker lists every ask, including answered questions
+- wizard-agent-service#366 [fix] Recommended fix: Keep thread names at project level
+- wizard-agent-service#367 [maintenance] Maintenance: record running tracker visibility parity contract
+- wizard-agent-service#369 [feature] QA: record tracker send-version and ordinary-tail contract
+- wizard-agent-service#370 [feature] Validate tracker Seen versions atomically, support amber Dismiss, tighten red/amber instruction
+- wizard-agent-service#375 [feature] Integrate live release 75394f0 onto main (keeps #363 + tracker work)
+- wizard-agent-service#376 [fix] Recommended fix: Agent parity: chat-tweak-card entry; slim Chats preview hides the tweak marker
+- wizard-agent-service#377 [maintenance] Maintenance: notify the release train after a green Publish public image on main
+- wizard-agent-service#378 [fix] Recommended fix: your own messages show in chat history again
+- wizard-agent-service#380 [feature] Stale-run guard: a message held behind an active reply is not abandoned
+- wizard-agent-service#381 [feature] Chats list: a running helper or heavy job keeps an errored thread in Working
+- wizard-agent-service#382 [feature] Thread history: serve a still-queued first message instead of 404
+- wizard-agent-service#383 [feature] Finished helpers wake their thread again (Hermes 0.22.7 owner turns; failed-attempt key conflict)
+- wizard-agent-service#384 [fix] Recommended fix: health and other messages no longer wait on one slow Hermes launch
+- wizard-agent-service#385 [feature] Heavy admission: background helpers can submit while the parent is idle
+- wizard-agent-service#386 [fix] Recommended fix: heavy jobs are admitted again from owner turns (Hermes 0.22.7)
+- wizard-agent-service#387 [fix] Recommended fix: Chats list no longer re-reads thread history for unchanged sessions
+- wizard-agent-service#388 [fix] Recommended fix: routed agents can show your own messages again (off by default)
+- wizard-agent-service#389 [feature] New chats: free dead slots, queued sends and provisional titles visible everywhere
+- wizard-agent-service#390 [feature] Fix chat-photos reconciler CPU burn (backoff, idle cadence, coalesced kicks)
+- wizard-agent-service#391 [fix] Recommended fix: phone setup completes on alongside boxes when the phone opens Wizard (off by default)
+- wizard-agent-service#392 [feature] Owner screenshot turns show as the owner's own message (off by default, issue 145)
+- wizard-agent-service#393 [feature] Thread titles: name a thread by its app or area, never the opener's words
+- wizard-agent-service#394 [feature] perf: stop forced whole-queue ticks on finished-run reads; index-driven queue scans
+- wizard-agent-service#395 [feature] Thread tracker: main builder agent only (no tracker in Philosopher or other agents)
+- wizard-agent-service#396 [fix] Recommended fix: a reply your agent never starts fails visibly with Retry; health reports stalled replies; queue tick 5x cheaper
+- wizard-agent-service#397 [feature] Strong suggestion: AI Look up endpoint, a fast model explains a selected phrase in its message
+- wizard-agent-service#398 [feature] WizardOS is one word: titles, subjects, asks, voice, stored threads and spoken name
+- wizard-agent-service#401 [fix] Recommended fix: Wizard app chat photos reach the Files library (behind WIZARD_CHAT_PHOTOS_APP_CHATS)
+- wizard-agent-service#402 [fix] Recommended fix: a turn that handed off to a running deploy waits on it (Working, not Stuck/Ready)
+- wizard-agent-service#403 [feature] WizardOS respell: finish the last stored titles
+- wizard-agent-service#404 [fix] Recommended fix: a failed run names why it failed (ended plan, usage limit, network)
+- wizard-agent-service#407 [fix] Recommended fix: a reply refused by a restarting gateway is sent again by itself (no Retry)
+- wizard-agent-service#408 [feature] WizardOS settings links (reader, panel) reach the shell
+- wizard-agent-service#410 [fix] Recommended fix: agent builder offers Claude from the connected Claude app (off by default)
+- wizard-agent-service#411 [fix] Recommended fix: a message you send never leaves the thread (failed sends stay, marked Not sent, shown once)
+- wizard-agent-service#412 [feature] Strong suggestion: WizardOS links.panel on by default (opt out with links.panel false)
+- wizard-agent-service#413 [fix] Recommended fix: default-off shell-token gate on owner routes (browser owner boundary)
+- wizard-agent-service#414 [fix] Recommended fix: your own message survives queue pruning, rebuilds on Retry, and service sends never pass as yours (off by default)
+- wizard-agent-service#415 [fix] Recommended fix: Wizard Agent Service retains enough temporary space for recovery
+- wizard-agent-service#420 [maintenance] Maintenance: read-only census of leftover integration/* and live* branches
+- wizard-agent-service#421 [maintenance] Maintenance: agent runtime systemd unit lives in ops/, secrets in an EnvironmentFile
+- wizard-agent-service#424 [fix] Recommended fix: built-in file store keeps every upload instead of the newest 5,000
+- wizard-agent-service#425 [fix] Recommended fix: old /reports/<slug>/ links open the same page under Pages
+- wizard-agent-service#429 [feature] Strong suggestion: connecting a provider no longer attaches it to the main agent (switch, off by default)
+- wizard-agent-service#431 [fix] Recommended fix: say when the Hermes session database mount went stale instead of failing silently
+- wizard-agent-service#438 [fix] Recommended fix: extra agents start on rootless Docker and with a host .claude login
+- wizard-agent-service#439 [fix] Recommended fix: app tools are ready at chat start (tools/list cache hints)
+- wizard-agent-service#442 [fix] Recommended fix: one Claude row per account; a duplicate sign-in can be removed
+- wizard-agent-service#444 [fix] Recommended fix: dead AI sign-ins read expired, no usage call with an unrenewed token, live grant speaks for the account
+- wizard-agent-service#445 [maintenance] Maintenance: parity browser checks cover stream resume and offline start
+- wizard-agent-service#449 [fix] Recommended fix: an unreachable optional agent no longer blocks new chats
+- wizard-agent-service#450 [feature] Strong suggestion: Chats channels get their own Agent Service store (switched off)
+- wizard-agent-service#451 [feature] Strong suggestion: Chats list rows carry each channel post's first message and photos (switched off)
+- wizard-agent-service#452 [maintenance] Maintenance: agent parity registry lists the Chats Channels shell feature
+- wizard-agent-service#453 [feature] Strong suggestion: channel posts use the owner turns the thread's history shows (switched off)
+- wizard-agent-service#454 [feature] Strong suggestion: channel posts stay fast on every Chats list poll (switched off)
+- wizard-agent-service#455 [feature] Strong suggestion: agents file chats into channels and alerts land in Alerts (switched off)
+- wizard-agent-service#456 [maintenance] Maintenance: chat-channels parity entry covers agent post markdown in channel feeds
+- wizard-agent-service#457 [feature] Strong suggestion: hosted agents transcribe audio with wizard_transcribe instead of installing Whisper
+- wizard-agent-service#458 [maintenance] Maintenance: chat-channels parity cell covers Edit on a Not sent channel post (wizard-ux#1294)
+- wizard-agent-service#459 [maintenance] Maintenance: chat-channels parity cell covers Dismiss on a Not sent channel post
+- wizard-agent-service#460 [maintenance] Maintenance: agent parity chat-channels cell covers new chats from an open channel
+- wizard-agent-service#461 [fix] Recommended fix: Chats list rows carry each thread's start time so channel posts keep posting order
+- wizard-agent-service#462 [fix] Recommended fix: saved Wizards are kept on the box, so every device shows the same switcher
+- wizard-agent-service#466 [feature] Fix: long recordings reach container agents; refusals say why
+- wizard-agent-service#468 [maintenance] Maintenance: release train runs as the WizardOS Builder GitHub App
+- wizard-agent-service#470 [fix] Recommended fix: a stopped helper's late result no longer marks a finished thread Needs you
+- wizard-agent-service#472 [feature] Strong suggestion: channels keep their read position for the owner, shared by every device
+- wizard-agent-service#473 [fix] Recommended fix: keep saved uploads after a temporary index read failure
+- wizard-agent-service#474 [feature] Strong suggestion: thread-seen keeps the Mark done handled-through time, so Mark done syncs across devices
+- wizard-agent-service#475 [fix] Recommended fix: private Tinfoil search runs from main, not from draft #240
+- wizard-agent-service#476 [maintenance] Maintenance: parity cell chat-channels covers the agent tab naming its agent
+- wizard-agent-service#477 [fix] Recommended fix: a stopped helper delivered after done no longer holds an earlier ask open
+- wizard-agent-service#478 [maintenance] Maintenance: agent parity names the Channels Activity list (wizard-ux#1336)
+- wizard-agent-service#479 [fix] Recommended fix: under the browser boundary, the shell's own image, video and download loads of attachments pass without the token (off by default)
+- wizard-agent-service#481 [feature] Strong suggestion: a restart can wait for running chats and hold new sends instead of cutting them (off by default)
+- wizard-agent-service#482 [feature] Strong suggestion: Channels parts follow the one Channels switch at runtime
+- wizard-agent-service#483 [feature] Strong suggestion: restart gate refuses other apps' pages and non-JSON posts
+- wizard-agent-service#484 [maintenance] Maintenance: agent parity names the Needs you in the thread tests (wizard-ux 1331)
+- wizard-agent-service#485 [maintenance] Maintenance: agent parity names the jump-to-Needs-you pill tests (wizard-ux 1359)
+- wizard-agent-service#487 [fix] Recommended fix: Seen tracker items stay seen after a thread passes 40 items
+- wizard-agent-service#489 [maintenance] Maintenance: pin Node 22.23.5 runtime
+- wizard-agent-service#490 [fix] Recommended fix: owner settings refuse anonymous callers and other sites on every method
+- wizard-agent-service#491 [maintenance] Maintenance: agent parity names the reply-with-postscript tests (wizard-ux 1319)
+- wizard-agent-service#492 [maintenance] Maintenance: chat-channels parity cell lists the #General voice take routing test
+- wizard-agent-service#493 [feature] Strong suggestion: the owner's Restart now reaches the restarter through the restart gate
+- wizard-agent-service#494 [fix] Recommended fix: an own app screen loads in a sandboxed window with the browser boundary on
+- wizard-agent-service#495 [maintenance] Maintenance: agent parity cell for held sends during a graceful restart (shell, wizard-ux#1362)
+- wizard-agent-service#496 [feature] Strong suggestion: a new chat started during a graceful restart stays listed, saved, on every device and agent kind
+- wizard-agent-service#498 [fix] Recommended fix: Chats polls no longer rebuild the whole session catalog per request, and a stalled event loop logs its busiest routes
+- wizard-agent-service#500 [fix] Recommended fix: an event-loop stall names the background work that ran during it, and a restart logs how long each startup step took (issue 499)
+- wizard-agent-service#502 [fix] Recommended fix: seen-state saves no longer re-read apps.json per chat (Wizard froze)
+- wizard-agent-service#504 [fix] Recommended fix: workspace long-polls no longer show up as event-loop time, and parked polls share one file check (issue 503)
+- wizard-agent-service#506 [fix] Recommended fix: Claude extra usage is tried again once a capped subscription's old model cooldown no longer applies (issue 505)
+- wizard-agent-service#509 [fix] Recommended fix: long recordings reach container agents on the box's Python 3.12
+- wizard-agent-service#512 [fix] Recommended fix: the agent can load the apps' own skills on a standard install
+- wizard-agent-service#515 [fix] Recommended fix: one looping device can no longer freeze the Agent Service (per-device write limit)
+- wizard-agent-service#516 [maintenance] Maintenance: agent-parity cell names the thread-draft tests (wizard-ux#1444)
+- wizard-agent-service#517 [fix] Recommended fix: acceptance checks use patched OpenTelemetry API
+- wizard-agent-service#519 [fix] Recommended fix: an app's tools that come back reach the agent (list_changed + wizard_apps says why)
+- wizard-agent-service#521 [fix] Recommended fix: agent channel filing needs a matching subject and never re-files a chat the owner took out
+- wizard-agent-service#522 [fix] Recommended fix: channels learn subjects only from chats the owner filed
+- wizard-agent-service#523 [maintenance] Maintenance: agent parity cell for the desktop sidebar Chats look (wizard-ux#1443)
+- wizard-agent-service#524 [fix] Recommended fix: agents transcribe long recordings in one tool call, no ffmpeg loop
+- wizard-agent-service#526 [fix] Recommended fix: a later update reply no longer wipes a pending Your call ask from Ready
+- wizard-agent-service#528 [feature] Strong suggestion: Daily channel, one thread per day in a pinned channel (service half)
+- wizard-agent-service#530 [fix] Recommended fix: notification-only reminders stay out of the Daily chat
+- wizard-agent-service#531 [fix] Recommended fix: the launcher list carries an app's earlier ids so old home-screen pins keep opening it
+- wizard-agent-service#533 [fix] Recommended fix: the agent's schedule tool can post into today's Daily thread
+- wizard-agent-service#534 [fix] Recommended fix: a deploy refreshes the host Hermes copy of the Service's own plugins, so wizard_schedule can name Daily
+- wizard-agent-service#535 [maintenance] Maintenance: parity cell for the Channels list + starting a new chat
+- wizard-agent-service#536 [fix] Recommended fix: Dismiss on a failed thread works for every agent's thread
+- wizard-agent-service#537 [fix] Recommended fix: the deploy refreshes the box's pre-repo wizard-schedule copy, so agents can name Daily
+- wizard-agent-service#538 [maintenance] Maintenance: failure-dismiss parity cell names the shell tests
+- wizard-agent-service#539 [fix] Recommended fix: the Service refreshes its own Hermes plugins at startup, so the box's old deploy helper still delivers them
+- wizard-agent-service#540 [maintenance] Maintenance: parity cell for the signed-out send Reconnect card
+- wizard-agent-service#541 [maintenance] Maintenance: agent parity cell for the Daily channel's shell half
+- wizard-agent-service#542 [maintenance] Maintenance: parity cell notes the Activity marker left of the title
+- wizard-agent-service#543 [maintenance] Maintenance: agent-parity entry for message time zone tooltips
+- wizard-agent-service#546 [feature] Strong suggestion: Bring your Wizard: import an earlier Hermes agent's past as read-only History (switched off)
+- wizard-agent-service#547 [feature] Strong suggestion: private first: a fresh install's default agent is a private Tinfoil agent; Claude/ChatGPT switch on a separate standard agent (switched off)
+- wizard-agent-service#548 [maintenance] Maintenance: agent parity cell for the Chats connector model menu
+- wizard-agent-service#553 [fix] Recommended fix: a sentence the speech reading wrote twice comes out once
+- wizard-agent-service#554 [maintenance] Maintenance: parity cell stream-resume names the scroll-up hold and bottom follow (ux#1546)
+- wizard-agent-service#555 [feature] Strong suggestion: agent inbox keeps one record per background task (switch wizard/agent-inbox, off)
+- wizard-agent-service#557 [fix] Recommended fix: files sent in a chat stay openable after Hermes prunes its cache
+- wizard-agent-service#558 [feature] Strong suggestion: signal sweep card in today's Daily with hard caps and one-tap answers (switch wizard/agent-inbox, off)
+- wizard-agent-service#559 [feature] Strong suggestion: orb dump route starts a new task in the background with no visible thread (switch wizard/agent-inbox, off)
+- wizard-agent-service#560 [feature] Strong suggestion: alert rules decide what reaches Alerts; everything else waits for the sweep (switch wizard/agent-inbox, off)
+- wizard-agent-service#562 [fix] Recommended fix: alert rules send events and examples only to a private model (switch wizard/agent-inbox, off)
+- wizard-agent-service#563 [feature] Strong suggestion: a hidden worker thread opens from any link, and one the owner typed in lists again (switch wizard/agent-inbox, off)
+- wizard-agent-service#565 [fix] Recommended fix: finished scheduled runs stop blocking new watches
+- wizard-agent-service#566 [feature] Strong suggestion: Open and Send to inbox move a thread between Chats and the background; each tap teaches the orb (switch wizard/agent-inbox, off)
+- wizard-agent-service#567 [feature] Strong suggestion: a channel an agent creates gets a fitting emoji from its name (Channels switch wizard/chat-channels)
+- wizard-agent-service#568 [feature] Strong suggestion: Send to inbox never hides the Daily or Alerts threads (switch wizard/agent-inbox, off)
+- wizard-agent-service#570 [feature] Strong suggestion: Messenger (any app) is a second door to the one agent inbox, one card per sweep (switch wizard/agent-inbox, off)
+- wizard-agent-service#572 [feature] Strong suggestion: /wizard/v1/apps passes on an app's declared permissions (geolocation)
+- wizard-agent-service#573 [feature] Strong suggestion: an app door's urgent pings stay pending until the app has stored them (switch wizard/agent-inbox, off)
+- wizard-agent-service#574 [maintenance] Maintenance: agent parity entry for the compact model menu families (Fable row)
+- wizard-agent-service#576 [fix] Recommended fix: private first reaches the Service on a standard install
+- wizard-agent-service#578 [fix] Recommended fix: schedule, agent-read and bring-data plugins reach the Service on a standard install
+- wizard-app-manager#722 [fix] Recommended fix: a slow app update running past the second timeout is waited for, never reported failed mid-run
+- wizard-app-manager#724 [maintenance] Maintenance: mirror WizardOS 0.3.237-0.3.241 (0.3.240 = Stable candidate with the #711 fix; 0.3.241 onto latest)
+- wizard-app-manager#725 [maintenance] Maintenance: mirror stable 0.3.240 (For everyone gets the #711 app update fix)
+- wizard-app-manager#727 [fix] Recommended fix: feature switches work on a box whose Agent Service runs beside Hermes with an owner proof
+- wizard-app-manager#728 [fix] Recommended fix: apps.json lists an app's earlier ids so old home-screen pins keep opening it
+- wizard-app-manager#729 [maintenance] Maintenance: revert the #727 feature-switch fallbacks (issue withdrawn)
+- wizard-app-manager#731 [fix] Recommended fix: an app a failed update left stopped starts again on its next update or recover
+- wizard-app-manager#734 [fix] Recommended fix: the App Manager says which app updates are running
+- wizard-app-manager#736 [feature] Strong suggestion: WizardOS updates wait only for work they would stop, and a Mac's host starts them after its disk copy
+- wizard-app-manager#737 [maintenance] Maintenance: mirror WizardOS 0.3.243 onto latest (release train)
+- wizard-app-manager#739 [fix] Recommended fix: WizardOS shuts down in seconds: runtipi and Python app servers stop on the stop signal
+- wizard-app-manager#741 [maintenance] Maintenance: mirror WizardOS 0.3.245 onto latest (release train)
+- wizard-app-manager#742 [maintenance] Maintenance: mirror WizardOS 0.3.246 onto latest (release train)
+- wizard-app-manager#743 [maintenance] Maintenance: mirror WizardOS 0.3.247 onto latest (release train)
+- wizard-app-manager#744 [maintenance] Maintenance: mirror WizardOS 0.3.248 onto latest (release train)
+- wizard-app-manager#745 [maintenance] Maintenance: mirror WizardOS 0.3.249 onto latest (release train)
+- wizard-app-manager#746 [maintenance] Maintenance: mirror WizardOS 0.3.250 onto latest (release train)
+- wizard-app-manager#747 [maintenance] Maintenance: mirror WizardOS 0.3.251 onto latest (release train)
+- wizard-app-manager#748 [maintenance] Maintenance: mirror WizardOS 0.3.252 onto latest (release train)
+- wizard-app-manager#749 [maintenance] Maintenance: mirror WizardOS 0.3.253 onto latest (release train)
+- wizard-app-manager#750 [maintenance] Maintenance: mirror WizardOS 0.3.254 onto latest (release train)
+- wizard-app-manager#751 [maintenance] Maintenance: mirror WizardOS 0.3.255 onto latest (release train)
+- wizard-app-manager#752 [maintenance] Maintenance: mirror WizardOS 0.3.256 onto latest (release train)
+- wizard-app-manager#753 [maintenance] Maintenance: mirror WizardOS 0.3.257 onto latest (release train)
+- wizard-app-manager#755 [fix] Recommended fix: wam recover names the app it could not start and waits for apps still starting
+- wizard-app-manager#756 [maintenance] Maintenance: mirror WizardOS 0.3.258 onto latest (release train)
+- wizard-app-manager#757 [maintenance] Maintenance: mirror WizardOS 0.3.259 onto latest (release train)
+- wizard-app-manager#758 [maintenance] Maintenance: mirror WizardOS 0.3.260 onto latest (release train)
+- wizard-app-manager#760 [maintenance] Maintenance: mirror WizardOS 0.3.261 onto latest (release train)
+- wizard-app-manager#761 [feature] Strong suggestion: the installer can start a fresh box private first (WIZARD_PRIVATE_FIRST, unset by default)
+- wizard-app-manager#762 [maintenance] Maintenance: mirror WizardOS 0.3.262 onto latest (release train)
+- wizard-app-manager#763 [maintenance] Maintenance: mirror WizardOS 0.3.263 onto latest (release train)
+- wizard-app-manager#765 [fix] Recommended fix: an app update asked for during a run is queued, not refused
+- wizard-app-manager#766 [feature] App update queue: match the Tracker contract (Update all queues due ids, order kept, nothing lost) (#764)
+- wizard-app-manager#767 [maintenance] Maintenance: mirror WizardOS 0.3.264 onto latest (release train)
+- wizard-app-manager#768 [maintenance] Maintenance: mirror WizardOS 0.3.265 onto latest (release train)
+- wizard-app-manager#769 [maintenance] Maintenance: mirror WizardOS 0.3.266 onto latest (release train)
+- wizard-app-manager#770 [maintenance] Maintenance: mirror WizardOS 0.3.267 onto latest (release train)
+- wizard-app-manager#772 [maintenance] Maintenance: mirror WizardOS 0.3.268 onto latest (release train)
+- wizard-app-manager#773 [fix] Recommended fix: scheduled backups stream each agent's databases instead of needing ~2x state.db free
+- wizard-app-manager#774 [maintenance] Maintenance: mirror WizardOS 0.3.269 onto latest (release train)
+- wizard-app-manager#775 [maintenance] Maintenance: mirror WizardOS 0.3.270 onto latest (release train)
+- wizard-app-manager#776 [maintenance] Maintenance: mirror WizardOS 0.3.271 onto latest (release train)
+- wizard-app-manager#777 [maintenance] Maintenance: mirror WizardOS 0.3.272 onto latest (release train)
+- wizard-app-manager#778 [maintenance] Maintenance: mirror WizardOS 0.3.273 onto latest (release train)
+- wizard-app-manager#779 [fix] Recommended fix: boxes mirror the newest CI phone release, not only the hand-edited pointer
+- wizard-app-manager#780 [maintenance] Maintenance: mirror WizardOS 0.3.274 onto latest (release train)
+- wizard-app-manager#781 [maintenance] Maintenance: mirror WizardOS 0.3.275 onto latest (release train)
+- wizard-app-manager#782 [maintenance] Maintenance: mirror WizardOS 0.3.276 onto latest (release train)
+- wizard-app-manager#783 [maintenance] Maintenance: mirror WizardOS 0.3.277 onto latest (release train)
+- wizard-app-manager#784 [maintenance] Maintenance: mirror WizardOS 0.3.278 onto latest (release train)
+- wizard-app-manager#785 [maintenance] Maintenance: mirror WizardOS 0.3.279 onto latest (release train)
+- wizard-app-manager#786 [maintenance] Maintenance: mirror WizardOS 0.3.280 onto latest (release train)
+- wizard-app-manager#787 [maintenance] Maintenance: mirror WizardOS 0.3.281 onto latest (release train)
+- wizard-app-manager#788 [maintenance] Maintenance: mirror WizardOS 0.3.282 onto latest (release train)
+- wizard-app-manager#790 [fix] Recommended fix: phone feed checks the APK's real signer and ignores far-ahead CI releases
+- wizard-app-manager#792 [maintenance] Maintenance: mirror WizardOS 0.3.284 onto latest (release train)
+- wizard-app-manager#793 [maintenance] Maintenance: mirror WizardOS 0.3.285 onto latest (release train)
+- wizard-app-manager#794 [maintenance] Maintenance: mirror WizardOS 0.3.286 onto latest (release train)
+- wizard-app-manager#795 [maintenance] Maintenance: mirror WizardOS 0.3.287 onto latest (release train)
+- wizard-app-manager#796 [maintenance] Maintenance: mirror WizardOS 0.3.288 onto latest (release train)
+- wizard-app-manager#798 [fix] Recommended fix: Try it and wam feature-switches find the Agent Service on a box without apps.json rows
+- wizard-app-manager#800 [maintenance] Maintenance: mirror WizardOS 0.3.289 onto latest (release train)
+- wizard-app-manager#801 [maintenance] Maintenance: mirror WizardOS 0.3.290 onto latest (release train)
+- wizard-app-manager#803 [fix] Recommended fix: app switches are found on boxes whose apps have no view.local
+- wizard-app-manager#805 [maintenance] Maintenance: Settings app updates route on for everyone (switch removed)
+- wizard-app-manager#806 [maintenance] Maintenance: mirror WizardOS 0.3.291 onto latest (release train)
+- wizard-app-manager#809 [fix] Recommended fix: a fresh install no longer fails silently on GitHub's anonymous limit, and always shows the Tailscale sign-in link
+- wizard-app-manager#811 [maintenance] Maintenance: mirror WizardOS 0.3.292 onto latest (release train)
+- wizard-app-manager#812 [feature] Strong suggestion: wam check accepts wizard.md permissions: [geolocation]
+- wizard-app-manager#813 [feature] Strong suggestion: apps.json carries an app's wizard.md permissions (today only geolocation)
+- wizard-app-manager#815 [fix] Recommended fix: Mail and Messenger get their own Agent Service app token, so their agent inbox calls stop answering 403
+- wizard-app-manager#816 [maintenance] Maintenance: mirror WizardOS 0.3.294 onto latest (release train)
+- wizard-app-manager#817 [maintenance] Maintenance: mirror WizardOS 0.3.295 onto latest (release train)
+- wizard-app-manager#818 [maintenance] Maintenance: mirror WizardOS 0.3.296 onto latest (release train)
+- wizard-app-manager#819 [maintenance] Maintenance: mirror WizardOS 0.3.297 onto latest (release train)
+- wizard-app-manager#820 [maintenance] Maintenance: mirror WizardOS 0.3.298 onto latest (release train)
+- wizard-app-manager#821 [maintenance] Maintenance: mirror WizardOS 0.3.299 onto latest (release train)
+- wizard-app-manager#822 [maintenance] Maintenance: mirror WizardOS 0.3.300 onto latest (release train)
+- wizard-app-manager#823 [maintenance] Maintenance: mirror WizardOS 0.3.301 onto latest (release train)
+- wizard-app-manager#825 [maintenance] Maintenance: mirror WizardOS 0.3.303 onto latest (release train)
+- wizard-app-manager#827 [fix] Recommended fix: a leftover app copy in a second store never fails the whole backup
+- wizard-app-manager#828 [maintenance] Maintenance: mirror WizardOS 0.3.304 onto latest (release train)
+- wizard-app-manager#830 [fix] Recommended fix: a moved app repo keeps updating while the index still lists its old name
+- wizard-app-manager#833 [fix] Recommended fix: a renamed app moves to its new id in one step, also when updated by id
+- wizard-app-manager#834 [maintenance] Maintenance: mirror WizardOS 0.3.305 onto latest (release train)
+- wizard-app-manager#837 [maintenance] Maintenance: mirror WizardOS 0.3.306 onto latest (release train)
+- wizard-app-manager#838 [feature] Strong suggestion: the App Manager runs on Runtipi 4.12.0
+- wizard-app-manager#840 [maintenance] Maintenance: mirror WizardOS 0.3.307 onto latest (release train)
+- wizard-app-manager#841 [feature] Strong suggestion: wam signs Runtipi CLI tokens with Runtipi 4.12's CLI key (off by default)
+- wizard-app-manager#842 [maintenance] Maintenance: mirror WizardOS 0.3.308 onto latest (release train)
+- wizard-app-manager#843 [fix] Recommended fix: private-first boxes download Tinfoil in the background at install, not on Connect Tinfoil
+- wizard-app-manager#845 [maintenance] Maintenance: mirror WizardOS 0.3.310 onto latest (Claude and ChatGPT with the private-first sign-in)
+- wizard-app-manager#847 [fix] Recommended fix: default app custody mirrors again when the index lists browser twice
+- wizard-app-manager#848 [maintenance] Maintenance: mirror WizardOS 0.3.311 onto latest (release train)
+- wizard-app-manager#849 [maintenance] Maintenance: mirror WizardOS 0.3.312 onto latest (release train)
+- wizard-app-manager#850 [maintenance] Maintenance: mirror WizardOS 0.3.313 onto latest (release train)
+- wizard-app-manager#852 [maintenance] Maintenance: one home for system skills (wizard-app-manager system-skills/)
+- wizard-app-manager#853 [maintenance] Maintenance: write down the Runtipi boundary (what belongs in App Manager)
+- wizard-app-manager#855 [maintenance] Maintenance: mirror WizardOS 0.3.314 onto latest (release train)
+- wizard-app-manager#859 [fix] Recommended fix: the test workflow finishes in under 2 minutes (pytest in 8 parallel shards)
+- wizard-app-manager#860 [maintenance] Maintenance: mirror WizardOS 0.3.315 onto latest (release train)
+- wizard-app-manager#861 [maintenance] Maintenance: mirror WizardOS 0.3.316 onto latest (release train)
+- wizard-app-manager#862 [fix] Recommended fix: wam check fails any compose command over the Linux 128 KiB argument limit
+- wizard-app-manager#863 [fix] Recommended fix: inline packing refuses apps too big to unpack in their container
+- wizard-app-manager#864 [maintenance] Maintenance: mirror WizardOS 0.3.317 onto latest (release train)
+- wizard-app-manager#865 [fix] Recommended fix: Store Update and Start fail (and roll back) when the app keeps crashing
+- wizard-app-manager#871 [maintenance] Maintenance: mirror WizardOS 0.3.319 onto latest (release train)
+- default app ai-connection: wizard-chatgpt 37c3bc89 0.2.12 -> wizard-chatgpt f0de194e 0.2.20
+- default app claude-subscription: wizard-claude 2e58656b 0.2.14 -> wizard-claude ddf1ce68 0.2.24
+- default app notifications: notifications 46cd17cf 2.29.0-wizard17 -> notifications 1cc652fe 2.29.0-wizard29
+
+## Evidence
+
+## Installed upgrade 0.3.240 → 0.3.332 on a disposable KVM guest
+
+**Result: PASSED** (20261124T002242Z → 20261124T003455Z UTC)
+
+**Rig.** Disposable KVM guest on oscar-main (Ubuntu 24.04 cloud image overlay, 4 vCPU, 8 GB, user-mode NAT, loopback-only SSH). Root stock Hermes (Hermes Agent v0.23.3 (2026.9.24) · stable · local caafe5389ae5) from the official installer (`--skip-setup`) + `hermes gateway install`; Tailscale joined to a local headscale with a pre-auth key (stands in for the owner's approval); a test-only `tailscale` wrapper simulates HTTPS turned on. Headscale has no Serve, so installs end box-only. Nothing ran on a real box. Upgrade release base: public mirror. os.sh sha256 `61e19b9bd94e3b92…`.
+
+- Install 0.3.240 (public command, agent-run, `WIZARD_STRICT=1`): done in 367 s; release.json 0.3.240 pinned.
+- Upgrade to 0.3.332: done in 276 s; release.json 0.3.332 pinned, 27 checks, 0 failed.
+- Hermes config.yaml/.env/SOUL.md: the owner's settings identical; only WizardOS's own entries in config.yaml changed (diff below) (config.yaml `e43236d8…`, .env `30874642…`, SOUL.md `36c1f5a2…`).
+- After: Hermes API /health 200, gateway active, shell 302, `wizard doctor` FAIL 0, `wam doctor` FAIL 0.
+- Maintenance helper: root before, root after.
+
+<details><summary>Hermes config.yaml: what the upgrade changed</summary>
+
+```diff
+--- /root/.rig-before/config.yaml	2026-11-24 00:25:32.671749149 +0000
++++ /root/.hermes/config.yaml	2026-11-24 00:31:49.239672656 +0000
+@@ -2511,3 +2511,4 @@
+     url: http://127.0.0.1:8796/wizard/mcp
+     headers:
+       Authorization: Bearer ${WIZARD_MCP_TOKEN}
++    lazy: true
+```
+</details>
+
+<details><summary>Containers after the upgrade</summary>
+
+```
+browser_wizardapps-browser-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:28:00.709111645Z
+browser_wizardapps-browser-engine-1 sha256:0dc9356ce1428962cddcf938dab712a8c56de79adc326f9138298f13df440071 2026-11-24T00:28:00.578711894Z
+files_wizardapps-files-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:26:38.819888049Z
+files_wizardapps-files-engine-1 sha256:a469ea076d4a1b4b1d86a41d130f2f536cd9da996a2b1fb39c0d7635f9d89b9a 2026-11-24T00:26:38.699105406Z
+notifications_wizardapps-notifications-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:33:33.301662787Z
+notifications_wizardapps-notifications-engine-1 sha256:4c599cf0818965782f93f652bd843e92714992e84d6b88ad17713dc0951cda1f 2026-11-24T00:33:33.163214261Z
+runtipi sha256:9ea811d0370e6e1320bf7281e69c75a646d830824d28059cfe2622b1978144cb 2026-11-24T00:31:09.951127042Z
+runtipi-db sha256:c0e9c0e9bac7e4c1834b698217a03ee5c708de30d313c84a506972de0e24b059 2026-11-24T00:23:45.010545999Z
+runtipi-queue sha256:3dbd31cb9e4d45dac44de7b73cc45b848028494e98bcab71477386cbd4dc7f56 2026-11-24T00:23:45.132201465Z
+runtipi-reverse-proxy sha256:4cda3393930dceff030e144b46260e96e1337c9cfaa4fed81c90cb8f4d498f57 2026-11-24T00:24:00.257298701Z
+runtipi-wizard-release-index-1 sha256:9ea811d0370e6e1320bf7281e69c75a646d830824d28059cfe2622b1978144cb 2026-11-24T00:30:06.583845262Z
+secret-drop_wizardapps-secret-drop-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:28:06.57105979Z
+secret-drop_wizardapps-secret-drop-engine-1 sha256:29ebc6a7846e6036afc471dc6ddcee31a9cac3a0ce8f00d59cd1186c80c03302 2026-11-24T00:28:06.431834648Z
+transcriber_wizardapps-transcriber-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:26:29.232936766Z
+transcriber_wizardapps-transcriber-engine-1 sha256:2163775b6df5e451a71200e8f675fed68dbd8ab184fc604453d549e486f22fd2 2026-11-24T00:26:29.119065684Z
+wizard-agent-service_wizardapps-wizard-agent-service-1 sha256:bb3b9507e380636d3a9ddf143213245d7dc209b7331065de3ea119b75079e6f3 2026-11-24T00:32:30.096039782Z
+wizard-chatgpt_wizardapps-wizard-chatgpt-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:32:49.079818713Z
+wizard-chatgpt_wizardapps-wizard-chatgpt-engine-1 sha256:629c29911e68b2088e43ccdd21c0c8d57841eb021bc7951bbf9e2e2087e40924 2026-11-24T00:32:48.936953842Z
+wizard-claude_wizardapps-wizard-claude-1 sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 2026-11-24T00:33:14.580594759Z
+wizard-claude_wizardapps-wizard-claude-engine-1 sha256:bb4812461d21852967e3d89187c66c89e8c45a82878dbf81ad6972d7eef83ee1 2026-11-24T00:33:14.41726218Z
+wizard-connection-router_wizardapps-wizard-connection-router-1 sha256:71e9721efc3904c76862b83613d6e88a1c5edff26432152f3727073fde417ecf 2026-11-24T00:28:40.760219319Z
+wizard-ux_wizardapps-wizard-ux-1 sha256:99e61dbd20b11f9943d5bbfd07346fea71ef94b7204323100dbf0acb740afd2e 2026-11-24T00:32:23.132868611Z
+wizard-voice-service_wizardapps-wizard-voice-service-1 sha256:a279274949c03bd8fe244f083f727e41f51d7040e58a48288089621f5ab27e89 2026-11-24T00:28:33.399377665Z
+```
+</details>
