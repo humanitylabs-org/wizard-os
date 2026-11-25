@@ -20,6 +20,14 @@ def pr(title, labels=(), n=1, repo="humanitylabs-org/wizard-ux"):
     return {"repo": repo, "number": n, "commit": "c" * 40, "title": title, "labels": list(labels)}
 
 
+def setUpModule():
+    """The hotfix lane is always on (wizard-os#434), so every soak gate asks GitHub for hotfix issues. Tests never
+    read the real GitHub: no hotfixes unless a test patches hotfix_prs itself."""
+    p = mock.patch.object(rt, "hotfix_prs", return_value=[])
+    p.start()
+    unittest.addModuleCleanup(p.stop)
+
+
 class Tiers(unittest.TestCase):
     def test_only_recommended_fixes_count_as_fixes(self):
         self.assertEqual(rt.tier(pr("Recommended fix: pins stay put")), "fix")
@@ -723,7 +731,7 @@ class SoakByCutAge(unittest.TestCase):
 
 
 class HotfixLane(unittest.TestCase):
-    """wizard-os#434, behind WIZARD_TRAIN_HOTFIX_LANE=1 (off by default): a merged PR that closes or references a
+    """wizard-os#434, always on (its switch was removed after show-and-tell): a merged PR that closes or references a
     `hotfix` issue skips the 30-min cut limit and reaches For everyone after 24h (0h with `breaking` or a closed
     release-blocker), still held by any open release-blocker."""
     UX = "humanitylabs-org/wizard-ux"
@@ -738,15 +746,20 @@ class HotfixLane(unittest.TestCase):
                 "timelineItems": {"nodes": [{"__typename": "CrossReferencedEvent", "source": pr},
                                             {"__typename": "ClosedEvent", "closer": pr}, {"__typename": "X"}]}}
 
-    def test_off_by_default(self):
-        env = {k: v for k, v in __import__("os").environ.items() if k != "WIZARD_TRAIN_HOTFIX_LANE"}
-        out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(rt.HOTFIX_LANE)"],
+    def test_always_on_no_switch_left(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        self.assertNotIn("WIZARD_TRAIN_HOTFIX_LANE", src)
+        self.assertFalse(hasattr(rt, "HOTFIX_LANE"))
+        env = {**__import__("os").environ, "WIZARD_TRAIN_HOTFIX_LANE": "0"}   # a stale env value changes nothing
+        out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(hasattr(rt, 'HOTFIX_LANE'))"],
                              cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
         self.assertEqual(out, "False")
-        with mock.patch.object(rt, "HOTFIX_LANE", False), \
-                mock.patch.object(rt, "gh_json", side_effect=AssertionError("no GitHub reads while off")):
+
+    def test_no_gh_on_path_keeps_normal_timing(self):
+        rels = {"releases/0.3.102.json": self.rel("a" * 40), "releases/0.3.106.json": self.rel("b" * 40)}
+        with mock.patch.object(rt, "show", side_effect=lambda d, ref, f: json.dumps(rels[f])), \
+                mock.patch.object(rt, "hotfix_prs", side_effect=FileNotFoundError("gh")):
             self.assertEqual(rt.hotfix_soak(Path("."), "0.3.102", "0.3.106"), (72, []))
-            self.assertEqual(rt.pending_hotfixes(Path(".")), [])
 
     def test_finds_merged_component_prs_and_what_makes_them_immediate(self):
         got = rt.hotfix_prs_of("u", self.issue())
@@ -760,8 +773,7 @@ class HotfixLane(unittest.TestCase):
     def gate(self, hours, immediate=False, blockers=(), in_latest=True, lookup_fails=False):
         hf = [{"repo": self.UX, "number": 7, "commit": "h" * 40, "issue": "u", "immediate": immediate}]
         rels = {"releases/0.3.102.json": self.rel("a" * 40), "releases/0.3.106.json": self.rel("b" * 40)}
-        with mock.patch.object(rt, "HOTFIX_LANE", True), \
-                mock.patch.object(rt, "show", side_effect=lambda d, ref, f: json.dumps(rels[f])), \
+        with mock.patch.object(rt, "show", side_effect=lambda d, ref, f: json.dumps(rels[f])), \
                 mock.patch.object(rt, "hotfix_prs", side_effect=rt.Stop("down") if lookup_fails else None, return_value=hf), \
                 mock.patch.object(rt, "contains", side_effect=lambda repo, ref, c: ref == "b" * 40 and in_latest), \
                 mock.patch.object(rt, "soaked_for", return_value=hours), \
@@ -812,7 +824,7 @@ class HotfixLane(unittest.TestCase):
                 subprocess.run(["git", "clone", "-q", "--no-checkout", str(src), str(wos)], check=True,
                                capture_output=True)
                 with mock.patch.object(rt.time, "time", return_value=now), \
-                        mock.patch.object(rt, "HOTFIX_LANE", True), mock.patch.object(rt, "SOAK_BY_CUT", True), \
+                        mock.patch.object(rt, "SOAK_BY_CUT", True), \
                         mock.patch.object(rt, "show", side_effect=lambda r, ref, f: json.dumps(
                             self.rel(pin(f.split("/")[1][:-5])))), \
                         mock.patch.object(rt, "hotfix_prs", return_value=hf), \
@@ -843,8 +855,7 @@ class HotfixLane(unittest.TestCase):
                 mock.patch.object(rt, "plan", side_effect=rt.Stop("planned")):
             with self.assertRaises(rt.Stop):
                 rt.run(Path(d), False, False, [], False, "cut")
-        with mock.patch.object(rt, "HOTFIX_LANE", True), \
-                mock.patch.object(rt, "show", side_effect=lambda d, ref, f: "0.3.106\n" if f == "releases/latest"
+        with mock.patch.object(rt, "show", side_effect=lambda d, ref, f: "0.3.106\n" if f == "releases/latest"
                                   else json.dumps(self.rel("b" * 40))), \
                 mock.patch.object(rt, "hotfix_prs", return_value=[{"repo": self.UX, "number": 7, "commit": "h" * 40,
                                                                   "issue": "u", "immediate": False}]), \
