@@ -77,8 +77,11 @@ them, and an app without them simply shows no thumbs:
 other vote value is 400. Tapping the active thumb again sends `null`. Votes and `tried` are box state like `on`
 (`DATA/switches.json`).
 
-**Counts leave the box anonymously, opt-in by tapping:** only `{switch id, issues, tried, vote}` plus a per-box random
-id for de-duplication, never content or identity, through the existing Feedback route. The App Manager collects them
+**Counts leave the box only after the owner opts in, and anonymously** (James, show-and-tell yes on wizard-os#627):
+sharing is off by default on every box, and nothing is sent until the owner says yes to a clear prompt that says what is
+sent. Tapping a thumb or a switch is not that yes; the section and thumbs work fully on the box without it. Once the
+owner says yes: only `{switch id, issues, tried, vote}` plus a per-box random id for de-duplication, never content or
+identity, through the existing Feedback route. The App Manager collects them
 from the catalog above and the Tracker shows `Tried by N · 👍 N · 👎 N` on the item. Those two parts are tracked in
 their own repos (linked from wizard-os#627).
 
