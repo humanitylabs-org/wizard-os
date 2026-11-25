@@ -37,6 +37,7 @@ The shared map of WizardOS: how the pieces fit, the contracts between them, and 
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
 - [`AGENTS.md`](spec/AGENTS.md): more than one agent on a box — agent folder, harness / model provider / permissions, the `/wizard/v1/agents` API, per-agent chats (MVP, approved 14 Oct).
 - [`APP_WAKE.md`](spec/APP_WAKE.md): an installed app wakes the owner's agent with a small typed event through the box (`wizard.app-wake/1`, proposed, switch `wizard/app-wake`).
+- [`CAPTURE_INBOXES.md`](spec/CAPTURE_INBOXES.md): the owner's agent files whatever he drops (Files Inbox first, then Photos) by his own plain-words rules, one agent-inbox line per batch, undoable (proposed, switch `wizard/capture-inbox`).
 - [`APP_ACTIONS.md`](spec/APP_ACTIONS.md): an app's proposed action (a draft, a reply, an event) as a card in chat with Approve, Edit and Open in app (`wizard.app-actions/1`, proposed, switch `wizard/action-cards`).
 - [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the WizardOS kernel text and app skills; install alongside an existing Hermes (proposed).
 - [`DISK_ENCRYPTION.md`](spec/DISK_ENCRYPTION.md): owner data on LUKS2 sealed to the box's TPM 2.0 chip (PCR 7), a one-time recovery key, status lines and per-platform behaviour (#112).
