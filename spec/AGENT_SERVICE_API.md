@@ -155,7 +155,7 @@ Settings, capabilities and endpoint addresses. It still answers when Hermes is d
 `fast_router` shows only `account` and `model`, never the endpoint or key. `resumable_uploads` (with `endpoints.uploads` and `endpoints.shares`) is present when the service can store files and its upload state is writable; a client that does not see it uses `POST /wizard/files/upload`. `upload_destinations` (with `endpoints.user_files`) is present when, in addition, the box has a user-files root (`WIZARD_USER_FILES_ROOT`): uploads may then carry a `destination` and the Files app can list that root ([Upload destination](#upload-destination-files-app)). `network.base_url` is for links that leave Wizard; in-app links stay relative. An endpoint is `""` when its capability is off.
 
 ### `GET /wizard/v1/apps`
-The launcher list: installed apps from the App Manager's `apps.json` (the shell itself left out) plus the owner's links from `launcher.json`. Only what a tile needs leaves the box: no MCP address, health URL, repo or skill path.
+The launcher list: installed apps from the App Manager's `apps.json` (the shell itself left out) plus the owner's links from `launcher.json`. Only what a tile needs leaves the box: no MCP address, health URL or skill path. An installed app carries `repo`, the plain `owner/repo` the App Manager installed it from (absent when `apps.json` has none): the shell keeps one first-party app's window unsealed under the browser boundary only when it came from its own listing (humanitylabs-org/telegram#68).
 ```json
 {"schema":1,"apps":[
   {"id":"hello-wizard","name":"Hello Wizard","url":"/hello-wizard/","status":"running","system":false,"source":"apps.json"},
