@@ -88,5 +88,28 @@ function tap(el, id, attrs) { const row = { getAttribute: () => id }; const b = 
   state = { contract: 'wizard.app-switches/1', switches: [] };
   doc.listeners.visibilitychange.forEach(fn => fn()); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
   assert.equal(el.hidden, true); assert.equal(el.innerHTML, '');
+  // wizard-os#916: a re-read that started before a save, or lands while it is in flight, never paints the old state.
+  {
+    let box = listing(); const gets = [], posts = [];
+    const snap = () => res(200, JSON.parse(JSON.stringify(box)));
+    const f2 = (p, init = {}) => {
+      if (init.method === 'POST') return new Promise(r => posts.push(() => { const b = JSON.parse(init.body); box.switches.find(x => x.id === b.id).on = b.on; r(snap()); }));
+      const s = snap(); return new Promise(r => gets.push(() => r(s)));
+    };
+    const el2 = fakeEl(), doc2 = fakeDoc();
+    const m2 = T.mount(el2, { fetch: f2, document: doc2 }); gets.shift()(); await m2.ready;
+    const stale = m2.reload();                        // read sent while the box still says Off
+    const save = m2.send('drag-events', 'toggle');    // the flip
+    doc2.listeners.visibilitychange.forEach(fn => fn()); // page visible again during the save: no second read
+    assert.equal(gets.length, 1, 'no re-read is sent while a save is in flight');
+    posts.shift()(); await save;
+    assert.match(el2.innerHTML, /data-try-id="drag-events"[\s\S]*?aria-checked="true"/);
+    gets.shift()(); await stale;                      // the older read answers last
+    assert.equal(m2.listing.switches[0].on, true, 'older read dropped');
+    assert.match(el2.innerHTML, /data-try-id="drag-events"[\s\S]*?aria-checked="true"/, 'switch does not look reverted');
+    box.switches[0].on = false;                       // flipped from the Tracker; a later read still shows it
+    const later = m2.reload(); gets.shift()(); await later;
+    assert.match(el2.innerHTML, /data-try-id="drag-events"[\s\S]*?aria-checked="false"/);
+  }
   console.log('PASS: try-features section renders, hides, flips, votes and re-reads');
 })().catch(e => { console.error(e); process.exit(1); });
