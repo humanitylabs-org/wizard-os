@@ -204,5 +204,18 @@ class StyleCheck(unittest.TestCase):
         for name in ('try-features.js', 'wizard-try-features.js'):
             self.assertEqual(policy['assets'][name], {'source': 'style/try-features.js', 'sha256': digest})
 
+    def test_try_features_touch_and_save_order_in_a_browser(self):
+        # wizard-os#916: 44 px hit areas at 412 px with the same look, and no stale re-read over a save (real Chromium).
+        import shutil
+        node = shutil.which('node')
+        if not node: self.skipTest('node not installed')
+        here = Path(__file__).parent
+        probe = subprocess.run([node, '-e', "require(process.argv[1])", str(here.parent / 'tools/acceptance/router/qa-playwright.cjs')],
+                               capture_output=True, text=True, timeout=60)
+        if probe.returncode: self.skipTest('playwright not installed')
+        out = subprocess.run([node, str(here / 'test_try_features_browser.cjs')], capture_output=True, text=True, timeout=120)
+        if out.returncode and "Executable doesn't exist" in out.stdout + out.stderr: self.skipTest('no browser for playwright')
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+
 
 if __name__ == '__main__': unittest.main()
