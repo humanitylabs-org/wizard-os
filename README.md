@@ -36,6 +36,7 @@ The shared map of WizardOS: how the pieces fit, the contracts between them, and 
 - [`NATIVE_BRIDGE.md`](spec/NATIVE_BRIDGE.md): how native shells (Android, desktop) talk to the web UX.
 - [`WIZARD_ID.md`](spec/WIZARD_ID.md): your Wizard ID (Nostr key) created and held in the Wizard app, backup and restore, the signing sheet, and signed app publishing.
 - [`AGENTS.md`](spec/AGENTS.md): more than one agent on a box — agent folder, harness / model provider / permissions, the `/wizard/v1/agents` API, per-agent chats (MVP, approved 14 Oct).
+- [`APP_WAKE.md`](spec/APP_WAKE.md): an installed app wakes the owner's agent with a small typed event through the box (`wizard.app-wake/1`, proposed, switch `wizard/app-wake`).
 - [`AGENT_BRIDGE.md`](spec/AGENT_BRIDGE.md): how every agent on a box gets the installed apps as tools, the WizardOS kernel text and app skills; install alongside an existing Hermes (proposed).
 - [`DISK_ENCRYPTION.md`](spec/DISK_ENCRYPTION.md): owner data on LUKS2 sealed to the box's TPM 2.0 chip (PCR 7), a one-time recovery key, status lines and per-platform behaviour (#112).
 - [`HOST_HOP.md`](spec/HOST_HOP.md): Machines roles (main, standby, helper), moving a Wizard to another machine, and the client Wizards list (proposed).
