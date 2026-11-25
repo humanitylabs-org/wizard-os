@@ -1,6 +1,7 @@
 # App wake events (`wizard.app-wake/1`)
 
-**Status: proposed, built behind the owner switch `wizard/app-wake` (off by default; wizard-os#634).** First user:
+**Status: accepted, on for everyone (approved at show-and-tell, wizard-os#634; the owner switch `wizard/app-wake` is
+removed, only a box's `WIZARD_APP_WAKE=0` turns it off).** First user:
 Messenger's Agent chat wake. Implemented by the Agent Service (`server/app-wake.mjs`, `docs/app-wake.md`).
 
 An installed app may wake one of the owner's agents with a small typed event, for example "something new waits in
@@ -23,7 +24,7 @@ the agent only when the owner has given that agent this app.
 ## The probe: `GET /wizard/v1/agent-events`
 
 With the app's token: `200 {"on": true, "contract": "wizard.app-wake/1", "app": "<app id>", "agents": ["hermes", ...]}`,
-the agents this app may wake now. **`404` means the box offers no wake** (switch off, or an older Agent Service):
+the agents this app may wake now. **`404` means the box offers no wake** (an older Agent Service, or a box that set `WIZARD_APP_WAKE=0`):
 the app keeps whatever it did before. Apps read the probe at most every few minutes.
 
 ## A wake: `POST /wizard/v1/agent-events`
