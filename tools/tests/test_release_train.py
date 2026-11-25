@@ -20,6 +20,14 @@ def pr(title, labels=(), n=1, repo="humanitylabs-org/wizard-ux"):
     return {"repo": repo, "number": n, "commit": "c" * 40, "title": title, "labels": list(labels)}
 
 
+def setUpModule():
+    """The hotfix lane is always on (wizard-os#434), so every soak gate asks GitHub for hotfix issues. Tests never
+    read the real GitHub: no hotfixes unless a test patches hotfix_prs itself."""
+    p = mock.patch.object(rt, "hotfix_prs", return_value=[])
+    p.start()
+    unittest.addModuleCleanup(p.stop)
+
+
 class Tiers(unittest.TestCase):
     def test_only_recommended_fixes_count_as_fixes(self):
         self.assertEqual(rt.tier(pr("Recommended fix: pins stay put")), "fix")
@@ -746,6 +754,12 @@ class HotfixLane(unittest.TestCase):
         out = subprocess.run([sys.executable, "-c", "import release_train as rt; print(hasattr(rt, 'HOTFIX_LANE'))"],
                              cwd=HERE.parent, env=env, capture_output=True, text=True).stdout.strip()
         self.assertEqual(out, "False")
+
+    def test_no_gh_on_path_keeps_normal_timing(self):
+        rels = {"releases/0.3.102.json": self.rel("a" * 40), "releases/0.3.106.json": self.rel("b" * 40)}
+        with mock.patch.object(rt, "show", side_effect=lambda d, ref, f: json.dumps(rels[f])), \
+                mock.patch.object(rt, "hotfix_prs", side_effect=FileNotFoundError("gh")):
+            self.assertEqual(rt.hotfix_soak(Path("."), "0.3.102", "0.3.106"), (72, []))
 
     def test_finds_merged_component_prs_and_what_makes_them_immediate(self):
         got = rt.hotfix_prs_of("u", self.issue())

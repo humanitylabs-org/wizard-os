@@ -742,7 +742,7 @@ def hotfix_soak(wos: Path, stable: str, latest: str) -> tuple[float, list[dict]]
     try:
         rel = lambda v: json.loads(show(wos, "origin/main", f"releases/{v}.json"))   # noqa: E731
         hf = hotfixes_between(rel(stable), rel(latest))
-    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+    except (Stop, OSError, KeyError, StopIteration, TypeError, ValueError) as e:   # OSError: no gh on PATH
         say(f"hotfix lane: lookup failed ({e}); normal {SOAK_HOURS}h soak")
         return SOAK_HOURS, []
     if not hf:
@@ -755,7 +755,7 @@ def pending_hotfixes(wos: Path) -> list[dict]:
     try:
         latest = show(wos, "origin/main", "releases/latest").strip()
         return hotfixes_between(json.loads(show(wos, "origin/main", f"releases/{latest}.json")), None)
-    except (Stop, KeyError, StopIteration, TypeError, ValueError) as e:
+    except (Stop, OSError, KeyError, StopIteration, TypeError, ValueError) as e:   # OSError: no gh on PATH
         say(f"hotfix lane: lookup failed ({e}); normal throttle")
         return []
 
