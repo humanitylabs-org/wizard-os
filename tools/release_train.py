@@ -415,6 +415,35 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
     return d
 
 
+# Hermes recipe: its repo name is pinned again by releases/hermes-lock.json, which only James moves.
+REPO_MOVE_SKIP = {("default_apps", "agent")}
+
+
+def current_repo(repo: str) -> str | None:
+    """GitHub's owner/name for a repo today (the API follows a transfer or rename). None when it can't tell."""
+    r = subprocess.run(["gh", "api", f"repos/{repo}", "-q", ".full_name"], capture_output=True, text=True, timeout=60)
+    name = r.stdout.strip()
+    return name if r.returncode == 0 and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", name) else None
+
+
+def follow_repo_moves(d: dict, lookup=current_repo) -> list[str]:
+    """Rewrite every components.*.repo / default_apps.*.repo that moved on GitHub to its new name, same commit
+    (wizard-os#945: a box that already follows a move skips a pin naming the old repo). Returns "old -> new" lines."""
+    moved, seen = [], {}
+    for key in ("components", "default_apps"):
+        for slot, pin in (d.get(key) or {}).items():
+            if not isinstance(pin, dict) or not pin.get("repo") or (key, slot) in REPO_MOVE_SKIP:
+                continue
+            old = pin["repo"]
+            if old not in seen:
+                seen[old] = lookup(old)
+            new = seen[old]
+            if new and new.lower() != old.lower():
+                pin["repo"] = new
+                moved.append(f"{key}.{slot}: {old} -> {new}")
+    return moved
+
+
 def ride_alongs(work: Path, S: dict, C: dict) -> tuple[str, list[str], list[dict]]:
     """Every change Stable -> candidate, and the honest classification."""
     items, prs = [], []
@@ -437,7 +466,8 @@ def ride_alongs(work: Path, S: dict, C: dict) -> tuple[str, list[str], list[dict
                 a, b = (S[key].get(slot) or {}), (C[key].get(slot) or {})
                 if slot in ("shell", "agent-service"):
                     continue          # moves with its component
-                if a != b:
+                same = lambda x: {k: v for k, v in x.items() if k != "repo"}   # noqa: E731  a moved repo, same pin
+                if same(a) != same(b):
                     items.append(f"default app {slot}: {a.get('app')} {str(a.get('commit'))[:8]} {a.get('index_version')}"
                                  f" -> {b.get('app')} {str(b.get('commit'))[:8]} {b.get('index_version')}")
                     feature = True
@@ -952,6 +982,10 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     branch_cut, branch_promo = f"release/{V}-train", f"promote/{V}-train"
     if p["cut"]:
         C = candidate_json(L, V, p["moves"], stable, fix_notes or ["no fix (forced proof run)"])
+        moved = follow_repo_moves(C)
+        if moved:
+            C["notes"] += " Repos renamed to where GitHub moved them (same commits): " + "; ".join(moved) + "."
+            step(f"repo moves followed: {'; '.join(moved)}")
         (wt / "releases" / f"{V}.json").write_text(json.dumps(C, indent=2) + "\n")
         sh([sys.executable, "tools/check_release.py", f"releases/{V}.json"], cwd=wt, timeout=600)
         sh([sys.executable, "tools/promote_stable.py", "cut", V], cwd=wt)
