@@ -117,6 +117,44 @@ class Classification(unittest.TestCase):
         C = json.loads(json.dumps(S)); C["hermes"] = {"tag": "v2"}
         self.assertEqual(self._ride(S, C, [])[0], "feature")
 
+    def test_a_repo_that_only_moved_owner_is_no_ride_along(self):
+        S = self.base(); S["default_apps"]["files"]["repo"] = "oscarhenrycollins/files"
+        C = json.loads(json.dumps(S)); C["default_apps"]["files"]["repo"] = "humanitylabs-org/files"
+        self.assertEqual(self._ride(S, C, [])[:2], ("fix", []))
+
+
+class RepoMoves(unittest.TestCase):
+    """wizard-os#945: a cut pins every moved repo under GitHub's new name, same commit."""
+    MOVED = {"oscarhenrycollins/files": "humanitylabs-org/files",
+             "oscarhenrycollins/hermes-agent": "humanitylabs-org/hermes-agent"}
+
+    def rel(self):
+        return {"components": {"wizard-ux": {"repo": "humanitylabs-org/wizard-ux", "commit": "a" * 40}},
+                "default_apps": {"files": {"app": "files", "repo": "oscarhenrycollins/files", "commit": "d" * 40},
+                                 "browser": {"app": "browser", "repo": "oscarhenrycollins/browser", "commit": "e" * 40},
+                                 "agent": {"app": "hermes-agent", "repo": "oscarhenrycollins/hermes-agent",
+                                           "commit": "f" * 40},
+                                 "agent-history": None}}
+
+    def test_moved_repos_get_the_new_name_and_keep_their_commit(self):
+        d = self.rel()
+        calls = []
+        moved = rt.follow_repo_moves(d, lookup=lambda r: calls.append(r) or self.MOVED.get(r, r))
+        self.assertEqual(moved, ["default_apps.files: oscarhenrycollins/files -> humanitylabs-org/files"])
+        self.assertEqual(d["default_apps"]["files"], {"app": "files", "repo": "humanitylabs-org/files", "commit": "d" * 40})
+        self.assertEqual(d["default_apps"]["browser"]["repo"], "oscarhenrycollins/browser")
+        self.assertNotIn("oscarhenrycollins/hermes-agent", calls)   # the lock-pinned Hermes recipe is left to James
+        self.assertEqual(d["default_apps"]["agent"]["repo"], "oscarhenrycollins/hermes-agent")
+
+    def test_a_failed_lookup_changes_nothing(self):
+        d = self.rel()
+        self.assertEqual(rt.follow_repo_moves(d, lookup=lambda r: None), [])
+        self.assertEqual(d, self.rel())
+
+    def test_the_cut_follows_moves_before_check_release(self):
+        src = Path(rt.__file__).read_text()
+        self.assertLess(src.index("moved = follow_repo_moves(C)"), src.index('"tools/check_release.py", f"releases/{V}.json"'))
+
 
 class Gate(unittest.TestCase):
     def test_force_is_only_for_dry_runs(self):

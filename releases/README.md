@@ -183,6 +183,15 @@ A green checker establishes source/image identity, **not** a working fresh insta
 production activation, a native build, or catalog availability. `DRIFT` lines are
 not suppressed when the live catalog differs or cannot be reached.
 
+## Moved repos (wizard-os#945)
+
+Every `components.*.repo` and `default_apps.*.repo` names the repo as GitHub names it today. A box that has already
+followed a transfer (`wam app-updates` rewrites `.wizard-source`) skips a pin that still names the old owner, so
+`tools/check_release.py` (online) fails a release whose pinned repo GitHub answers under another name, and the
+release train's cut rewrites each moved repo to its new name (same commit) before that check. The one exception is
+the Hermes recipe (`default_apps.agent`): `releases/hermes-lock.json` pins its name too, so a move there is printed as
+`MOVED`, not failed or rewritten, until the lock moves.
+
 ## Channels: latest and stable
 
 DECISIONS #75 (James, 21 Oct 2026). Two pointers, both mirrored to

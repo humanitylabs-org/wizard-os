@@ -274,3 +274,66 @@ GET        /wizard-os-home/api/route             compat    ux  -
     def test_gate_starts_at_0_3_33(self):
         rel = {"version": "0.3.32", "components": {"wizard-agent-service": {"repo": "x/y", "commit": "0" * 40}}}
         self.assertEqual(self.cr.service_routes_online(rel, self.SPEC), ([], []))
+
+
+class MovedRepos(unittest.TestCase):
+    """wizard-os#945: a release pinning a repo under a name GitHub redirects fails online."""
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(HERE.parent))
+        import check_release
+        cls.cr = check_release
+
+    MOVED = {"oscarhenrycollins/files": "humanitylabs-org/files",
+             "oscarhenrycollins/hermes-agent": "humanitylabs-org/hermes-agent"}
+
+    def rel(self, files="oscarhenrycollins/files", ux="humanitylabs-org/wizard-ux"):
+        return {"components": {"wizard-ux": {"repo": ux, "commit": "a" * 40}},
+                "default_apps": {"files": {"app": "files", "repo": files},
+                                 "browser": {"app": "browser", "repo": "oscarhenrycollins/browser"},
+                                 "agent-history": None}}
+
+    def look(self, repo):
+        return self.MOVED.get(repo, repo), ""
+
+    def test_a_moved_default_app_fails_and_names_the_new_repo(self):
+        ok, errs, warns = self.cr.moved_repos(self.rel(), lookup=self.look)
+        self.assertEqual(errs, ["default_apps.files.repo: oscarhenrycollins/files moved to humanitylabs-org/files: "
+                                "pin the new name (same commit)"])
+        self.assertEqual((ok, warns), ([], []))
+
+    def test_a_moved_component_fails_too(self):
+        _, errs, _ = self.cr.moved_repos(self.rel(files="humanitylabs-org/files", ux="oscarhenrycollins/files"),
+                                         lookup=self.look)
+        self.assertEqual(len(errs), 1)
+        self.assertTrue(errs[0].startswith("components.wizard-ux.repo:"), errs)
+
+    def test_current_names_pass(self):
+        ok, errs, _ = self.cr.moved_repos(self.rel(files="humanitylabs-org/files"), lookup=self.look)
+        self.assertEqual(errs, [])
+        self.assertEqual(len(ok), 1)
+
+    def test_a_case_only_difference_is_not_a_move(self):
+        _, errs, _ = self.cr.moved_repos(self.rel(files="HumanityLabs-org/Files"),
+                                         lookup=lambda r: (r.lower(), ""))
+        self.assertEqual(errs, [])
+
+    def test_a_repo_github_cant_find_fails(self):
+        _, errs, _ = self.cr.moved_repos(self.rel(files="humanitylabs-org/files"),
+                                         lookup=lambda r: (None, "Not Found (HTTP 404)") if r.endswith("files") else (r, ""))
+        self.assertEqual(errs, ["default_apps.files.repo: can't look up humanitylabs-org/files on GitHub "
+                                "(Not Found (HTTP 404))"])
+
+    def test_the_lock_pinned_hermes_recipe_is_reported_not_failed(self):
+        rel = self.rel(files="humanitylabs-org/files")
+        rel["default_apps"]["agent"] = {"app": "hermes-agent", "repo": "oscarhenrycollins/hermes-agent"}
+        ok, errs, warns = self.cr.moved_repos(rel, lookup=self.look)
+        self.assertEqual(errs, [])
+        self.assertEqual(len(warns), 1)
+        self.assertIn("hermes-lock.json", warns[0])
+
+    def test_each_repo_is_looked_up_once(self):
+        rel = self.rel(files="humanitylabs-org/wizard-ux")
+        seen = []
+        self.cr.moved_repos(rel, lookup=lambda r: seen.append(r) or (r, ""))
+        self.assertEqual(sorted(seen), ["humanitylabs-org/wizard-ux", "oscarhenrycollins/browser"])

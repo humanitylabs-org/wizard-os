@@ -8,7 +8,8 @@
 Online it also checks that each commit is on the branch the release names (a commit only reachable from a PR is
 not a release), and that each image was built from its component's pinned commit (OCI label
 org.opencontainers.image.revision). The installer (wizard-app-manager get.sh) installs exactly these pins and reads
-back what runs; releases/stable names the release a plain `curl -fsSL aiwizards.com/os.sh | bash` installs.
+back what runs; every pinned repo must answer under the name the release uses (a moved repo fails until the release
+pins its new name). releases/stable names the release a plain `curl -fsSL aiwizards.com/os.sh | bash` installs.
 
 A release file names exactly what one WizardOS version is: the commit of each component repo, the image digests
 those commits produced, and the default app in every parking spot (with the index version it resolves to).
@@ -400,6 +401,52 @@ def service_routes_online(rel: dict, spec_text: str) -> tuple[list[str], list[st
     return [f"wizard-agent-service@{c['commit'][:12]}: serves every stable /wizard/ route in spec/AGENT_SERVICE_API.md"], []
 
 
+def current_name(repo: str) -> tuple[str | None, str]:
+    """GitHub's name for a repo today. A transferred or renamed repo answers under its new owner/name (the API follows
+    the redirect), so a pin still naming the old one shows up as a difference (wizard-os#945)."""
+    r = subprocess.run(["gh", "api", f"repos/{repo}", "-q", ".full_name"], capture_output=True, text=True)
+    name = r.stdout.strip()
+    if r.returncode == 0 and REPO.fullmatch(name):
+        return name, ""
+    return None, ((r.stderr or "").strip().splitlines() or ["not found"])[-1][:160]
+
+
+def pinned_repos(rel: dict) -> list[tuple[str, str]]:
+    """(where, repo) for every components.*.repo and default_apps.*.repo the release names."""
+    out = [(f"components.{n}", c["repo"]) for n, c in (rel.get("components") or {}).items()
+           if isinstance(c, dict) and c.get("repo")]
+    out += [(f"default_apps.{s}", d["repo"]) for s, d in (rel.get("default_apps") or {}).items()
+            if isinstance(d, dict) and d.get("repo")]
+    return out
+
+
+# The Hermes recipe's repo is pinned again by releases/hermes-lock.json, which only James moves (DECISIONS #74): a move
+# there is reported, not failed, so it can't stop every For testers cut.
+LOCKED_SLOTS = ("default_apps.agent",)
+
+
+def moved_repos(rel: dict, lookup=current_name) -> tuple[list[str], list[str], list[str]]:
+    """A pin must name the repo as GitHub names it now: a moved repo pinned under its old name is skipped by boxes
+    that already follow the move (wizard-os#945). Returns (ok lines, errors, warnings)."""
+    ok, errs, warns, seen = [], [], [], {}
+    for where, repo in pinned_repos(rel):
+        if repo not in seen:
+            seen[repo] = lookup(repo)
+        now, why = seen[repo]
+        if now is None:
+            errs.append(f"{where}.repo: can't look up {repo} on GitHub ({why})")
+        elif now.lower() != repo.lower():
+            if where in LOCKED_SLOTS:
+                warns.append(f"{where}.repo: {repo} moved to {now}; releases/hermes-lock.json pins the old name, "
+                             "so the lock has to move first")
+            else:
+                errs.append(f"{where}.repo: {repo} moved to {now}: pin the new name (same commit)")
+    if not errs:
+        ok.append(f"repos: all {len(seen)} pinned repos answer under the name the release uses"
+                  + (" (except the lock-pinned Hermes recipe)" if warns else ""))
+    return ok, errs, warns
+
+
 def commit_exists(repo: str, sha: str) -> tuple[bool, str]:
     r = subprocess.run(["gh", "api", f"repos/{repo}/commits/{sha}", "-q", ".sha"], capture_output=True, text=True)
     if r.returncode == 0 and r.stdout.strip() == sha:
@@ -635,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     errs = shape(rel) + candidate_place(rel, Path(a.file))
     ok_lines: list[str] = []
+    m_warns: list[str] = []
     if not errs and not a.offline:
         for name, c in rel["components"].items():
             ok, why = commit_exists(c["repo"], c["commit"])
@@ -686,6 +734,10 @@ def main(argv: list[str] | None = None) -> int:
                     errs.append(f"image {name}: built from {im['built_from']}@{rev[:12]}, release pins "
                                 f"{src['commit'][:12]}")
     if not errs and not a.offline:
+        m_ok, m_errs, m_warns = moved_repos(rel)
+        ok_lines += m_ok
+        errs += m_errs
+    if not errs and not a.offline:
         h_ok, h_errs = hermes_online(rel)
         ok_lines += h_ok
         errs += h_errs
@@ -698,6 +750,8 @@ def main(argv: list[str] | None = None) -> int:
     warns = index_drift(rel.get("default_apps") or {}) if not errs and not a.offline else []
     for line in ok_lines:
         print(f"PASS  {line}")
+    for w in m_warns:
+        print(f"MOVED {w}")
     for w in warns:   # the installer takes the index's current version; get.sh reads it back as DRIFT
         print(f"DRIFT {w}")
     for e in errs:
