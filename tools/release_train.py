@@ -659,11 +659,10 @@ def release_blockers() -> list[str]:
     return [f"{x.get('url')} {x.get('title', '')[:80]}" for x in got]
 
 
-# Hotfix lane (wizard-os#434), OFF by default: WIZARD_TRAIN_HOTFIX_LANE=1 turns it on. When a merged component PR
+# Hotfix lane (wizard-os#434), always on (approved at show-and-tell, 25 Nov 2026). When a merged component PR
 # closes or references an org issue labelled `hotfix`: its For testers cut skips the MIN_CUT_INTERVAL throttle, and
 # the For everyone soak is HOTFIX_SOAK_HOURS instead of SOAK_HOURS (still no open release-blocker), or 0h when the
 # hotfix issue is also labelled `breaking` or the PR closes a `release-blocker` issue. Any lookup error: normal timing.
-HOTFIX_LANE = os.environ.get("WIZARD_TRAIN_HOTFIX_LANE", "0") == "1"
 HOTFIX_LABEL, BREAKING_LABEL = "hotfix", "breaking"
 HOTFIX_SOAK_HOURS = 24
 HOTFIX_LOOKBACK_DAYS = 30
@@ -739,9 +738,7 @@ def hotfixes_between(old: dict, new: dict | None) -> list[dict]:
 
 
 def hotfix_soak(wos: Path, stable: str, latest: str) -> tuple[float, list[dict]]:
-    """(hours latest must soak, hotfixes it carries since stable). Lane off or any lookup error: (SOAK_HOURS, [])."""
-    if not HOTFIX_LANE:
-        return SOAK_HOURS, []
+    """(hours latest must soak, hotfixes it carries since stable). Any lookup error: (SOAK_HOURS, [])."""
     try:
         rel = lambda v: json.loads(show(wos, "origin/main", f"releases/{v}.json"))   # noqa: E731
         hf = hotfixes_between(rel(stable), rel(latest))
@@ -754,9 +751,7 @@ def hotfix_soak(wos: Path, stable: str, latest: str) -> tuple[float, list[dict]]
 
 
 def pending_hotfixes(wos: Path) -> list[dict]:
-    """Hotfix PRs merged on a component main but not yet in releases/latest. Lane off or lookup error: []."""
-    if not HOTFIX_LANE:
-        return []
+    """Hotfix PRs merged on a component main but not yet in releases/latest. Lookup error: []."""
     try:
         latest = show(wos, "origin/main", "releases/latest").strip()
         return hotfixes_between(json.loads(show(wos, "origin/main", f"releases/{latest}.json")), None)
@@ -824,7 +819,7 @@ def oldest_above(stable: str, latest: str, wos: Path, now: float | None = None) 
 def soak_gate(stable: str, latest: str, wos: Path) -> tuple[bool, str, float | None, list[dict], str]:
     """Is a release due for For everyone? (due, outcome when not due, hours on latest, hotfixes that shortened the
     soak, the version to promote). <wos> is the wizard-os clone (git objects; no checkout needed).
-    Cheap: wizard-os only (plus GitHub API reads when the hotfix lane is on)."""
+    Cheap: wizard-os only (plus GitHub API reads for the hotfix lane)."""
     if _key(latest) <= _key(stable):
         return False, f"nothing to promote: For everyone ({stable}) already has latest ({latest})", None, [], latest
     need, hf = hotfix_soak(wos, stable, latest)
