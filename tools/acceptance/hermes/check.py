@@ -30,6 +30,7 @@ NET = "hs"
 HERMES, WAS, FAKE = "hs-hermes", "hs-was", "hs-fake"
 WAS_URL = "http://127.0.0.1:8787"
 HERMES_URL = "http://127.0.0.1:8642"
+SETTLE_TURNS = 3  # ordinary turns the compaction check allows before the compacted history must reach the model
 CONFIG = """model:
   provider: custom
   base_url: http://hs-fake:18080/v1
@@ -285,6 +286,12 @@ class Box:
                         text.startswith("## Result m1"), ", ".join(f"{k} {'yes' if v else 'NO'}" for k, v in got.items())),
                     [self.ev / "md-input.txt", self.ev / "md-rendered.html"])
 
+    @staticmethod
+    def compacted(sent):
+        """True when a request to the model carries the compaction summary and none of the early fact turns."""
+        return "HS-SUMMARY-FACT" in json.dumps(sent) and not any(
+            m.get("role") == "user" and "HS-FACT " in str(m.get("content")) for m in sent)
+
     def check_compaction(self):
         """Facts are stated early in a thread, buried under ordinary turns and a long reply, so Hermes' default
         compaction (head and tail protected, middle summarised) has to carry them through its summary."""
@@ -298,6 +305,19 @@ class Box:
             self.send(sid, f"HS-ECHO pad{i}")
         self.send(sid, "HS-FILL f1", timeout=300)
         self.send(sid, "HS-ECHO after-fill", timeout=300)
+        # When the compacted history reaches the model varies by release: v0.21.5 used it on the very next turn.
+        # From v0.22 the gateway's session hygiene still compacts after the long turn, but the next turn goes out
+        # with the full history ("Skipping preflight compression: ... not anchored on real usage ... deferring to
+        # the next response"), and the turn after that is compacted (wizard-os#726,
+        # docs/acceptance/hermes-fork-v0.22.7-compaction.md). Owners lose nothing either way. So the recall waits for
+        # ordinary turns until one reaches the model compacted, up to SETTLE_TURNS of them, and the delay is reported.
+        settled = None
+        for i in range(SETTLE_TURNS):
+            self.send(sid, f"HS-ECHO settle{i}", timeout=300)
+            req = next((r for r in reversed(self.fake_requests()[before:]) if r["reply"] == f"ECHO settle{i}"), None)
+            if req and self.compacted(req["request"]["messages"]):
+                settled = i + 1
+                break
         run = self.send(sid, "HS-RECALL", timeout=300)
         reqs = self.fake_requests()[before:]
         summaries = [r for r in reqs if "TURNS TO SUMMARIZE" in json.dumps(r["request"]) or
@@ -323,6 +343,11 @@ class Box:
         ok = run.get("status") == "completed" and bool(summaries) and via_summary == ["alpha", "bravo", "charlie"] \
             and not verbatim and recalled == via_summary
         self.observations.append({
+            "topic": "When compaction reaches the model",
+            "detail": (f"Hermes compacted after the long turn; the compacted history first reached the model on ordinary "
+                       f"turn {settled} after it (v0.21.5: turn 1; v0.22 and later: turn 2, one extra full-size call)"
+                       if settled else f"no ordinary turn reached the model compacted within {SETTLE_TURNS} turns")})
+        self.observations.append({
             "topic": "Thread history after compaction",
             "detail": f"the compaction test thread has {stored} rows in state.db ({stored_facts} of the 3 early fact turns); "
                       f"the Agent Service returns {len(msgs)} messages to the shell (include_compacted=true, view=wizard), "
@@ -332,7 +357,9 @@ class Box:
                                                              for s in summaries]),
               self.dump("compaction-recall-request.json", recall_sent)]
         self.record("A long conversation keeps its reasoning after compaction", ok,
-                    f"Hermes compacted {len(summaries)} time(s); on the recall turn the early facts reached the model only "
+                    f"Hermes compacted {len(summaries)} time(s), used by the model "
+                    f"{f'from ordinary turn {settled} on' if settled else f'not within {SETTLE_TURNS} ordinary turns'}; "
+                    "on the recall turn the early facts reached the model only "
                     f"through the summary: {via_summary or 'none'} (still verbatim: {verbatim or 'none'}); the model "
                     f"recalled {recalled or 'none'}", ev)
 

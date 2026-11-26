@@ -122,10 +122,27 @@ jobs:
           [ "$(ls | wc -l)" = 2 ]
           tag="$IMAGE:sha-$COMMIT"
           docker buildx imagetools create -t "$tag" $(printf "$IMAGE@sha256:%s " *)
-          digest=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest}}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])')
+          # GHCR can answer "not found" for a tag it accepted a moment ago (wizard-os#726: the push worked, the
+          # read-back right after it got nothing and the JSON parse crashed). Read back with retries, never parse
+          # empty output, and check the labels on the digest itself rather than the tag.
+          readback() {
+            local out i
+            for i in 1 2 3 4 5 6 7 8; do
+              if out=$(docker buildx imagetools inspect "$@") && [ -n "$out" ]; then
+                printf '%s\n' "$out"; return 0
+              fi
+              echo "::warning::imagetools inspect $1 gave nothing (try $i of 8), retrying" >&2
+              sleep $((i * 5))
+            done
+            echo "::error::could not read $1 back from the registry after 8 tries" >&2
+            return 1
+          }
+          digest=$(readback "$tag" --format '{{.Manifest.Digest}}')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::bad digest for $tag: '$digest'"; exit 1; }
           for arch in amd64 arm64; do
-            rev=$(docker buildx imagetools inspect "$tag" --format "{{json .Image}}" | python3 -c "import json,sys; print(json.load(sys.stdin)['linux/$arch']['config']['Labels']['org.opencontainers.image.revision'])")
-            [ "$rev" = "$COMMIT" ] || { echo "::error::linux/$arch revision $rev != $COMMIT"; exit 1; }
+            rev=$(readback "$IMAGE@$digest" --format \
+              "{{with index .Image \"linux/$arch\"}}{{index .Config.Labels \"org.opencontainers.image.revision\"}}{{end}}")
+            [ "$rev" = "$COMMIT" ] || { echo "::error::linux/$arch revision '$rev' != $COMMIT"; exit 1; }
           done
           {
             echo "### Wizard fork image"

@@ -1,0 +1,174 @@
+{
+ "note": "wizard-os#726. Compaction check, run on the builder machine (x86_64 Docker, no VM) with tools/acceptance/hermes/check.py: 'old' = check as on main before #726 (recall right after the long turn), 'new' = check after #726 (ordinary settle turns until one reaches the model compacted). Each row is one request the fake model received from 'HS-ECHO after-fill' on.",
+ "runs": {
+  "old check on v0.22.7 fork control build (b200f5bc)": {
+   "image": "ghcr.io/defleur-agents/hermes-agent@sha256:1fc3a522a95dfd6b85a43b12fa3ea602b453a352a30bf01afc813c7c535b31ec",
+   "result": "FAIL",
+   "requests": [
+    {
+     "input": "HS-ECHO after-fill",
+     "messages": 38,
+     "chars": 223662,
+     "reply": "ECHO after-fill"
+    },
+    {
+     "input": "summary call",
+     "messages": 1,
+     "chars": 12942,
+     "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation abo"
+    },
+    {
+     "input": "HS-RECALL",
+     "messages": 40,
+     "chars": 223757,
+     "reply": "RECALL alpha bravo charlie | summary=false | verbatim_fact_turns=true"
+    }
+   ]
+  },
+  "old check on v0.21.5 (fca358f, pinned today)": {
+   "image": "nousresearch/hermes-agent@sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7",
+   "result": "PASS",
+   "requests": [
+    {
+     "input": "HS-ECHO after-fill",
+     "messages": 38,
+     "chars": 226425,
+     "reply": "ECHO after-fill"
+    },
+    {
+     "input": "summary call",
+     "messages": 1,
+     "chars": 13364,
+     "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation abo"
+    },
+    {
+     "input": "HS-RECALL",
+     "messages": 8,
+     "chars": 26031,
+     "reply": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false"
+    }
+   ]
+  },
+  "new check on v0.22.7 fork control build (b200f5bc)": {
+   "image": "ghcr.io/defleur-agents/hermes-agent@sha256:1fc3a522a95dfd6b85a43b12fa3ea602b453a352a30bf01afc813c7c535b31ec",
+   "result": "PASS",
+   "requests": [
+    {
+     "input": "HS-ECHO after-fill",
+     "messages": 38,
+     "chars": 223662,
+     "reply": "ECHO after-fill"
+    },
+    {
+     "input": "summary call",
+     "messages": 1,
+     "chars": 12942,
+     "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation abo"
+    },
+    {
+     "input": "HS-ECHO settle0",
+     "messages": 40,
+     "chars": 223763,
+     "reply": "ECHO settle0"
+    },
+    {
+     "input": "summary call",
+     "messages": 1,
+     "chars": 8786,
+     "reply": "## Goal\nAcceptance conversation about remembered facts (synthetic).\n\n#"
+    },
+    {
+     "input": "HS-ECHO settle1",
+     "messages": 10,
+     "chars": 23372,
+     "reply": "ECHO settle1"
+    },
+    {
+     "input": "HS-RECALL",
+     "messages": 8,
+     "chars": 22756,
+     "reply": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false"
+    }
+   ]
+  },
+  "new check on v0.21.5 (fca358f, pinned today)": {
+   "image": "nousresearch/hermes-agent@sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7",
+   "result": "PASS",
+   "requests": [
+    {
+     "input": "HS-ECHO after-fill",
+     "messages": 38,
+     "chars": 226425,
+     "reply": "ECHO after-fill"
+    },
+    {
+     "input": "summary call",
+     "messages": 1,
+     "chars": 13376,
+     "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation abo"
+    },
+    {
+     "input": "HS-ECHO settle0",
+     "messages": 8,
+     "chars": 26037,
+     "reply": "ECHO settle0"
+    },
+    {
+     "input": "HS-RECALL",
+     "messages": 10,
+     "chars": 26129,
+     "reply": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false"
+    }
+   ]
+  },
+  "new check on v0.23.3 official": {
+   "image": "nousresearch/hermes-agent@sha256:3e9fe4c6ef36490f43aa0d0d80f9df64e9c92a576eee3042f1a97c8813c05355",
+   "result": "PASS",
+   "requests": [
+    {
+     "input": "HS-ECHO after-fill",
+     "messages": 38,
+     "chars": 223662,
+     "reply": "ECHO after-fill"
+    },
+    {
+     "input": "summary call",
+     "messages": 4,
+     "chars": 13622,
+     "reply": "## Historical Task Snapshot\nNone.\n\n## Goal\nAcceptance conversation abo"
+    },
+    {
+     "input": "HS-ECHO settle0",
+     "messages": 40,
+     "chars": 223763,
+     "reply": "ECHO settle0"
+    },
+    {
+     "input": "summary call",
+     "messages": 4,
+     "chars": 9551,
+     "reply": "## Goal\nAcceptance conversation about remembered facts (synthetic).\n\n#"
+    },
+    {
+     "input": "HS-ECHO settle1",
+     "messages": 10,
+     "chars": 23417,
+     "reply": "ECHO settle1"
+    },
+    {
+     "input": "HS-RECALL",
+     "messages": 8,
+     "chars": 22756,
+     "reply": "RECALL alpha bravo charlie | summary=true | verbatim_fact_turns=false"
+    }
+   ]
+  }
+ },
+ "hermes_log_v0.22.7_new_check": [
+  "2026-11-26 01:54:20,446 INFO gateway.run: Session hygiene: 39 messages, ~65,143 tokens (actual) \u2014 auto-compressing (threshold: 85% of 64,000 = 54,400 tokens)",
+  "2026-11-26 01:54:20,603 INFO gateway.run: Session hygiene: compressed 39 \u2192 6 msgs, ~65,143 \u2192 ~1,095 tokens",
+  "2026-11-26 01:54:20,711 INFO [wizard_1795658018980_028621cda80c] agent.turn_context: Skipping preflight compression: rough estimate ~62,877 >= 54,400 is not anchored on real usage (last real provider prompt 0); deferring to the next response",
+  "2026-11-26 01:54:22,496 INFO gateway.run: Session hygiene: 9 messages, ~65,168 tokens (actual) \u2014 auto-compressing (threshold: 85% of 64,000 = 54,400 tokens)",
+  "2026-11-26 01:54:22,567 INFO gateway.run: Session hygiene: compressed 9 \u2192 4 msgs, ~65,168 \u2192 ~917 tokens"
+ ]
+}
