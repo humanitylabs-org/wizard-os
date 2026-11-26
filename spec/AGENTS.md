@@ -203,6 +203,8 @@ No entry = the main agent (`hermes`). A fresh box therefore routes every app to 
 
 ## 10. Private first: new installs start private (#115, approved by James 18 Nov 2026)
 
+**Fresh-install default off for launch** (James, 25 Nov 2026, DECISIONS #117): a fresh WizardOS starts standard first (section 11). This section is the mechanism that Set up private AI runs; it is not what a fresh box does on its own. The switch below stays off by default.
+
 Switch: `wizard/private-first-setup` (shell tweak, kept in the owner's Look file like `wizard/chat-channels`); Agent Service env `WIZARD_PRIVATE_FIRST=1` forces it on and `0` forces it off, because a fresh box has no Look file when setup runs. Off by default: with it off, sections 1 to 9 apply unchanged. Tracked in [wizard-os#676](https://github.com/humanitylabs-org/wizard-os/issues/676).
 
 With the switch on:
@@ -214,6 +216,46 @@ With the switch on:
 - **Existing installs are not migrated.** A box set up before the switch keeps its agents and app lists; moving it is a separate decision.
 
 The pieces are built in the repos that own them, each `Refs wizard-os#676`: the Agent Service ([wizard-agent-service#545](https://github.com/humanitylabs-org/wizard-agent-service/issues/545): first-run private agent, standard agent on provider connect, attach protection, the switch reader), Wizard UX ([wizard-ux#1549](https://github.com/humanitylabs-org/wizard-ux/issues/1549): Welcome's Connect your AI and the catalog entry), the provider images ([wizard-app-store#77](https://github.com/humanitylabs-org/wizard-app-store/issues/77): `adopt_as_agent_default`, Tinfoil connect) and the App Manager ([wizard-app-manager#759](https://github.com/humanitylabs-org/wizard-app-manager/issues/759): passing `WIZARD_PRIVATE_FIRST` from the installer).
+
+## 11. Private mode as an opt-in (#117, James 25 Nov 2026)
+
+WizardOS launches **standard first**: a fresh box starts with a standard agent (the main Hermes, `hermes`) on the owner's Claude or ChatGPT subscription, and private mode is something the owner turns on. Section 10's mechanism stays and is what turning it on runs; its fresh-install default is off (DECISIONS #117 amends #115). The seal (section 6, #59), the Private group in the model picker (section 8, #64) and one-way read grants (#81, section 9) are unchanged. Tracked in [wizard-os#930](https://github.com/humanitylabs-org/wizard-os/issues/930); the idea's lead item is [wizard-ux#1800](https://github.com/humanitylabs-org/wizard-ux/issues/1800).
+
+**Launch default.** With no switches set, Welcome's **Connect your AI** offers Sign in with Claude and Sign in with ChatGPT, both attached to the standard agent, and Skip for now. Continue never waits for a private agent, so a first reply needs no Tinfoil account. Fresh Macs start the same way ([try-wizard#171](https://github.com/humanitylabs-org/try-wizard/issues/171)). Every app starts on the standard agent under section 5's defaults.
+
+**Welcome offer.** Right after Connect your AI, Welcome offers private AI once: "Want a fully private AI?" with **Set up private AI** (primary), **Later** and **No thanks**. The answer is saved on the box (`POST /wizard/v1/private-first {"offer": "setup"|"later"|"declined"}`, [AGENT_SERVICE_API.md](AGENT_SERVICE_API.md)).
+- **Set up private AI** opts the box into section 10 and runs the Tinfoil sign-in. On a fresh box there are no apps or history yet, so there is no Privacy check: the private agent is created and made the default, and Claude or ChatGPT stay on the standard agent.
+- **Later** leaves "Finish setting up private AI" in Settings › Privacy; the install-sheet nudges stay on.
+- **No thanks** means nothing prompts again, except the install-sheet nudges, which stay on (decided: No thanks does not silence them).
+- With nothing connected (Skip for now), the offer leads with private AI as the way to get a model at all.
+
+**Four ways in later.** Private mode can be turned on at any time from:
+1. **Settings › Privacy**: the "Private mode" row (Off, On, or "Finish setting up private AI" while unfinished) and the always-available **Privacy check** ([wizard-ux#1801](https://github.com/humanitylabs-org/wizard-ux/issues/1801)).
+2. **The model picker**: the Private group shows "Set up private AI" while the box has no private agent.
+3. **The Tinfoil app**: signing in there opens the same switch-over.
+4. **The install sheet** of an app that holds personal data, on a box with no private agent: one card above the agent ticks, "Set up private AI" or "Use <your AI> for now" ([wizard-ux#1802](https://github.com/humanitylabs-org/wizard-ux/issues/1802)). Shown on every such install, never as a pop-up outside an install.
+
+All four open one switch-over sheet.
+
+**Switch-over.** Each step is resumable: leaving halfway keeps what is done, and reopening continues where it stopped with nothing duplicated. The Agent Service records every change with what it replaced, so a retry changes nothing twice and Undo can reverse it ([wizard-agent-service#626](https://github.com/humanitylabs-org/wizard-agent-service/issues/626)).
+1. **Sign in** to private AI: Tinfoil, through the Tinfoil app's own sign-in.
+2. **Create the private agent** through section 10's path: `private` preset, confidential provider, `fallback: false`, sealed. An existing private agent is reused, never doubled. The standard agent and its Claude or ChatGPT are untouched.
+3. **Privacy check moves**: every installed app that holds personal data, which agent uses it and whose servers that model runs on ("Mail → main agent → Anthropic"), personal-data apps pre-ticked to move. A moved app leaves the standard agent's list and joins the private agent's (section 5), its "Sends its work to" binding (section 7) points at the private agent, and the scheduled jobs that run on it move too. The app's own logins (Gmail and the like) are untouched; nothing is reconnected. The Claude and ChatGPT connection apps never move.
+4. **Bring your context along** (on by default): one-way read of the standard agent's chats and memory (section 9, #81). Nothing flows back.
+5. **Main chat**: "Start new chats on private AI" (on by default) makes the private agent the default agent; voice follows. The sheet says plainly that private AI is a bit less capable than Claude for hard problems and that any chat can still pick Claude.
+6. **Done**: what moved, plus one honest sentence: what Claude or ChatGPT already saw stays in the standard agent's memory and chats and in that company's records, with links to both for deleting. Cleaning that up for the owner is phase 2 and not specified here.
+
+**Undo.** Turning private mode off puts every moved app, binding and schedule back as it was, removes the read access, and makes the standard agent the default again. The private agent and its history are kept, sealed (#59), never merged into the standard agent. Deleting the private agent stays a separate, explicit action.
+
+**"Personal data" is declared by the app, never hard-coded.** An app holds personal data when its `wizard.md` says `privacy: private` (section 5) or, for a connector, it carries the "Contains private data" designation; it may add a short line of what it reads ("reads your email") for the install-sheet card. An app with no declaration counts as not personal. No list of apps lives in the shell or the Agent Service; the default apps declare it themselves ([wizard-os#929](https://github.com/humanitylabs-org/wizard-os/issues/929)).
+
+**No extra router for Tinfoil.** The private agent reaches Tinfoil through the Tinfoil app's relay (#66, [PRIVATE_PROVIDERS.md](PRIVATE_PROVIDERS.md)); launch uses **Tinfoil directly**, and a Wizard-branded private plan can plug into the same slot later. The orb's router below is the existing one, not a new component.
+
+**Routing once private mode is on.** Two separate additions, each behind its own switch and off by default (James, 25 Nov 2026):
+- **Orb agent choice** (`wizard/private-routing`; [wizard-agent-service#629](https://github.com/humanitylabs-org/wizard-agent-service/issues/629), shell half [wizard-ux#1804](https://github.com/humanitylabs-org/wizard-ux/issues/1804); `POST /wizard/v1/route` in [AGENT_SERVICE_API.md](AGENT_SERVICE_API.md)). A spoken agent or model name goes straight to that agent with the owner's exact words (no relay); otherwise a personal-data request goes to the private agent (the private router can only move a request toward private); otherwise the thread in front; otherwise the default agent. The router model is used only when it is private; with none, rules decide. Under the same switch, private alerts reach the phone with no text, and Daily and the sweep belong to the private agent ([wizard-agent-service#631](https://github.com/humanitylabs-org/wizard-agent-service/issues/631)).
+- **Result reader** (`wizard/result-reader`; [wizard-agent-service#630](https://github.com/humanitylabs-org/wizard-agent-service/issues/630)). A fixed private model, not the worker's own status line, decides how a finished background run reaches the owner (waiting on you, a result, or a quiet note).
+
+**Switches.** Each part ships off by default and is decided on its own issue: `wizard/private-mode` (Settings › Privacy, Privacy check, switch-over and Undo, in the shell and the Agent Service), `wizard/private-ai-nudge` (the install-sheet card), `wizard/private-routing` and `wizard/result-reader` (above). The Welcome's standard-first order and offer are on for everyone (wizard-ux#1800). `wizard/private-first-setup` (section 10) stays off by default.
 
 ## Deferred (James, 14 Oct; brought back when due)
 
