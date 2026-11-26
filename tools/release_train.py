@@ -508,7 +508,16 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
     (the App Manager mirror: verify_mirror) is the automated non-author check of DECISIONS #96 as amended: it must
     pass, and post its status, before the merge."""
     sh(["git", "-C", str(wt), "push", "-q", "-f", "origin", f"HEAD:refs/heads/{branch}"])
-    url = sh(["gh", "pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", title, "--body", fit_body(body)]).strip()
+    url = existing_pr(repo, branch)
+    if url:
+        # An earlier run opened this PR and stopped before merging it (wizard-os#959: a 502 on `gh pr merge` left
+        # #939 open, and every later `gh pr create` failed). The force-push above moved it to this run's head;
+        # refresh its title and body and carry on with it.
+        say(f"reusing the open PR for {branch}: {url}")
+        sh(["gh", "pr", "edit", url, "-R", repo, "--title", title, "--body", fit_body(body)], check=False)
+    else:
+        url = sh(["gh", "pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", title,
+                  "--body", fit_body(body)]).strip()
     n = url.rstrip("/").rsplit("/", 1)[1]
     sh(["gh", "api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={label}"], check=False)
     head = sh(["git", "-C", str(wt), "rev-parse", "HEAD"]).strip()
@@ -517,7 +526,12 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
         verify(n, head)          # raises Stop (and posts a failure status) unless byte-identical
     while need_checks:
         time.sleep(30)
-        checks = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup"])["statusCheckRollup"]
+        pr = gh_json(["pr", "view", n, "-R", repo, "--json", "statusCheckRollup,headRefOid"])
+        if pr.get("headRefOid", head) != head:    # a reused PR: GitHub has not caught up with the force-push yet
+            if time.time() > deadline:
+                raise Stop(f"{url}: GitHub still shows head {pr['headRefOid'][:8]}, not {head[:8]}")
+            continue
+        checks = pr["statusCheckRollup"]
         states = [(c.get("name") or c.get("context"),
                    c.get("status") or ("PENDING" if c.get("state") == "PENDING" else "COMPLETED"),
                    c.get("conclusion") or c.get("state")) for c in checks]
@@ -536,8 +550,41 @@ def open_and_merge(repo: str, wt: Path, branch: str, title: str, body: str, labe
             break
         if time.time() > deadline:
             raise Stop(f"{url}: checks still running after {timeout // 60:.0f} min")
-    sh(["gh", "pr", "merge", n, "-R", repo, "--merge", "--match-head-commit", head])
+    merge_pr(repo, n, head)
     return url
+
+
+def existing_pr(repo: str, branch: str) -> str | None:
+    """URL of the open PR from `branch` into main, if a run before this one left it open."""
+    prs = gh_json(["pr", "list", "-R", repo, "--head", branch, "--base", "main", "--state", "open",
+                   "--json", "url,number"]) or []
+    return prs[0]["url"] if prs else None
+
+
+TRANSIENT = re.compile(r"\b(5\d\d|bad gateway|service unavailable|gateway time-?out|timed? ?out|"
+                       r"connection (reset|refused)|eof|tls handshake)\b", re.I)
+
+
+def merge_pr(repo: str, n: str, head: str, tries: int = 4, pause: float = 20) -> None:
+    """Merge exactly `head`. A GitHub 5xx or network blip is retried (wizard-os#959); when the failed call had in
+    fact merged the PR, that counts as merged. Any other failure stops the train as before."""
+    for attempt in range(1, tries + 1):
+        try:
+            sh(["gh", "pr", "merge", n, "-R", repo, "--merge", "--match-head-commit", head])
+            return
+        except (Stop, subprocess.TimeoutExpired) as e:
+            err = e
+        try:
+            st = gh_json(["pr", "view", n, "-R", repo, "--json", "state,headRefOid"]) or {}
+        except (Stop, subprocess.TimeoutExpired, ValueError):
+            st = {}
+        if st.get("state") == "MERGED" and st.get("headRefOid", head) == head:
+            say(f"{repo}#{n}: merge call failed but the PR is merged; carrying on")
+            return
+        if attempt == tries or not TRANSIENT.search(str(err)):
+            raise err if isinstance(err, Stop) else Stop(f"`gh pr merge {n} -R {repo}` timed out")
+        say(f"{repo}#{n}: merge failed ({str(err)[-120:]}); retry {attempt}/{tries - 1} in {pause:.0f}s")
+        time.sleep(pause)
 
 
 def mirror_problems(changes: list[tuple[str, str]], mirror_file, canonical_file, base_file) -> tuple[list[str], list[str]]:

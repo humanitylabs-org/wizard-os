@@ -31,6 +31,8 @@ class CommitStatusAdmission(unittest.TestCase):
                     raise AssertionError('did not settle within the supplied status sequence')
                 polls.append(index)
                 return {'statusCheckRollup': rows[index]}
+            if args[:2] == ['pr', 'list']:
+                return []
             if args[:2] == ['api', 'graphql']:
                 return {'data': {'repository': {'pullRequest': {'reviewThreads': {'nodes': []}}}}}
             raise AssertionError(args)
