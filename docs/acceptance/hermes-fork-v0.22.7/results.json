@@ -1,0 +1,97 @@
+{
+  "image": "ghcr.io/defleur-agents/hermes-agent@sha256:1fc3a522a95dfd6b85a43b12fa3ea602b453a352a30bf01afc813c7c535b31ec",
+  "from_image": "nousresearch/hermes-agent@sha256:fca358f12efd65bfaaca05884166f15c0e2788375ca30d77061ac1ebc96452b7",
+  "was_image": "ghcr.io/humanitylabs-org/wizard-agent-service@sha256:cb92d01c5656e89f8280e54f6972bc486de3d04f1e50203e00c8acf0d8bb0389",
+  "ux_image": "ghcr.io/humanitylabs-org/wizard-ux@sha256:c60920e7da9fadbc7d9c322c26df6068c9fa505eb30cf1cf6e9829268acfebec",
+  "fake_image": "python@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4",
+  "started": "2026-11-26T01:57:27Z",
+  "from_version": "Hermes Agent v0.21.5 (2026.9.24) \u00b7 upstream f97608f1",
+  "version": "Hermes Agent vgit.b200f5b (2026.9.24) \u00b7 upstream b200f5bc",
+  "image_labels": {
+    "org.opencontainers.image.description": "WizardOS Hermes fork b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+    "org.opencontainers.image.revision": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+    "org.opencontainers.image.source": "https://github.com/defleur-agents/hermes-agent"
+  },
+  "finished": "2026-11-26T02:01:45Z",
+  "checks": [
+    {
+      "check": "A thread sends and receives",
+      "pass": true,
+      "detail": "run completed, output 'ECHO t1'; thread has 3 messages read back through the Agent Service",
+      "evidence": [
+        "evidence/thread-run.json",
+        "evidence/thread-messages.json"
+      ]
+    },
+    {
+      "check": "A helper's result comes back to the thread that started it",
+      "pass": true,
+      "detail": "background helper; the Agent Service's follow-through started the next turn; helper's model call seen: True; helper result stored in the parent thread: True; parent's reply using it: 'PARENT-SAW CHILD-RESULT h1'; helper sessions recorded with this thread as parent: 1",
+      "evidence": [
+        "evidence/helper-run.json",
+        "evidence/helper-messages.json",
+        "evidence/helper-messages-raw.json",
+        "evidence/helper-child-sessions.json"
+      ]
+    },
+    {
+      "check": "Markdown replies render",
+      "pass": true,
+      "detail": "reply stored verbatim: True; rendered by the shell's chat-kit.js: heading yes, bold yes, list yes, code block yes, table yes, link yes",
+      "evidence": [
+        "evidence/md-input.txt",
+        "evidence/md-rendered.html"
+      ]
+    },
+    {
+      "check": "A long conversation keeps its reasoning after compaction",
+      "pass": true,
+      "detail": "Hermes compacted 2 time(s), used by the model from ordinary turn 2 on; on the recall turn the early facts reached the model only through the summary: ['alpha', 'bravo', 'charlie'] (still verbatim: none); the model recalled ['alpha', 'bravo', 'charlie']",
+      "evidence": [
+        "evidence/compaction-recall-run.json",
+        "evidence/compaction-messages.json",
+        "evidence/compaction-summary-requests.json",
+        "evidence/compaction-recall-request.json"
+      ]
+    },
+    {
+      "check": "The database is intact before and after a restart",
+      "pass": true,
+      "detail": "integrity before ok, after ok; sessions 6\u21926, messages 75\u219275; the first thread reads back identically and takes a new turn ('ECHO r1')",
+      "evidence": [
+        "evidence/restart-db.json",
+        "evidence/restart-thread-before.json",
+        "evidence/restart-thread-after.json"
+      ]
+    },
+    {
+      "check": "A scheduled job fires",
+      "pass": true,
+      "detail": "job cf851ee14f8d scheduled 'every 1m'; its model call arrived 112s after creation",
+      "evidence": [
+        "evidence/cron-create.txt",
+        "evidence/cron-list.txt",
+        "evidence/cron-outputs.json"
+      ]
+    },
+    {
+      "check": "An update followed by a rollback both work, with history intact",
+      "pass": true,
+      "detail": "update Hermes Agent v0.21.5 (2026.9.24) \u00b7 upstream f97608f1 \u2192 Hermes Agent vgit.b200f5b (2026.9.24) \u00b7 upstream b200f5bc: ok (seed thread from before the update read back identically: True); rollback \u2192 Hermes Agent v0.21.5 (2026.9.24) \u00b7 upstream f97608f1: ok (integrity ok; seed thread and post-update thread read back identically; new turn 'ECHO rb1')",
+      "evidence": [
+        "evidence/update.json",
+        "evidence/rollback.json"
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "topic": "When compaction reaches the model",
+      "detail": "Hermes compacted after the long turn; the compacted history first reached the model on ordinary turn 2 after it (v0.21.5: turn 1; v0.22 and later: turn 2, one extra full-size call)"
+    },
+    {
+      "topic": "Thread history after compaction",
+      "detail": "the compaction test thread has 57 rows in state.db (3 of the 3 early fact turns); the Agent Service returns 46 messages to the shell (include_compacted=true, view=wizard), including the compacted early turns"
+    }
+  ]
+}

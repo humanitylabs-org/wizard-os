@@ -48,6 +48,13 @@ only through the summary, and the model recalled all three. The number of turns 
 observation "When compaction reaches the model". A release that never uses its compacted history within three turns
 still fails.
 
+## All seven checks with the new check
+
+The full `check.py` (start on the v0.21.5 pin, update to the v0.22.7 fork control image, run the checks, roll
+back), same machine and images as above: **7 of 7 PASS**
+([`hermes-fork-v0.22.7/results.json`](hermes-fork-v0.22.7/results.json)). This is not the fresh-VM forum record
+#726 asks for; that run stays with Archimedes.
+
 ## The fork image publish step
 
 The same 19 Nov control run (fork run 44515962008) built both architectures and pushed the multi-arch tag, then the
