@@ -373,4 +373,4 @@ class InstallStampRevisionTests(unittest.TestCase):
         self.assertIsNone(self.check(self.layer({"opt/hermes/install-stamp.json": self.stamp(commit="main")}))[0])
         stamp = self.layer({"opt/hermes/install-stamp.json": self.stamp()})
         self.assertIsNone(self.check(stamp, self.layer({"opt/hermes/.wh.install-stamp.json": b""}))[0])
-        self.assertIsNone(self.check(stamp, size=check_release.STAMP_LAYER_MAX + 1)[0])
+        self.assertIsNone(self.check(stamp, size=8 * 1024 * 1024 + 1)[0])
