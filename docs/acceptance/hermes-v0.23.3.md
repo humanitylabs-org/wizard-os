@@ -102,7 +102,7 @@ cron). Reports worth knowing:
   already on it.
 - Never restore an old `state.db` over newer writes.
 
-## Promotion record (to land on or after 27 Nov 00:35Z)
+## Promotion record (landed 27 Nov 2026, after 00:35Z)
 
 `hermes_lock.validate` refuses an `approved_at` in the future, and every box runs it whenever it loads the lock, so
 this record can only merge once its date has passed:
@@ -124,3 +124,6 @@ this record can only merge once its date has passed:
 Then byte-identical copies in App Manager (`wam/hermes-lock.json`, `releases/hermes-lock.json`) and Agent Service
 (`ops/agent-runtime/hermes-lock.json`), their new images, and one For testers release that moves App Manager, Agent
 Service, the `hermes` block and the agent slot together.
+
+Landed with a `previous` block (the replaced v2026.9.24 pin) so the stable snapshot stays installable while the
+promoted snapshot soaks on For testers (spec/HERMES_LOCK.md step 4, wizard-app-manager#856).

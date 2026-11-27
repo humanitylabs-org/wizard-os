@@ -55,6 +55,13 @@ pause unrelated app timers. This policy does not patch or interpose stock Hermes
    `acceptance`, `canary`, `bug_review`, and `rollback` evidence URLs. Timestamp
    validation requires approved_at >= published_at + 7 days and not in the future.
    CI/local validation is not an approval. Never self-merge this change.
+   The promotion also records the pin it replaces as `previous` (`hermes`, `agent_recipe`, `runtime_image`).
+   A release that pins all of `previous` stays valid, so the current stable snapshot (and every installer and
+   check that reads it against the shared lock) keeps working while the promoted snapshot goes to For testers
+   first and to For everyone after its soak. `previous` never mixes with the new pin (old engine with the new
+   recipe or the reverse fails), it is not a host update target (`check_pin` takes only the locked pin), and it
+   only exists in an approved lock. Drop it in a later lock change once stable runs the promoted pin
+   (wizard-app-manager#856).
 5. Cut the matching snapshot only after dependency PRs land. In a coordinated
    maintenance window, inventory each install and verify backups/quiet state;
    explicitly pass the approved promotion id to each host/container updater.

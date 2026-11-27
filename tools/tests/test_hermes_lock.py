@@ -87,6 +87,46 @@ class HermesLockTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 'update_refused')
         self.assertIn('paused', str(exc.exception))
 
+    def test_promotion_record_passes_its_own_gate(self):
+        # wizard-app-manager#856: James approved v0.23.3-wizard1, dated the first moment the seven-day rule allows.
+        doc = lock.validate(copy.deepcopy(self.doc))
+        self.assertEqual(doc['state'], 'approved')
+        self.assertEqual(doc['promotion']['id'], 'hermes-v0.23.3-wizard1')
+        early = datetime(2026, 11, 27, 0, 34, tzinfo=timezone.utc)
+        with self.assertRaisesRegex(ValueError, 'future-dated'):
+            lock.validate(copy.deepcopy(self.doc), early)
+        with patch.dict(os.environ, {'WIZARD_HERMES_PROMOTION': 'hermes-v0.23.3-wizard1'}):
+            self.assertEqual(lock.authorize(self.doc), 'hermes-v0.23.3-wizard1')
+
+    def release(self, pin, recipe):
+        return {'hermes': copy.deepcopy(pin), 'default_apps': {'agent': copy.deepcopy(recipe)}}
+
+    def test_releases_pinning_the_replaced_pin_stay_valid_until_stable_moves(self):
+        prev = self.doc['previous']
+        lock.check_release(self.release(prev['hermes'], prev['agent_recipe']), self.doc)
+        lock.check_release(self.release(self.doc['hermes'], self.doc['agent_recipe']), self.doc)
+        # Never a mix of the two: the replaced engine with the new recipe, or the other way round.
+        for pin, recipe in ((prev['hermes'], self.doc['agent_recipe']), (self.doc['hermes'], prev['agent_recipe'])):
+            with self.assertRaisesRegex(ValueError, 'frozen'):
+                lock.check_release(self.release(pin, recipe), self.doc)
+        # The replaced pin is a release pin only: a host update target still needs the locked one.
+        with self.assertRaisesRegex(ValueError, 'shared exact lock'):
+            lock.check_pin(prev['hermes'], self.doc)
+
+    def test_previous_needs_an_exact_different_pin_and_a_promotion(self):
+        doc = copy.deepcopy(self.doc); doc['previous']['hermes']['commit'] = 'main'
+        with self.assertRaisesRegex(ValueError, 'previous'):
+            lock.validate(doc)
+        doc = copy.deepcopy(self.doc); doc['previous']['hermes'] = copy.deepcopy(doc['hermes'])
+        with self.assertRaisesRegex(ValueError, 'differ'):
+            lock.validate(doc)
+        doc = copy.deepcopy(self.doc); doc['state'] = 'frozen'; doc['promotion'] = None
+        with self.assertRaisesRegex(ValueError, 'reviewed promotion'):
+            lock.validate(doc)
+        doc = copy.deepcopy(self.doc); del doc['previous']
+        with self.assertRaisesRegex(ValueError, 'frozen'):
+            lock.check_release(self.release(self.doc['previous']['hermes'], self.doc['previous']['agent_recipe']), doc)
+
     def test_current_stable_matches_central_lock(self):
         root = Path(__file__).resolve().parents[2]
         version = (root / 'releases/stable').read_text().strip()
