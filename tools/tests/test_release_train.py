@@ -89,7 +89,7 @@ class Candidate(unittest.TestCase):
 
     def test_the_hermes_recipe_follows_the_shared_lock(self):
         # wizard-app-store#92: a lock move (Hermes engine image with the DirectSDK plugin 0.4.1) reaches the next cut.
-        recipe = rt.hermes_lock.load()["agent_recipe"]
+        recipe = rt.lock_recipe()
         L = json.loads(json.dumps(self.L))
         L["default_apps"]["agent"].update(commit="e" * 40, index_version="old")
         C = rt.candidate_json(L, "9.9.9", {}, "0.0.1", [])
