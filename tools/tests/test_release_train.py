@@ -77,8 +77,10 @@ class Candidate(unittest.TestCase):
             for name in self.L[key]:
                 if name not in ("wizard-agent-service", "agent-service", "agent"):
                     self.assertEqual(C[key][name], self.L[key][name], f"{key}.{name} must not move")
-        for key in set(self.L) - {"version", "name", "date", "about", "notes", "components", "images", "default_apps"}:
+        for key in set(self.L) - {"version", "name", "date", "about", "notes", "components", "images", "default_apps",
+                                  "hermes"}:
             self.assertEqual(C[key], self.L[key], key)
+        self.assertEqual(C["hermes"], rt.lock_doc()["hermes"])
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "9.9.9.json"
             p.write_text(json.dumps(C, indent=2) + "\n")
@@ -102,6 +104,32 @@ class Candidate(unittest.TestCase):
         C = rt.candidate_json(L, "9.9.9", {}, "0.0.1", [])
         self.assertEqual(C["default_apps"]["agent"], L["default_apps"]["agent"])
         self.assertNotIn("Hermes recipe", C["name"])
+
+    def test_the_hermes_pin_follows_the_shared_lock_with_its_recipe(self):
+        # wizard-app-manager#856: a promotion moves the engine and the recipe in the same cut, never one of them.
+        lock = rt.lock_doc()
+        prev = lock["previous"][-1]
+        L = json.loads(json.dumps(self.L))
+        L["hermes"] = json.loads(json.dumps({**prev["hermes"], "test_record": "none: old", "rollback": None}))
+        L["default_apps"]["agent"].update(commit=prev["agent_recipe"]["commit"],
+                                          index_version=prev["agent_recipe"]["index_version"])
+        self.assertEqual(rt.lock_moves(L), [f"Hermes {prev['hermes']['tag']} -> {lock['hermes']['tag']}",
+                                            f"Hermes recipe {prev['agent_recipe']['index_version']} -> "
+                                            f"{lock['agent_recipe']['index_version']}"])
+        C = rt.candidate_json(L, "9.9.9", {}, "0.0.1", ["the shared Hermes lock moved"])
+        self.assertEqual(C["hermes"], lock["hermes"])
+        self.assertEqual(C["default_apps"]["agent"]["commit"], lock["agent_recipe"]["commit"])
+        self.assertIn(f"Hermes {prev['hermes']['tag']} -> {lock['hermes']['tag']}", C["name"])
+        self.assertEqual(rt.lock_moves(C), [])
+        sys.path.insert(0, str(HERE.parent))
+        import hermes_lock
+        hermes_lock.check_release(C)
+
+    def test_a_lock_move_alone_is_a_reason_to_cut(self):
+        src = (HERE.parent / "release_train.py").read_text()
+        block = src[src.index("def plan("):src.index("def next_version(")]
+        self.assertIn('out["lock_moves"] = lock_moves(L) if any_merge else []', block)
+        self.assertIn('if out["moves"] or out["lock_moves"]:', block)
 
 
 class Classification(unittest.TestCase):

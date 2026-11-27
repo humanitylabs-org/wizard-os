@@ -370,7 +370,9 @@ def plan(work: Path, any_merge: bool = False) -> dict:
             pub = info.get("published") or (published(repo, d) if comp in IMAGE_COMPONENTS else published_wam(d, L))
             if pub and pub["commit"] != l_c and not is_ancestor(d, pub["commit"], l_c):
                 out["moves"][comp] = pub
-    if out["moves"]:
+    # A lock move alone (James moved the Hermes pin) is cut too, with no component move (wizard-app-manager#856).
+    out["lock_moves"] = lock_moves(L) if any_merge else []
+    if out["moves"] or out["lock_moves"]:
         out["candidate"], out["cut"] = next_version(wos), True
     elif out["waiting_fixes"] and _key(latest) > _key(stable):
         out["candidate"], out["cut"] = latest, False
@@ -386,13 +388,35 @@ def next_version(wos: Path) -> str:
     return f"{a}.{b}.{int(c) + 1}"
 
 
-def lock_recipe() -> dict:
-    """The agent recipe of the shared Hermes lock beside this script (tools/hermes_lock.py, releases/hermes-lock.json)."""
+def lock_doc() -> dict:
+    """The shared Hermes lock beside this script (tools/hermes_lock.py, releases/hermes-lock.json), validated."""
     here = str(Path(__file__).resolve().parent)
     if here not in sys.path:
         sys.path.insert(0, here)
     import hermes_lock
-    return hermes_lock.load()["agent_recipe"]
+    return hermes_lock.load()
+
+
+def lock_recipe() -> dict:
+    """The agent recipe of the shared Hermes lock."""
+    return lock_doc()["agent_recipe"]
+
+
+PIN_KEYS = ("tag", "commit", "image")
+
+
+def lock_moves(L: dict) -> list[str]:
+    """What a cut must move to follow the shared Hermes lock: its `hermes` pin and agent recipe (wizard-app-manager#856).
+
+    Only James moves the lock (DECISIONS #74); once he has, that alone is a reason to cut For testers."""
+    lock, out = lock_doc(), []
+    h, agent = L.get("hermes"), (L.get("default_apps") or {}).get("agent")
+    if isinstance(h, dict) and any(h.get(k) != lock["hermes"].get(k) for k in PIN_KEYS):
+        out.append(f"Hermes {h.get('tag')} -> {lock['hermes']['tag']}")
+    recipe = lock["agent_recipe"]
+    if isinstance(agent, dict) and agent.get("app") == recipe["app"] and agent.get("commit") != recipe["commit"]:
+        out.append(f"Hermes recipe {agent.get('index_version')} -> {recipe['index_version']}")
+    return out
 
 
 def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[str]) -> dict:
@@ -419,9 +443,14 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
         names.append(f"{label} {old[:8]} -> {pub['commit'][:8]}")
     # The Hermes recipe follows the shared lock, which only James moves (DECISIONS #74): without this every cut copied
     # latest's recipe forward and a lock move never reached a release (wizard-app-store#92).
-    recipe, agent = lock_recipe(), (d.get("default_apps") or {}).get("agent")
+    # The Hermes pin follows the lock the same way, so a promotion moves engine and recipe in one cut
+    # (wizard-app-manager#856); a mix of the two is refused by every box.
+    names += lock_moves(d)
+    lock = lock_doc()
+    recipe, agent = lock["agent_recipe"], (d.get("default_apps") or {}).get("agent")
+    if isinstance(d.get("hermes"), dict) and any(d["hermes"].get(k) != lock["hermes"].get(k) for k in PIN_KEYS):
+        d["hermes"] = json.loads(json.dumps(lock["hermes"]))
     if isinstance(agent, dict) and agent.get("app") == recipe["app"] and agent.get("commit") != recipe["commit"]:
-        names.append(f"Hermes recipe {agent.get('index_version')} -> {recipe['index_version']}")
         agent.update(repo=recipe["repo"], commit=recipe["commit"], index_version=recipe["index_version"])
     d["name"] = f"WizardOS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
     d["about"] = (f"Latest {L['version']} with " + ", ".join(names) + ". Cut by the release train for merged "
@@ -1043,7 +1072,8 @@ def run(work: Path, dry: bool, force: bool, rig_args: list[str], feature_fast_tr
     fix_notes = [f"{f.split(' ', 1)[0]} {f.split(' ', 1)[1][:90]}" for f in p["waiting_fixes"]]
     branch_cut, branch_promo = f"release/{V}-train", f"promote/{V}-train"
     if p["cut"]:
-        C = candidate_json(L, V, p["moves"], stable, fix_notes or ["no fix (forced proof run)"])
+        C = candidate_json(L, V, p["moves"], stable, fix_notes or (
+            ["the shared Hermes lock moved"] if p.get("lock_moves") else ["no fix (forced proof run)"]))
         moved = follow_repo_moves(C)
         if moved:
             C["notes"] += " Repos renamed to where GitHub moved them (same commits): " + "; ".join(moved) + "."

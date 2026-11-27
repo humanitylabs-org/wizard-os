@@ -337,3 +337,40 @@ class MovedRepos(unittest.TestCase):
         seen = []
         self.cr.moved_repos(rel, lookup=lambda r: seen.append(r) or (r, ""))
         self.assertEqual(sorted(seen), ["humanitylabs-org/wizard-ux", "oscarhenrycollins/browser"])
+
+
+class InstallStampRevisionTests(unittest.TestCase):
+    """wizard-app-manager#856: official Hermes images from v0.23 carry no OCI labels; the build stamp proves the commit."""
+
+    def layer(self, files):
+        import io
+        import tarfile
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+            for name, data in files.items():
+                info = tarfile.TarInfo(name); info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        return buf.getvalue()
+
+    def check(self, *layers, size=None):
+        sys.path.insert(0, str(HERE.parent))
+        import check_release
+        blobs = {f"sha256:{i}": raw for i, raw in enumerate(layers)}
+        man = {"layers": [{"digest": d, "size": size or len(raw)} for d, raw in blobs.items()]}
+        return check_release.install_stamp_revision(man, blobs.__getitem__)
+
+    def stamp(self, **kw):
+        return json.dumps({"commit": "c" * 40, "dirty": False, **kw}).encode()
+
+    def test_top_most_stamp_decides(self):
+        old = self.layer({"opt/hermes/install-stamp.json": self.stamp(commit="a" * 40)})
+        new = self.layer({"opt/hermes/install-stamp.json": self.stamp()})
+        self.assertEqual(self.check(old, new, self.layer({"etc/x": b"1"})), ("c" * 40, ""))
+
+    def test_missing_dirty_removed_or_big_layers_prove_nothing(self):
+        self.assertIsNone(self.check(self.layer({"etc/x": b"1"}))[0])
+        self.assertIsNone(self.check(self.layer({"opt/hermes/install-stamp.json": self.stamp(dirty=True)}))[0])
+        self.assertIsNone(self.check(self.layer({"opt/hermes/install-stamp.json": self.stamp(commit="main")}))[0])
+        stamp = self.layer({"opt/hermes/install-stamp.json": self.stamp()})
+        self.assertIsNone(self.check(stamp, self.layer({"opt/hermes/.wh.install-stamp.json": b""}))[0])
+        self.assertIsNone(self.check(stamp, size=8 * 1024 * 1024 + 1)[0])
