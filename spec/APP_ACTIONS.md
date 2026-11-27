@@ -1,6 +1,6 @@
 # App actions in chat (`wizard.app-actions/1`)
 
-**Status: proposed, built behind the owner switch `wizard/action-cards` (off by default; wizard-ux#1463).** The shell
+**Status: on for everyone in the shell (wizard-ux#1463; the switch `wizard/action-cards` is removed).** The shell
 card is wizard-ux `web/core/action-cards.js`. Apps adopt it on their own (Messenger drafts, Mail replies, Calendar
 events and Money reconciliation steps first); until an app does, nothing changes for it.
 
@@ -26,7 +26,7 @@ returns its id plus one marker line the agent puts in its reply, on its own line
   from the app itself, read by the owner's browser at a fixed path under the installed app's own url, so words the
   agent writes (or an injected message makes it write) can never change what is approved or where it is sent.
 - Wizard always hides the marker from the message text, copy, the Chats list preview and a streaming answer, like
-  every chat marker (wizard-ux docs/CHAT-MARKERS.md). With the switch off no card is drawn and nothing is read.
+  every chat marker (wizard-ux docs/CHAT-MARKERS.md).
 - The skill that teaches the tool says: put the marker line in your reply as is; don't also describe the item at
   length (the card shows it); never claim it was sent before the card says Approved.
 
@@ -95,5 +95,5 @@ or `{ "decision": "reject" }`. `fields` appears only after Edit and only holds e
 
 - Calls go only to `<installed app url>api/actions/<id>` on the shell's own origin, for an app in the box's list;
   an unknown app or one on another origin gets no call ("<app> isn't installed on this Wizard").
-- Nothing is approved without the owner's tap; nothing is sent while the switch is off.
+- Nothing is approved without the owner's tap.
 - The app's strings are shown as plain text (escaped), never as markup.
