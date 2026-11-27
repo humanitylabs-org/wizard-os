@@ -506,6 +506,41 @@ def dockerhub_digest_exists(digest: str) -> tuple[bool, str]:
         return False, str(e)[:160]
 
 
+STAMP = "opt/hermes/install-stamp.json"
+STAMP_LAYER_MAX = 8 * 1024 * 1024     # the stamp sits in a tiny top layer; never download the big ones
+
+
+def install_stamp_revision(manifest: dict, blob) -> tuple[str | None, str]:
+    """The commit in the image's /opt/hermes/install-stamp.json, read from its top-most layer that has it.
+
+    `blob(digest)` returns the digest-verified layer bytes. Only small layers are read, top-down; the first layer
+    that writes or deletes the stamp decides (as in the running image). The stamp must name a clean CI build.
+    """
+    import io
+    import tarfile
+    for layer in reversed(manifest.get("layers") or []):
+        name = Path(STAMP).name
+        if int(layer.get("size") or 0) > STAMP_LAYER_MAX:
+            return None, "the install stamp is not in a small top layer"
+        try:
+            with tarfile.open(fileobj=io.BytesIO(blob(layer["digest"])), mode="r:*") as tar:
+                for m in tar.getmembers():
+                    path = m.name.lstrip("./")
+                    if path in (str(Path(STAMP).parent / (".wh." + name)), str(Path(STAMP).parent / ".wh..wh..opq")):
+                        return None, "a layer removes the install stamp"
+                    if path == STAMP:
+                        if not m.isfile() or m.size > 64 * 1024:
+                            return None, "the install stamp is not a small file"
+                        stamp = json.loads(tar.extractfile(m).read())
+                        rev = stamp.get("commit") if isinstance(stamp, dict) else None
+                        if not SHA.fullmatch(str(rev or "")) or stamp.get("dirty") is not False:
+                            return None, "the install stamp names no clean 40-char commit"
+                        return rev, ""
+        except (tarfile.TarError, OSError, ValueError, KeyError) as e:
+            return None, f"its layers can't be read ({str(e)[:80]})"
+    return None, "it has no install stamp"
+
+
 def dockerhub_image_revision(digest: str) -> tuple[str | None, str]:
     """Prove the digest's revision on BOTH install architectures, without downloading image layers.
 
@@ -521,14 +556,19 @@ def dockerhub_image_revision(digest: str) -> tuple[str | None, str]:
             "https://auth.docker.io/token?service=registry.docker.io&scope=repository:nousresearch/hermes-agent:pull",
             timeout=20))["token"]
 
-        def get(path: str, expected: str) -> dict:
+        def get_raw(path: str, expected: str, limit: int = 16 * 1024 * 1024) -> bytes:
             req = urllib.request.Request(f"https://registry-1.docker.io/v2/nousresearch/hermes-agent/{path}",
                                          headers={"Authorization": f"Bearer {tok}", "Accept": accept})
             with urllib.request.urlopen(req, timeout=30) as r:
-                raw = r.read()
+                raw = r.read(limit + 1)
+            if len(raw) > limit:
+                raise ValueError("registry blob is larger than expected")
             if "sha256:" + hashlib.sha256(raw).hexdigest() != expected:
                 raise ValueError("registry content differs from its digest")
-            return json.loads(raw)
+            return raw
+
+        def get(path: str, expected: str) -> dict:
+            return json.loads(get_raw(path, expected))
 
         top = get(f"manifests/{digest}", digest)
         revisions = set()
@@ -543,7 +583,11 @@ def dockerhub_image_revision(digest: str) -> tuple[str | None, str]:
             cfg = get(f"blobs/{cd}", cd)
             rev = ((cfg.get("config") or {}).get("Labels") or {}).get("org.opencontainers.image.revision")
             if not SHA.fullmatch(str(rev or "")):
-                return None, f"linux/{arch} has no full OCI revision label; image/tag agreement is unproven"
+                # Official images from v0.23 on carry no labels; their CI build writes the source commit into
+                # /opt/hermes/install-stamp.json instead (wizard-app-manager#856). Read it from the image's own layers.
+                rev, why = install_stamp_revision(man, lambda d: get_raw(f"blobs/{d}", d))
+                if rev is None:
+                    return None, f"linux/{arch} has no full OCI revision label and {why}; image/tag agreement is unproven"
             revisions.add(rev)
         if len(revisions) != 1:
             return None, "Linux architectures carry different source revisions"

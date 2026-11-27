@@ -1,4 +1,4 @@
-# Hermes v0.23.3-wizard1: acceptance, bug review and rollback (23 Nov 2026)
+# Hermes v0.23.3 (wizard1, promoted as wizard3): acceptance, bug review and rollback (23 Nov 2026)
 
 Evidence for the Hermes lock promotion asked for in
 [wizard-app-manager#856](https://github.com/humanitylabs-org/wizard-app-manager/issues/856) (spec/HERMES_LOCK.md
@@ -14,6 +14,7 @@ promotion record.
 | Agent recipe | `oscarhenrycollins/hermes-agent` commit `8db4cc2aa51b9b91cd9369631b2aa47b4dc48c1d` (index version `0.23.3-wizard1`, `tipi_version` 7) |
 | Replaces | `v2026.9.24` (Hermes v0.21.5), Wizard image `sha256:e8ad921a…`, recipe `e8ae558f` |
 | Why | 9 high-severity advisories in the shipped engine's packages; v0.23.3 carries tornado 6.6.1, oauthlib 4.0.1, pyasn1 0.6.5, msgpack 1.2.3 |
+| Promoted image (27 Nov) | `ghcr.io/humanitylabs-org/hermes-agent:v0.23.3-wizard3@sha256:40d7c4d1b7d3eb79457e59a66ec982931f2ce4b451050d0689626b9bfc7ed9fe`, built from wizard-app-store `images/hermes-agent` at `2b2701f5`: wizard1 plus the Claude subscription plugin 0.4.1 and the holographic memory plugin 0.30.0 built in (see "What wizard3 adds" below); recipe `63df40f03ebbb80040932328835be596f7974c6a` (index version `0.23.3-wizard3`, `tipi_version` 9) |
 | Owner approval | James, [23 Nov](https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7096312096): ship on the normal path, For testers first, approval date 27 Nov 2026 00:35Z (the earliest the 7-day gate allows) |
 
 ## Acceptance: the seven stable checks
@@ -61,8 +62,23 @@ including the three fact turns). On v2026.9.24 it showed only the turns after th
 Since 22 Nov ~16:40Z James's fresh private-first forum install runs this exact published image
 ([Archimedes, 22 Nov](https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7082235579)):
 0 restarts, gateway `/health` ok at 0.23.3, the fixed package versions, install stamp 0644, no tracebacks. Before
-that it ran the equivalent v0.23.2 fork build for two days. Archimedes re-checks it on 27 Nov and adds the result to
-the issue.
+that it ran the equivalent v0.23.2 fork build for two days. [Re-checked 27 Nov](https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7208627333): 4.5
+days on the same image, 0 restarts, `/health` ok at 0.23.3, 0 tracebacks.
+
+## What wizard3 adds (27 Nov)
+
+Doing the promotion showed that Hermes v0.22+ no longer ships the holographic memory provider in core: it became a
+catalog plugin that Hermes downloads from GitHub the first time an agent starts, and every Agent Service agent uses
+it. James chose to build it into the image
+([27 Nov](https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7216012115)), and the
+engine also takes the Claude subscription plugin 0.4.1 (wizard-app-store#92). The Hermes engine itself is the same
+v0.23.3 as above, so the seven checks and the canary carry over. Its own evidence:
+
+- the Agent Service memory proof passes on the wizard3 digest with no network for all four agent kinds (restart
+  recall, native backup and import, Wizard wiring); on wizard1/wizard2 it fails with "Could not resolve host:
+  github.com" (wizard-agent-service#704, wizard-app-store#94);
+- the plugin is fetched at build time from the commit Hermes' own catalog pins (`ed73195`, 0.30.0), each file
+  checked by sha256.
 
 ## Bug review
 
@@ -102,25 +118,21 @@ cron). Reports worth knowing:
   already on it.
 - Never restore an old `state.db` over newer writes.
 
-## Promotion record (to land on or after 27 Nov 00:35Z)
+## Promotion record (landed 27 Nov 2026)
 
-`hermes_lock.validate` refuses an `approved_at` in the future, and every box runs it whenever it loads the lock, so
-this record can only merge once its date has passed:
+`releases/hermes-lock.json`: state `approved`, `hermes` v0.23.3 (`caafe538`, official image `sha256:3e9fe4c6…`),
+recipe `63df40f0` (`0.23.3-wizard3`), runtime image `sha256:40d7c4d1…`, promotion `hermes-v0.23.3-wizard3`
+(published 2026-11-20T00:34:38Z, approved 2026-11-27T10:32:39Z, James's choice of the image with memory built in),
+evidence links to this file, James's approval and the canary.
 
-```json
-"state": "approved",
-"hermes": {"tag": "v0.23.3", "commit": "caafe5389ae585ef77387a962aee05b1bcf17029",
-           "image": {"ref": "docker.io/nousresearch/hermes-agent:v0.23.3",
-                     "digest": "sha256:3e9fe4c6ef36490f43aa0d0d80f9df64e9c92a576eee3042f1a97c8813c05355"}, ...},
-"agent_recipe": {"commit": "8db4cc2aa51b9b91cd9369631b2aa47b4dc48c1d", "index_version": "0.23.3-wizard1", ...},
-"runtime_image": "ghcr.io/humanitylabs-org/hermes-agent@sha256:1353ee1e39d4fe5536050ade372cf70951fb6947eb1f192c8158a1a038f0fb8f",
-"promotion": {"id": "hermes-v0.23.3-wizard1", "published_at": "2026-11-20T00:34:38Z", "approved_at": "2026-11-27T00:35:00Z",
-              "recommendation": "https://github.com/humanitylabs-org/wizard-app-manager/issues/856",
-              "approval": "https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7096312096",
-              "acceptance": "<this file>", "canary": "https://github.com/humanitylabs-org/wizard-app-manager/issues/856#issuecomment-7082235579",
-              "bug_review": "<this file>#bug-review", "rollback": "<this file>#rollback"}
-```
+The lock keeps both pins it replaced as `previous`: v2026.9.24 with recipe `5876502e` (For testers until the cut) and
+v2026.9.24 with recipe `e8ae558f` (For everyone until a v0.23.3 release has soaked 72 h and passed the upgrade test).
+A release naming all of one of them stays installable; a mix never is. Byte-identical copies in App Manager
+(`wam/hermes-lock.json`, `releases/hermes-lock.json`) and Agent Service (`ops/agent-runtime/hermes-lock.json`); the
+release train then cuts the For testers release that moves App Manager, Agent Service, the `hermes` block and the
+agent slot together.
 
-Then byte-identical copies in App Manager (`wam/hermes-lock.json`, `releases/hermes-lock.json`) and Agent Service
-(`ops/agent-runtime/hermes-lock.json`), their new images, and one For testers release that moves App Manager, Agent
-Service, the `hermes` block and the agent slot together.
+Rollback of one box from wizard3: recipe `5876502e`, image
+`ghcr.io/humanitylabs-org/hermes-agent@sha256:418566205540ac68a0ced01970972446f6b769d075341f23dae6b9dcf74aa99e`, with the
+same app data. Once the holographic plugin has merged facts (plugin v0.19+), memory is off for an agent moved back
+to the in-core provider of v2026.9.24 until it is moved forward again.

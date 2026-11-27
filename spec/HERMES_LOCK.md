@@ -14,11 +14,14 @@ historical snapshots are immutable; the release checker applies this comparison
 to the current stable snapshot and new releases, not historical files.
 
 While a lock move goes For testers first, the lock keeps the pin it replaced as
-`previous` (`hermes`, `agent_recipe`, `runtime_image`, `why`). A release naming
-**all** of `previous` (the stable snapshot still soaking) stays valid; a mix of
-old and new never is, and `check_pin` alone only accepts the locked pin. Drop
-`previous` once stable is on the new pin. The release train copies the lock's
-recipe into each cut (wizard-app-store#92).
+`previous` (`hermes`, `agent_recipe`, `runtime_image`, `why`), or a list of
+them when the channels run different replaced pins (wizard-app-manager#856:
+For everyone on one recipe, For testers on another). A release naming **all**
+of one of them (a snapshot still soaking) stays valid; a mix of old and new
+never is, and `check_pin` alone only accepts the locked pin. Drop an entry
+once no channel pointer names it. The release train copies the lock's
+`hermes` pin and recipe into each cut, and a lock move alone is a reason to
+cut (wizard-app-store#92, wizard-app-manager#856).
 
 The initial lock **freezes the existing September baseline**, not a claim that
 September is universally safe or that 0.21.7/0.22.x is safe. Its committed
