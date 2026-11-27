@@ -228,7 +228,9 @@ class HermesForkCandidate(unittest.TestCase):
             rel = json.loads(out.read_text())
             self.assertEqual(rel["channel"], "candidate")
             self.assertEqual(rel["hermes"]["fork"]["commit"], FORK_COMMIT)
-            self.assertEqual(rel["hermes"]["rollback"]["image"], SEPTEMBER_PIN["image"])
+            # The rollback is the base release's own Hermes (latest's; v0.23.3 since wizard-app-manager#856).
+            base = json.loads((ROOT / "releases" / (before["latest"].strip() + ".json")).read_text())
+            self.assertEqual(rel["hermes"]["rollback"]["image"], base["hermes"]["image"])
             self.assertEqual(run(str(out), "--offline").returncode, 0)
         self.assertEqual(before, {n: (ROOT / "releases" / n).read_text() for n in ("latest", "stable")})
 
