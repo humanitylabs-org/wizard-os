@@ -60,6 +60,10 @@ view:                       # required for view; optional for others
   port: 8080
 
 receives_voice_input: true  # optional boolean: app owns voice requests and feedback
+personal_data: reads your email   # optional: the app holds the owner's personal data;
+                            # the line says what it reads (see "Personal data")
+privacy: private            # optional: keep the app off standard agents until the
+                            # owner ticks one (spec/AGENTS.md section 5)
 permissions: [geolocation]  # optional: browser permissions the app may ask the
                             # owner for (only geolocation today; absent = none)
 
@@ -149,6 +153,16 @@ app names belong in the shell's alias table.
 ## Receives voice input
 
 Optional `receives_voice_input: true` opts a declared app view into shell-delivered speech. Missing/false keeps normal shell routing; the value is a strict boolean. The app owns interpretation and feedback, including whether its existing agent workflow needs a Chat. Shells own capture and interaction design; this declares no orb or app-local recorder. See [VOICE_INPUT.md](VOICE_INPUT.md) for the shared receiver, durable acknowledgement and recovery contract.
+
+## Personal data
+
+An app that holds the owner's personal data (mail, messages, notes, recordings, photos, money, contacts, calendar) says so itself, so the Privacy check, the private mode switch-over and the install sheet's private AI card find it without a list of apps in the shell (wizard-os#929).
+
+- `personal_data: <line>` declares it. The line is a short plain phrase of what the app reads, written to follow the app's name: `personal_data: reads your email` shows as "Mail reads your email." on the install sheet. One line, at most 80 characters; `personal_data: true` declares it without a line (the sheet then says "<App> holds personal data."). The App Manager copies the declaration into `apps.json` as `personal_data` (the trimmed line, or `true`) and drops anything else (`false`, empty, a list or a map), so a malformed value never stops the app installing.
+- `privacy: private` (spec/AGENTS.md section 5) also counts as personal data, and so does providing a private-data slot (`meeting-recording`, `meeting-transcripts`, `transcript-redaction`). An app with `privacy: private` may add `personal_data: <line>` for the sheet's sentence.
+- **An app with no declaration is not personal.** Nothing else (its name, its slots, its category) makes it one.
+- `personal_data` is only a label. Unlike `privacy: private`, it changes nothing about which agents can use the app: a new app still starts on the main agent, and the owner moves it to a private agent through the Privacy check. Only the features that read it change anything, each behind its own switch (`wizard/private-mode`, `wizard/private-ai-nudge`, `wizard/private-routing`).
+- The Agent Service reports it in `GET /wizard/v1/apps/<id>/agents` (`personal_data: true`, plus `personal_data_reads` when there is a line) and in the Privacy check (`personal_data`, `personal_data_reads`).
 
 ## Browser permissions
 
