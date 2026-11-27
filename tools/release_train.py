@@ -75,6 +75,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+import hermes_lock
+
 ORG = "humanitylabs-org"
 WOS, WAM = f"{ORG}/wizard-os", f"{ORG}/wizard-app-manager"
 # image component -> (repo, default_apps slot that pins the same commit)
@@ -408,6 +410,12 @@ def candidate_json(L: dict, version: str, moves: dict, stable: str, notes: list[
             d["default_apps"][slot]["commit"] = pub["commit"]
         label = {"wizard-ux": "Wizard UX", "wizard-agent-service": "Agent Service"}.get(comp, "App Manager")
         names.append(f"{label} {old[:8]} -> {pub['commit'][:8]}")
+    # The Hermes recipe follows the shared lock, which only James moves (DECISIONS #74): without this every cut copied
+    # latest's recipe forward and a lock move never reached a release (wizard-app-store#92).
+    recipe, agent = hermes_lock.load()["agent_recipe"], (d.get("default_apps") or {}).get("agent")
+    if isinstance(agent, dict) and agent.get("app") == recipe["app"] and agent.get("commit") != recipe["commit"]:
+        names.append(f"Hermes recipe {agent.get('index_version')} -> {recipe['index_version']}")
+        agent.update(repo=recipe["repo"], commit=recipe["commit"], index_version=recipe["index_version"])
     d["name"] = f"WizardOS {version} — {L['version']} with " + ", ".join(names) + " (fixes)"
     d["about"] = (f"Latest {L['version']} with " + ", ".join(names) + ". Cut by the release train for merged "
                   "Recommended fixes: " + "; ".join(notes) + f". Stable stays {stable} until the installed upgrade test passes.")

@@ -13,6 +13,13 @@ official image digest and default agent recipe must equal the lock. Existing
 historical snapshots are immutable; the release checker applies this comparison
 to the current stable snapshot and new releases, not historical files.
 
+While a lock move goes For testers first, the lock keeps the pin it replaced as
+`previous` (`hermes`, `agent_recipe`, `runtime_image`, `why`). A release naming
+**all** of `previous` (the stable snapshot still soaking) stays valid; a mix of
+old and new never is, and `check_pin` alone only accepts the locked pin. Drop
+`previous` once stable is on the new pin. The release train copies the lock's
+recipe into each cut (wizard-app-store#92).
+
 The initial lock **freezes the existing September baseline**, not a claim that
 September is universally safe or that 0.21.7/0.22.x is safe. Its committed
 acceptance record reports seven passing checks AND the known compacted-history

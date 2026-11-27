@@ -87,6 +87,32 @@ class HermesLockTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 'update_refused')
         self.assertIn('paused', str(exc.exception))
 
+    def test_a_release_on_the_replaced_recipe_stays_valid_only_as_a_pair(self):
+        # wizard-app-store#92: the lock moved the recipe; For everyone's snapshot still pins all of the old one.
+        prev = self.doc['previous']
+        old = {'hermes': copy.deepcopy(prev['hermes']), 'default_apps': {'agent': copy.deepcopy(prev['agent_recipe'])}}
+        lock.check_release(old, self.doc)
+        new = {'hermes': copy.deepcopy(self.doc['hermes']), 'default_apps': {'agent': copy.deepcopy(self.doc['agent_recipe'])}}
+        lock.check_release(new, self.doc)
+        for rel in (old, new):
+            rel['default_apps']['agent']['commit'] = 'a' * 40
+            with self.assertRaisesRegex(ValueError, 'frozen'):
+                lock.check_release(rel, self.doc)
+        doc = copy.deepcopy(self.doc); del doc['previous']
+        with self.assertRaisesRegex(ValueError, 'frozen'):
+            lock.check_release({'hermes': prev['hermes'], 'default_apps': {'agent': prev['agent_recipe']}}, doc)
+
+    def test_previous_must_be_exact_and_different(self):
+        doc = copy.deepcopy(self.doc)
+        doc['previous']['agent_recipe'] = copy.deepcopy(doc['agent_recipe'])
+        doc['previous']['hermes'] = copy.deepcopy(doc['hermes'])
+        with self.assertRaisesRegex(ValueError, 'differ'):
+            lock.validate(doc)
+        for key in ('hermes', 'agent_recipe', 'runtime_image'):
+            doc = copy.deepcopy(self.doc); doc['previous'][key] = 'latest' if key == 'runtime_image' else {}
+            with self.assertRaises(ValueError):
+                lock.validate(doc)
+
     def test_current_stable_matches_central_lock(self):
         root = Path(__file__).resolve().parents[2]
         version = (root / 'releases/stable').read_text().strip()

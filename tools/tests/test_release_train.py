@@ -75,7 +75,7 @@ class Candidate(unittest.TestCase):
         self.assertEqual(C["default_apps"]["agent-service"]["commit"], "f" * 40)
         for key in ("components", "images", "default_apps"):
             for name in self.L[key]:
-                if name not in ("wizard-agent-service", "agent-service"):
+                if name not in ("wizard-agent-service", "agent-service", "agent"):
                     self.assertEqual(C[key][name], self.L[key][name], f"{key}.{name} must not move")
         for key in set(self.L) - {"version", "name", "date", "about", "notes", "components", "images", "default_apps"}:
             self.assertEqual(C[key], self.L[key], key)
@@ -85,6 +85,23 @@ class Candidate(unittest.TestCase):
             r = subprocess.run([sys.executable, str(HERE.parent / "check_release.py"), "--offline", str(p)],
                                capture_output=True, text=True, timeout=60)
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+    def test_the_hermes_recipe_follows_the_shared_lock(self):
+        # wizard-app-store#92: a lock move (Hermes engine image with the DirectSDK plugin 0.4.1) reaches the next cut.
+        recipe = rt.hermes_lock.load()["agent_recipe"]
+        L = json.loads(json.dumps(self.L))
+        L["default_apps"]["agent"].update(commit="e" * 40, index_version="old")
+        C = rt.candidate_json(L, "9.9.9", {}, "0.0.1", [])
+        agent = C["default_apps"]["agent"]
+        self.assertEqual((agent["repo"], agent["commit"], agent["index_version"]),
+                         (recipe["repo"], recipe["commit"], recipe["index_version"]))
+        self.assertEqual(agent["alongside"], L["default_apps"]["agent"]["alongside"])
+        self.assertIn("Hermes recipe old -> " + recipe["index_version"], C["name"])
+        L["default_apps"]["agent"].update(commit=recipe["commit"], index_version=recipe["index_version"])
+        C = rt.candidate_json(L, "9.9.9", {}, "0.0.1", [])
+        self.assertEqual(C["default_apps"]["agent"], L["default_apps"]["agent"])
+        self.assertNotIn("Hermes recipe", C["name"])
 
 
 class Classification(unittest.TestCase):
