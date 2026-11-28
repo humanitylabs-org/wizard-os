@@ -262,7 +262,7 @@ Phone pairing invite from Wizard Inbox: `201 {"origin":"https://…","enroll_url
 | `GET /api/model/options` | none | none |
 | `GET /api/sessions` | `limit`, `offset` ≤ 6 digits; `include_children` only `false`; `snapshot` (a paging cursor, not forwarded) | canonical paged listing; rows gain live run status from the run queue and admitted runs, defer state and Wizard titles; archived rows only with the state.db fallback |
 | `POST /api/sessions` | none | `{"source":"wizard-mobile","id":"wizard_…"}`; operator ids refused |
-| `GET /api/sessions/{id}` | `view` only `detail` (not forwarded) | private paths rewritten. `view=detail` adds the retry input and run state, and the thread's saved route exactly as its list row has it: `provider` and `wizard_model_lock_updated_at` from the thread's model lock (wizard-ux#1973) |
+| `GET /api/sessions/{id}` | `view` only `detail` (not forwarded) | private paths rewritten. `view=detail` adds the retry input and run state, and the thread's saved route exactly as its list row has it: `provider` and `wizard_model_lock_updated_at` from the thread's model lock (wizard-ux#1973), and the list row's content clock: `wizard_last_user_at` and `wizard_last_assistant_at` from the same session truth, so a client can check a saved copy of this one thread against it (wizard-ux#2055) |
 | `PATCH /api/sessions/{id}` | none | `{"title":…}` renames; `{"archived":true\|false}` closes or restores and clears any defer |
 | `GET /api/sessions/{id}/messages` | `order` `latest`/`oldest`; `limit` ≤ 500; `offset`; `include_compacted` `true`/`false`; `view` only `wizard` (not forwarded) | always: status markers and agent media projected to `/wizard/attachments/…`. `view=wizard` also drops delegation-batch and task-restore rows, slims each row to `id`, `role`, timestamps, `display_kind`, `display_content`, `content` (tool rows: no content, plus `plan`/`question`), adds `shareable` (a finished assistant answer), slims `tool_calls` to name + `display_label`, and turns process wake-ups into `role:"system"`, `display_kind:"process_wakeup"`. Rows with `display_kind:"hidden"` stay; the client hides them |
 | `POST /api/sessions/{id}/model` | none | `{"model":…,"provider":…}`; the operator preset is refused |
@@ -310,7 +310,7 @@ limited to 128 KiB. Cross-site browser requests are rejected.
 
 | Endpoint | Contract |
 | --- | --- |
-| `GET /wizard/v1/schedules` | `200 {"schedules":[job,...]}` |
+| `GET /wizard/v1/schedules` | `200 {"schedules":[job,...]}`. Optional `?kind=run\|remind\|watch\|return` lists only that kind (400 for any other). Every answer carries an `ETag`; `If-None-Match` with it answers `304` and no body while the list is unchanged (wizard-ux#2055) |
 | `POST /wizard/v1/schedules` | Create, `201 job` |
 | `PATCH /wizard/v1/schedules/{id}` | Edit, `200 job`; `enabled:false/true` pauses/resumes |
 | `DELETE /wizard/v1/schedules/{id}` | `200 {"deleted":true}` |
