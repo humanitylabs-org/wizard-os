@@ -13,10 +13,69 @@ and cwd using `wizard_heavy_submit`; receipt is the turn boundary. Set the worke
 work directory on Linux. The acceptance directory must be strictly below it.
 The runner admits native macOS/arm64 (VZ) and Linux/x86_64 (QEMU/KVM) only, reusing
 `release_gate.native_vm_config` and its digest-pinned image. Linux also reuses
-the release gate's 40 GiB guest disk budget; Mac keeps its 50 GiB guest. Preflight
-requires 250 GiB reserve plus guest disk, 1 GiB metadata and (when enabled)
-9 GiB phone scratch: 300 GiB for Linux onboarding. Host commands refuse a
-depleted reserve, but forced stop/delete always remain available.
+the release gate's 40 GiB guest disk budget; Mac keeps its 50 GiB guest.
+`capacity.py` owns the host-space policy: **Linux onboarding requires 110 GiB
+free**, comprising 40 GiB guest, 1 GiB metadata, 9 GiB phone scratch and a
+60 GiB coexistence reserve. Without phone scratch the Linux requirement is
+101 GiB. **76 GiB free is still insufficient**; this change reduces the cleanup
+needed rather than bypassing low-space protection. `--check-only` and run
+receipts report `disk_gib`, `reserve_gib` and `required_free_gib`.
+
+Normal host commands refuse free space below the reserve (60 GiB on Linux).
+The daily runner now deletes its disposable guest before creating/starting the
+retained guest, so its additional guest-disk allowance is also one at a time.
+An already-retained disk is reflected in free space before admission. `run.py`
+checks between commands only: admission assumes the guest disk and phone scratch
+budgets hold throughout a long install/phone command; it does not continuously
+protect the reserve against unrelated writers.
+Forced Lima stop/delete remain available even at zero free space and after the
+release monitor latches. The release gate shares Linux's 101 GiB admission and
+60 GiB command floor; its watcher stops the guest below 61 GiB, retaining the
+existing extra metadata margin. macOS is explicitly unchanged: reserve 250 GiB,
+`run.py` admission 301 GiB without phone / 310 GiB with phone, and the separate
+40 GiB `release_gate.py`/macOS-only `ci.py` path requires 291 GiB. No Linux
+measurement is extrapolated into a new macOS policy.
+
+### Linux coexistence evidence (4 November 2026)
+
+These are allocated host bytes from read-only `du -x -B1` on the Linux work
+volume, not apparent sparse-file sizes, a sampled time-series peak, or public
+installation minimums. Existing retained directories already reduce `df` free;
+the allowances below conservatively budget additional growth as well, rather
+than pretending all retained bytes will be allocated again.
+
+- **32 GiB Android coexistence allowance:** the entire Android build/job/AVD/cache
+  tree occupied 20,947,521,536 bytes and the shared SDK 5,325,189,120 bytes
+  (24.47 GiB combined), rounded up to 32 GiB. The largest timestamped Android
+  job was 2,725,060,608 bytes; its two device/AVD trees used 1,388,703,744 and
+  1,145,819,136 bytes. The separately measured native emulator case used
+  1,794,383,872 bytes (AVD 1,781,956,608). This supports retaining the separate
+  9 GiB onboarding phone allowance; none is a measured worst-case build peak.
+- **16 GiB daily-fix/light-job growth allowance:** a retained ordinary shell
+  acceptance tree occupied 8,166,391,808 bytes (7.61 GiB). Allow two such
+  increments, rounded up. This is an operational allowance, not a claim that
+  every job is smaller: image repacking and full appliances have much larger
+  retained trees and belong to the serialized heavy lane, not light packaging.
+- **12 GiB emergency free margin:** deliberately unallocated safety headroom,
+  not measured consumption. Together these make the 60 GiB command reserve.
+
+The heavy-worker service uses one shared Android/VM lock. Heavy Android,
+Gradle, emulator and VM execution is serialized. Light packaging has a separate
+lock and may overlap (900-second maximum; no Android helper); retained artifacts
+and daily fix tests can also coexist. Thus admission must include a margin, but
+a second simultaneous full heavy guest/build is not its sizing assumption.
+An out-of-lock large job or unbounded accumulation can still exhaust the volume;
+the command floor and release monitor fail closed rather than make that safe by
+assertion. This task performs **no cleanup and no VM/emulator run**.
+
+The earlier [1 November 0.3.94 result](https://github.com/humanitylabs-org/wizard-os/issues/87#issuecomment-6555691751)
+passed public install, first chat and seven phone checks at harness `f60e8c5`,
+receipt SHA256 `d5dd1f59e962c66c32539673a9111b9331cf9f1ef857927ba5a4d01ef8cf5f1f`.
+The retained receipt was read back for this change. It demonstrates that the
+40 GiB guest plus existing phone configuration can complete; it contains **no
+host-space high-water measurement**. It is not a run of this new policy, generic
+first-run APK proof (the APK entered exported Connect), physical-device or QR
+proof, nor evidence of the four-day soak.
 
 ### Backup capacity measurement (0.3.94)
 
@@ -39,8 +98,8 @@ set-aside use same-filesystem renames, not full duplicate copies. The ~1 GiB
 bundle therefore is not a ~1 GiB restore budget. With no surviving guest filesystem
 for an exact peak measurement, use the observed 24 GiB exhaustion as a lower bound
 and add 16 GiB (40 GiB total) for expanded data, accumulated Undo and growth, rather
-than claim a precise peak. The release gate requires 291 GiB host free; onboarding
-with phone requires 300 GiB, within the reserved Linux worker budget. This changes
+than claim a precise peak. With the Linux coexistence policy above, the release
+gate requires 101 GiB host free; onboarding with phone requires 110 GiB. This changes
 only harness capacity, not public installation minimums or export refusal logic;
 WAM's low-space export/import tests still exercise explicit insufficient budgets.
 

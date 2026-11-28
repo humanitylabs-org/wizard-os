@@ -9,8 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def load(name, relative):
     spec = importlib.util.spec_from_file_location(name, ROOT / relative)
+    assert spec is not None and spec.loader is not None
     m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
+    with patch.object(sys, 'path', [str((ROOT / relative).parent), *sys.path]):
+        spec.loader.exec_module(m)
     return m
 
 class NativeHosts(unittest.TestCase):

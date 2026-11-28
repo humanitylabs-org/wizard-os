@@ -18,9 +18,9 @@ import threading
 import time
 
 import run as launch
+from capacity import GIB, METADATA_GIB, required_free_gib, reserve_gib
 
 HERE = Path(__file__).resolve().parent
-GIB = 1 << 30
 # Includes upgrade-retained images, a real ~1 GiB backup, staged archives,
 # expanded app data and Undo snapshots. 0.3.94 exhausted 24 GiB while making
 # the transcriber Undo archive; 40 GiB adds 16 GiB for that peak and headroom.
@@ -85,14 +85,17 @@ def main():
     assert not sys.flags.optimize, 'assertions may not be optimized away'
     if a.fixture:
         assert hashlib.sha256(a.fixture.read_bytes()).hexdigest() == a.fixture_sha256
-    assert shutil.disk_usage(work).free >= (250 + GUEST_DISK_GIB + 1) * GIB, '250 GiB reserve plus guest and metadata required'
+    reserve = reserve_gib()
+    required_gib = required_free_gib(GUEST_DISK_GIB)
+    capacity = {'disk_gib': GUEST_DISK_GIB, 'reserve_gib': reserve, 'required_free_gib': required_gib}
+    assert shutil.disk_usage(work).free >= required_gib * GIB, f'{reserve} GiB reserve plus guest and metadata required ({required_gib} GiB)'
     os.environ.update(PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
                       LIMA_HOME=str(root / 'lima'), LIMA_CACHE_HOME=str(root / 'cache'))
     vm = 'release-check'
     assert len(str(root / 'lima' / vm / 'ssh.sock.1234567890123456')) < 104
     if a.check_only:
         print(json.dumps({'preflight': True, 'executed': False, 'release': a.release,
-                          'previous_release': a.previous_release, 'backup': bool(a.fixture)}))
+                          'previous_release': a.previous_release, 'backup': bool(a.fixture), **capacity}))
         return 0
     root.mkdir(parents=True)
     evidence = root / 'evidence'
@@ -100,13 +103,17 @@ def main():
     log = evidence / 'private-run.log'
     result = {'passed': False, 'release': a.release, 'from': a.previous_release,
               'cases': [], 'step': 'start', 'overlays': [], 'architecture': native_vm_config()['arch'],
-              'at': dt.datetime.now(dt.timezone.utc).isoformat(), 'disk_gib': GUEST_DISK_GIB, 'reserve_gib': 250}
+              'at': dt.datetime.now(dt.timezone.utc).isoformat(), **capacity}
     stop = threading.Event()
     low_space = threading.Event()
     def command(argv, timeout=1800):
-        assert not low_space.is_set() and shutil.disk_usage(work).free >= 250 * GIB
-        launch.command(list(map(str, argv)), log, timeout)
-        assert not low_space.is_set()
+        argv = list(map(str, argv))
+        cleanup = launch.cleanup_command(argv)
+        if not cleanup:
+            assert not low_space.is_set() and shutil.disk_usage(work).free >= reserve * GIB
+        launch.command(argv, log, timeout)
+        if not cleanup:
+            assert not low_space.is_set()
     def shell(argv, timeout=1800):
         command(['limactl', 'shell', '--workdir', '/', vm, '--', *argv], timeout)
     def create(name):
@@ -138,7 +145,8 @@ def main():
         result['cases'].append(value)
     def monitor():
         while not stop.wait(2):
-            if shutil.disk_usage(work).free < 251 * GIB:
+            # Preserve the early metadata margin above the command floor.
+            if shutil.disk_usage(work).free < (reserve + METADATA_GIB) * GIB:
                 low_space.set()
                 subprocess.run(['limactl', 'stop', '-f', vm], capture_output=True, timeout=120)
                 return
