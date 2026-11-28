@@ -1,5 +1,11 @@
 # Agent Service API (`/wizard/...`), v1
 
+Candidate app-managed runtimes: [APP_AGENT_RUNTIMES.md](APP_AGENT_RUNTIMES.md)
+adds install/uninstall-driven, credential-free agent-list projection for any
+harness. Existing request/stream/session endpoints are unchanged. Installed
+runtime keys come only from Service's own WAM grants file; these agents are
+managed by App Manager, never by the Hermes container driver.
+
 **Owner: Archimedes** (DECISIONS #42; Jan reviews after the fact). **Status: v1, documented from shipped behaviour.**
 
 This is the contract between Wizard front ends (Wizard UX on the web and in the Android app) and `wizard-agent-service`. It describes what the service does today. Where today's behaviour looks wrong it is flagged under [Discrepancies](#discrepancies), not redesigned here. A change to anything below is a PR that edits this file first; a breaking change bumps `api` in the bootstrap.
